@@ -1,0 +1,11 @@
+.xml-content {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  overflow-x: auto;
+}

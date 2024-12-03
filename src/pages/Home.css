@@ -1,0 +1,36 @@
+.page-container {
+  position: relative;
+}
+
+.background-logo {
+  position: fixed;  /* Changed from absolute to fixed */
+  bottom: 70px;    /* Position above the tab bar */
+  left: 50%;
+  transform: translateX(-50%);  /* Only center horizontally */
+  width: 60%;      /* Adjusted size */
+  max-width: 250px;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.content-container {
+  position: relative;
+  z-index: 1;
+}
+
+.image-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+.no-image-text {
+  text-align: center;
+}
+
+.button-container {
+  padding: 16px;
+}

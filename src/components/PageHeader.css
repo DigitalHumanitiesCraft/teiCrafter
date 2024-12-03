@@ -1,0 +1,21 @@
+.header-content {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.header-content ion-title {
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+}
+
+.header-logo {
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+}
+
+/* Adjust title position when back button is present */
+ion-back-button + .header-content {
+  margin-left: -4px;
+}
