@@ -84,8 +84,7 @@
         await import('./tokenizer.test.js');
         // Tests will be added in later Stufen:
         await import('./model.test.js');
-        // import('./transform.test.js');
-        // import('./validator.test.js');
+        await import('./validator.test.js');
 
         // --- Smoke test for module system ---
         const { CONFIDENCE, DEMO_CONFIGS, ICONS } = await import('../js/utils/constants.js');

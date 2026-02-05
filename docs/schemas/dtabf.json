@@ -1,0 +1,225 @@
+{
+  "$schema": "teiCrafter Schema Profile v1",
+  "name": "DTABf-Subset",
+  "description": "Hardcoded schema profile covering elements from the 3 demo datasets (HSA letter, DTA print, medieval recipe). Based on DTABf (Deutsches Textarchiv Basisformat).",
+  "elements": {
+    "TEI": {
+      "allowedChildren": ["teiHeader", "text"],
+      "allowedParents": [],
+      "attributes": {
+        "xmlns": { "type": "uri", "required": true }
+      }
+    },
+    "teiHeader": {
+      "allowedChildren": ["fileDesc", "profileDesc"],
+      "allowedParents": ["TEI"],
+      "attributes": {}
+    },
+    "fileDesc": {
+      "allowedChildren": ["titleStmt", "publicationStmt", "sourceDesc"],
+      "allowedParents": ["teiHeader"],
+      "attributes": {}
+    },
+    "titleStmt": {
+      "allowedChildren": ["title"],
+      "allowedParents": ["fileDesc"],
+      "attributes": {}
+    },
+    "title": {
+      "allowedChildren": ["#text", "persName", "placeName", "date"],
+      "allowedParents": ["titleStmt", "bibl"],
+      "attributes": {
+        "type": { "type": "enum", "values": ["main", "sub"] }
+      }
+    },
+    "publicationStmt": {
+      "allowedChildren": ["p"],
+      "allowedParents": ["fileDesc"],
+      "attributes": {}
+    },
+    "sourceDesc": {
+      "allowedChildren": ["p", "bibl"],
+      "allowedParents": ["fileDesc"],
+      "attributes": {}
+    },
+    "profileDesc": {
+      "allowedChildren": ["correspDesc"],
+      "allowedParents": ["teiHeader"],
+      "attributes": {}
+    },
+    "correspDesc": {
+      "allowedChildren": ["correspAction"],
+      "allowedParents": ["profileDesc"],
+      "attributes": {}
+    },
+    "correspAction": {
+      "allowedChildren": ["persName", "placeName", "date"],
+      "allowedParents": ["correspDesc"],
+      "attributes": {
+        "type": { "type": "enum", "values": ["sent", "received"], "required": true }
+      }
+    },
+    "text": {
+      "allowedChildren": ["body"],
+      "allowedParents": ["TEI"],
+      "attributes": {}
+    },
+    "body": {
+      "allowedChildren": ["div", "p"],
+      "allowedParents": ["text"],
+      "attributes": {}
+    },
+    "div": {
+      "allowedChildren": ["div", "p", "head", "pb", "lb", "opener", "closer", "dateline", "salute", "signed", "bibl", "persName", "placeName", "orgName", "date", "name", "measure", "term", "foreign"],
+      "allowedParents": ["body", "div"],
+      "attributes": {
+        "type": { "type": "string" },
+        "n": { "type": "string" }
+      }
+    },
+    "p": {
+      "allowedChildren": ["#text", "persName", "placeName", "orgName", "date", "name", "bibl", "term", "measure", "material", "foreign", "lb", "pb"],
+      "allowedParents": ["div", "body", "publicationStmt", "sourceDesc", "opener", "closer"],
+      "attributes": {}
+    },
+    "head": {
+      "allowedChildren": ["#text", "persName", "placeName", "orgName", "date", "lb", "pb"],
+      "allowedParents": ["div"],
+      "attributes": {}
+    },
+    "pb": {
+      "allowedChildren": [],
+      "allowedParents": ["div", "p", "head", "body", "opener", "closer"],
+      "attributes": {
+        "n": { "type": "string" },
+        "facs": { "type": "uri" }
+      },
+      "selfClosing": true
+    },
+    "lb": {
+      "allowedChildren": [],
+      "allowedParents": ["p", "head", "div", "dateline", "opener", "closer", "salute", "signed"],
+      "attributes": {},
+      "selfClosing": true
+    },
+    "opener": {
+      "allowedChildren": ["#text", "dateline", "salute", "persName", "placeName", "date", "lb"],
+      "allowedParents": ["div"],
+      "attributes": {}
+    },
+    "closer": {
+      "allowedChildren": ["#text", "salute", "signed", "persName", "placeName", "date", "lb", "dateline"],
+      "allowedParents": ["div"],
+      "attributes": {}
+    },
+    "dateline": {
+      "allowedChildren": ["#text", "placeName", "date", "lb"],
+      "allowedParents": ["opener", "closer", "div"],
+      "attributes": {}
+    },
+    "salute": {
+      "allowedChildren": ["#text", "persName", "lb"],
+      "allowedParents": ["opener", "closer"],
+      "attributes": {}
+    },
+    "signed": {
+      "allowedChildren": ["#text", "persName", "lb"],
+      "allowedParents": ["closer"],
+      "attributes": {}
+    },
+    "persName": {
+      "allowedChildren": ["#text", "name"],
+      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "salute", "signed", "correspAction", "title", "bibl"],
+      "attributes": {
+        "ref": { "type": "uri" },
+        "key": { "type": "string" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "placeName": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "correspAction", "title", "bibl"],
+      "attributes": {
+        "ref": { "type": "uri" },
+        "key": { "type": "string" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "orgName": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "head", "div"],
+      "attributes": {
+        "ref": { "type": "uri" },
+        "key": { "type": "string" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "date": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "correspAction", "title", "bibl"],
+      "attributes": {
+        "when": { "type": "date" },
+        "notBefore": { "type": "date" },
+        "notAfter": { "type": "date" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "name": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "div", "persName"],
+      "attributes": {
+        "type": { "type": "string" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "bibl": {
+      "allowedChildren": ["#text", "title", "persName", "placeName", "date"],
+      "allowedParents": ["p", "div", "sourceDesc"],
+      "attributes": {
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "term": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "div"],
+      "attributes": {
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "measure": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "div"],
+      "attributes": {
+        "type": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "material": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "div"],
+      "attributes": {
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    },
+    "foreign": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["p", "div"],
+      "attributes": {
+        "xml:lang": { "type": "language" },
+        "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
+        "resp": { "type": "string" }
+      }
+    }
+  }
+}

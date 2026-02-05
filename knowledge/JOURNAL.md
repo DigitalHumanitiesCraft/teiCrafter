@@ -496,3 +496,32 @@ docs/schemas/           ← (leer, für Stufe 8)
 - Konfidenz-Kanal: Hintergrund-Tint + Unterstreichungsstil (solid=sicher, dashed=prüfenswert, dotted=problematisch, double=manuell)
 
 **Status:** Preview-Modul und Review-CSS implementiert.
+
+---
+
+#### Stufe 8: Validierung (Stories 5.1, 5.2)
+
+**Ziel:** Plaintext-Vergleich, Wohlgeformtheit, Schema-Validierung gegen JSON-Profil.
+
+| Datei | Details |
+|---|---|
+| `docs/js/services/validator.js` | `validate()` – Multi-Level-Validierung: Level 1 Plaintext-Vergleich (Wort-Ähnlichkeit), Level 2 Wohlgeformtheit (DOMParser), Level 3 Schema-Validierung (Element-Nesting, Attribute), Level 5 Ungeprüfte Annotationen. |
+| `docs/js/services/schema.js` | `loadSchema()` – JSON-Schema-Profil laden und abfragen. `isKnownElement()`, `isChildAllowed()`, `isAttributeKnown()`, `getAllowedChildren()`. Permissiv bei unbekannten Elementen. |
+| `docs/schemas/dtabf.json` | Hardcodiertes Schema-Profil: 30+ Elemente aus den 3 Demo-Datensätzen (HSA Brief, DTA Druck, Rezept). allowedChildren, allowedParents, Attribut-Typen (enum, string, uri, date, number, language). |
+| `docs/tests/validator.test.js` | 12 Unit-Tests in 4 Suites: Well-formedness, Plaintext-Vergleich, Unreviewed-Check, Integration. |
+
+**Validierungsebenen:**
+
+| Ebene | Implementiert | Blockiert Export |
+|---|---|---|
+| 1: Plaintext-Vergleich | Ja | Ja (bei <95% Ähnlichkeit) |
+| 2: Wohlgeformtheit | Ja | Ja |
+| 3: Schema-Validierung | Ja (JSON-Profil) | Nein (nur Warnung) |
+| 4: XPath-Regeln | Nein (Phase 3) | — |
+| 5: Expert-in-the-Loop | Ja (= Review) | Warnung |
+
+**Schema-Profil `dtabf.json`:**
+- 30+ Elemente: TEI, teiHeader, fileDesc, titleStmt, publicationStmt, sourceDesc, profileDesc, correspDesc, correspAction, text, body, div, p, head, pb, lb, opener, closer, dateline, salute, signed, persName, placeName, orgName, date, name, bibl, term, measure, material, foreign
+- Pro Element: allowedChildren, allowedParents, Attribut-Definitionen
+
+**Status:** Validator, Schema-Service, Schema-Profil und Tests implementiert.
