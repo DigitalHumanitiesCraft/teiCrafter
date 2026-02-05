@@ -335,3 +335,21 @@ docs/schemas/           ← (leer, für Stufe 8)
 ```
 
 **Status:** ES6-Modulsystem funktioniert. Prototyp-Funktionalität vollständig erhalten.
+
+---
+
+#### Stufe 0.5: Visuelle Testmatrix
+
+**Ziel:** Alle 24 Annotationstyp-Konfidenz-Kombinationen visuell validieren.
+
+**Erstellt:**
+- `docs/tests/visual-matrix.html` – 6 Entity-Typen × 4 Konfidenz-Kategorien
+- Dual-Channel-Encoding: Unterstreichungsfarbe (Annotationstyp) + Hintergrund-Tint (Konfidenz)
+- Zusätzlicher visueller Kanal: Linienstil (solid/dashed/dotted/double)
+- Realistischer Kontexttest mit Briefabsatz
+- Automatisierte Kontrastprüfung (Euclidean Color Distance)
+- 4 bekannte Problemfälle identifiziert und visuell dokumentiert
+
+**Außerdem:** `knowledge/INDEX.md` aktualisiert – `research-landscape.md` in Dokumentenliste aufgenommen.
+
+**Status:** Testmatrix erstellt, bereit für visuelle Inspektion.

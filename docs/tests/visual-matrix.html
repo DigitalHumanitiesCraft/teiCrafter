@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>teiCrafter – Visuelle Testmatrix (6 × 4)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Strukturfarben */
+            --color-surface: #FAFAF7;
+            --color-panel: #FFFFFF;
+            --color-header: #1E3A5F;
+            --color-border: #D0D4DC;
+            --color-text: #1A1A1A;
+            --color-text-secondary: #5A6270;
+            --color-text-muted: #8899AA;
+
+            /* Konfidenz (Dual-Channel) */
+            --color-confident: #2D8A70;
+            --color-confident-tint: #E8F5F0;
+            --color-review: #CC8A1E;
+            --color-review-tint: #FEF5E7;
+            --color-problem: #C0392B;
+            --color-problem-tint: #FDECEB;
+            --color-manual: #5A6270;
+
+            /* Annotationstyp-Farben */
+            --color-persName: #3B7DD8;
+            --color-persName-bg: #EBF2FC;
+            --color-placeName: #2A9D8F;
+            --color-placeName-bg: #E6F5F3;
+            --color-orgName: #7B68AE;
+            --color-orgName-bg: #F0EDF6;
+            --color-date: #B8860B;
+            --color-date-bg: #FDF6E3;
+            --color-bibl: #C47A8A;
+            --color-bibl-bg: #FAF0F2;
+            --color-term: #6B7280;
+            --color-term-bg: #F3F4F6;
+
+            --font-ui: 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', Consolas, monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-ui);
+            background: var(--color-surface);
+            color: var(--color-text);
+            padding: 24px;
+            line-height: 1.6;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            color: var(--color-header);
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--color-text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 24px;
+        }
+
+        /* Matrix Table */
+        .matrix {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 32px;
+        }
+
+        .matrix th {
+            padding: 8px 12px;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            text-align: left;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .matrix th.conf-header {
+            text-align: center;
+        }
+
+        .matrix td {
+            padding: 12px;
+            border-bottom: 1px solid #E8EAED;
+            vertical-align: middle;
+        }
+
+        .matrix td.type-label {
+            font-weight: 500;
+            font-size: 0.8125rem;
+            white-space: nowrap;
+        }
+
+        .matrix td.cell {
+            text-align: center;
+        }
+
+        /* Entity annotation spans – Dual-Channel Encoding */
+        .entity {
+            display: inline;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            border-bottom: 2px solid transparent;
+        }
+
+        /* Annotationstyp → Unterstreichungsfarbe */
+        .entity.persName   { border-bottom-color: var(--color-persName); }
+        .entity.placeName  { border-bottom-color: var(--color-placeName); }
+        .entity.orgName    { border-bottom-color: var(--color-orgName); }
+        .entity.date       { border-bottom-color: var(--color-date); }
+        .entity.bibl       { border-bottom-color: var(--color-bibl); }
+        .entity.term       { border-bottom-color: var(--color-term); }
+
+        /* Konfidenz → Hintergrund-Tint */
+        .entity.conf-sicher       { background: var(--color-confident-tint); }
+        .entity.conf-pruefenswert { background: var(--color-review-tint); }
+        .entity.conf-problematisch{ background: var(--color-problem-tint); }
+        .entity.conf-manuell      { background: #F2F4F8; }
+
+        /* Konfidenz → Optionaler Border-Style als zusätzlicher Kanal */
+        .entity.conf-sicher        { border-bottom-style: solid; }
+        .entity.conf-pruefenswert  { border-bottom-style: dashed; }
+        .entity.conf-problematisch { border-bottom-style: dotted; }
+        .entity.conf-manuell       { border-bottom-style: double; }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .legend-section h3 {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8125rem;
+        }
+
+        .legend-swatch {
+            width: 16px;
+            height: 16px;
+            border-radius: 3px;
+            border: 1px solid var(--color-border);
+        }
+
+        .legend-line {
+            width: 24px;
+            height: 0;
+            border-bottom: 2px solid var(--color-text);
+        }
+
+        .legend-line.solid  { border-bottom-style: solid; }
+        .legend-line.dashed { border-bottom-style: dashed; }
+        .legend-line.dotted { border-bottom-style: dotted; }
+        .legend-line.double { border-bottom-style: double; border-bottom-width: 3px; }
+
+        /* Context paragraph */
+        .context-block {
+            background: var(--color-panel);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 24px;
+            font-size: 0.875rem;
+            line-height: 1.8;
+        }
+
+        .context-block h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--color-header);
+        }
+
+        /* Known problem cases */
+        .problem-cases {
+            background: var(--color-problem-tint);
+            border: 1px solid #E8B4B0;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+
+        .problem-cases h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--color-problem);
+        }
+
+        .problem-cases ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .problem-cases li {
+            font-size: 0.8125rem;
+            padding: 4px 0;
+        }
+
+        .verdict {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .verdict-ok { background: var(--color-confident-tint); color: var(--color-confident); }
+        .verdict-warn { background: var(--color-review-tint); color: var(--color-review); }
+        .verdict-fail { background: var(--color-problem-tint); color: var(--color-problem); }
+    </style>
+</head>
+<body>
+    <h1>[ tei <span style="color:#CC8A1E">Crafter</span> ] Visuelle Testmatrix</h1>
+    <p class="subtitle">6 Annotationstypen × 4 Konfidenz-Kategorien = 24 Kombinationen. Dual-Channel-Encoding: Unterstreichungsfarbe (Typ) + Hintergrund-Tint (Konfidenz).</p>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-section">
+            <h3>Annotationstyp (Unterstreichung)</h3>
+            <div class="legend-items">
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-persName)"></div> persName</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-placeName)"></div> placeName</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-orgName)"></div> orgName</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-date)"></div> date</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-bibl)"></div> bibl</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-term)"></div> term</div>
+            </div>
+        </div>
+        <div class="legend-section">
+            <h3>Konfidenz (Hintergrund + Linienstil)</h3>
+            <div class="legend-items">
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-confident-tint)"></div><div class="legend-line solid"></div> Sicher</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-review-tint)"></div><div class="legend-line dashed"></div> Pr&uuml;fenswert</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: var(--color-problem-tint)"></div><div class="legend-line dotted"></div> Problematisch</div>
+                <div class="legend-item"><div class="legend-swatch" style="background: #F2F4F8"></div><div class="legend-line double"></div> Manuell</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matrix -->
+    <table class="matrix">
+        <thead>
+            <tr>
+                <th>Annotationstyp</th>
+                <th class="conf-header">Sicher</th>
+                <th class="conf-header">Pr&uuml;fenswert</th>
+                <th class="conf-header">Problematisch</th>
+                <th class="conf-header">Manuell</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="type-label" style="color: var(--color-persName)">persName</td>
+                <td class="cell"><span class="entity persName conf-sicher">Hugo Schuchardt</span></td>
+                <td class="cell"><span class="entity persName conf-pruefenswert">Otto Benndorf</span></td>
+                <td class="cell"><span class="entity persName conf-problematisch">H. S.</span></td>
+                <td class="cell"><span class="entity persName conf-manuell">Mussafia</span></td>
+            </tr>
+            <tr>
+                <td class="type-label" style="color: var(--color-placeName)">placeName</td>
+                <td class="cell"><span class="entity placeName conf-sicher">Graz</span></td>
+                <td class="cell"><span class="entity placeName conf-pruefenswert">Wien</span></td>
+                <td class="cell"><span class="entity placeName conf-problematisch">Dalmazia</span></td>
+                <td class="cell"><span class="entity placeName conf-manuell">Leipzig</span></td>
+            </tr>
+            <tr>
+                <td class="type-label" style="color: var(--color-orgName)">orgName</td>
+                <td class="cell"><span class="entity orgName conf-sicher">Universit&auml;t Graz</span></td>
+                <td class="cell"><span class="entity orgName conf-pruefenswert">k.k. Akademie</span></td>
+                <td class="cell"><span class="entity orgName conf-problematisch">Inst.</span></td>
+                <td class="cell"><span class="entity orgName conf-manuell">ACDH-CH</span></td>
+            </tr>
+            <tr>
+                <td class="type-label" style="color: var(--color-date)">date</td>
+                <td class="cell"><span class="entity date conf-sicher">23. August 1879</span></td>
+                <td class="cell"><span class="entity date conf-pruefenswert">im August</span></td>
+                <td class="cell"><span class="entity date conf-problematisch">neulich</span></td>
+                <td class="cell"><span class="entity date conf-manuell">1879-08-23</span></td>
+            </tr>
+            <tr>
+                <td class="type-label" style="color: var(--color-bibl)">bibl</td>
+                <td class="cell"><span class="entity bibl conf-sicher">Miklosich, SbWAW 1875</span></td>
+                <td class="cell"><span class="entity bibl conf-pruefenswert">a.a.O. S. 47</span></td>
+                <td class="cell"><span class="entity bibl conf-problematisch">das Buch</span></td>
+                <td class="cell"><span class="entity bibl conf-manuell">ZfRPh III, 1879</span></td>
+            </tr>
+            <tr>
+                <td class="type-label" style="color: var(--color-term)">term</td>
+                <td class="cell"><span class="entity term conf-sicher">Lautverschiebung</span></td>
+                <td class="cell"><span class="entity term conf-pruefenswert">Substrat</span></td>
+                <td class="cell"><span class="entity term conf-problematisch">Ding</span></td>
+                <td class="cell"><span class="entity term conf-manuell">Kreolisch</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Context: Realistic paragraph -->
+    <div class="context-block">
+        <h3>Kontexttest: Realistischer Briefabsatz</h3>
+        <p>
+            Hochgeehrter Herr <span class="entity persName conf-sicher">Professor</span>! Ich erlaube mir, Ihnen mitzutheilen,
+            dass ich am <span class="entity date conf-sicher">23. August 1879</span> von
+            <span class="entity placeName conf-sicher">Graz</span> nach
+            <span class="entity placeName conf-pruefenswert">Wien</span> reisen werde, um bei der
+            <span class="entity orgName conf-pruefenswert">k.k. Akademie der Wissenschaften</span> vorzusprechen.
+            <span class="entity persName conf-sicher">Benndorf</span> hat mir
+            <span class="entity date conf-pruefenswert">letzte Woche</span> geschrieben, dass
+            <span class="entity persName conf-problematisch">M.</span> ebenfalls kommen wird.
+            Vergleiche dazu <span class="entity bibl conf-pruefenswert">Miklosich, a.a.O.</span> und den
+            <span class="entity term conf-sicher">Lautverschiebungs</span>-Aufsatz.
+            Die <span class="entity orgName conf-problematisch">Gesellschaft</span> tagt
+            <span class="entity date conf-problematisch">demnächst</span> in
+            <span class="entity placeName conf-problematisch">D.</span>
+        </p>
+    </div>
+
+    <!-- Known problem cases -->
+    <div class="problem-cases">
+        <h3>Bekannte Problemf&auml;lle</h3>
+        <ul>
+            <li>
+                <span class="entity date conf-pruefenswert">im August</span> (date + pr&uuml;fenswert)
+                – Ist die gelbe Unterstreichung auf gelbem Hintergrund erkennbar?
+                <span class="verdict" id="v-date-review"></span>
+            </li>
+            <li>
+                <span class="entity placeName conf-sicher">Graz</span> (placeName + sicher)
+                – Ist das Gr&uuml;n (Tint) vom Gr&uuml;n (Unterstreichung) unterscheidbar?
+                <span class="verdict" id="v-place-sicher"></span>
+            </li>
+            <li>
+                <span class="entity term conf-manuell">Kreolisch</span> (term + manuell)
+                – Ist Grau auf Grau lesbar?
+                <span class="verdict" id="v-term-manuell"></span>
+            </li>
+            <li>
+                <span class="entity bibl conf-problematisch">das Buch</span> vs.
+                <span class="entity term conf-problematisch">Ding</span>
+                – Sind bibl (rosa) und term (grau) bei problematisch (rot) unterscheidbar?
+                <span class="verdict" id="v-bibl-term-prob"></span>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        // Automated contrast check: verify the border-bottom color differs from the background color
+        // This is a heuristic check, not a WCAG-compliant contrast ratio
+        function hexToRgb(hex) {
+            const m = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+            return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+        }
+
+        function colorDistance(rgb1, rgb2) {
+            if (!rgb1 || !rgb2) return 999;
+            return Math.sqrt(
+                Math.pow(rgb1[0] - rgb2[0], 2) +
+                Math.pow(rgb1[1] - rgb2[1], 2) +
+                Math.pow(rgb1[2] - rgb2[2], 2)
+            );
+        }
+
+        function rgbFromComputed(str) {
+            const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+            return m ? [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])] : null;
+        }
+
+        // Check all 24 cells
+        const cells = document.querySelectorAll('.entity');
+        let allDistinguishable = true;
+
+        cells.forEach(el => {
+            const style = getComputedStyle(el);
+            const bg = rgbFromComputed(style.backgroundColor);
+            const border = rgbFromComputed(style.borderBottomColor);
+            const dist = colorDistance(bg, border);
+
+            if (dist < 60) {
+                el.title = 'Low contrast: distance=' + Math.round(dist);
+                el.style.outline = '2px solid red';
+                allDistinguishable = false;
+            }
+        });
+
+        // Check known problem cases
+        function check(id, selector1, threshold) {
+            const el = document.querySelector(selector1);
+            if (!el) return;
+            const style = getComputedStyle(el);
+            const bg = rgbFromComputed(style.backgroundColor);
+            const border = rgbFromComputed(style.borderBottomColor);
+            const dist = colorDistance(bg, border);
+            const verdict = document.getElementById(id);
+            if (!verdict) return;
+
+            if (dist >= 80) {
+                verdict.textContent = 'OK (' + Math.round(dist) + ')';
+                verdict.className = 'verdict verdict-ok';
+            } else if (dist >= 50) {
+                verdict.textContent = 'Grenzwertig (' + Math.round(dist) + ')';
+                verdict.className = 'verdict verdict-warn';
+            } else {
+                verdict.textContent = 'Nicht unterscheidbar (' + Math.round(dist) + ')';
+                verdict.className = 'verdict verdict-fail';
+            }
+        }
+
+        // Specific problem cases
+        check('v-date-review', '.entity.date.conf-pruefenswert', 60);
+        check('v-place-sicher', '.entity.placeName.conf-sicher', 60);
+        check('v-term-manuell', '.entity.term.conf-manuell', 60);
+
+        // bibl vs term at problematisch – check if the border colors differ enough
+        const biblProb = document.querySelector('.problem-cases .entity.bibl.conf-problematisch');
+        const termProb = document.querySelector('.problem-cases .entity.term.conf-problematisch');
+        if (biblProb && termProb) {
+            const b1 = rgbFromComputed(getComputedStyle(biblProb).borderBottomColor);
+            const b2 = rgbFromComputed(getComputedStyle(termProb).borderBottomColor);
+            const dist = colorDistance(b1, b2);
+            const verdict = document.getElementById('v-bibl-term-prob');
+            if (verdict) {
+                if (dist >= 60) {
+                    verdict.textContent = 'OK (' + Math.round(dist) + ')';
+                    verdict.className = 'verdict verdict-ok';
+                } else {
+                    verdict.textContent = 'Kritisch (' + Math.round(dist) + ')';
+                    verdict.className = 'verdict verdict-warn';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -22,6 +22,7 @@ Zentrales Wissenssystem für das teiCrafter-Projekt. Jedes Dokument hat eine def
 | [DECISIONS](DECISIONS.md) | Was ist offen, was wurde entschieden? | Alle | Alle |
 | [STORIES](STORIES.md) | Was muss implementiert und getestet werden? | Entwicklung, Testing | DESIGN, ARCHITECTURE, WORKFLOW |
 | [DISTILLATION](DISTILLATION.md) | Wie entstehen die TEI-Wissensmodule? | Entwicklung (Phase 3) | teiModeller |
+| [Research Landscape](research-landscape.md) | Wie positioniert sich teiCrafter in der Forschung 2025–2026? | Alle, Publikationen | teiCrafter |
 
 ## Abhängigkeitsrichtung
 
