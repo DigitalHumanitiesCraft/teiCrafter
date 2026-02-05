@@ -412,3 +412,30 @@ docs/schemas/           ← (leer, für Stufe 8)
 | `docs/js/services/storage.js` | LocalStorage-Wrapper mit `teiCrafter_`-Prefix. getSetting/setSetting/removeSetting. API-Keys werden NIE gespeichert. |
 
 **Status:** Source-Panel und Storage-Service implementiert. Import-Logik war bereits in app.js (Stufe 0).
+
+---
+
+#### Stufe 4: LLM-Konfiguration (Stories Q.1, Q.2)
+
+**Ziel:** Multi-Provider LLM-Service mit sicherer API-Key-Verwaltung.
+
+| Datei | Details |
+|---|---|
+| `docs/js/services/llm.js` | 4 Provider-Adapter (Gemini, OpenAI, Anthropic, Ollama). API-Keys in module-scoped Map (nicht window/DOM/Storage). setApiKey() validiert (max 256 Zeichen, druckbares ASCII). complete() mit credentials:'omit'. testConnection(). |
+
+**Provider-Adapter:**
+
+| Provider | Auth | Besonderheit |
+|---|---|---|
+| Gemini | URL-Param `?key=` | Modell in URL |
+| OpenAI | `Authorization: Bearer` | Standard Chat-API |
+| Anthropic | `x-api-key` + `anthropic-dangerous-direct-browser-access` | Browser-CORS |
+| Ollama | Keine | localhost:11434 |
+
+**Sicherheit:**
+- Keys nur in module-scoped `Map` (nicht exportiert)
+- `setApiKey()` validiert Input
+- Alle `fetch()` mit `credentials: 'omit'`
+- Provider und Modell in LocalStorage, Keys NIE
+
+**Status:** LLM-Service implementiert.
