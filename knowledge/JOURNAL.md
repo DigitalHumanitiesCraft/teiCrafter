@@ -458,3 +458,41 @@ docs/schemas/           ← (leer, für Stufe 8)
 **Konfidenz-Mapping:** high→sicher, medium→prüfenswert, low→problematisch, fehlend→prüfenswert (konservativ).
 
 **Status:** Transform-Service implementiert.
+
+---
+
+#### Stufe 7: Review (Stories 4.1, 4.2, 4.3)
+
+**Ziel:** Inline- und Batch-Review-Workflow für Annotationen.
+
+| Datei | Details |
+|---|---|
+| `docs/js/preview.js` | `createPreview()` – Interaktive Vorschau mit TEI-XML→HTML-Konvertierung. Inline-Review (Hover-Aktionsleiste: Accept/Edit/Reject) und Batch-Keyboard-Review (N/P/A/R/E/Escape). Fortschrittsbalken, Annotation-Focus mit Scroll-to-View. |
+| `docs/css/style.css` | Preview-Container, Konfidenz-Tint-Overlays (conf-sicher/pruefenswert/problematisch/manuell), Review-Status-Encoding (Akzeptiert=dezent, Verworfen=durchgestrichen+transparent, Editiert=dashed outline), Annotation-Focus (Gold-Outline), Hover-Bar, Batch-Review-Bar mit Fortschritt und Keyboard-Hints. |
+
+**Inline-Review (Story 4.1):**
+- Hover auf prüfenswert/problematisch → Kompakte Aktionsleiste (Accept/Edit/Reject)
+- Accept → Konfidenz→sicher, Status→akzeptiert
+- Edit → Konfidenz→manuell, Status→editiert
+- Reject → Status→verworfen (visuell durchgestrichen)
+- Bereits akzeptierte Annotationen zeigen keine Hover-Bar
+
+**Batch-Review (Story 4.2):**
+- N: Nächste offene Annotation (springt zu, scrollt, Gold-Focus)
+- P: Vorige offene Annotation
+- A/R/E: Accept/Reject/Edit + automatisch zur Nächsten
+- Escape: Batch-Mode beenden
+- Fokussierte Annotation wird per `scrollIntoView` zentriert
+
+**Fortschrittsbalken (Story 4.3):**
+- Navy-Bar am oberen Rand der Vorschau
+- "Review: X / Y geprüft" mit Proportional-Balken (Gold)
+- Aktuelle Annotation: Tag-Name + Text-Vorschau
+- Keyboard-Hints als kbd-Elemente
+- "Alle Annotationen geprüft!" bei Abschluss
+
+**Dual-Channel-Encoding in Review:**
+- Typ-Kanal: Unterstreichungsfarbe (entity.persName/placeName/...)
+- Konfidenz-Kanal: Hintergrund-Tint + Unterstreichungsstil (solid=sicher, dashed=prüfenswert, dotted=problematisch, double=manuell)
+
+**Status:** Preview-Modul und Review-CSS implementiert.
