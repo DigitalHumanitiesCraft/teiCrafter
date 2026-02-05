@@ -81,8 +81,8 @@
         window.__test = { describe, it, assert, assertEqual };
 
         // --- Import and run test modules ---
+        await import('./tokenizer.test.js');
         // Tests will be added in later Stufen:
-        // import('./tokenizer.test.js');
         // import('./model.test.js');
         // import('./transform.test.js');
         // import('./validator.test.js');

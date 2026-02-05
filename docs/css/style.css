@@ -2069,6 +2069,73 @@ body {
 }
 
 /* =============================================================================
+   Overlay Editor (Textarea + Pre)
+   ============================================================================= */
+
+.editor-overlay {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.editor-overlay .editor-textarea,
+.editor-overlay .editor-pre {
+    /* Identical typography for pixel-perfect alignment */
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-code);
+    white-space: pre;
+    tab-size: 2;
+    padding: var(--space-md);
+    margin: 0;
+    border: none;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    word-wrap: normal;
+    letter-spacing: 0;
+}
+
+.editor-overlay .editor-textarea {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    color: transparent;
+    caret-color: var(--color-text);
+    background: transparent;
+    resize: none;
+    outline: none;
+    -webkit-text-fill-color: transparent;
+}
+
+.editor-overlay .editor-textarea::selection {
+    background: rgba(59, 125, 216, 0.25);
+    -webkit-text-fill-color: transparent;
+}
+
+.editor-overlay .editor-pre {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: var(--color-panel);
+    color: var(--syntax-text);
+}
+
+/* Syntax highlighting classes */
+.xml-element   { color: var(--syntax-element); font-weight: 500; }
+.xml-attr      { color: var(--syntax-attr); }
+.xml-value     { color: var(--syntax-value); }
+.xml-delimiter { color: var(--syntax-delimiter); }
+.xml-comment   { color: var(--syntax-comment); font-style: italic; }
+.xml-pi        { color: var(--syntax-pi); }
+.xml-namespace { color: var(--syntax-namespace); }
+.xml-entity    { color: var(--syntax-entity); }
+
+/* =============================================================================
    Toast Notifications
    ============================================================================= */
 

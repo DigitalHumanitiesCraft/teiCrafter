@@ -353,3 +353,32 @@ docs/schemas/           ← (leer, für Stufe 8)
 **Außerdem:** `knowledge/INDEX.md` aktualisiert – `research-landscape.md` in Dokumentenliste aufgenommen.
 
 **Status:** Testmatrix erstellt, bereit für visuelle Inspektion.
+
+---
+
+#### Stufe 1: Overlay-Spike (Story 0.2)
+
+**Ziel:** Beweis, dass die Overlay-Technik (Textarea + Pre) mit State-Machine-Tokenizer funktioniert.
+
+**Erstellt:**
+
+| Datei | Details |
+|---|---|
+| `docs/js/tokenizer.js` | State-Machine XML-Tokenizer (reine Funktion). 9 Token-Typen: element, attrName, attrValue, delimiter, comment, pi, namespace, entity, text. Invariante: lückenlose, überlappungsfreie Abdeckung des Inputs. Graceful bei malformed XML. |
+| `docs/js/editor.js` | Overlay-Editor: `createOverlayEditor(container, options)`. Textarea (color: transparent, caret-color: sichtbar) über Pre (syntax-highlighted, pointer-events: none). Scroll-Sync, rAF-Debouncing, Tab-Insertion. |
+| `docs/tests/tokenizer.test.js` | 17 Unit-Tests: leerer String, einfache Elemente, Attribute, Kommentare, PIs, Entities, Namespace-Prefixe, xmlns, Coverage-Invariante, malformed XML, Performance (<50ms für 500 Zeilen). |
+| `docs/css/style.css` | `.editor-overlay`, `.editor-textarea`, `.editor-pre` mit identischer Typografie. Syntax-Klassen: `.xml-element`, `.xml-attr`, `.xml-value`, `.xml-delimiter`, `.xml-comment`, `.xml-pi`, `.xml-namespace`, `.xml-entity`. |
+
+**Tokenizer-Architektur:**
+- State Machine mit Zuständen: TEXT → TAG_OPEN → TAG_NAME → ATTR_SPACE → ATTR_NAME → ATTR_EQ → ATTR_VALUE
+- Sonderzustände: COMMENT, PI, CDATA, ENTITY, CLOSE_TAG
+- Namespace-Erkennung: `tei:TEI` → NAMESPACE(`tei:`) + ELEMENT(`TEI`), `xmlns` → NAMESPACE
+- Keine Exceptions bei ungültigem Input
+
+**Overlay-Architektur:**
+- Container (position: relative) mit Textarea (z-index: 2, transparent) und Pre (z-index: 1, pointer-events: none)
+- Identische CSS: font-family, font-size, line-height, padding, white-space, tab-size
+- Scroll-Sync: `textarea.onscroll → pre.scrollTop/Left = textarea.scrollTop/Left`
+- Debouncing: `requestAnimationFrame` für Re-Highlighting bei Input
+
+**Status:** Tokenizer und Overlay-Editor implementiert, Unit-Tests erstellt.
