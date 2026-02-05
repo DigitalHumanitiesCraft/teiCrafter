@@ -399,3 +399,16 @@ docs/schemas/           ← (leer, für Stufe 8)
 | `docs/css/style.css` | Gutter-CSS: `.editor-gutter`, `.gutter-line`, `.gutter-marker-*`. Flexbox-Layout. |
 
 **Status:** Model, Gutter-Editor und Tests implementiert.
+
+---
+
+#### Stufe 3: Import (Stories 1.1, 1.2, 1.3)
+
+**Ziel:** Source-Panel-Modul und Storage-Service extrahieren.
+
+| Datei | Details |
+|---|---|
+| `docs/js/source.js` | `createSourcePanel()` – Quelltext-Anzeige mit Plaintext/Digitalisat-Tabs. Wiederverwendbar in Transform- und Validate-Steps. |
+| `docs/js/services/storage.js` | LocalStorage-Wrapper mit `teiCrafter_`-Prefix. getSetting/setSetting/removeSetting. API-Keys werden NIE gespeichert. |
+
+**Status:** Source-Panel und Storage-Service implementiert. Import-Logik war bereits in app.js (Stufe 0).
