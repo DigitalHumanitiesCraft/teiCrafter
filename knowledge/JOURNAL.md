@@ -525,3 +525,32 @@ docs/schemas/           ← (leer, für Stufe 8)
 - Pro Element: allowedChildren, allowedParents, Attribut-Definitionen
 
 **Status:** Validator, Schema-Service, Schema-Profil und Tests implementiert.
+
+---
+
+#### Stufe 9: Export (Stories 6.1, 6.2)
+
+**Ziel:** TEI-XML exportieren mit Attribut-Bereinigung und Ungeprüft-Warnung.
+
+| Datei | Details |
+|---|---|
+| `docs/js/services/export.js` | `prepareExport()` – Attribut-Bereinigung (@confidence, @resp). `getExportStats()` – Zeilen/Entitäten-Zählung. `downloadXml()` – Blob-Download. `copyToClipboard()` – Zwischenablage (mit Fallback). `getExportFileName()` – Dateiname-Generierung. |
+
+**Attribut-Bereinigung:**
+
+| Attribut | Standard-Export | Option "Beibehalten" |
+|---|---|---|
+| `@confidence` | Entfernt | Beibehalten (high/medium/low) |
+| `@resp="#machine"` | Entfernt | Umgewandelt in `@resp="#teiCrafter"` |
+| Review-Status | Nicht exportiert | — |
+
+**Export-Formate:**
+- Vollständiges TEI-XML (mit teiHeader)
+- Nur `<body>` (für Import in bestehende Editionen)
+
+**Sicherheit:**
+- Download über `Blob` + `URL.createObjectURL()` (kein Server-Roundtrip)
+- Clipboard mit `navigator.clipboard.writeText()` + `execCommand('copy')` Fallback
+- XML-Serialisierung über `XMLSerializer` (garantiert wohlgeformte Ausgabe)
+
+**Status:** Export-Service implementiert. Alle 10 Stufen abgeschlossen.
