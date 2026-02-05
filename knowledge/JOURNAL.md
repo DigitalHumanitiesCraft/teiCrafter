@@ -439,3 +439,22 @@ docs/schemas/           ← (leer, für Stufe 8)
 - Provider und Modell in LocalStorage, Keys NIE
 
 **Status:** LLM-Service implementiert.
+
+---
+
+#### Stufe 5: Mapping / Stufe 6: Transform (Stories 2.1, 2.2, 3.1, 3.2, 3.3)
+
+**Ziel:** Dreischichten-Prompt-Assemblierung, Response-Parsing, Konfidenz-Extraktion.
+
+| Datei | Details |
+|---|---|
+| `docs/js/services/transform.js` | `assemblePrompt()` (Basis + Kontext + Mapping), `getPromptLayers()` (UI-Preview), `transform()` (LLM-Call + Parse), `extractXmlFromResponse()`, `extractConfidenceMap()`, `compareText()`. |
+
+**Dreischichten-Prompt:**
+1. **Basis:** Wohlgeformtheit, Texterhalt, @confidence/@resp, Präzision vor Recall
+2. **Kontext:** Quellentyp, Sprache, Epoche, Projekt
+3. **Mapping:** Projektspezifische Annotationsregeln (filterbar nach gewählten Typen)
+
+**Konfidenz-Mapping:** high→sicher, medium→prüfenswert, low→problematisch, fehlend→prüfenswert (konservativ).
+
+**Status:** Transform-Service implementiert.
