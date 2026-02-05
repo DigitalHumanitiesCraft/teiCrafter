@@ -2077,10 +2077,56 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
+    display: flex;
 }
 
-.editor-overlay .editor-textarea,
-.editor-overlay .editor-pre {
+.editor-overlay.editor-has-gutter {
+    /* Gutter takes fixed width, editor-area fills rest */
+}
+
+/* Gutter */
+.editor-gutter {
+    width: var(--gutter-width);
+    min-width: var(--gutter-width);
+    background: var(--color-gutter);
+    border-right: 1px solid var(--color-border-light);
+    overflow: hidden;
+    user-select: none;
+    padding-top: var(--space-md);
+}
+
+.gutter-line {
+    display: flex;
+    align-items: center;
+    height: calc(var(--font-size-sm) * var(--line-height-code));
+    padding: 0 6px 0 0;
+    border-left: 3px solid transparent;
+}
+
+.gutter-number {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-align: right;
+    width: 100%;
+    display: block;
+}
+
+/* Gutter confidence markers */
+.gutter-marker-sicher        { border-left-color: var(--color-confident); }
+.gutter-marker-pruefenswert  { border-left-color: var(--color-review); }
+.gutter-marker-problematisch { border-left-color: var(--color-problem); }
+.gutter-marker-manuell       { border-left-color: var(--color-manual); }
+
+/* Editor area (pre + textarea) */
+.editor-area {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+}
+
+.editor-area .editor-textarea,
+.editor-area .editor-pre {
     /* Identical typography for pixel-perfect alignment */
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
@@ -2097,7 +2143,7 @@ body {
     letter-spacing: 0;
 }
 
-.editor-overlay .editor-textarea {
+.editor-area .editor-textarea {
     position: absolute;
     top: 0;
     left: 0;
@@ -2110,12 +2156,12 @@ body {
     -webkit-text-fill-color: transparent;
 }
 
-.editor-overlay .editor-textarea::selection {
+.editor-area .editor-textarea::selection {
     background: rgba(59, 125, 216, 0.25);
     -webkit-text-fill-color: transparent;
 }
 
-.editor-overlay .editor-pre {
+.editor-area .editor-pre {
     position: absolute;
     top: 0;
     left: 0;

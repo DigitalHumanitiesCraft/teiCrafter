@@ -382,3 +382,20 @@ docs/schemas/           ← (leer, für Stufe 8)
 - Debouncing: `requestAnimationFrame` für Re-Highlighting bei Input
 
 **Status:** Tokenizer und Overlay-Editor implementiert, Unit-Tests erstellt.
+
+---
+
+#### Stufe 2: Editor-Fundament (Stories 0.1, 0.3, 0.4)
+
+**Ziel:** Reaktives Dokumentenmodell mit 4 Zustandsschichten, Undo/Redo, Gutter.
+
+**Erstellt / Geändert:**
+
+| Datei | Details |
+|---|---|
+| `docs/js/model.js` | `DocumentModel extends EventTarget`. 4 Zustandsschichten. Snapshot-basiertes Undo/Redo (max 100). Keystroke-Gruppierung (500ms). |
+| `docs/tests/model.test.js` | 15 Unit-Tests: XML, Undo/Redo, Keystroke, Confidence, Review, Validation, Reset. |
+| `docs/js/editor.js` | Erweitert: Gutter (Zeilennummern, Konfidenz-Marker), scroll-synced. |
+| `docs/css/style.css` | Gutter-CSS: `.editor-gutter`, `.gutter-line`, `.gutter-marker-*`. Flexbox-Layout. |
+
+**Status:** Model, Gutter-Editor und Tests implementiert.

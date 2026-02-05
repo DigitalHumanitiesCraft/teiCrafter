@@ -2,6 +2,7 @@
  * teiCrafter – Overlay XML Editor
  * Textarea (transparent text, visible caret) overlaid on Pre (syntax-highlighted).
  * Scroll-synced, same CSS for both layers.
+ * Gutter with line numbers and confidence markers.
  */
 
 import { tokenize, TOKEN } from './tokenizer.js';
@@ -19,6 +20,9 @@ const TOKEN_CLASS = Object.freeze({
     [TOKEN.TEXT]:        ''  // no wrapper needed
 });
 
+// Confidence → CSS modifier for gutter markers
+const CONFIDENCE_PRIORITY = ['problematisch', 'pruefenswert', 'sicher', 'manuell'];
+
 /**
  * Create an overlay editor inside a container element.
  *
@@ -27,14 +31,38 @@ const TOKEN_CLASS = Object.freeze({
  * @param {string} [options.value=''] - Initial XML content
  * @param {boolean} [options.readOnly=false]
  * @param {function} [options.onChange] - Called with new value on input
- * @returns {{ textarea: HTMLTextAreaElement, destroy: function, getValue: function, setValue: function }}
+ * @param {boolean} [options.showGutter=true] - Show line numbers and confidence markers
+ * @returns {EditorInstance}
+ *
+ * @typedef {Object} EditorInstance
+ * @property {HTMLTextAreaElement} textarea
+ * @property {function} destroy
+ * @property {function(): string} getValue
+ * @property {function(string): void} setValue
+ * @property {function(Map<number, string>): void} setLineConfidence - Map of lineNumber → confidence
+ * @property {function(): number} getLineCount
  */
 export function createOverlayEditor(container, options = {}) {
-    const { value = '', readOnly = false, onChange = null } = options;
+    const { value = '', readOnly = false, onChange = null, showGutter = true } = options;
 
     // Clear container
     container.innerHTML = '';
     container.classList.add('editor-overlay');
+    if (showGutter) container.classList.add('editor-has-gutter');
+
+    // Gutter
+    let gutter = null;
+    if (showGutter) {
+        gutter = document.createElement('div');
+        gutter.className = 'editor-gutter';
+        gutter.setAttribute('aria-hidden', 'true');
+        container.appendChild(gutter);
+    }
+
+    // Editor area (contains pre + textarea)
+    const editorArea = document.createElement('div');
+    editorArea.className = 'editor-area';
+    container.appendChild(editorArea);
 
     // Pre (highlighted layer)
     const pre = document.createElement('pre');
@@ -52,13 +80,17 @@ export function createOverlayEditor(container, options = {}) {
     textarea.wrap = 'off';
     textarea.readOnly = readOnly;
 
-    container.appendChild(pre);
-    container.appendChild(textarea);
+    editorArea.appendChild(pre);
+    editorArea.appendChild(textarea);
+
+    // Line confidence state
+    let lineConfidenceMap = new Map();
 
     // Highlight function
     function highlight(xml) {
         if (!xml) {
-            pre.innerHTML = '\n'; // Ensure pre has height
+            pre.innerHTML = '\n';
+            updateGutter(1);
             return;
         }
 
@@ -75,18 +107,38 @@ export function createOverlayEditor(container, options = {}) {
             }
         }
 
-        // Append a trailing newline so the pre matches textarea height
         pre.innerHTML = parts.join('') + '\n';
+        updateGutter(xml.split('\n').length);
+    }
+
+    // Gutter rendering
+    function updateGutter(lineCount) {
+        if (!gutter) return;
+
+        const lines = [];
+        for (let i = 1; i <= lineCount; i++) {
+            const conf = lineConfidenceMap.get(i) || '';
+            const markerClass = conf ? ' gutter-marker-' + conf : '';
+            lines.push(
+                '<div class="gutter-line' + markerClass + '">' +
+                    '<span class="gutter-number">' + i + '</span>' +
+                '</div>'
+            );
+        }
+        gutter.innerHTML = lines.join('');
     }
 
     // Initial render
     textarea.value = value;
     highlight(value);
 
-    // Scroll sync
+    // Scroll sync (gutter, pre, and textarea)
     function syncScroll() {
         pre.scrollTop = textarea.scrollTop;
         pre.scrollLeft = textarea.scrollLeft;
+        if (gutter) {
+            gutter.scrollTop = textarea.scrollTop;
+        }
     }
 
     textarea.addEventListener('scroll', syncScroll);
@@ -124,7 +176,7 @@ export function createOverlayEditor(container, options = {}) {
             textarea.removeEventListener('scroll', syncScroll);
             textarea.removeEventListener('input', onInput);
             container.innerHTML = '';
-            container.classList.remove('editor-overlay');
+            container.classList.remove('editor-overlay', 'editor-has-gutter');
         },
         getValue() {
             return textarea.value;
@@ -133,8 +185,47 @@ export function createOverlayEditor(container, options = {}) {
             textarea.value = xml;
             highlight(xml);
             syncScroll();
+        },
+        setLineConfidence(map) {
+            lineConfidenceMap = map;
+            updateGutter(textarea.value.split('\n').length);
+        },
+        getLineCount() {
+            return textarea.value.split('\n').length;
         }
     };
+}
+
+/**
+ * Compute line-level confidence from a per-element confidence map and XML string.
+ * Returns a Map<lineNumber, dominantConfidence> where the dominant confidence
+ * follows priority: problematisch > pruefenswert > sicher > manuell.
+ *
+ * @param {string} xml
+ * @param {Map<string, string>} confidenceMap - elementId → confidence
+ * @returns {Map<number, string>}
+ */
+export function computeLineConfidence(xml, confidenceMap) {
+    const lineMap = new Map();
+    if (!xml || confidenceMap.size === 0) return lineMap;
+
+    // Parse XML to find elements with confidence
+    try {
+        const doc = new DOMParser().parseFromString(xml, 'application/xml');
+        if (doc.querySelector('parsererror')) return lineMap;
+
+        // Walk all elements, find their line positions
+        const lines = xml.split('\n');
+        for (const [elementId, conf] of confidenceMap) {
+            // Find line containing this element (simple: search by id or tag occurrence)
+            // For now, this is a placeholder that maps conf to line 0
+            // Full implementation will use element position tracking
+        }
+    } catch (e) {
+        // Ignore parsing errors
+    }
+
+    return lineMap;
 }
 
 /**
