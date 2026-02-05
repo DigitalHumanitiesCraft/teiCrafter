@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>teiCrafter – Test Runner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: #FAFAF7; color: #1A1A1A; padding: 24px; }
+        h1 { font-size: 1.25rem; color: #1E3A5F; margin-bottom: 16px; }
+        .suite { margin-bottom: 24px; border: 1px solid #D0D4DC; border-radius: 6px; overflow: hidden; }
+        .suite-header { background: #F2F4F8; padding: 8px 12px; font-weight: 600; font-size: 0.875rem; }
+        .test { padding: 6px 12px; border-top: 1px solid #E8EAED; font-size: 0.8125rem; display: flex; gap: 8px; align-items: center; }
+        .test .icon { width: 16px; text-align: center; }
+        .pass { color: #2D8A70; }
+        .fail { color: #C0392B; }
+        .error-msg { color: #C0392B; font-family: monospace; font-size: 0.75rem; margin-left: 24px; padding: 4px 0; }
+        .summary { margin-top: 16px; padding: 12px; border-radius: 6px; font-weight: 600; }
+        .summary.all-pass { background: #E8F5F0; color: #2D8A70; }
+        .summary.has-fail { background: #FDECEB; color: #C0392B; }
+    </style>
+</head>
+<body>
+    <h1>[ tei <span style="color:#CC8A1E">Crafter</span> ] Test Runner</h1>
+    <div id="output"></div>
+    <div id="summary"></div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+        const summaryEl = document.getElementById('summary');
+        let totalPass = 0, totalFail = 0;
+        let currentSuite = null;
+        let currentContainer = null;
+
+        function describe(name, fn) {
+            const suite = document.createElement('div');
+            suite.className = 'suite';
+            const header = document.createElement('div');
+            header.className = 'suite-header';
+            header.textContent = name;
+            suite.appendChild(header);
+            output.appendChild(suite);
+            currentSuite = name;
+            currentContainer = suite;
+            fn();
+            currentSuite = null;
+            currentContainer = null;
+        }
+
+        function it(name, fn) {
+            const row = document.createElement('div');
+            row.className = 'test';
+            try {
+                fn();
+                totalPass++;
+                row.innerHTML = '<span class="icon pass">&#10003;</span><span>' + name + '</span>';
+            } catch (e) {
+                totalFail++;
+                row.innerHTML = '<span class="icon fail">&#10007;</span><span>' + name + '</span>';
+                const errRow = document.createElement('div');
+                errRow.className = 'error-msg';
+                errRow.textContent = e.message;
+                currentContainer.appendChild(row);
+                currentContainer.appendChild(errRow);
+                return;
+            }
+            currentContainer.appendChild(row);
+        }
+
+        function assert(condition, msg) {
+            if (!condition) throw new Error(msg || 'Assertion failed');
+        }
+
+        function assertEqual(actual, expected, msg) {
+            if (actual !== expected) {
+                throw new Error((msg || 'assertEqual') + ': expected ' + JSON.stringify(expected) + ', got ' + JSON.stringify(actual));
+            }
+        }
+
+        // Expose globally for test modules
+        window.__test = { describe, it, assert, assertEqual };
+
+        // --- Import and run test modules ---
+        // Tests will be added in later Stufen:
+        // import('./tokenizer.test.js');
+        // import('./model.test.js');
+        // import('./transform.test.js');
+        // import('./validator.test.js');
+
+        // --- Smoke test for module system ---
+        const { CONFIDENCE, DEMO_CONFIGS, ICONS } = await import('../js/utils/constants.js');
+        const { escHtml, $ } = await import('../js/utils/dom.js');
+
+        describe('Module System', () => {
+            it('constants.js exports CONFIDENCE enum', () => {
+                assert(CONFIDENCE.SICHER === 'sicher', 'CONFIDENCE.SICHER should be "sicher"');
+                assert(CONFIDENCE.PRUEFENSWERT === 'pruefenswert');
+                assert(CONFIDENCE.PROBLEMATISCH === 'problematisch');
+                assert(CONFIDENCE.MANUELL === 'manuell');
+            });
+
+            it('constants.js exports DEMO_CONFIGS with 3 entries', () => {
+                const keys = Object.keys(DEMO_CONFIGS);
+                assertEqual(keys.length, 3, 'DEMO_CONFIGS count');
+                assert(keys.includes('hsa-letter'));
+                assert(keys.includes('dta-print'));
+                assert(keys.includes('recipe'));
+            });
+
+            it('constants.js exports ICONS with all required keys', () => {
+                assert(ICONS.letter, 'ICONS.letter');
+                assert(ICONS.book, 'ICONS.book');
+                assert(ICONS.recipe, 'ICONS.recipe');
+                assert(ICONS.upload, 'ICONS.upload');
+                assert(ICONS.success, 'ICONS.success');
+                assert(ICONS.settings, 'ICONS.settings');
+            });
+        });
+
+        describe('DOM Utilities', () => {
+            it('escHtml escapes all dangerous characters', () => {
+                assertEqual(escHtml('<script>alert("xss")</script>'),
+                    '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+            });
+
+            it('escHtml handles empty string', () => {
+                assertEqual(escHtml(''), '');
+            });
+
+            it('escHtml handles non-string input', () => {
+                assertEqual(escHtml(null), '');
+                assertEqual(escHtml(undefined), '');
+            });
+
+            it('escHtml escapes ampersand, single quotes', () => {
+                assertEqual(escHtml("Tom & Jerry's"), 'Tom &amp; Jerry&#39;s');
+            });
+
+            it('$ selector returns element', () => {
+                const el = $('h1');
+                assert(el !== null, '$ should find h1');
+            });
+        });
+
+        // Show summary
+        const total = totalPass + totalFail;
+        summaryEl.className = 'summary ' + (totalFail === 0 ? 'all-pass' : 'has-fail');
+        summaryEl.textContent = totalPass + '/' + total + ' tests passed' + (totalFail > 0 ? ', ' + totalFail + ' failed' : '');
+    </script>
+</body>
+</html>

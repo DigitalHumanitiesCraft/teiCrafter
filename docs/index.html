@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>teiCrafter – LLM-unterstützte TEI-Annotation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- HEADER (TEI-Navy) -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="logo">[ tei <span class="logo-accent">Crafter</span> ]</h1>
+            </div>
+
+            <!-- WORKFLOW STEPPER (5 Schritte) -->
+            <nav class="workflow-stepper" aria-label="Workflow-Schritte">
+                <ol class="stepper-list">
+                    <li class="stepper-step active" data-step="1">
+                        <span class="step-label">Import</span>
+                    </li>
+                    <li class="step-connector"></li>
+                    <li class="stepper-step" data-step="2">
+                        <span class="step-label">Mapping</span>
+                    </li>
+                    <li class="step-connector"></li>
+                    <li class="stepper-step" data-step="3">
+                        <span class="step-label">Transform</span>
+                    </li>
+                    <li class="step-connector"></li>
+                    <li class="stepper-step" data-step="4">
+                        <span class="step-label">Validate</span>
+                    </li>
+                    <li class="step-connector"></li>
+                    <li class="stepper-step" data-step="5">
+                        <span class="step-label">Export</span>
+                    </li>
+                </ol>
+            </nav>
+
+            <div class="header-right">
+                <span class="model-badge">
+                    <span class="model-icon">●</span>
+                    <span id="model-name">Kein Modell</span>
+                </span>
+                <button class="btn-icon" id="btn-settings" aria-label="Einstellungen" title="Einstellungen">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT: Dynamically rendered by JavaScript based on current step -->
+        <main class="app-main step-1">
+            <!-- Content will be rendered by app.js based on current workflow step -->
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="app-footer">
+            <div class="footer-left">
+                <span class="status-indicator ready">●</span>
+                <span id="footer-status">Bereit</span>
+            </div>
+            <div class="footer-right">
+                <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank" rel="noopener">GitHub</a>
+                <span class="separator">|</span>
+                <a href="https://doi.org/10.5281/zenodo.8425163" target="_blank" rel="noopener">FORGE 2023</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- JSZip for DOCX support (loaded as global, used lazily) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
