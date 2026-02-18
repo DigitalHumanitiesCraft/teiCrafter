@@ -1,16 +1,11 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, architecture, state, editor, odd]
-status: active
----
-
 # Technische Architektur
 
 Systemdesign für teiCrafter. Client-only, kein Backend.
 
+Stand: 2026-02-18. Status-Tags: `[Implementiert]` `[Teilweise]` `[Geplant]`
+
 **Abhängigkeit:** [DESIGN.md](DESIGN.md) (visuelle Vorgaben), [WORKFLOW.md](WORKFLOW.md) (LLM-Integration und Review-Workflow)
+**Technische Details:** [MODULES.md](MODULES.md) (Public APIs pro Modul), [STATUS.md](STATUS.md) (Ist-Stand)
 
 ---
 
@@ -57,13 +52,15 @@ Systemdesign für teiCrafter. Client-only, kein Backend.
 
 ---
 
-## 2. Reaktives Dokumentenmodell
+## 2. Reaktives Dokumentenmodell `[Implementiert – nicht in app.js verdrahtet]`
+
+> **Ist-Stand:** Die Klasse `DocumentModel` in model.js ist vollständig implementiert und getestet (21 Tests). Aber app.js nutzt einen einfachen `AppState`-Objekt statt des DocumentModel. Die Observer-Verdrahtung (Views registrieren sich als Listener) existiert daher noch nicht. Siehe [STATUS.md](STATUS.md).
 
 ### 2.1 Single Source of Truth
 
 Alle Ansichten (XML-Editor, Vorschau, Validierung, Review, Attribut-Tab) sind Projektionen eines gemeinsamen Dokumentenmodells. Es gibt keine direkte Kommunikation zwischen den Ansichten. Jede Ansicht registriert sich als Beobachter (Observer) des Modells. Das verhindert Zyklen und garantiert Konsistenz.
 
-### 2.2 Zustandsschichten
+### 2.2 Zustandsschichten `[Implementiert in model.js – nicht verdrahtet]`
 
 Das Dokumentenmodell hält vier Zustandsschichten, die gemeinsam eine Dokumentversion bilden.
 
@@ -74,7 +71,7 @@ Das Dokumentenmodell hält vier Zustandsschichten, die gemeinsam eine Dokumentve
 | **Validierung** | Liste von Nachrichten mit Dokumentpositionen | Schema-Prüfung (automatisch) | Neuberechnung bei Dokumentänderung |
 | **Review-Status** | Pro prüfenswert/problematischem Element: offen/akzeptiert/editiert/verworfen | Transform (alles "offen") | Review-Aktionen |
 
-### 2.3 Zustandspropagation
+### 2.3 Zustandspropagation `[Soll-Zustand – nicht verdrahtet]`
 
 ```
 Benutzeraktion (Editor oder Vorschau)
@@ -90,9 +87,11 @@ Benutzeraktion (Editor oder Vorschau)
 
 Die Validierungsschicht wird bei jeder Dokumentänderung neu berechnet, unterbricht aber niemals das Editieren. Invalide Zustände sind während des Editierens normal und werden toleriert. Fehler werden visuell markiert, blockieren aber keine Aktionen.
 
-### 2.4 Implementierungsmuster
+### 2.4 Implementierungsmuster `[Implementiert in model.js – Events definiert, aber keine Listener registriert]`
 
 Das Dokumentenmodell wird als Klasse implementiert, die EventTarget erweitert (natives Browser-API, keine Bibliothek). Jede Zustandsänderung feuert ein typisiertes Event.
+
+> **Hinweis:** Die Event-Tabelle unten beschreibt den Soll-Zustand. model.js feuert `documentChanged`, `confidenceChanged`, `validationComplete`, `reviewAction` und `undoRedo`. Die Events `selectionChanged` und `transformComplete` sind noch nicht implementiert.
 
 | Event | Payload | Auslöser |
 |---|---|---|
@@ -106,7 +105,7 @@ Das Dokumentenmodell wird als Klasse implementiert, die EventTarget erweitert (n
 
 ---
 
-## 3. Undo/Redo
+## 3. Undo/Redo `[Implementiert]`
 
 ### 3.1 Prinzip
 
@@ -130,7 +129,7 @@ Der Undo-Stack hält maximal 100 Einträge. Bei Überschreitung wird der ältest
 
 ---
 
-## 4. Editor-Entscheidung
+## 4. Editor-Entscheidung `[Implementiert – Overlay]`
 
 ### 4.1 Anforderungen
 
@@ -182,13 +181,13 @@ Der Undo-Stack hält maximal 100 Einträge. Bei Überschreitung wird der ältest
 
 **Nicht empfohlen.** Option C (ContentEditable) wegen der Browser-Inkonsistenzen und der Schwierigkeit, einen konsistenten Zustand zwischen DOM und Dokumentenmodell zu halten.
 
-### 4.4 Spike-Kriterium
+### 4.4 Spike-Ergebnis ✅
 
-Bevor die endgültige Entscheidung fällt, sollte ein Spike die Overlay-Technik mit einem TEI-Dokument von 500 Zeilen testen. Wenn Scroll-Drift oder Cursor-Mapping-Probleme auftreten, wechselt die Empfehlung zu CodeMirror 6.
+Der Overlay-Spike wurde in Stufe 1 (Session 8) durchgeführt. Ergebnis: Kein Scroll-Drift bei 500-Zeilen-Dokumenten. Die Overlay-Technik wird für den Prototyp verwendet. CodeMirror 6 bleibt als Upgrade-Pfad für die Produktionsversion.
 
 ---
 
-## 5. XML-Tokenizer
+## 5. XML-Tokenizer `[Implementiert]`
 
 Unabhängig von der Editor-Entscheidung wird ein eigener XML-Tokenizer benötigt, der Token-Typen für das Syntax-Highlighting und für die Konfidenz-Integration liefert.
 
@@ -216,7 +215,7 @@ Der Tokenizer selbst kennt keine Konfidenz. Die Zuordnung geschieht in einer nac
 
 ---
 
-## 6. Schema-Führung (ODD-basiert)
+## 6. Schema-Führung (ODD-basiert) `[Teilweise – Stufe 1]`
 
 ### 6.1 Prinzip
 
@@ -258,7 +257,7 @@ Das erlaubt es, die UX der Autovervollständigung und der Inline-Validierung fr�
 
 ---
 
-## 7. LLM-Integration
+## 7. LLM-Integration `[Implementiert und in app.js verdrahtet]`
 
 ### 7.1 Provider
 
@@ -271,7 +270,9 @@ Das erlaubt es, die UX der Autovervollständigung und der Inline-Validierung fr�
 
 ### 7.2 API-Key-Handling
 
-Identisch zum [[coOCR HTR]]-Sicherheitsmodell. Keys im Browser-Memory, kein localStorage, kein Backend. Flüchtig (Tab schließen = weg). DevTools-sichtbar. Ollama als komplett lokale Alternative.
+Keys im Browser-Memory (module-scoped Map in llm.js), kein localStorage, kein Backend. Flüchtig (Tab schließen = weg). DevTools-sichtbar. Ollama als komplett lokale Alternative.
+
+**Ist-Stand:** llm.js ist voll funktional mit 4 Providern, aber app.js importiert es nicht. Der Transform-Button in Schritt 3 ruft aktuell eine Dummy-Funktion (`generateBasicTei()`) auf. Siehe [STATUS.md](STATUS.md) für Details.
 
 ### 7.3 Transform-Service
 
@@ -281,7 +282,7 @@ Der Service liefert zwei Outputs. Erstens, den annotierten TEI-XML-Baum. Zweiten
 
 ---
 
-## 8. Dateistruktur
+## 8. Dateistruktur `[Implementiert]`
 
 ```
 docs/
@@ -335,7 +336,9 @@ Falls die Editor-Entscheidung (Abschnitt 4) zu CodeMirror 6 führt, wäre das di
 
 ---
 
-## 10. Datenflüsse
+## 10. Datenflüsse `[Teilweise – Soll-Zustand]`
+
+> **Hinweis:** Die Service-Integration (Stufen 11–13) ist abgeschlossen: app.js ruft transform.js, validator.js und export.js auf. Aber: app.js nutzt weiterhin einen einfachen `AppState` statt des `DocumentModel`, und die View-Module (editor.js, preview.js, source.js) sind noch nicht eingebunden. Die folgenden Datenflüsse beschreiben daher teilweise noch den **Soll-Zustand**. Siehe [STATUS.md](STATUS.md) für den Ist-Stand.
 
 ### Import → Transform → Review → Export
 
@@ -381,6 +384,8 @@ Benutzer klickt Annotation in Vorschau
 
 ---
 
-**Abhängigkeiten:**
-- [DESIGN.md](DESIGN.md) für visuelle Vorgaben
-- [WORKFLOW.md](WORKFLOW.md) für LLM-Integration und Review-Workflow
+**Verknüpfte Dokumente:**
+- [DESIGN.md](DESIGN.md) — Visuelle Vorgaben
+- [WORKFLOW.md](WORKFLOW.md) — LLM-Integration und Review-Workflow
+- [MODULES.md](MODULES.md) — Public APIs aller Module
+- [STATUS.md](STATUS.md) — Implementierungs-Ist-Stand

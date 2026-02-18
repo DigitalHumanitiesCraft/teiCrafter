@@ -1,14 +1,8 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, decisions, implementation, planning]
-status: active
----
-
 # Offene Entscheidungen und Implementierungsplan
 
-Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jede Entscheidung verweist auf das Dokument, das den fachlichen Kontext liefert. Entschiedene Punkte werden mit Datum und Begründung dokumentiert.
+Konsolidierte Übersicht aller offenen und entschiedenen Punkte im teiCrafter-Projekt. Jede Entscheidung verweist auf das Dokument, das den fachlichen Kontext liefert.
+
+Stand: 2026-02-18 (Session 11)
 
 ---
 
@@ -16,48 +10,31 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 | Entscheidung | Ergebnis | Begründung | Datum |
 |---|---|---|---|
-| Rechtes Panel: Tab-Struktur | Vorschau + Review integriert, Validierung, Attribute | Review ist keine eigenständige Tätigkeit, sondern eine Schicht über der Vorschau. Attribut-Tab ist funktional notwendig für Edit-Aktion. | 2026-02-05 |
-| Editor-Optionen | Overlay (Prototyp), CodeMirror 6 (Produkt). Kein Monaco, kein ContentEditable. | Monaco zu groß (~2MB), ContentEditable zu fragil. Overlay genügt für Prototyp, CM6 für Produkt. | 2026-02-05 |
-| Prompt-Architektur | Dreischichten-Modell (Basis, Kontext, Mapping) als führend | Trennung ermöglicht stabile Basisregeln bei flexibler Projekt-Konfiguration | 2026-02-05 |
+| Rechtes Panel: Tab-Struktur | Vorschau + Review integriert, Validierung, Attribute | Review ist keine eigenständige Tätigkeit, sondern eine Schicht über der Vorschau | 2026-02-05 |
+| Editor-Optionen | Overlay (Prototyp), CodeMirror 6 (Produkt). Kein Monaco, kein ContentEditable | Monaco zu groß (~2MB), ContentEditable zu fragil. Overlay genügt für Prototyp, CM6 für Produkt | 2026-02-05 |
+| Prompt-Architektur | Dreischichten-Modell (Basis, Kontext, Mapping) | Trennung ermöglicht stabile Basisregeln bei flexibler Projekt-Konfiguration | 2026-02-05 |
 | Validierungsebenen | Fünf Ebenen (Plaintext, Schema, XPath, LLM-as-a-Judge, Expert-in-the-Loop) | Gestufte Qualitätsprüfung statt binär valide/invalide | 2026-02-05 |
 | Konfidenz-Kategorien | Vier Kategorien (sicher, prüfenswert, problematisch, manuell) | Manuell notwendig für menschlich erzeugte Annotationen ohne LLM-Konfidenz | 2026-02-05 |
-| Dokumentname TRANSFORM.md | Umbenannt zu WORKFLOW.md | "Transform" ist zu unspezifisch. WORKFLOW.md deckt den gesamten Arbeitsprozess ab. | 2026-02-05 |
+| Dokumentname TRANSFORM.md | Umbenannt zu WORKFLOW.md | "Transform" ist zu unspezifisch | 2026-02-05 |
+| Overlay-Spike (500-Zeilen) | Spike bestanden, kein Scroll-Drift | Implementiert in Stufe 1, bestätigt in Session 8 (JOURNAL.md) | 2026-02-18 |
+| Visuelle Testmatrix | 24 Kombinationen getestet, 2 Problemfälle identifiziert | `date`+prüfenswert und `placeName`+sicher erfordern Aufmerksamkeit. Lösung: Unterstreichungsstil als Zusatzkanal | 2026-02-18 |
+| Service-Integration-Strategie | Direkte Verdrahtung in app.js, AppState beibehalten | Inkrementeller Ansatz: Services zuerst, DocumentModel-Umbau als separater Schritt (Stufe 14). Inline-Dummys gelöscht. | 2026-02-18 |
 
 ---
 
-## Offen: Priorität Hoch (blockieren den Prototyp)
+## Offen: Priorität Hoch (blockiert durchgängigen Workflow)
 
-### Editor-Engine: Overlay-Spike
+### DocumentModel vs. AppState
 
-**Kontext:** [ARCHITECTURE.md](ARCHITECTURE.md) §4
+**Kontext:** [ARCHITECTURE.md](ARCHITECTURE.md) §2, [MODULES.md](MODULES.md)
 
-**Frage:** Funktioniert die Overlay-Technik bei TEI-Dokumenten mit 500 Zeilen ohne Scroll-Drift und Cursor-Mapping-Probleme?
+**Problem:** app.js nutzt ein einfaches `AppState`-Objekt statt des reaktiven `DocumentModel` (model.js). Das bedeutet: kein Undo/Redo, kein Observer-Pattern, keine Event-basierte View-Synchronisation.
 
 **Optionen:**
-- Spike bestätigt Overlay → Prototyp mit Overlay
-- Spike zeigt Probleme → Wechsel zu CodeMirror 6 auch für den Prototyp
+- AppState durch DocumentModel ersetzen (sauber, aber großer Umbau)
+- DocumentModel als Ergänzung zu AppState für XML-spezifischen State (inkrementell)
 
-**Kriterium:** Implementierungs-Spike mit einem realen TEI-Dokument
-
-**Nächster Schritt:** Spike durchführen
-
----
-
-### Farbkombinationen: Visuelle Testmatrix
-
-**Kontext:** [WORKFLOW.md](WORKFLOW.md) §9, [DESIGN.md](DESIGN.md) §2.5
-
-**Frage:** Sind alle 24 Annotationstyp-Konfidenz-Kombinationen visuell unterscheidbar?
-
-**Bekannte Problemfälle:**
-- `<date>` (Bernstein) auf "prüfenswert" (Bernstein-Tint)
-- `<placeName>` (Teal) auf "sicher" (Teal-Tint)
-
-**Ausweichoption:** Konfidenz über Unterstreichungsstil (solid/dashed/dotted) statt Hintergrund-Tint
-
-**Kriterium:** HTML-Testmatrix mit allen Kombinationen, empirische Prüfung
-
-**Nächster Schritt:** Testmatrix-HTML erzeugen und visuell bewerten
+**Kriterium:** Welcher Ansatz ermöglicht schnellsten Weg zum durchgängigen Workflow?
 
 ---
 
@@ -84,10 +61,6 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Frage:** Soll das Source-Panel permanent 25% belegen oder als einklappbare Sidebar funktionieren?
 
-**Argument für permanent:** Der Digitalisat-Tab (Vergleich mit dem Original) rechtfertigt permanente Sichtbarkeit stärker als der Plaintext-Tab.
-
-**Argument für einklappbar:** Mehr Platz für Editor und Vorschau, besonders bei kleineren Bildschirmen.
-
 **Kriterium:** Nutzerfeedback im Prototyp
 
 ---
@@ -96,7 +69,9 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Kontext:** [ARCHITECTURE.md](ARCHITECTURE.md) §10
 
-**Frage:** Soll die Cursor-Kopplung zwischen Editor und Vorschau in beide Richtungen funktionieren oder nur Vorschau → Editor?
+**Frage:** Soll die Cursor-Kopplung zwischen Editor und Vorschau in beide Richtungen funktionieren?
+
+**Ist-Stand:** Keine Kopplung implementiert (kein Cross-Panel-Sync)
 
 **Kriterium:** Nutzerfeedback
 
@@ -108,9 +83,7 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Kontext:** [ARCHITECTURE.md](ARCHITECTURE.md) §6
 
-**Frage:** Wann wird das clientseitige ODD-Parsing (Stufe 2) implementiert?
-
-**Status:** Stufe 1 (hardcodiertes JSON-Profil) reicht für den Prototyp. Stufe 2 ist ein Phase-3-Feature.
+**Status:** Stufe 1 (hardcodiertes JSON-Profil) implementiert. Stufe 2 (generisches ODD-Parsing) ist Phase 3.
 
 ---
 
@@ -118,23 +91,17 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Kontext:** [ARCHITECTURE.md](ARCHITECTURE.md)
 
-**Frage:** Wie werden Personenregister, Ortsregister etc. in den Attribut-Tab integriert?
-
-**Optionen:** Tab im rechten Panel, Dropdown im Attribut-Tab, Modal
-
-**Kriterium:** Nutzerfeedback
+**Frage:** Wie werden Personenregister, Ortsregister etc. integriert?
 
 ---
 
-### Undo-Strategie
+### Undo-Strategie für große Dokumente
 
 **Kontext:** [ARCHITECTURE.md](ARCHITECTURE.md) §3
 
-**Frage:** Reicht die Snapshot-basierte Undo-Strategie für große Dokumente (>1000 Zeilen)?
+**Frage:** Reicht Snapshot-basiertes Undo für >1000 Zeilen?
 
-**Ausweichoption:** Diff-basiertes Undo-System
-
-**Kriterium:** Dokumentgröße im Praxistest
+**Ausweichoption:** Diff-basiertes Undo
 
 ---
 
@@ -142,11 +109,7 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Kontext:** [WORKFLOW.md](WORKFLOW.md)
 
-**Frage:** Soll das LLM alle Annotationstypen in einem Durchlauf annotieren oder separate Durchläufe pro Typ machen?
-
-**Trade-off:** Ein Durchlauf ist billiger und schneller, separate Durchläufe können präziser sein.
-
-**Kriterium:** Qualitätsvergleich mit realen Dokumenten
+**Frage:** Alle Annotationstypen in einem LLM-Durchlauf oder separate Durchläufe?
 
 ---
 
@@ -154,9 +117,7 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Kontext:** [WORKFLOW.md](WORKFLOW.md)
 
-**Frage:** Wie reagiert Accept/Reject, wenn ein `<persName>` innerhalb eines `<bibl>` liegt?
-
-**Kriterium:** Edge-Case-Analyse im Prototyp
+**Frage:** Wie reagiert Accept/Reject bei `<persName>` innerhalb `<bibl>`?
 
 ---
 
@@ -164,71 +125,61 @@ Konsolidierte Übersicht aller offenen Entscheidungen im teiCrafter-Projekt. Jed
 
 **Kontext:** [WORKFLOW.md](WORKFLOW.md) §3
 
-**Frage:** Sollen Few-Shot-Beispiele automatisch aus bestehenden Annotationen extrahiert oder manuell konfiguriert werden?
-
-**Kriterium:** Qualitätstest mit verschiedenen Dokumenttypen
+**Frage:** Automatische Extraktion aus bestehenden Annotationen oder manuelle Konfiguration?
 
 ---
 
 ### teiModeller: Wissensmodul-Granularität
 
-**Kontext:** [teiModeller.md](teiModeller.md) §5, [DISTILLATION.md](DISTILLATION.md) §1
+**Kontext:** [teiModeller.md](teiModeller.md), [DISTILLATION.md](DISTILLATION.md) §1
 
-**Frage:** Wie fein sollen die destillierten TEI-Wissensmodule aufgeteilt werden?
-
-**Optionen:** Pro TEI-Modul, pro Elementgruppe, pro Anwendungsfall
-
-**Teilweise beantwortet:** [DISTILLATION.md](DISTILLATION.md) spezifiziert ein Modul pro TEI-Modul mit Trennung in Referenzwissen und Modellierungswissen. Pilotdurchlauf mit `namesdates` geplant. Endgültige Bestätigung der Granularität steht nach dem Pilotdurchlauf aus.
-
-**Kriterium:** Pilotdurchlauf mit `namesdates`-Modul (siehe [DISTILLATION.md](DISTILLATION.md) §4)
+**Status:** Pilotdurchlauf mit `namesdates`-Modul geplant. Endgültige Granularität steht nach dem Pilot aus.
 
 ---
 
 ### Normdaten-Integration
 
-**Kontext:** [teiCrafter.md](teiCrafter.md)
+**Kontext:** [VISION.md](VISION.md)
 
-**Frage:** Sollen Normdaten-Zuordnungen (GND, VIAF, Geonames) bereits im Transform vorgeschlagen werden oder nachgelagert über eine Reconciliation-Schnittstelle?
-
-**Kriterium:** Machbarkeit und Qualität der LLM-basierten Zuordnung
+**Frage:** LLM-Vorschläge für GND/VIAF/Geonames bereits im Transform oder nachgelagerte Reconciliation?
 
 ---
 
-## Implementierungsreihenfolge (Prototyp)
-
-Abgeleitet aus den Abhängigkeiten und Prioritäten.
+## Abgeschlossene Implementierungsreihenfolge (Phase 2)
 
 ```
-1. Visuelle Testmatrix (Farbkombinationen)
-   │
-2. Editor-Spike (Overlay, 500 Zeilen)
-   │
-3. XML-Tokenizer (reine Funktion, testbar)
-   │
-4. Reaktives Dokumentenmodell + Undo
-   │
-5. Editor (Overlay oder CM6, je nach Spike)
-   │
-6. Source-Panel + Vorschau
-   │
-7. LLM-Service (ein Provider)
-   │
-8. Transform + Diff-Ansicht
-   │
-9. Review-Workflow (Inline + Batch)
-   │
-10. Schema-Validierung (Stufe 1, hardcodiert)
-    │
-11. Export
+ 1. ✅ Visuelle Testmatrix (Farbkombinationen)
+ 2. ✅ Editor-Spike (Overlay, 500 Zeilen)
+ 3. ✅ XML-Tokenizer (reine Funktion, 17 Tests)
+ 4. ✅ Reaktives Dokumentenmodell + Undo (21 Tests)
+ 5. ✅ Editor (Overlay mit Gutter)
+ 6. ✅ Source-Panel + Vorschau (Inline + Batch Review)
+ 7. ✅ LLM-Service (4 Provider)
+ 8. ✅ Transform + Prompt-Assembly
+ 9. ✅ Validierung (3 von 5 Levels, 13 Tests)
+10. ✅ Export (Attribut-Bereinigung, Download, Clipboard)
+```
+
+**Nächste Reihenfolge (Service-Integration):**
+
+```
+11. ✅ app.js → transform.js + llm.js verdrahten (Schritt 3) + Settings-Dialog
+12. ✅ app.js → validator.js + schema.js verdrahten (Schritt 4)
+13. ✅ app.js → export.js verdrahten (Schritt 5) + Export-Optionen
+14. ⬜ DocumentModel als zentrale State-Quelle einführen
+15. ⬜ View-Module (editor.js, preview.js, source.js) einbinden
+16. ⬜ Test-Coverage erweitern (Service-Tests, View-Tests)
 ```
 
 ---
 
 **Referenzierte Dokumente:**
-- [DESIGN.md](DESIGN.md)
+- [STATUS.md](STATUS.md) — Implementierungs-Ist-Stand
+- [MODULES.md](MODULES.md) — Technische Modul-Referenz
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [WORKFLOW.md](WORKFLOW.md)
+- [DESIGN.md](DESIGN.md)
 - [teiModeller.md](teiModeller.md)
-- [teiCrafter.md](teiCrafter.md)
+- [VISION.md](VISION.md)
 - [DISTILLATION.md](DISTILLATION.md)
 - [STORIES.md](STORIES.md)

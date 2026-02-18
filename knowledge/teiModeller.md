@@ -1,11 +1,3 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, teimodeller, modelling, tei-guidelines, phase-3]
-status: planned
----
-
 # teiModeller
 
 Der teiModeller unterstützt den Prozess der Modellierungsentscheidung. Er beantwortet die Frage "Wie soll dieses Textphänomen in TEI abgebildet werden?" und erzeugt als Ergebnis Mapping-Regeln, die in die Mapping-Schicht der [Dreischichten-Prompt-Architektur](WORKFLOW.md) übernommen werden können.

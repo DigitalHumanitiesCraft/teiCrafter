@@ -4,6 +4,94 @@ Chronologisches Arbeitsprotokoll des teiCrafter-Projekts.
 
 ---
 
+## 2026-02-18
+
+### Session 9: Knowledge Vault Refactoring
+
+**Auslöser:** Umfassende Code-Analyse aller 14 JS-Module ergab erhebliche Diskrepanz zwischen Dokumentation und Implementierung. Kernbefund: Alle Service-Module sind production-ready, aber app.js importiert keinen einzigen Service. Die Knowledge Base beschrieb einen durchgängigen Workflow, der so noch nicht existiert.
+
+**Durchgeführt:**
+
+1. **Vollständige Repository-Analyse** – 7 parallele Agents analysierten app.js (684 Zeilen, alle 5 Steps), model.js + tokenizer.js (Tests, Edge Cases), editor.js + preview.js + source.js (Views, Stubs), alle 6 Services + 2 Utilities, knowledge/ (11 Dokumente), CSS + HTML, Tests + Demo-Daten.
+
+2. **Neue Dokumente erstellt:**
+   - **STATUS.md** – Neue Wahrheitsquelle für den Ist-Stand. Modul-Status-Matrix (14 Module: implementiert/integriert/getestet), Workflow-Schritte mit Ist vs. Soll, priorisierte nächste Schritte.
+   - **MODULES.md** – Technische API-Referenz aller 14 Module mit Public API, Events, Abhängigkeiten, bekannten Issues.
+
+3. **Umbenannt:** teiCrafter.md → VISION.md (klarerer Zweck)
+
+4. **Aktualisierte Dokumente:**
+   - **DECISIONS.md** – Editor-Spike und Visual-Matrix von "Offen:Hoch" nach "Entschieden" verschoben. Neue Entscheidung "Service-Integration" als höchste Priorität. Implementierungsreihenfolge mit Stufen 11–16 erweitert.
+   - **STORIES.md** – Alle 21 Story-Marker gegen Code-Realität geprüft. Neue Statuslegende: ✅ (integriert), 🔧 (Modul da, nicht verdrahtet), ⬜ (offen). Ergebnis: 7 ✅, 14 🔧, 0 ⬜. Zusammenfassungstabelle mit Modul/Integration-Trennung.
+   - **ARCHITECTURE.md** – Status-Tags pro Abschnitt (`[Implementiert]`, `[Teilweise]`, `[Geplant]`). Spike-Ergebnis als bestanden markiert. Datenflüsse als Soll-Zustand gekennzeichnet. Verweise auf STATUS.md und MODULES.md.
+   - **DESIGN.md** – Implementierungsstatus-Hinweis ergänzt (CSS 2484 Zeilen, offene Punkte: Dark Mode, reduced-motion, contrast).
+   - **WORKFLOW.md** – Implementierungsstatus-Hinweis ergänzt (Services existieren aber nicht verdrahtet).
+   - **INDEX.md** – Komplett überarbeitet: neue Dokumente aufgenommen, Kategorie-Spalte (Konzept/Ist-Stand/Forschung/Prozess), Claude-Synchronisationsregeln, neuer Kernbegriff "Service-Integration".
+
+5. **YAML-Frontmatter entfernt** aus allen Dateien (INDEX, teiModeller, DISTILLATION, DESIGN, WORKFLOW, ARCHITECTURE, STORIES, DECISIONS). Vault ist jetzt reines Standard-Markdown.
+
+6. **Obsidian-Wiki-Links** (`[[...]]`) durch Standard-Markdown-Links ersetzt (war bereits in VISION.md der letzte Ort).
+
+**Architektonische Erkenntnis:** Die kritische Lücke ist nicht fehlende Implementierung, sondern fehlende **Verdrahtung**. Alle Bausteine existieren. Die nächste Aufgabe ist klar: app.js muss die Services importieren und die View-Module einbinden. Siehe STATUS.md §Nächste Schritte.
+
+**Vault-Struktur nach Refactoring:** 13 Dokumente (11 bestehend + 2 neu), ~4000 Zeilen, rein Standard-Markdown, keine Obsidian-Features.
+
+### Session 10: Verifikation und 12-Punkt-Korrektur
+
+**Auslöser:** Kritische Selbstprüfung der Session-9-Ergebnisse mit 5 parallelen Verifikations-Agents.
+
+**Gefundene Probleme (12):**
+
+- **3 HOCH:** MODULES.md hatte falsche editor.js-Options (`initialValue`→`value`, `lineNumbers`→`showGutter`), fehlende model.js-APIs (`reset()`, `fileName`, `sourceType`), und falsche Test-Zählung (54→51).
+- **5 MITTEL:** STORIES.md markierte 0.1–0.3 als ✅ obwohl editor.js nicht in app.js integriert ist (→🔧). STATUS.md zählte tokenizer als "integriert via editor.js" obwohl editor.js selbst nicht integriert ist. ARCHITECTURE.md fehlten Status-Tags in §2.2–2.4. MODULES.md `extractConfidenceMap()` war unvollständig. editor.js Tab-Listener-Leak fehlte in Known Issues.
+- **4 NIEDRIG:** WORKFLOW.md preview.js-Formulierung irreführend. MODULES.md `getProviderConfigs()` Return-Typ fehlte. INDEX.md Sync-Regeln unklar. ARCHITECTURE.md §2 Soll/Ist nicht getrennt.
+
+**Alle 12 korrigiert.** Aktualisierte Zahlen: 4 ✅ integriert (statt 7), 17 🔧 Modul da (statt 14), 2/14 Module in app.js integriert (statt 3), 51 Tests (statt 54).
+
+### Session 11: Service-Integration (Stufen 11–13)
+
+**Auslöser:** Nächster Schritt nach Knowledge-Vault-Refactoring. Die kritische Lücke war die fehlende Verdrahtung der Service-Module in app.js.
+
+**Durchgeführt:**
+
+1. **Stufe 11: Transform + LLM (Schritt 3)**
+   - 7 neue Imports in app.js (transform, llm, validator, schema, export)
+   - AppState um `confidenceMap`, `transformStats`, `originalPlaintext` erweitert
+   - `performTransform()` ersetzt: Demo-Modus beibehalten, echter LLM-Pfad via `transform()` mit AbortController + Cancel-Button
+   - `generateBasicTei()` gelöscht (Dummy)
+   - LLM-Settings-Dialog: Provider-Auswahl, Modell, API-Key, Verbindungstest
+   - `#btn-settings`-Handler verdrahtet + Model-Badge im Header
+   - Transform-Stats-Anzeige im Editor-Footer (farbcodiert nach Konfidenz)
+
+2. **Stufe 12: Validierung (Schritt 4)**
+   - `renderValidateStep()` → async, nutzt `validate()` aus validator.js
+   - Schema lazy-loaded via `loadSchema()` beim ersten Aufruf
+   - Validation-Messages gruppiert nach Level (error/warning/info)
+   - `calculateSimilarity()` gelöscht (validator.js macht Word-Similarity)
+   - `isWellFormedXml()` beibehalten (für Import-Validierung in processFile)
+   - `renderStep()` → async (wegen await in Schritt 4)
+
+3. **Stufe 13: Export (Schritt 5)**
+   - `renderExportStep()` nutzt `getExportStats()`, `prepareExport()`, `downloadXml()`, `copyToClipboard()` aus export.js
+   - Export-Optionen-UI: Checkboxen für keepConfidence, keepResp
+   - Entity-Statistiken zeigen alle 9 Tag-Typen (statt nur 3)
+   - `getExportContent()`, `downloadTei()`, `copyToClipboard()` (Inline), `countEntities()` gelöscht
+
+4. **CSS-Ergänzungen** (~80 Zeilen): Settings-Dialog, Transform-Stats, Export-Options, Transform-Loading-Spinner
+
+5. **Knowledge-Docs aktualisiert:**
+   - STATUS.md: Schritte 3–5 ❌→✅, Module 2/14→7/14 integriert, Stufen 11–13 als Meilensteine
+   - MODULES.md: app.js Imports, AppState-Felder, neue Funktionen
+   - DECISIONS.md: Service-Integration als entschieden, Implementierungssequenz aktualisiert
+   - STORIES.md: 6 Stories von 🔧→✅ (3.1, 5.1, 5.2, 6.1, Q.1, Q.2), Zusammenfassung 4→10 ✅
+   - JOURNAL.md: Dieser Eintrag
+
+**Gelöschte Inline-Funktionen (7):** `generateBasicTei()`, `getExportContent()`, `downloadTei()`, `copyToClipboard()` (Inline-Version), `countEntities()`, `calculateSimilarity()`. Beibehalten: `extractPlaintext()` (Compare-Panel), `isWellFormedXml()` (Import-Validierung).
+
+**Nächste Schritte:** Stufe 14 (DocumentModel statt AppState) → Stufe 15 (View-Module einbinden) → Stufe 16 (Test-Coverage).
+
+---
+
 ## 2026-02-05
 
 ### Session 1: Projektstart UI-Prototyp

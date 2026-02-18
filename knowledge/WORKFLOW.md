@@ -1,14 +1,8 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, workflow, transform, review, validation, prompt]
-status: active
----
-
 # Annotation, Review und Validierung
 
 Dieses Dokument spezifiziert den zentralen Arbeitsprozess in teiCrafter. Es umfasst die Prompt-Architektur, den LLM-gestützten Transform, den menschlichen Review-Workflow und die fünf Validierungsebenen.
+
+**Implementierungsstatus:** Die Service-Module (transform.js, validator.js, export.js) sind in app.js verdrahtet (Stufen 11–13). Der Transform nutzt den echten LLM-Aufruf, die Validierung nutzt validator.js + schema.js, der Export nutzt export.js mit Attribut-Bereinigung. Noch offen: Die View-Module (preview.js, editor.js, source.js) sind nicht in app.js eingebunden – die Vorschau nutzt Inline-HTML statt preview.js, der Editor nutzt contenteditable statt editor.js. Siehe [STATUS.md](STATUS.md).
 
 **Abhängigkeiten:**
 - [ARCHITECTURE.md](ARCHITECTURE.md) für Dokumentenmodell, Undo-System, LLM-Service

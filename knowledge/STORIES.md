@@ -1,14 +1,8 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, user-stories, testing, prototyp]
-status: active
----
-
 # User Stories und Testplanung
 
 User Stories für den teiCrafter-Prototyp (Phase 2) und ausgewählte Stories für Phase 3. Jede Story folgt dem Schema "Als [Rolle] möchte ich [Aktion], damit [Nutzen]" und enthält einen manuell durchführbaren Testfall.
+
+Stand: 2026-02-18 (Session 11)
 
 **Abhängigkeiten:** [DESIGN.md](DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [WORKFLOW.md](WORKFLOW.md), [teiModeller.md](teiModeller.md), [DECISIONS.md](DECISIONS.md)
 
@@ -26,10 +20,10 @@ Für Stories mit LLM-Aufrufen (ab 3.1) wird ein gültiger API-Key für mindesten
 
 | Status | Bedeutung |
 |---|---|
-| ⬜ offen | Noch nicht begonnen |
-| 🔨 in Arbeit | In Implementierung |
-| ✅ erledigt | Implementiert und getestet |
-| ⏳ Phase 3 | Nicht Teil des Prototyps |
+| ✅ | Modul implementiert UND in app.js integriert |
+| 🔧 | Modul implementiert, aber NICHT in app.js integriert |
+| ⬜ | Noch nicht begonnen |
+| ⏳ | Phase 3 (nicht Teil des Prototyps) |
 
 ---
 
@@ -39,7 +33,7 @@ Validiert das technische Fundament, bevor inhaltliche Features aufgebaut werden.
 
 ---
 
-### Story 0.1 – XML wird mit Syntax-Highlighting dargestellt ⬜
+### Story 0.1 – XML wird mit Syntax-Highlighting dargestellt 🔧
 
 **Referenz:** [DESIGN.md](DESIGN.md) §4 (XML-Editor), [ARCHITECTURE.md](ARCHITECTURE.md) §4
 
@@ -53,7 +47,7 @@ Validiert das technische Fundament, bevor inhaltliche Features aufgebaut werden.
 
 ---
 
-### Story 0.2 – Scrollen ohne Drift (Overlay-Spike) ⬜
+### Story 0.2 – Scrollen ohne Drift (Overlay-Spike) 🔧
 
 **Referenz:** [ARCHITECTURE.md](ARCHITECTURE.md) §4, [DECISIONS.md](DECISIONS.md) (Editor-Engine: Overlay-Spike)
 
@@ -69,7 +63,7 @@ Validiert das technische Fundament, bevor inhaltliche Features aufgebaut werden.
 
 ---
 
-### Story 0.3 – Zeilennummern im Gutter ⬜
+### Story 0.3 – Zeilennummern im Gutter 🔧
 
 **Referenz:** [DESIGN.md](DESIGN.md) §4
 
@@ -83,7 +77,7 @@ Validiert das technische Fundament, bevor inhaltliche Features aufgebaut werden.
 
 ---
 
-### Story 0.4 – Undo/Redo auf Dokumentebene ⬜
+### Story 0.4 – Undo/Redo auf Dokumentebene 🔧
 
 **Referenz:** [ARCHITECTURE.md](ARCHITECTURE.md) §3
 
@@ -108,7 +102,7 @@ Entspricht dem Workflow-Stepper-Schritt "Import". Referenz: [DESIGN.md](DESIGN.m
 
 ---
 
-### Story 1.1 – Plaintext importieren ⬜
+### Story 1.1 – Plaintext importieren ✅
 
 **Als** Editorin **möchte ich** eine Plaintext-Datei per Drag-and-Drop oder Dateiauswahl laden, **damit** ich mit der Annotation beginnen kann.
 
@@ -120,7 +114,7 @@ Entspricht dem Workflow-Stepper-Schritt "Import". Referenz: [DESIGN.md](DESIGN.m
 
 ---
 
-### Story 1.2 – Basis-TEI importieren ⬜
+### Story 1.2 – Basis-TEI importieren ✅
 
 **Als** Editorin **möchte ich** eine existierende TEI-XML-Datei laden, **damit** ich sie weiter annotieren kann.
 
@@ -132,7 +126,7 @@ Entspricht dem Workflow-Stepper-Schritt "Import". Referenz: [DESIGN.md](DESIGN.m
 
 ---
 
-### Story 1.3 – Ungültiges XML wird abgewiesen ⬜
+### Story 1.3 – Ungültiges XML wird abgewiesen ✅
 
 **Als** Editorin **möchte ich** bei fehlerhaftem XML eine verständliche Fehlermeldung sehen, **damit** ich das Problem beheben kann.
 
@@ -150,7 +144,7 @@ Entspricht dem Workflow-Stepper-Schritt "Mapping". Referenz: [WORKFLOW.md](WORKF
 
 ---
 
-### Story 2.1 – Annotationstypen auswählen ⬜
+### Story 2.1 – Annotationstypen auswählen ✅
 
 **Als** Editorin **möchte ich** vor dem Transform festlegen, welche Annotationstypen das LLM annotieren soll, **damit** ich die Annotation gezielt steuern kann.
 
@@ -162,9 +156,9 @@ Entspricht dem Workflow-Stepper-Schritt "Mapping". Referenz: [WORKFLOW.md](WORKF
 
 ---
 
-### Story 2.2 – Prompt vor dem Absenden einsehen ⬜
+### Story 2.2 – Prompt vor dem Absenden einsehen 🔧
 
-**Referenz:** [WORKFLOW.md](WORKFLOW.md) §3, Architekturprinzip "Transparenz" in [teiCrafter.md](teiCrafter.md)
+**Referenz:** [WORKFLOW.md](WORKFLOW.md) §3, Architekturprinzip "Transparenz" in [VISION.md](VISION.md)
 
 **Als** Editorin **möchte ich** den assemblierten Prompt sehen, bevor er an das LLM gesendet wird, **damit** ich die Transparenz über den Annotationsprozess behalte.
 
@@ -182,7 +176,7 @@ Entspricht dem Workflow-Stepper-Schritt "Transform". Referenz: [WORKFLOW.md](WOR
 
 ---
 
-### Story 3.1 – LLM annotiert den Text ⬜
+### Story 3.1 – LLM annotiert den Text ✅
 
 **Als** Editorin **möchte ich** den TEI-Body an ein LLM senden und ein annotiertes TEI-Dokument zurückbekommen, **damit** ich den Annotationsvorschlag prüfen kann.
 
@@ -196,7 +190,7 @@ Entspricht dem Workflow-Stepper-Schritt "Transform". Referenz: [WORKFLOW.md](WOR
 
 ---
 
-### Story 3.2 – Diff-Ansicht vor der Übernahme ⬜
+### Story 3.2 – Diff-Ansicht vor der Übernahme 🔧
 
 **Referenz:** [WORKFLOW.md](WORKFLOW.md) §5 (Diff-Ansicht), [DECISIONS.md](DECISIONS.md) (Diff-Darstellung)
 
@@ -210,7 +204,7 @@ Entspricht dem Workflow-Stepper-Schritt "Transform". Referenz: [WORKFLOW.md](WOR
 
 ---
 
-### Story 3.3 – Konfidenz wird visuell kodiert ⬜
+### Story 3.3 – Konfidenz wird visuell kodiert 🔧
 
 **Referenz:** [DESIGN.md](DESIGN.md) §2.5 (Dual-Channel-Encoding), [WORKFLOW.md](WORKFLOW.md) §9, [DECISIONS.md](DECISIONS.md) (Farbkombinationen)
 
@@ -230,7 +224,7 @@ Entspricht dem Review-Workflow. Referenz: [WORKFLOW.md](WORKFLOW.md) §6–8.
 
 ---
 
-### Story 4.1 – Einzelne Annotation prüfen (Inline-Review) ⬜
+### Story 4.1 – Einzelne Annotation prüfen (Inline-Review) 🔧
 
 **Als** Editorin **möchte ich** eine Annotation in der Vorschau anklicken und sie akzeptieren, bearbeiten oder ablehnen, **damit** ich jede LLM-Annotation einzeln bewerten kann.
 
@@ -245,7 +239,7 @@ Entspricht dem Review-Workflow. Referenz: [WORKFLOW.md](WORKFLOW.md) §6–8.
 
 ---
 
-### Story 4.2 – Batch-Review per Tastatur ⬜
+### Story 4.2 – Batch-Review per Tastatur 🔧
 
 **Referenz:** [WORKFLOW.md](WORKFLOW.md) §7 (Batch-Review)
 
@@ -259,7 +253,7 @@ Entspricht dem Review-Workflow. Referenz: [WORKFLOW.md](WORKFLOW.md) §6–8.
 
 ---
 
-### Story 4.3 – Review-Fortschritt sichtbar ⬜
+### Story 4.3 – Review-Fortschritt sichtbar 🔧
 
 **Referenz:** [WORKFLOW.md](WORKFLOW.md) §8
 
@@ -279,7 +273,7 @@ Entspricht dem Workflow-Stepper-Schritt "Validate". Referenz: [WORKFLOW.md](WORK
 
 ---
 
-### Story 5.1 – Plaintext-Vergleich ⬜
+### Story 5.1 – Plaintext-Vergleich ✅
 
 **Referenz:** [WORKFLOW.md](WORKFLOW.md) §10 (Ebene 1: Plaintext-Vergleich)
 
@@ -293,7 +287,7 @@ Entspricht dem Workflow-Stepper-Schritt "Validate". Referenz: [WORKFLOW.md](WORK
 
 ---
 
-### Story 5.2 – Schema-Validierung (Stufe 1) ⬜
+### Story 5.2 – Schema-Validierung (Stufe 1) ✅
 
 **Referenz:** [WORKFLOW.md](WORKFLOW.md) §10 (Ebene 2: Schema), [ARCHITECTURE.md](ARCHITECTURE.md) §6 (Zwei-Stufen-ODD)
 
@@ -313,7 +307,7 @@ Entspricht dem Workflow-Stepper-Schritt "Export".
 
 ---
 
-### Story 6.1 – TEI-XML exportieren ⬜
+### Story 6.1 – TEI-XML exportieren ✅
 
 **Als** Editorin **möchte ich** das fertige Dokument als TEI-XML-Datei herunterladen, **damit** ich es in nachgelagerten Systemen (ediarum, oXygen, GAMS) weiterverarbeiten kann.
 
@@ -325,7 +319,7 @@ Entspricht dem Workflow-Stepper-Schritt "Export".
 
 ---
 
-### Story 6.2 – Warnung bei ungeprüften Annotationen ⬜
+### Story 6.2 – Warnung bei ungeprüften Annotationen 🔧
 
 **Als** Editorin **möchte ich** gewarnt werden, wenn ich ein Dokument mit ungeprüften Annotationen exportiere, **damit** ich keine ungeprüften LLM-Vorschläge versehentlich als fertig behandle.
 
@@ -341,9 +335,9 @@ Entspricht dem Workflow-Stepper-Schritt "Export".
 
 ---
 
-### Story Q.1 – API-Key eingeben ⬜
+### Story Q.1 – API-Key eingeben ✅
 
-**Referenz:** Architekturprinzip "Lokale Kontrolle" in [teiCrafter.md](teiCrafter.md)
+**Referenz:** Architekturprinzip "Lokale Kontrolle" in [VISION.md](VISION.md)
 
 **Als** Editorin **möchte ich** meinen API-Key für einen LLM-Provider eingeben, **damit** die Anwendung Annotationen generieren kann.
 
@@ -355,9 +349,9 @@ Entspricht dem Workflow-Stepper-Schritt "Export".
 
 ---
 
-### Story Q.2 – LLM-Provider wählen ⬜
+### Story Q.2 – LLM-Provider wählen ✅
 
-**Referenz:** Architekturprinzip "Modellvielfalt" in [teiCrafter.md](teiCrafter.md)
+**Referenz:** Architekturprinzip "Modellvielfalt" in [VISION.md](VISION.md)
 
 **Als** Editorin **möchte ich** zwischen verschiedenen LLM-Providern wählen können, **damit** ich nicht an einen Anbieter gebunden bin.
 
@@ -407,18 +401,20 @@ Diese Stories sind nicht Teil des Prototyps. Sie dokumentieren die geplante Funk
 
 ### Prototyp-Scope
 
-| Schritt | Stories | Anzahl |
-|---|---|---|
-| 0 – Editor-Fundament | 0.1, 0.2, 0.3, 0.4 | 4 |
-| 1 – Import | 1.1, 1.2, 1.3 | 3 |
-| 2 – Mapping | 2.1, 2.2 | 2 |
-| 3 – Transform | 3.1, 3.2, 3.3 | 3 |
-| 4 – Review | 4.1, 4.2, 4.3 | 3 |
-| 5 – Validierung | 5.1, 5.2 | 2 |
-| 6 – Export | 6.1, 6.2 | 2 |
-| Q – LLM-Konfiguration | Q.1, Q.2 | 2 |
-| **Gesamt Prototyp** | | **21** |
-| M – teiModeller (Phase 3) | M.1, M.2 | 2 |
+| Schritt | Stories | ✅ Integriert | 🔧 Modul da | ⬜ Offen |
+|---|---|:---:|:---:|:---:|
+| 0 – Editor-Fundament | 0.1, 0.2, 0.3, 0.4 | 0 | 4 | 0 |
+| 1 – Import | 1.1, 1.2, 1.3 | 3 | 0 | 0 |
+| 2 – Mapping | 2.1, 2.2 | 1 | 1 | 0 |
+| 3 – Transform | 3.1, 3.2, 3.3 | 1 | 2 | 0 |
+| 4 – Review | 4.1, 4.2, 4.3 | 0 | 3 | 0 |
+| 5 – Validierung | 5.1, 5.2 | 2 | 0 | 0 |
+| 6 – Export | 6.1, 6.2 | 1 | 1 | 0 |
+| Q – LLM-Konfiguration | Q.1, Q.2 | 2 | 0 | 0 |
+| **Gesamt Prototyp** | **21** | **10** | **11** | **0** |
+| M – teiModeller (Phase 3) | M.1, M.2 | — | — | ⏳ 2 |
+
+**Zusammenfassung:** Alle 21 Prototyp-Stories haben implementierte Module. 10 sind voll integriert (UI + Service): Import 1.1–1.3, Mapping 2.1, Transform 3.1, Validierung 5.1–5.2, Export 6.1, LLM-Konfiguration Q.1–Q.2. 11 haben funktionierende Module, die aber noch nicht durchgängig in der UI verdrahtet sind (Editor-Fundament 0.1–0.4 weil editor.js nicht importiert, Review 4.1–4.3 weil preview.js nicht importiert, Transform 3.2–3.3 weil Diff-Ansicht und Konfidenz-Visualisierung preview.js benötigen, Export 6.2 weil Export-Warnung-Dialog fehlt). Siehe [STATUS.md](STATUS.md) für Details.
 
 ### Empfohlene Implementierungsreihenfolge
 
@@ -450,9 +446,11 @@ Für die manuelle Testdurchführung werden folgende Dokumente benötigt.
 ---
 
 **Referenzierte Dokumente:**
+- [STATUS.md](STATUS.md) — Implementierungs-Ist-Stand
+- [MODULES.md](MODULES.md) — Technische Modul-Referenz
 - [DESIGN.md](DESIGN.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [WORKFLOW.md](WORKFLOW.md)
 - [teiModeller.md](teiModeller.md)
 - [DECISIONS.md](DECISIONS.md)
-- [teiCrafter.md](teiCrafter.md)
+- [VISION.md](VISION.md)

@@ -1,14 +1,8 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, design, ui, color, typography]
-status: active
----
-
 # Design Specification
 
 Visuelle Spezifikation für teiCrafter. Definiert Farben, Typografie, Layout, Komponenten und Interaktionsmuster. Architektonische Entscheidungen (Datenmodell, State Management, Editor-Engine) sind in [ARCHITECTURE.md](ARCHITECTURE.md) dokumentiert. Der Annotations- und Review-Workflow ist in [WORKFLOW.md](WORKFLOW.md) spezifiziert.
+
+**Implementierungsstatus:** Die CSS-Implementierung (`docs/css/style.css`, 2484 Zeilen) bildet diese Spezifikation weitgehend ab. Offene Punkte: kein Dark Mode, kein `prefers-reduced-motion`, kein `prefers-contrast`. Siehe [STATUS.md](STATUS.md).
 
 ---
 

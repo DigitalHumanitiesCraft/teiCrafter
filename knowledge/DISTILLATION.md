@@ -1,11 +1,3 @@
----
-type: knowledge
-created: 2026-02-05
-updated: 2026-02-05
-tags: [teicrafter, teimodeller, distillation, pipeline, tei-guidelines]
-status: planned
----
-
 # TEI-Guidelines-Destillation
 
 Dieses Dokument spezifiziert die Pipeline, die aus den TEI P5 Guidelines destillierte Wissensmodule für den [teiModeller](teiModeller.md) erzeugt. Die Pipeline ist ein vorgelagerter Produktionsprozess, der unabhängig von der teiCrafter-Laufzeitanwendung steht und bei neuen TEI-Releases erneut ausgeführt werden kann.
@@ -63,7 +55,7 @@ Jedes der 23 Module entspricht einem Kapitel der Guidelines. Die Kapitel enthalt
 | certainty | 22 Certainty, Precision, and Responsibility | CE.html | Mittel |
 | tagdocs | 23 Documentation Elements | TD.html | Niedrig |
 
-Die Prioritätsspalte orientiert sich an den Synergieprojekten aus [teiCrafter.md](teiCrafter.md). "Basis" bedeutet, dass das Modul in jedem TEI-Schema enthalten sein sollte. "Hoch" markiert Module mit direkter Relevanz für laufende Projekte.
+Die Prioritätsspalte orientiert sich an den Synergieprojekten aus [VISION.md](VISION.md). "Basis" bedeutet, dass das Modul in jedem TEI-Schema enthalten sein sollte. "Hoch" markiert Module mit direkter Relevanz für laufende Projekte.
 
 ### 2.2 Elementreferenzen
 
@@ -231,5 +223,5 @@ Die Destillations-Pipeline ist ein Entwicklungswerkzeug, kein Laufzeit-Feature. 
 **Referenzierte Dokumente:**
 - [teiModeller.md](teiModeller.md)
 - [WORKFLOW.md](WORKFLOW.md)
-- [teiCrafter.md](teiCrafter.md)
+- [VISION.md](VISION.md)
 - [DECISIONS.md](DECISIONS.md)
