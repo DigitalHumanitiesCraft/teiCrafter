@@ -48,6 +48,25 @@ Chronologisches Arbeitsprotokoll des teiCrafter-Projekts.
 
 **Alle 12 korrigiert.** Aktualisierte Zahlen: 4 ✅ integriert (statt 7), 17 🔧 Modul da (statt 14), 2/14 Module in app.js integriert (statt 3), 51 Tests (statt 54).
 
+### Session 15: Technische Referenz (REFERENCE.md)
+
+**Auslöser:** User forderte ein präzises, kompaktes, neutrales Wissensdokument das alles erfasst was bekannt ist — über die bestehende SYNTHESIS.md hinaus.
+
+**Durchgeführt:**
+
+1. **Vollständige Code-Analyse** – Drei parallele Agenten lasen:
+   - Alle 15 Knowledge-Dokumente (~6500 Zeilen)
+   - Alle 14 JS-Module + HTML (4159 Zeilen JS)
+   - CSS (2643 Zeilen), 60 Tests, Schema (27 Elemente), Demo-Konfiguration
+
+2. **Neues Wissensdokument: REFERENCE.md** – Technische Referenz des gesamten Projekts. 17 Abschnitte: Systemübersicht, Dateistruktur, Modularchitektur mit Integrationsmatrix, vollständiger Datenfluss, alle Datenstrukturen (AppState, DocumentModel, Token, Annotation, ValidationMessage), LLM-Integration (6 Provider, Request/Response-Formate, Dreischichten-Prompt, Konfidenz-Mapping), Validierung (5 Ebenen, Algorithmen), Review-Workflow, CSS-Designsystem (98 Custom Properties, Dual-Channel, Responsive), Architekturmuster, 20+ bekannte Probleme kategorisiert, Testabdeckung, Hardcoded Values, Forschungsgrundlage, Strategie, Metriken.
+
+3. **Abgrenzung:** SYNTHESIS.md = 5-Minuten-Onboarding (Was, Warum, Wohin). REFERENCE.md = Technische Tiefe (Wie, Womit, Welche Grenzen). Ein Agent oder Entwickler kann mit REFERENCE.md ohne Quellcode-Zugriff arbeiten.
+
+4. **INDEX.md** – REFERENCE.md aufgenommen (Kategorie: Ist-Stand, Zielgruppe: Entwicklung, Agents).
+
+**Korrektur gegenüber Session 14:** Unit-Tests sind 60 (nicht 51): tokenizer 19, model 23, validator 18.
+
 ### Session 14: Strategiebericht und Knowledge-Update
 
 **Auslöser:** Nach Abschluss des Refactorings (Session 13) stellte sich die Frage: Was sind die nächsten Schritte? Statt direkt mit Stufe 14 (DocumentModel) weiterzumachen, wurde eine strategische Analyse durchgeführt.

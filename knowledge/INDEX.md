@@ -2,7 +2,7 @@
 
 Zentrales Wissenssystem für das teiCrafter-Projekt. Jedes Dokument hat eine definierte Zuständigkeit, eine Zielgruppe und explizite Abhängigkeiten. Reines Standard-Markdown, keine Obsidian-Features.
 
-Stand: 2026-02-18 (Session 14)
+Stand: 2026-02-18 (Session 15)
 
 ---
 
@@ -11,6 +11,7 @@ Stand: 2026-02-18 (Session 14)
 | Dokument | Beantwortet | Kategorie | Zielgruppe |
 |---|---|---|---|
 | [SYNTHESIS](SYNTHESIS.md) | **Kompaktes Gesamtbild** – alles in einem Dokument | Synthese | Alle, Onboarding |
+| [REFERENCE](REFERENCE.md) | **Technische Referenz** – Code, APIs, Datenflüsse, Known Issues | Ist-Stand | Entwicklung, Agents |
 | [VISION](VISION.md) | Was ist das Projekt, warum existiert es? | Konzept | Alle |
 | [STATUS](STATUS.md) | Was funktioniert, was ist Stub, was fehlt? | Ist-Stand | Alle |
 | [MODULES](MODULES.md) | Welche Module gibt es, welche API haben sie? | Ist-Stand | Entwicklung |
@@ -56,6 +57,7 @@ STORIES.md (konsumiert DESIGN + ARCHITECTURE + WORKFLOW, trackt via STATUS)
 DECISIONS.md (querschnittlich, konsumiert alle Dokumente)
 JOURNAL.md (chronologisch, referenziert beliebige Dokumente)
 SYNTHESIS.md (kompaktes Gesamtbild, destilliert aus allen Dokumenten)
+REFERENCE.md (technische Tiefe, destilliert aus Code + Dokumenten)
 LANDSCAPE.md (Tool-Landschaft, informiert VISION und DECISIONS)
 research-landscape.md (eigenständig, informiert VISION)
 ```
