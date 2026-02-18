@@ -5,6 +5,7 @@
  */
 
 import { complete } from './llm.js';
+import { ANNOTATION_TAGS } from '../utils/constants.js';
 
 // --- Basisschicht (generisch, von teiCrafter vorgegeben) ---
 const BASE_PROMPT = `You are a TEI-XML annotation assistant. Your task is to annotate the given text with TEI-XML markup.
@@ -180,7 +181,7 @@ export function extractXmlFromResponse(response) {
  */
 export function extractConfidenceMap(doc) {
     const map = new Map();
-    const annotationTags = ['persName', 'placeName', 'orgName', 'date', 'name', 'bibl', 'term', 'measure', 'foreign'];
+    const annotationTags = ANNOTATION_TAGS;
 
     let counter = 0;
     for (const tagName of annotationTags) {

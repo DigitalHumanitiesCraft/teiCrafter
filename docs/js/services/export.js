@@ -6,6 +6,8 @@
  * or optionally retains them with transformed values.
  */
 
+import { ANNOTATION_TAGS } from '../utils/constants.js';
+
 /**
  * @typedef {Object} ExportOptions
  * @property {'full'|'body'} format - Full TEI or body-only
@@ -91,7 +93,7 @@ export function getExportStats(xml) {
 
     const lineCount = xml.split('\n').length;
     const entityCounts = {};
-    const tags = ['persName', 'placeName', 'orgName', 'date', 'name', 'bibl', 'term', 'measure', 'foreign'];
+    const tags = ANNOTATION_TAGS;
 
     let totalEntities = 0;
     for (const tag of tags) {
@@ -156,5 +158,8 @@ export async function copyToClipboard(content) {
  */
 export function getExportFileName(originalName) {
     if (!originalName) return 'document-tei.xml';
-    return originalName.replace(/\.[^.]+$/, '') + '-tei.xml';
+    // Strip path components to prevent path traversal
+    const basename = originalName.replace(/^.*[\\/]/, '').replace(/\.[^.]+$/, '');
+    const safe = basename.replace(/[^a-zA-Z0-9_\-. ]/g, '').trim();
+    return (safe || 'document') + '-tei.xml';
 }

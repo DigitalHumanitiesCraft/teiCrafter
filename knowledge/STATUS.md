@@ -1,6 +1,6 @@
 # Implementierungs-Status
 
-Stand: 2026-02-18 (Session 12)
+Stand: 2026-02-18 (Session 13)
 
 Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Beantwortet: Was funktioniert? Was ist Stub? Was fehlt?
 
@@ -87,7 +87,7 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 
 | Modul | Typ | Implementiert | In app.js integriert | Tests | Bekannte Issues |
 |-------|-----|:---:|:---:|:---:|-----------------|
-| app.js | Core | ✅ | — | ❌ | Event-Listener-Akkumulation bei Re-Render, kein Error-Boundary |
+| app.js | Core | ✅ | — | ❌ | Event-Delegation (kein Listener-Leak mehr), kein Error-Boundary |
 | model.js | Core | ✅ | ❌ | ✅ 21 | Validation nicht in Undo-Snapshots |
 | tokenizer.js | Core | ✅ | ❌ (editor.js selbst nicht integriert) | ✅ 17 | Keine numerischen Entities, CDATA-Edge-Case |
 | editor.js | View | ✅ | ❌ | ❌ | `computeLineConfidence()` ist Stub (returns empty Map) |
@@ -97,9 +97,9 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 | transform.js | Service | ✅ | ✅ | ❌ | 3-Schichten-Prompt, Fallback-Extraktion |
 | validator.js | Service | ✅ | ✅ | ✅ 13 | Level 4 (XPath) ist Phase 3 |
 | schema.js | Service | ✅ | ✅ | ❌ | Permissiv wenn Schema nicht geladen, lazy-loaded |
-| export.js | Service | ✅ | ✅ | ❌ | Attribut-Bereinigung, Cross-Browser-Clipboard |
+| export.js | Service | ✅ | ✅ | ❌ | Attribut-Bereinigung, Cross-Browser-Clipboard, Path-Traversal-Fix |
 | storage.js | Service | ✅ | ⚠️ (indirekt via llm.js) | ❌ | Nur Provider/Model-Settings |
-| constants.js | Utility | ✅ | ✅ | ❌ | — |
+| constants.js | Utility | ✅ | ✅ | ❌ | ANNOTATION_TAGS zentralisiert |
 | dom.js | Utility | ✅ | ✅ | ❌ | — |
 
 **Zusammenfassung:** 14/14 Module implementiert. 7/14 direkt in app.js integriert (constants, dom, llm, transform, validator, schema, export). 1/14 indirekt integriert (storage via llm). 3/14 mit Unit-Tests (51 Tests gesamt). Test-Coverage: ~21%.
@@ -165,6 +165,7 @@ Stufen 11–13 abgeschlossen: transform.js + llm.js (Schritt 3), validator.js + 
 | 12 | Service-Integration: Validator + Schema | — | 2026-02 |
 | 13 | Service-Integration: Export + Optionen-UI | — | 2026-02 |
 | — | LLM-Provider-Update: 6 Provider, MODEL_CATALOG, Modell-Dropdown | — | 2026-02 |
+| — | Refactoring: Event-Delegation, ANNOTATION_TAGS DRY, CSS-Bugfixes, Security-Fix | — | 2026-02 |
 
 ---
 

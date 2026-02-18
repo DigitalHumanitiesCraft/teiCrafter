@@ -2,7 +2,7 @@
 
 Technische Dokumentation aller JavaScript-Module mit Public API, Abhängigkeiten und bekannten Issues. Aktualisiert bei API-Änderungen.
 
-Stand: 2026-02-18 (Session 12)
+Stand: 2026-02-18 (Session 13)
 
 ---
 
@@ -32,37 +32,37 @@ services/llm.js ─────────────────── consta
 
 ### app.js — Application Shell
 
-**Pfad:** `docs/js/app.js` (~884 Zeilen)
+**Pfad:** `docs/js/app.js` (~960 Zeilen)
 
 **Importiert:** `constants.js`, `dom.js`, `transform.js`, `llm.js`, `validator.js`, `schema.js`, `export.js`
 **Nicht importiert (noch offen):** model.js, editor.js, preview.js, source.js, storage.js
 
 **Interner State:**
-- `AppState` — Objekt mit `currentStep`, `inputContent`, `inputFormat`, `fileName`, `demoId`, `sourceType`, `mappingRules`, `context`, `outputXml`, `confidenceMap`, `transformStats`, `originalPlaintext`
-- `AppState.set(partial)` — Merge-Update
-- `AppState.reset()` — Alle Felder zurücksetzen
+- `INITIAL_STATE` — Gefrorenes Objekt mit Default-Werten
+- `AppState` — Objekt mit spread von INITIAL_STATE + `set(partial)` + `reset()` (via `structuredClone`)
 - `transformController` — Module-scoped AbortController für Cancel-Support
+- `transformInProgress` — Guard gegen Doppelklick bei Transform
+- `stepCleanup` — Cleanup-Funktion für step-spezifische Listener (Drag-and-Drop)
 
-**Stepper-Funktionen:**
-- `renderStep(step)` — Async Router zu 5 Render-Funktionen
-- `renderImportStep(container)` — Dropzone, Demos, Dateiverarbeitung
-- `renderMappingStep(container)` — Quellentyp, Mapping-Textarea, Kontext
-- `renderTransformStep(container)` — 3-Panel mit Tabs, LLM-Transform via transform.js
-- `renderValidateStep(container)` — Async, nutzt validator.js + schema.js (lazy-loaded)
-- `renderExportStep(container)` — Nutzt export.js (prepareExport, getExportStats, downloadXml, copyToClipboard)
+**Event-Delegation (Session 13):**
+- Ein einzelner `click`-Listener auf `.app-main` statt individueller Listener pro Button
+- Buttons nutzen `data-action`-Attribute: `go-step-N`, `select-file`, `load-demo`, `save-mapping`, `transform`, `cancel-transform`, `download-export`, `copy-export`, `new-document`
+- `handleAction(action, e)` — Zentraler Switch für ~13 Actions
+- Tab-Clicks werden ebenfalls delegiert (`.tab[data-tab]`)
+- `stepCleanup` → räumt Drag-and-Drop-Listener beim Step-Wechsel auf
 
-**LLM-Funktionen:**
-- `openSettingsDialog()` — 6 Provider, Modell-Dropdown mit Preisen/Reasoning, Custom-Feld für Ollama, Verbindungstest
+**LLM-Funktionen (aufgeteilt in Session 13):**
+- `buildSettingsHtml(configs, curProvider, curModel)` — Reiner HTML-String für Dialog
+- `attachSettingsListeners(dialog, backdrop, configs)` — Event-Binding für Dialog
+- `openSettingsDialog()` — Orchestrierung (erstellt Backdrop + Dialog, ruft obige auf)
 - `updateModelBadge()` — Header-Badge aktualisieren
 - `buildModelOptions(providerId, selectedModel)` — Modell-Optionen mit Metadaten rendern
 - `getProviderInfo(providerId)` — Provider-Info-Text (lokal vs. Cloud)
-- `performTransform()` — Demo-Modus oder LLM-Aufruf via transform.js
 
 **Bekannte Issues:**
-- Event-Listener werden bei jedem `renderStep()` neu angehängt (keine Cleanup-Funktion)
 - Kein Error-Boundary — Renderer-Fehler brechen gesamte UI
 - HTML als String-Concatenation — fragil, keine Templating-Engine
-- `extractPlaintext()` und `isWellFormedXml()` verbleiben inline (erstere für Compare-Panel, letztere für Import-Validierung)
+- `extractPlaintext()` und `isWellFormedXml()` verbleiben inline (für Compare-Panel bzw. Import-Validierung)
 
 ---
 
@@ -348,7 +348,7 @@ services/llm.js ─────────────────── consta
 
 **Pfad:** `docs/js/utils/constants.js` (~119 Zeilen)
 
-**Exports:** `CONFIDENCE`, `REVIEW_STATUS`, `ENTITY_TYPES`, `LLM_PROVIDERS` (6: gemini, openai, anthropic, deepseek, qwen, ollama), `MAX_UNDO`, `KEYSTROKE_DEBOUNCE`, `MAX_FILE_SIZE`, `TOAST_DURATION`, `TOAST_DURATION_ERROR`, `SOURCE_LABELS`, `DEMO_CONFIGS`, `ICONS`, `getDefaultMapping(sourceType)`
+**Exports:** `CONFIDENCE`, `REVIEW_STATUS`, `ENTITY_TYPES`, `LLM_PROVIDERS` (6: gemini, openai, anthropic, deepseek, qwen, ollama), `ANNOTATION_TAGS` (9 Tags, genutzt von transform, export, preview), `MAX_UNDO`, `KEYSTROKE_DEBOUNCE`, `MAX_FILE_SIZE`, `TOAST_DURATION`, `TOAST_DURATION_ERROR`, `SOURCE_LABELS`, `DEMO_CONFIGS`, `ICONS`, `getDefaultMapping(sourceType)`
 
 ### dom.js — DOM-Utilities
 

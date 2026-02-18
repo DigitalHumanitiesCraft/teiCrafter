@@ -159,7 +159,7 @@ export function createOverlayEditor(container, options = {}) {
     textarea.addEventListener('input', onInput);
 
     // Tab key: insert 2 spaces
-    textarea.addEventListener('keydown', e => {
+    function onKeydown(e) {
         if (e.key === 'Tab') {
             e.preventDefault();
             const start = textarea.selectionStart;
@@ -168,13 +168,16 @@ export function createOverlayEditor(container, options = {}) {
             textarea.selectionStart = textarea.selectionEnd = start + 2;
             onInput();
         }
-    });
+    }
+
+    textarea.addEventListener('keydown', onKeydown);
 
     return {
         textarea,
         destroy() {
             textarea.removeEventListener('scroll', syncScroll);
             textarea.removeEventListener('input', onInput);
+            textarea.removeEventListener('keydown', onKeydown);
             container.innerHTML = '';
             container.classList.remove('editor-overlay', 'editor-has-gutter');
         },

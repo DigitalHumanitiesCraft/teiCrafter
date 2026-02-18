@@ -48,6 +48,38 @@ Chronologisches Arbeitsprotokoll des teiCrafter-Projekts.
 
 **Alle 12 korrigiert.** Aktualisierte Zahlen: 4 ✅ integriert (statt 7), 17 🔧 Modul da (statt 14), 2/14 Module in app.js integriert (statt 3), 51 Tests (statt 54).
 
+### Session 13: Code-Qualität-Refactoring (4 Phasen)
+
+**Auslöser:** Umfassende Code-Analyse aller 14 JS-Module, HTML und CSS (2600+ Zeilen). Gesamtqualität 8.7/10, aber app.js hatte strukturelle Schulden die Weiterentwicklung behindern.
+
+**Durchgeführt:**
+
+1. **Phase 1: Quick Wins**
+   - `ANNOTATION_TAGS` in constants.js zentralisiert → import in transform.js, export.js, preview.js (war 3× dupliziert)
+   - CSS-Bugfixes: `.btn-primary` Definition ergänzt (8× verwendet, nie definiert), `--font-serif` Custom Property ergänzt, duplizierte `.compare-text` gemergt, `prefers-reduced-motion` Media Query ergänzt, `@import` durch Kommentar ersetzt (dupliziert mit HTML `<link>`)
+   - Path-Traversal-Fix in `export.js getExportFileName()` – Pfadkomponenten und unsichere Zeichen werden entfernt
+   - Ungenutzter Import `getPromptLayers` aus app.js entfernt
+
+2. **Phase 2: Event-Management**
+   - Event-Delegation: Ein `click`-Listener auf `.app-main` statt 20+ individuelle Listener
+   - Buttons nutzen `data-action`-Attribute → `handleAction()` als zentraler Switch (~13 Actions)
+   - Tab-Clicks ebenfalls delegiert (`.tab[data-tab]`)
+   - `stepCleanup`-Pattern: Drag-and-Drop-Listener werden beim Step-Wechsel aufgeräumt
+   - Eliminiert Event-Listener-Akkumulation bei Step-Navigation
+
+3. **Phase 3: app.js Struktur**
+   - `openSettingsDialog()` aufgeteilt: `buildSettingsHtml()`, `attachSettingsListeners()`, `openSettingsDialog()` (133→3 Funktionen)
+   - `AppState.reset()` DRY: `INITIAL_STATE` + `structuredClone()` statt manueller Property-Kopie
+   - Transform-Button Doppelklick-Schutz via `transformInProgress`-Guard
+
+4. **Phase 4: Service-Feinschliff**
+   - editor.js: Tab-`keydown`-Listener wird jetzt in `destroy()` aufgeräumt (Memory-Leak-Fix)
+   - validator.js: Level-Kommentare korrigiert (Ausführungsreihenfolge statt willkürliche Nummerierung)
+
+**Betroffene Dateien:** app.js, constants.js, style.css, export.js, transform.js, preview.js, editor.js, validator.js
+
+**Nächste Schritte:** Stufe 14 (DocumentModel statt AppState) → Stufe 15 (View-Module einbinden) → Stufe 16 (Test-Coverage).
+
 ### Session 12: LLM-Provider-Update (6 Provider, MODEL_CATALOG)
 
 **Auslöser:** User wünscht aktuelle Modelle, mehr Provider (DeepSeek, Qwen), Preistransparenz und Reasoning-Kennzeichnung.

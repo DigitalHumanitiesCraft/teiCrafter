@@ -2,7 +2,7 @@
 
 Konsolidierte Übersicht aller offenen und entschiedenen Punkte im teiCrafter-Projekt. Jede Entscheidung verweist auf das Dokument, das den fachlichen Kontext liefert.
 
-Stand: 2026-02-18 (Session 12)
+Stand: 2026-02-18 (Session 13)
 
 ---
 
@@ -20,6 +20,8 @@ Stand: 2026-02-18 (Session 12)
 | Visuelle Testmatrix | 24 Kombinationen getestet, 2 Problemfälle identifiziert | `date`+prüfenswert und `placeName`+sicher erfordern Aufmerksamkeit. Lösung: Unterstreichungsstil als Zusatzkanal | 2026-02-18 |
 | Service-Integration-Strategie | Direkte Verdrahtung in app.js, AppState beibehalten | Inkrementeller Ansatz: Services zuerst, DocumentModel-Umbau als separater Schritt (Stufe 14). Inline-Dummys gelöscht. | 2026-02-18 |
 | LLM-Provider-Auswahl | 6 Provider: Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama | Breite Abdeckung: 3 US-Cloud + 2 CN-Cloud + 1 Lokal. DeepSeek/Qwen nutzen OpenAI-kompatibles Format. MODEL_CATALOG mit Preisen/Reasoning-Flag. | 2026-02-18 |
+| Event-Management in app.js | Event-Delegation statt individuelle Listener | Ein Click-Listener auf `.app-main` mit `data-action`-Attributen. Eliminiert Listener-Leaks bei Step-Wechseln. Drag-and-Drop via `stepCleanup`-Pattern. Tab-Clicks ebenfalls delegiert. | 2026-02-18 |
+| ANNOTATION_TAGS-Zentralisierung | Zentrale Liste in constants.js | Tag-Liste war 5× dupliziert (transform, validator, export, preview, editor). Jetzt 1 Quelle, 3 Konsumenten (validator/editor haben keine hardcodierte Liste). | 2026-02-18 |
 
 ---
 

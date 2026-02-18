@@ -6,12 +6,7 @@
  */
 
 import { escHtml } from './utils/dom.js';
-import { CONFIDENCE, REVIEW_STATUS, ENTITY_TYPES } from './utils/constants.js';
-
-// Annotation tag names the preview should recognise
-const ANNOTATION_TAGS = [
-    'persName', 'placeName', 'orgName', 'date', 'name', 'bibl', 'term', 'measure', 'foreign'
-];
+import { CONFIDENCE, REVIEW_STATUS, ENTITY_TYPES, ANNOTATION_TAGS } from './utils/constants.js';
 
 /**
  * Create an interactive preview panel.

@@ -2,11 +2,12 @@
  * teiCrafter – Validator Service
  * Multi-level validation for TEI-XML documents.
  *
- * Level 1: Plaintext comparison (original vs. transformed)
- * Level 2: Well-formedness (DOMParser)
- * Level 3: Schema validation (JSON profile)
- * Level 4: XPath rules (future – Phase 3)
- * Level 5: Expert-in-the-Loop (= review workflow)
+ * Checks (in execution order):
+ * 1. Well-formedness (DOMParser)
+ * 2. Plaintext comparison (original vs. transformed)
+ * 3. Schema validation (JSON profile)
+ * 4. Expert-in-the-Loop (= review workflow)
+ * Future: XPath rules (Phase 3)
  */
 
 import * as schema from './schema.js';
@@ -41,21 +42,21 @@ export function validate({ xml, originalPlaintext, reviewStatusMap }) {
         return messages;
     }
 
-    // Level 2: Well-formedness
+    // 1. Well-formedness (prerequisite for all subsequent checks)
     const { doc, errors: wfErrors } = checkWellFormedness(xml);
     messages.push(...wfErrors);
 
-    // Level 1: Plaintext comparison
+    // 2. Plaintext comparison (requires parsed doc)
     if (originalPlaintext && doc) {
         messages.push(...checkPlaintext(doc, originalPlaintext));
     }
 
-    // Level 3: Schema validation
+    // 3. Schema validation (requires parsed doc + loaded schema)
     if (doc && schema.isLoaded()) {
         messages.push(...checkSchema(doc, xml));
     }
 
-    // Level 5: Expert review (unreviewed annotations)
+    // 4. Expert review (unreviewed annotations)
     if (reviewStatusMap) {
         messages.push(...checkUnreviewed(reviewStatusMap));
     }

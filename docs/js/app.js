@@ -5,7 +5,7 @@
 
 import { DEMO_CONFIGS, ICONS, SOURCE_LABELS, MAX_FILE_SIZE, getDefaultMapping } from './utils/constants.js';
 import { $, $$, escHtml, highlightXml, showToast } from './utils/dom.js';
-import { transform, getPromptLayers } from './services/transform.js';
+import { transform } from './services/transform.js';
 import { setApiKey, hasApiKey, getProvider, setProvider, getModel, setModel, getProviderConfigs, getModelCatalog, getModelsForProvider, testConnection } from './services/llm.js';
 import { validate } from './services/validator.js';
 import { loadSchema, isLoaded as isSchemaLoaded } from './services/schema.js';
@@ -15,7 +15,7 @@ import { prepareExport, getExportStats, downloadXml as downloadXmlService, copyT
 // Application State
 // ---------------------------------------------------------------------------
 
-const AppState = {
+const INITIAL_STATE = Object.freeze({
     currentStep: 1,
     inputContent: null,
     inputFormat: 'plaintext',
@@ -27,33 +27,27 @@ const AppState = {
     outputXml: null,
     confidenceMap: null,
     transformStats: null,
-    originalPlaintext: null,
+    originalPlaintext: null
+});
 
+const AppState = {
+    ...INITIAL_STATE,
     set(updates) { Object.assign(this, updates); },
-
-    reset() {
-        this.currentStep = 1;
-        this.inputContent = null;
-        this.inputFormat = 'plaintext';
-        this.fileName = null;
-        this.demoId = null;
-        this.sourceType = 'generic';
-        this.mappingRules = null;
-        this.context = { language: 'de', epoch: '19c', project: '' };
-        this.outputXml = null;
-        this.confidenceMap = null;
-        this.transformStats = null;
-        this.originalPlaintext = null;
-    }
+    reset() { Object.assign(this, structuredClone(INITIAL_STATE)); }
 };
 
 let transformController = null;
+let transformInProgress = false;
+let stepCleanup = null;
 
 // ---------------------------------------------------------------------------
 // Step Rendering
 // ---------------------------------------------------------------------------
 
 async function renderStep(step) {
+    stepCleanup?.();
+    stepCleanup = null;
+
     const main = $('.app-main');
     main.classList.remove('step-1', 'step-2', 'step-3', 'step-4', 'step-5');
     main.classList.add('step-' + step);
@@ -82,7 +76,7 @@ function renderImportStep(container) {
             '<h3 class="demo-title">' + escHtml(cfg.name) + '</h3>' +
             '<p class="demo-source">' + escHtml(cfg.subtitle) + '</p>' +
             '<p class="demo-type">' + escHtml(cfg.desc) + '</p>' +
-            '<button class="btn-secondary btn-sm btn-load-demo">Laden</button>' +
+            '<button class="btn-secondary btn-sm" data-action="load-demo">Laden</button>' +
         '</article>'
     ).join('');
 
@@ -94,7 +88,7 @@ function renderImportStep(container) {
                     '<h2 class="dropzone-title">Dokument importieren</h2>' +
                     '<p class="dropzone-hint">Datei hierher ziehen oder klicken</p>' +
                     '<input type="file" id="file-input" accept=".txt,.md,.xml,.docx" hidden>' +
-                    '<button class="btn-primary" id="btn-select-file">Datei ausw\u00e4hlen\u2026</button>' +
+                    '<button class="btn-primary" data-action="select-file">Datei ausw\u00e4hlen\u2026</button>' +
                 '</div>' +
                 '<div class="format-info">' +
                     '<p class="format-title">Formate:</p>' +
@@ -112,32 +106,31 @@ function renderImportStep(container) {
             '</div>' +
         '</section>';
 
-    initImportHandlers();
-}
-
-function initImportHandlers() {
+    // Drag-and-drop needs step-scoped listeners (cleaned up on step change)
     const dz = $('#dropzone');
     const fi = $('#file-input');
-    const bs = $('#btn-select-file');
-
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-    dz.addEventListener('drop', async e => {
+    const onDragover = e => { e.preventDefault(); dz.classList.add('drag-over'); };
+    const onDragleave = () => dz.classList.remove('drag-over');
+    const onDrop = async e => {
         e.preventDefault();
         dz.classList.remove('drag-over');
         if (e.dataTransfer.files[0]) await processFile(e.dataTransfer.files[0]);
-    });
-
-    bs.addEventListener('click', () => fi.click());
-    fi.addEventListener('change', async e => {
+    };
+    const onFileChange = async e => {
         if (e.target.files[0]) await processFile(e.target.files[0]);
-    });
+    };
 
-    $$('.btn-load-demo').forEach(b =>
-        b.addEventListener('click', async e => {
-            await loadDemo(e.target.closest('.demo-card').dataset.demo);
-        })
-    );
+    dz.addEventListener('dragover', onDragover);
+    dz.addEventListener('dragleave', onDragleave);
+    dz.addEventListener('drop', onDrop);
+    fi.addEventListener('change', onFileChange);
+
+    stepCleanup = () => {
+        dz.removeEventListener('dragover', onDragover);
+        dz.removeEventListener('dragleave', onDragleave);
+        dz.removeEventListener('drop', onDrop);
+        fi.removeEventListener('change', onFileChange);
+    };
 }
 
 async function processFile(file) {
@@ -305,25 +298,11 @@ function renderMappingStep(container) {
                     '</div>' +
                 '</div>' +
                 '<div class="mapping-actions">' +
-                    '<button class="btn-secondary" id="btn-back-import">Zur\u00fcck</button>' +
-                    '<button class="btn-primary btn-lg" id="btn-start-transform">Weiter</button>' +
+                    '<button class="btn-secondary" data-action="go-step-1">Zur\u00fcck</button>' +
+                    '<button class="btn-primary btn-lg" data-action="save-mapping">Weiter</button>' +
                 '</div>' +
             '</div>' +
         '</section>';
-
-    $('#btn-back-import').addEventListener('click', () => goToStep(1));
-    $('#btn-start-transform').addEventListener('click', () => {
-        AppState.set({
-            mappingRules: $('#mapping-rules').value,
-            sourceType: $('#source-type-select').value,
-            context: {
-                language: $('#ctx-language').value,
-                epoch: $('#ctx-epoch').value,
-                project: $('#ctx-project').value
-            }
-        });
-        goToStep(3);
-    });
 }
 
 // ---------------------------------------------------------------------------
@@ -355,7 +334,7 @@ function renderTransformStep(container) {
         '<section class="panel panel-editor">' +
             '<div class="panel-header">' +
                 '<span class="panel-label">TEI-XML Editor</span>' +
-                '<button class="btn-primary btn-sm" id="btn-transform">Transformieren</button>' +
+                '<button class="btn-primary btn-sm" data-action="transform">Transformieren</button>' +
             '</div>' +
             '<div class="panel-content">' +
                 '<div class="editor-wrapper" id="editor-wrapper">' +
@@ -391,19 +370,17 @@ function renderTransformStep(container) {
                 '</div>' +
             '</div>' +
             '<div class="panel-footer">' +
-                '<button class="btn-secondary btn-sm" id="btn-back-mapping">Zur\u00fcck</button>' +
-                '<button class="btn-primary btn-sm" id="btn-to-validate" ' + (hasOutput ? '' : 'disabled') + '>Weiter</button>' +
+                '<button class="btn-secondary btn-sm" data-action="go-step-2">Zur\u00fcck</button>' +
+                '<button class="btn-primary btn-sm" data-action="go-step-4" ' + (hasOutput ? '' : 'disabled') + '>Weiter</button>' +
             '</div>' +
         '</section>';
-
-    initTabHandlers();
-    $('#btn-transform').addEventListener('click', performTransform);
-    $('#btn-back-mapping').addEventListener('click', () => goToStep(2));
-    $('#btn-to-validate').addEventListener('click', () => goToStep(4));
 }
 
 async function performTransform() {
-    const btn = $('#btn-transform');
+    if (transformInProgress) return;
+    transformInProgress = true;
+
+    const btn = $('[data-action="transform"]');
     btn.disabled = true;
     btn.textContent = 'Transformiere…';
 
@@ -414,6 +391,7 @@ async function performTransform() {
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
             const xml = await resp.text();
             AppState.set({ outputXml: xml, originalPlaintext: AppState.inputContent });
+            transformInProgress = false;
             renderStep(3);
             return;
         }
@@ -422,6 +400,7 @@ async function performTransform() {
         if (!hasApiKey()) {
             showToast('Bitte zuerst LLM-Provider konfigurieren.', 'warning');
             await openSettingsDialog();
+            transformInProgress = false;
             btn.disabled = false;
             btn.textContent = 'Transformieren';
             return;
@@ -434,18 +413,12 @@ async function performTransform() {
                 '<div class="transform-loading">' +
                     '<div class="spinner"></div>' +
                     '<p>LLM-Transformation läuft…</p>' +
-                    '<button class="btn-secondary btn-sm" id="btn-cancel-transform">Abbrechen</button>' +
+                    '<button class="btn-secondary btn-sm" data-action="cancel-transform">Abbrechen</button>' +
                 '</div>';
         }
 
         // Set up AbortController
         transformController = new AbortController();
-        const cancelBtn = $('#btn-cancel-transform');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                transformController?.abort();
-            });
-        }
 
         // Save original plaintext for validation later
         AppState.set({ originalPlaintext: AppState.inputContent });
@@ -464,10 +437,12 @@ async function performTransform() {
             transformStats: result.stats
         });
         transformController = null;
+        transformInProgress = false;
         renderStep(3);
 
     } catch (e) {
         transformController = null;
+        transformInProgress = false;
         if (e.name === 'AbortError') {
             showToast('Transformation abgebrochen.', 'warning');
         } else {
@@ -555,13 +530,10 @@ async function renderValidateStep(container) {
                 renderMessages(messages) +
             '</div>' +
             '<div class="panel-footer">' +
-                '<button class="btn-secondary btn-sm" id="btn-back-transform">Zurück</button>' +
-                '<button class="btn-primary btn-sm" id="btn-to-export" ' + (hasErrors ? 'disabled' : '') + '>Weiter</button>' +
+                '<button class="btn-secondary btn-sm" data-action="go-step-3">Zurück</button>' +
+                '<button class="btn-primary btn-sm" data-action="go-step-5" ' + (hasErrors ? 'disabled' : '') + '>Weiter</button>' +
             '</div>' +
         '</section>';
-
-    $('#btn-back-transform').addEventListener('click', () => goToStep(3));
-    $('#btn-to-export').addEventListener('click', () => goToStep(5));
 }
 
 // ---------------------------------------------------------------------------
@@ -604,41 +576,14 @@ function renderExportStep(container) {
                     '<label><input type="checkbox" id="opt-keep-resp"> Resp-Attribute beibehalten</label>' +
                 '</div>' +
                 '<div class="export-actions">' +
-                    '<button class="btn-primary btn-lg" id="btn-download">Download TEI-XML</button>' +
+                    '<button class="btn-primary btn-lg" data-action="download-export">Download TEI-XML</button>' +
                 '</div>' +
                 '<div class="export-secondary">' +
-                    '<button class="btn-secondary" id="btn-copy">In Zwischenablage kopieren</button>' +
-                    '<button class="btn-secondary" id="btn-new-doc">Neues Dokument</button>' +
+                    '<button class="btn-secondary" data-action="copy-export">In Zwischenablage kopieren</button>' +
+                    '<button class="btn-secondary" data-action="new-document">Neues Dokument</button>' +
                 '</div>' +
             '</div>' +
         '</section>';
-
-    function getExportOptions() {
-        return {
-            format: $('input[name="export-format"]:checked')?.value || 'full',
-            keepConfidence: $('#opt-keep-confidence')?.checked || false,
-            keepResp: $('#opt-keep-resp')?.checked || false
-        };
-    }
-
-    $('#btn-download').addEventListener('click', () => {
-        const opts = getExportOptions();
-        const content = prepareExport(xml, opts);
-        downloadXmlService(content, exportFileName);
-    });
-
-    $('#btn-copy').addEventListener('click', async () => {
-        const opts = getExportOptions();
-        const content = prepareExport(xml, opts);
-        const ok = await copyToClipboardService(content);
-        if (ok) {
-            showToast('In Zwischenablage kopiert!', 'success');
-        } else {
-            showToast('Kopieren fehlgeschlagen.', 'error');
-        }
-    });
-
-    $('#btn-new-doc').addEventListener('click', () => { AppState.reset(); goToStep(1); });
 }
 
 // ---------------------------------------------------------------------------
@@ -698,22 +643,15 @@ function isWellFormedXml(xml) {
 }
 
 // ---------------------------------------------------------------------------
-// Tab Handlers
+// Export Helpers
 // ---------------------------------------------------------------------------
 
-function initTabHandlers() {
-    $$('.tab-group').forEach(tg => {
-        tg.querySelectorAll('.tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                const panel = tab.closest('.panel');
-                panel.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                panel.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-                tab.classList.add('active');
-                const target = panel.querySelector('.tab-content[data-tab="' + tab.dataset.tab + '"]');
-                if (target) target.classList.add('active');
-            });
-        });
-    });
+function getExportOptions() {
+    return {
+        format: $('input[name="export-format"]:checked')?.value || 'full',
+        keepConfidence: $('#opt-keep-confidence')?.checked || false,
+        keepResp: $('#opt-keep-resp')?.checked || false
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -788,11 +726,7 @@ function getProviderInfo(providerId) {
     return 'API-Key erforderlich · Kosten pro Nutzung';
 }
 
-async function openSettingsDialog() {
-    const configs = getProviderConfigs();
-    const curProvider = getProvider() || 'gemini';
-    const curModel = getModel() || configs[curProvider]?.defaultModel || '';
-
+function buildSettingsHtml(configs, curProvider, curModel) {
     const providerOptions = Object.entries(configs).map(([id, cfg]) =>
         '<option value="' + escHtml(id) + '"' + (id === curProvider ? ' selected' : '') + '>' +
             escHtml(cfg.name) +
@@ -801,17 +735,7 @@ async function openSettingsDialog() {
 
     const isOllama = curProvider === 'ollama';
 
-    const backdrop = document.createElement('div');
-    backdrop.className = 'dialog-backdrop';
-
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog dialog-settings';
-    dialog.setAttribute('role', 'dialog');
-    dialog.setAttribute('aria-modal', 'true');
-    dialog.setAttribute('aria-label', 'LLM-Einstellungen');
-
-    dialog.innerHTML =
-        '<h3 class="dialog-title">LLM-Einstellungen</h3>' +
+    return '<h3 class="dialog-title">LLM-Einstellungen</h3>' +
         '<div class="dialog-body">' +
             '<div class="settings-grid">' +
                 '<label for="settings-provider">Provider</label>' +
@@ -833,10 +757,9 @@ async function openSettingsDialog() {
             '<button class="btn-secondary" id="settings-cancel">Abbrechen</button>' +
             '<button class="btn-primary" id="settings-save">Speichern</button>' +
         '</div>';
+}
 
-    backdrop.appendChild(dialog);
-    document.body.appendChild(backdrop);
-
+function attachSettingsListeners(dialog, backdrop, configs) {
     const providerSelect = dialog.querySelector('#settings-provider');
     const modelSelect = dialog.querySelector('#settings-model');
     const customModelInput = dialog.querySelector('#settings-custom-model');
@@ -844,33 +767,6 @@ async function openSettingsDialog() {
     const keyInput = dialog.querySelector('#settings-apikey');
     const infoEl = dialog.querySelector('#settings-info');
     const providerInfoEl = dialog.querySelector('#provider-info');
-
-    providerSelect.addEventListener('change', () => {
-        const pid = providerSelect.value;
-        const cfg = configs[pid];
-        const pidIsOllama = cfg?.authType === 'none';
-
-        // Update model dropdown
-        modelSelect.innerHTML = buildModelOptions(pid, cfg?.defaultModel || '');
-
-        // Toggle custom model field for Ollama
-        customModelInput.style.display = pidIsOllama ? '' : 'none';
-        customModelLabel.style.display = pidIsOllama ? '' : 'none';
-        customModelInput.value = '';
-
-        // Update provider info
-        providerInfoEl.textContent = getProviderInfo(pid);
-
-        // Update API key field
-        keyInput.value = '';
-        if (pidIsOllama) {
-            keyInput.placeholder = 'Nicht benötigt (lokal)';
-            keyInput.disabled = true;
-        } else {
-            keyInput.placeholder = hasApiKey(pid) ? '••••••• (gesetzt)' : 'API-Key eingeben';
-            keyInput.disabled = false;
-        }
-    });
 
     function getSelectedModel() {
         const pid = providerSelect.value;
@@ -880,6 +776,27 @@ async function openSettingsDialog() {
         }
         return modelSelect.value;
     }
+
+    providerSelect.addEventListener('change', () => {
+        const pid = providerSelect.value;
+        const cfg = configs[pid];
+        const pidIsOllama = cfg?.authType === 'none';
+
+        modelSelect.innerHTML = buildModelOptions(pid, cfg?.defaultModel || '');
+        customModelInput.style.display = pidIsOllama ? '' : 'none';
+        customModelLabel.style.display = pidIsOllama ? '' : 'none';
+        customModelInput.value = '';
+        providerInfoEl.textContent = getProviderInfo(pid);
+
+        keyInput.value = '';
+        if (pidIsOllama) {
+            keyInput.placeholder = 'Nicht benötigt (lokal)';
+            keyInput.disabled = true;
+        } else {
+            keyInput.placeholder = hasApiKey(pid) ? '••••••• (gesetzt)' : 'API-Key eingeben';
+            keyInput.disabled = false;
+        }
+    });
 
     dialog.querySelector('#settings-test').addEventListener('click', async () => {
         const pid = providerSelect.value;
@@ -891,22 +808,15 @@ async function openSettingsDialog() {
         infoEl.className = 'settings-info';
         try {
             const result = await testConnection();
-            if (result.success) {
-                infoEl.textContent = '\u2713 ' + result.message;
-                infoEl.className = 'settings-info settings-success';
-            } else {
-                infoEl.textContent = '\u2717 ' + result.message;
-                infoEl.className = 'settings-info settings-error';
-            }
+            infoEl.textContent = (result.success ? '\u2713 ' : '\u2717 ') + result.message;
+            infoEl.className = 'settings-info ' + (result.success ? 'settings-success' : 'settings-error');
         } catch (e) {
             infoEl.textContent = '\u2717 ' + e.message;
             infoEl.className = 'settings-info settings-error';
         }
     });
 
-    dialog.querySelector('#settings-cancel').addEventListener('click', () => {
-        backdrop.remove();
-    });
+    dialog.querySelector('#settings-cancel').addEventListener('click', () => backdrop.remove());
 
     dialog.querySelector('#settings-save').addEventListener('click', () => {
         const pid = providerSelect.value;
@@ -923,9 +833,122 @@ async function openSettingsDialog() {
     });
 }
 
+async function openSettingsDialog() {
+    const configs = getProviderConfigs();
+    const curProvider = getProvider() || 'gemini';
+    const curModel = getModel() || configs[curProvider]?.defaultModel || '';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'dialog-backdrop';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'dialog dialog-settings';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', 'LLM-Einstellungen');
+
+    dialog.innerHTML = buildSettingsHtml(configs, curProvider, curModel);
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+
+    attachSettingsListeners(dialog, backdrop, configs);
+}
+
+// ---------------------------------------------------------------------------
+// Event Delegation (single listener on .app-main)
+// ---------------------------------------------------------------------------
+
+function handleAction(action, e) {
+    // Navigation
+    if (/^go-step-(\d)$/.test(action)) {
+        const step = parseInt(action.charAt(action.length - 1), 10);
+        goToStep(step);
+        return;
+    }
+
+    switch (action) {
+        // Step 1: Import
+        case 'select-file':
+            $('#file-input')?.click();
+            break;
+        case 'load-demo': {
+            const card = e.target.closest('.demo-card');
+            if (card?.dataset.demo) loadDemo(card.dataset.demo);
+            break;
+        }
+
+        // Step 2: Mapping
+        case 'save-mapping':
+            AppState.set({
+                mappingRules: $('#mapping-rules')?.value,
+                sourceType: $('#source-type-select')?.value,
+                context: {
+                    language: $('#ctx-language')?.value || 'de',
+                    epoch: $('#ctx-epoch')?.value || '19c',
+                    project: $('#ctx-project')?.value || ''
+                }
+            });
+            goToStep(3);
+            break;
+
+        // Step 3: Transform
+        case 'transform':
+            performTransform();
+            break;
+        case 'cancel-transform':
+            transformController?.abort();
+            break;
+
+        // Step 5: Export
+        case 'download-export': {
+            const opts = getExportOptions();
+            const xml = AppState.outputXml || '';
+            const content = prepareExport(xml, opts);
+            downloadXmlService(content, getExportFileName(AppState.fileName || 'document.xml'));
+            break;
+        }
+        case 'copy-export': {
+            const opts = getExportOptions();
+            const xml = AppState.outputXml || '';
+            const content = prepareExport(xml, opts);
+            copyToClipboardService(content).then(ok => {
+                showToast(ok ? 'In Zwischenablage kopiert!' : 'Kopieren fehlgeschlagen.', ok ? 'success' : 'error');
+            });
+            break;
+        }
+        case 'new-document':
+            AppState.reset();
+            goToStep(1);
+            break;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Initialization
 // ---------------------------------------------------------------------------
+
+const main = $('.app-main');
+
+// Delegated click handler for data-action buttons
+main.addEventListener('click', e => {
+    const actionEl = e.target.closest('[data-action]');
+    if (actionEl) {
+        handleAction(actionEl.dataset.action, e);
+        return;
+    }
+
+    // Delegated tab handler
+    const tab = e.target.closest('.tab[data-tab]');
+    if (tab) {
+        const panel = tab.closest('.panel');
+        if (!panel) return;
+        panel.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        panel.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        tab.classList.add('active');
+        const target = panel.querySelector('.tab-content[data-tab="' + tab.dataset.tab + '"]');
+        if (target) target.classList.add('active');
+    }
+});
 
 $('#btn-settings')?.addEventListener('click', openSettingsDialog);
 updateModelBadge();

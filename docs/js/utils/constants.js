@@ -37,6 +37,13 @@ export const LLM_PROVIDERS = Object.freeze({
     OLLAMA: 'ollama'
 });
 
+// --- Annotation Tags ---
+
+export const ANNOTATION_TAGS = Object.freeze([
+    'persName', 'placeName', 'orgName', 'date', 'name',
+    'bibl', 'term', 'measure', 'foreign'
+]);
+
 // --- Limits ---
 
 export const MAX_UNDO = 100;
