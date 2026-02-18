@@ -1,6 +1,6 @@
 # Implementierungs-Status
 
-Stand: 2026-02-18 (Session 14)
+Stand: 2026-02-18 (Session 16)
 
 Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Beantwortet: Was funktioniert? Was ist Stub? Was fehlt?
 
@@ -28,7 +28,7 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 |--------|--------|---------|
 | UI | ✅ | Dropzone, Datei-Auswahl, Demo-Karten, Format-Badges |
 | Dateiformate | ✅ | .txt, .md, .xml, .docx (DOCX via JSZip-CDN) |
-| Demo-Daten | ✅ | 3 Demos: HSA-Brief, DTA-Druck, Rezept |
+| Demo-Daten | ✅ | 2 Demos mit echten Daten: CoReMA-Rezept, DEPCHA-Rentrechnung (SZD-Brief ausstehend) |
 | Validierung | ✅ | Dateigröße (10 MB), Dateityp, XML-Wohlgeformtheit |
 | Service-Integration | ✅ | Kein Service nötig |
 | Bekannte Lücken | — | Quellentyp-Erkennung nutzt einfaches Keyword-Matching |
@@ -38,7 +38,7 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 | Aspekt | Status | Details |
 |--------|--------|---------|
 | UI | ✅ | Quellentyp-Auswahl, Mapping-Textarea, Kontext-Felder |
-| Default-Mappings | ✅ | 4 Quellentypen mit vorausgefüllten Regeln |
+| Default-Mappings | ✅ | 5 Quellentypen mit vorausgefüllten Regeln (correspondence, bookkeeping, print, recipe, generic) |
 | Service-Integration | ⚠️ | schema.js nicht eingebunden (keine Validierung der Mapping-Regeln) |
 | Bekannte Lücken | — | Kein Syntax-Check, keine Autovervollständigung, kein Preset-Management |
 
@@ -132,9 +132,10 @@ Stufen 11–13 abgeschlossen: transform.js + llm.js (Schritt 3), validator.js + 
 Strategieentscheidung: Erst beweisen, dass der Kern funktioniert, bevor Architektur polieren. Begründung: [LANDSCAPE.md](LANDSCAPE.md), [DECISIONS.md](DECISIONS.md).
 
 **Phase A – Durchstich validieren (1–2 Sessions):**
-1. Echten LLM-Transform testen (Demo-Brief + API-Key, Bruchstellen dokumentieren)
-2. Few-Shot-Beispiele zu Prompt-Assembly hinzufügen (höchster Hebel für LLM-Qualität)
-3. Bruchstellen fixen (Response-Parsing, Plaintext-Veränderung, halluzinierte Attribute)
+1. 🔧 Demo-Daten: 2 echte Datensätze angelegt (CoReMA-Rezept, DEPCHA-Rentrechnung), SZD-Brief ausstehend
+2. Echten LLM-Transform testen (Demo-Rezept + API-Key, Bruchstellen dokumentieren)
+3. Few-Shot-Beispiele zu Prompt-Assembly hinzufügen (höchster Hebel für LLM-Qualität)
+4. Bruchstellen fixen (Response-Parsing, Plaintext-Veränderung, halluzinierte Attribute)
 
 **Phase B – Review-Workflow erlebbar machen (1–2 Sessions):**
 4. preview.js in app.js einbinden (Inline-Review: Accept/Reject/Edit, Konfidenz-Visualisierung)
@@ -178,6 +179,7 @@ DocumentModel (Stufe 14) und editor.js/source.js (Stufe 15) wurden nach Strategi
 | 13 | Service-Integration: Export + Optionen-UI | — | 2026-02 |
 | — | LLM-Provider-Update: 6 Provider, MODEL_CATALOG, Modell-Dropdown | — | 2026-02 |
 | — | Refactoring: Event-Delegation, ANNOTATION_TAGS DRY, CSS-Bugfixes, Security-Fix | — | 2026-02 |
+| A1 | Phase A1: Demo-Daten mit echten Quellen (CoReMA, DEPCHA), Bookkeeping-sourceType | — | 2026-02 |
 
 ---
 

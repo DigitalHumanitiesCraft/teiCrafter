@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Wie man das wiltpret behalten soll</title>
+      </titleStmt>
+      <publicationStmt><p>Demo – teiCrafter</p></publicationStmt>
+      <sourceDesc>
+        <p>CoReMA, Wo1 Bl. 211r–211v (CC BY 4.0)</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="recipe">
+        <head>Wie man das <name type="ingredient" confidence="high" resp="#machine">wiltpret</name> behalten soll</head>
+        <p>Item wiltu das <name type="ingredient" confidence="high" resp="#machine">wilpret</name> behalten das eß nit verschmeckt so
+Nem daß vnd adar eß fein sauber vnd thu es In ain saubers
+<name type="tool" confidence="high" resp="#machine">geschir</name> Vnnd geus ain <name type="ingredient" confidence="high" resp="#machine">wein</name> daran spreng es vor mit ain <name type="ingredient" confidence="high" resp="#machine">Saltz</name> ain wenigso bleibt es gut als lang du wilt</p>
+      </div>
+    </body>
+  </text>
+</TEI>

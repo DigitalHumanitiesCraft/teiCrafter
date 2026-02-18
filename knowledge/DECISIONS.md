@@ -2,7 +2,7 @@
 
 Konsolidierte Übersicht aller offenen und entschiedenen Punkte im teiCrafter-Projekt. Jede Entscheidung verweist auf das Dokument, das den fachlichen Kontext liefert.
 
-Stand: 2026-02-18 (Session 14)
+Stand: 2026-02-18 (Session 16)
 
 ---
 
@@ -25,6 +25,8 @@ Stand: 2026-02-18 (Session 14)
 | Entwicklungsstrategie Phase 2→3 | Durchstich-first (Walking Skeleton validieren), dann gezielte Architekturverbesserung | Marktanalyse ([LANDSCAPE.md](LANDSCAPE.md)) bestätigt: kein vergleichbares Tool existiert. SW-Literatur (Cockburn, Freeman/Pryce, Hunt/Thomas) eindeutig: Skeleton unter Realbedingungen validieren bevor Architektur polieren. Review-Workflow ist der Differentiator. | 2026-02-18 |
 | Preview vor Editor integrieren | preview.js hat Vorrang vor editor.js bei View-Integration | DH-Scholars wollen visuelles Feedback, nicht rohe Spitzklammern. Die Vorschau ist das Arbeitsinstrument für alle; der Editor ist Werkzeug für Fortgeschrittene. | 2026-02-18 |
 | Few-Shot-Beispiele als Prompt-Hebel | 2–3 annotierte Beispiele pro Quellentyp in Mapping-Schicht | Forschungslage eindeutig: Few-Shot effektiver als verbose Regeln. Höchster Hebel für bessere LLM-Ergebnisse bei minimalem Aufwand. | 2026-02-18 |
+| Demo-Daten: Echte Quellen statt Platzhalter | CoReMA-Rezept (mittelalterlich, CC BY 4.0) + DEPCHA-Rentrechnung (1718, CC BY 4.0) + SZD-Brief (ausstehend) | Reale DH-Projekte der Uni Graz: CoReMA testet historische Sprache/Rezeptdomäne, DEPCHA testet Bookkeeping-Ontology mit bk:-Attributen, SZD testet Korrespondenz. Alle drei Projekte dem User bekannt. | 2026-02-18 |
+| Bookkeeping als neuer sourceType | `bookkeeping` mit SOURCE_LABELS, DEFAULT_MAPPINGS, detectType() | Rechnungsbücher sind eigenständiger Quellentyp mit spezifischen Entitäten (Geldbeträge, Konten, Waren). Bookkeeping-Ontology (bk:) erfordert @ana-Attribute, die in generischen Regeln nicht vorkommen. | 2026-02-18 |
 
 ---
 
@@ -172,7 +174,8 @@ Stand: 2026-02-18 (Session 14)
 
 ```
 Phase A – Durchstich validieren:
-  A1. ⬜ Echten LLM-Transform testen (Demo-Brief + API-Key)
+  A0. ✅ Demo-Daten mit echten Quellen (CoReMA-Rezept, DEPCHA-Rentrechnung)
+  A1. ⬜ Echten LLM-Transform testen (Demo-Rezept + API-Key)
   A2. ⬜ Few-Shot-Beispiele zu Prompt-Assembly hinzufügen
   A3. ⬜ Bruchstellen dokumentieren und fixen
 

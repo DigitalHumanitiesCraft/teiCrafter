@@ -2,7 +2,7 @@
 
 Technische Dokumentation aller JavaScript-Module mit Public API, Abhängigkeiten und bekannten Issues. Aktualisiert bei API-Änderungen.
 
-Stand: 2026-02-18 (Session 13)
+Stand: 2026-02-18 (Session 16)
 
 ---
 
@@ -348,7 +348,7 @@ services/llm.js ─────────────────── consta
 
 **Pfad:** `docs/js/utils/constants.js` (~119 Zeilen)
 
-**Exports:** `CONFIDENCE`, `REVIEW_STATUS`, `ENTITY_TYPES`, `LLM_PROVIDERS` (6: gemini, openai, anthropic, deepseek, qwen, ollama), `ANNOTATION_TAGS` (9 Tags, genutzt von transform, export, preview), `MAX_UNDO`, `KEYSTROKE_DEBOUNCE`, `MAX_FILE_SIZE`, `TOAST_DURATION`, `TOAST_DURATION_ERROR`, `SOURCE_LABELS`, `DEMO_CONFIGS`, `ICONS`, `getDefaultMapping(sourceType)`
+**Exports:** `CONFIDENCE`, `REVIEW_STATUS`, `ENTITY_TYPES`, `LLM_PROVIDERS` (6: gemini, openai, anthropic, deepseek, qwen, ollama), `ANNOTATION_TAGS` (9 Tags, genutzt von transform, export, preview), `MAX_UNDO`, `KEYSTROKE_DEBOUNCE`, `MAX_FILE_SIZE`, `TOAST_DURATION`, `TOAST_DURATION_ERROR`, `SOURCE_LABELS` (5 Typen: correspondence, bookkeeping, print, recipe, generic), `DEMO_CONFIGS` (2 Demos: bookkeeping, recipe), `ICONS`, `getDefaultMapping(sourceType)`
 
 ### dom.js — DOM-Utilities
 

@@ -6,6 +6,39 @@ Chronologisches Arbeitsprotokoll des teiCrafter-Projekts.
 
 ## 2026-02-18
 
+### Session 16: Phase A1 -- Demo-Daten mit echten Quellen
+
+**Ausloeser:** Durchstich-Strategie erfordert echte Daten statt Platzhalter. User schlug drei Projekte vor: Stefan Zweig Digital (Korrespondenz), DEPCHA (Rechnungsbuch), drittes Beispiel offen.
+
+**Durchgefuehrt:**
+
+1. **Demo-Daten recherchiert und angelegt** -- Drei Use Cases evaluiert:
+   - CoReMA-Rezept (Wo1, Bl. 211r-211v): Vollstaendiger Plaintext und TEI-XML von GAMS geholt. Mittelalterliches Rezept "Wie man das wiltpret behalten soll" (~50 Woerter, Fruehneuhochdeutsch).
+   - DEPCHA-Rentrechnung (1718, LiLA AS 8/2): Ausschnitt aus der Liechtensteinischen Rentrechnung von GAMS extrahiert. Zwei Konten mit Personen, Geldbetraegen (fl/kr), Datumsangaben.
+   - SZD-Brief: Ausstehend (User liefert Dateipfad nach).
+
+2. **6 Demo-Dateien erstellt:**
+   - `docs/data/demo/plaintext/recipe-medieval.txt` -- CoReMA-Rezept als Reintext
+   - `docs/data/demo/mappings/recipe-docta.md` -- Detaillierte Mapping-Regeln fuer historische Rezepte (ingredient, tool, instruction, measure) mit Few-Shot-Beispiel
+   - `docs/data/demo/expected-output/recipe-medieval-tei.xml` -- Manuell erstelltes Referenz-TEI (Gold-Standard)
+   - `docs/data/demo/plaintext/rentrechnung-1718.txt` -- DEPCHA-Ausschnitt
+   - `docs/data/demo/mappings/bookkeeping-depcha.md` -- Bookkeeping-Ontology-Mapping (bk:account, bk:money, bk:commodity) mit Few-Shot-Beispiel
+   - `docs/data/demo/expected-output/rentrechnung-1718-tei.xml` -- Referenz-TEI mit @ana-Attributen
+
+3. **Neuer sourceType `bookkeeping`:**
+   - `SOURCE_LABELS` erweitert (5 Typen statt 4)
+   - `DEFAULT_MAPPINGS` erweitert mit Bookkeeping-Regeln
+   - `DEMO_CONFIGS` aktualisiert: `hsa-letter` + `dta-print` durch `bookkeeping` ersetzt (Platzhalter-Demos durch echte Daten)
+   - `detectType()` in app.js erweitert (erkennt "fl", "kr", "Rechnung", "Empfang Gelt")
+
+4. **CLAUDE.md erstellt** -- Projektspezifische Instruktionen (keine Emojis, deutsche Commits, Sync-Regeln).
+
+5. **Knowledge-Dokumente aktualisiert:** STATUS.md, DECISIONS.md, MODULES.md, STORIES.md, JOURNAL.md
+
+**Betroffene Dateien:** 6 neue Demo-Dateien, constants.js, app.js, CLAUDE.md, 5 Knowledge-Dokumente
+
+**Naechste Schritte:** Echten LLM-Transform mit Rezept-Demo testen (Phase A1), Bruchstellen dokumentieren, Few-Shot-Beispiele in Prompt einbauen.
+
 ### Session 9: Knowledge Vault Refactoring
 
 **Auslöser:** Umfassende Code-Analyse aller 14 JS-Module ergab erhebliche Diskrepanz zwischen Dokumentation und Implementierung. Kernbefund: Alle Service-Module sind production-ready, aber app.js importiert keinen einzigen Service. Die Knowledge Base beschrieb einen durchgängigen Workflow, der so noch nicht existiert.

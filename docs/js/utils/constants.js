@@ -56,6 +56,7 @@ export const TOAST_DURATION_ERROR = 8000;
 
 export const SOURCE_LABELS = Object.freeze({
     correspondence: 'Korrespondenz',
+    bookkeeping: 'Rechnungsbuch',
     print: 'Druck',
     recipe: 'Rezept',
     generic: 'Dokument'
@@ -64,28 +65,16 @@ export const SOURCE_LABELS = Object.freeze({
 // --- Demo Configurations ---
 
 export const DEMO_CONFIGS = Object.freeze({
-    'hsa-letter': {
-        name: 'Brief',
-        subtitle: 'Hugo Schuchardt',
-        desc: 'Korrespondenz',
-        icon: 'letter',
-        sourceType: 'correspondence',
-        files: {
-            plaintext: '../data/demo/plaintext/hsa-letter-benndorf.txt',
-            mapping: '../data/demo/mappings/correspondence-hsa.md',
-            expectedOutput: '../data/demo/expected-output/hsa-letter-benndorf-tei.xml'
-        }
-    },
-    'dta-print': {
-        name: 'Historischer Druck',
-        subtitle: 'DTA-Basisformat',
-        desc: 'Strukturiert',
+    'bookkeeping': {
+        name: 'Rechnungsbuch',
+        subtitle: 'DEPCHA',
+        desc: 'Finanzdokument',
         icon: 'book',
-        sourceType: 'print',
+        sourceType: 'bookkeeping',
         files: {
-            plaintext: '../data/demo/plaintext/dta-print-sample.txt',
-            mapping: '../data/demo/mappings/print-dta.md',
-            expectedOutput: '../data/demo/expected-output/dta-print-sample-tei.xml'
+            plaintext: '../data/demo/plaintext/rentrechnung-1718.txt',
+            mapping: '../data/demo/mappings/bookkeeping-depcha.md',
+            expectedOutput: '../data/demo/expected-output/rentrechnung-1718-tei.xml'
         }
     },
     'recipe': {
@@ -117,6 +106,7 @@ export const ICONS = Object.freeze({
 
 const DEFAULT_MAPPINGS = Object.freeze({
     correspondence: 'Mapping rules:\n* <div> Entire letter\n* <pb> Page breaks "|{n}|"\n* <dateline> Date reference\n* <persName> Person\n* <placeName> Place\n* <date> when={YYYY-MM-DD}',
+    bookkeeping: 'Mapping rules:\n* <div type="account" ana="bk:account"> Account\n* <head> Account heading\n* <persName> Person\n* <placeName> Place\n* <measure ana="bk:money" unit="fl|kr" quantity="N"> Amount\n* <date when="YYYY-MM-DD"> Date',
     print: 'Mapping rules:\n* <div> Chapter\n* <head> Heading\n* <p> Paragraphs\n* <pb> Page breaks\n* <persName> Person\n* <placeName> Place',
     recipe: 'Mapping rules:\n* <div type="recipe"> Recipe\n* <head> Title\n* <p> Instructions\n* <name type="ingredient"> Ingredients\n* <measure> Quantities',
     generic: 'Mapping rules:\n* <div> Division\n* <p> Paragraphs\n* <persName> Person\n* <placeName> Place'

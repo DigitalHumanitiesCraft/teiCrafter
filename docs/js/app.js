@@ -233,6 +233,7 @@ async function loadDemo(id) {
 
 function detectType(text) {
     if (text.includes('Gruss') || text.includes('ergebener') || text.includes('College')) return 'correspondence';
+    if (text.includes(' fl') || text.includes(' kr') || text.includes('Rechnung') || text.includes('Empfang Gelt')) return 'bookkeeping';
     if (text.includes('Kapitel') || text.includes('ERSTES')) return 'print';
     if (text.includes('Nym') || text.includes('pfunt') || text.includes('zucker')) return 'recipe';
     return 'generic';

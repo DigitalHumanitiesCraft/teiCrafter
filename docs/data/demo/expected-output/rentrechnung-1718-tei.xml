@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Rentrechnung 1718</title>
+      </titleStmt>
+      <publicationStmt><p>Demo – teiCrafter</p></publicationStmt>
+      <sourceDesc>
+        <p>Liechtensteinisches Landesarchiv, AS 8/2 – DEPCHA (CC BY 4.0)</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="account" ana="bk:account">
+        <head>Empfang Gelt
+Neuer Empfang
+Admodiations Gelt</head>
+        <p>Die ertragnis des stypatirten Admodiationsquarti von <date when="1718-04-23" confidence="medium" resp="#machine">Georgi 1718</date> bis <date when="1719" confidence="medium" resp="#machine">1719</date> per <measure ana="bk:money" unit="fl" quantity="6200" confidence="high" resp="#machine">6200 fl</measure> haben die herrschaftl. Admodiatores, als <persName confidence="high" resp="#machine">Peter Walser</persName>, alter <name type="role" confidence="high" resp="#machine">Landtammann</name>, dessen Söhne <persName confidence="high" resp="#machine">Thomas</persName> und <persName confidence="high" resp="#machine">Anthoni Walser</persName>, <persName confidence="high" resp="#machine">Florian Wolf</persName> sel. gewester hochfürstlicher <name type="role" confidence="high" resp="#machine">Weingartenmeister</name> nachfolgender gestalt abgestattet. Und zwar mit bahrem Gelt zu Handen der fürstl. Verwaltung vom <date when="1718-09-01" confidence="high" resp="#machine">1. September 1718</date> bis <date when="1720-03-31" confidence="medium" resp="#machine">Endt Marty 1720</date> zusammen hiedurch geliefert per <measure ana="bk:money" unit="fl" quantity="513" confidence="high" resp="#machine">513 fl</measure></p>
+      </div>
+      <div type="account" ana="bk:account">
+        <head>Von dem <name type="role" confidence="high" resp="#machine">Haupt Zollner</name> <placeName confidence="high" resp="#machine">Liechtenstein</placeName> <persName confidence="high" resp="#machine">Thomas Walser</persName></head>
+        <p>Von <date when="1718-10-01" confidence="medium" resp="#machine">1. und respective 22 Octobris</date> bis <date when="1718-11-22" confidence="medium" resp="#machine">22 Novembris 1718</date> <measure ana="bk:money" unit="fl" quantity="48" confidence="high" resp="#machine">48 fl</measure> <measure ana="bk:money" unit="kr" quantity="25" confidence="high" resp="#machine">25 kr</measure></p>
+        <p>Von <date when="1718-11-22" confidence="medium" resp="#machine">22 Novembris</date> bis <date when="1718-12-22" confidence="medium" resp="#machine">22 Decembris</date> <measure ana="bk:money" unit="fl" quantity="60" confidence="high" resp="#machine">60 fl</measure> <measure ana="bk:money" unit="kr" quantity="15" confidence="high" resp="#machine">15 kr</measure></p>
+      </div>
+    </body>
+  </text>
+</TEI>

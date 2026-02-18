@@ -2,7 +2,7 @@
 
 User Stories für den teiCrafter-Prototyp (Phase 2) und ausgewählte Stories für Phase 3. Jede Story folgt dem Schema "Als [Rolle] möchte ich [Aktion], damit [Nutzen]" und enthält einen manuell durchführbaren Testfall.
 
-Stand: 2026-02-18 (Session 14)
+Stand: 2026-02-18 (Session 16)
 
 **Abhängigkeiten:** [DESIGN.md](DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [WORKFLOW.md](WORKFLOW.md), [teiModeller.md](teiModeller.md), [DECISIONS.md](DECISIONS.md)
 
