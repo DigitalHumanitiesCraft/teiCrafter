@@ -2,7 +2,7 @@
 
 Vollständige technische Dokumentation des Projekts. Destilliert aus 15 Wissensdokumenten, 14 JS-Modulen, 2643 Zeilen CSS, 27 Schema-Elementen und 60 Unit-Tests. Ziel: Ein Agent oder Entwickler kann mit diesem Dokument ohne Quellcode-Zugriff arbeiten.
 
-Stand: 2026-02-18 (Session 15)
+Stand: 2026-02-18 (Session 16)
 
 Abgrenzung zu SYNTHESIS.md: SYNTHESIS.md ist das 5-Minuten-Onboarding (Was, Warum, Wohin). REFERENCE.md ist die technische Tiefe (Wie, Womit, Welche Grenzen).
 
@@ -59,11 +59,14 @@ docs/
 │   │   ├── export.js       166 Zeilen, Attribut-Bereinigung, Download, Clipboard
 │   │   └── storage.js       69 Zeilen, localStorage-Wrapper (nur Provider/Model)
 │   └── utils/
-│       ├── constants.js    128 Zeilen, Enums, Configs, Icons, ANNOTATION_TAGS
+│       ├── constants.js    ~180 Zeilen, Enums, Configs, Icons, ANNOTATION_TAGS, DEMO_CONFIGS
 │       └── dom.js          172 Zeilen, $, $$, escHtml, showToast, showDialog
 ├── schemas/dtabf.json      27 TEI-Elemente, DTABf-Subset
 ├── tests/                  60 Unit-Tests (tokenizer: 19, model: 23, validator: 18)
-└── data/demo/              3 Demos (Brief, Druck, Rezept) — Dateien konfiguriert, Verzeichnis leer
+└── data/demo/              2 echte Demos (Rezept, Rentrechnung) + 1 Platzhalter (Brief)
+    ├── plaintext/          recipe-medieval.txt, rentrechnung-1718.txt
+    ├── mappings/           recipe-docta.md, bookkeeping-depcha.md
+    └── expected-output/    recipe-medieval-tei.xml, rentrechnung-1718-tei.xml
 ```
 
 Gesamt: 4159 Zeilen JavaScript, 2643 Zeilen CSS, 82 Zeilen HTML.
@@ -153,7 +156,7 @@ User → Import (app.js)
   inputFormat: 'plaintext' | 'markdown' | 'xml' | 'docx',
   fileName: string | null,
   demoId: string | null,
-  sourceType: 'correspondence' | 'print' | 'recipe' | 'generic',
+  sourceType: 'correspondence' | 'print' | 'recipe' | 'bookkeeping' | 'generic',
   mappingRules: string | null,
   context: { language: string, epoch: string, project: string },
   outputXml: string | null,
@@ -479,7 +482,7 @@ Wenn kein Schema geladen: `isKnownElement()`, `isChildAllowed()`, `isAttributeKn
 |---------|-----------|-----------|
 | View-Module nicht integriert | Vorschau ist Regex-HTML, kein Review | Hoch (Phase B) |
 | DocumentModel nicht als State-Quelle | Kein Undo/Redo im UI, keine Observer-Sync | Mittel (Phase C) |
-| Nie mit echtem LLM getestet | Kernworkflow unvalidiert | Hoch (Phase A) |
+| Nie mit echtem LLM getestet | Kernworkflow unvalidiert, Demo-Daten vorhanden (Phase A0) | Hoch (Phase A1) |
 | Few-Shot-Beispiele fehlen | Höchster Einzelhebel für Qualität | Hoch (Phase A) |
 
 ### 10.2 Code-Defekte
@@ -582,15 +585,21 @@ Schema-Validierung (Level 3) importiert aber nicht getestet. CDATA, DOCTYPE, Uni
 
 3 konfigurierte Demos in `constants.js`:
 
-| ID | Name | Quellentyp | Dateien |
-|----|------|-----------|---------|
-| hsa-letter | Hugo Schuchardt Brief | correspondence | plaintext, mapping, expected-output |
-| dta-print | DTA Druck-Sample | print | plaintext, mapping, expected-output |
-| recipe | Mittelalterliches Rezept | recipe | plaintext, mapping, expected-output |
+| ID | Name | Quellentyp | Status | Quelle |
+|----|------|-----------|--------|--------|
+| recipe | Mittelalterliches Rezept | recipe | Echte Daten | CoReMA, Wo1 Bl. 211r-211v (CC BY 4.0) |
+| bookkeeping | Rentrechnung 1718 | bookkeeping | Echte Daten | DEPCHA, Rechnungsbuch (CC BY 4.0) |
+| hsa-letter | Hugo Schuchardt Brief | correspondence | Platzhalter | Dateien fehlen noch |
 
-Demo-Modus in `performTransform()`: Statt LLM-Aufruf wird `expectedOutput`-Datei geladen. CSS für Demo-Karten vorhanden.
+Demo-Modus in `performTransform()`: Statt LLM-Aufruf wird `expectedOutput`-Datei geladen. CSS fuer Demo-Karten vorhanden.
 
-Dateipfade konfiguriert in `DEMO_CONFIGS`, Verzeichnis `data/demo/` existiert aber enthält keine Dateien.
+Demo-Dateien in `data/demo/` (Phase A0, Session 16):
+- `plaintext/recipe-medieval.txt` -- Fruehneuhochdeutsches Rezept (~50 Woerter)
+- `plaintext/rentrechnung-1718.txt` -- Rechnungsbuch-Ausschnitt (~80 Woerter)
+- `mappings/recipe-docta.md` -- DoCTA-konforme Rezept-Annotationsregeln mit Few-Shot-Beispiel
+- `mappings/bookkeeping-depcha.md` -- Bookkeeping-Ontology-Mapping mit bk:-Attributen
+- `expected-output/recipe-medieval-tei.xml` -- Gold-Standard TEI fuer Rezept
+- `expected-output/rentrechnung-1718-tei.xml` -- Gold-Standard TEI fuer Rentrechnung
 
 ---
 
@@ -645,11 +654,12 @@ Dateipfade konfiguriert in `DEMO_CONFIGS`, Verzeichnis `data/demo/` existiert ab
 - Services funktional, Views nicht verdrahtet
 - Kernworkflow nie end-to-end getestet
 
-### 15.2 Nächste Schritte
+### 15.2 Naechste Schritte
 
 ```
 Phase A — Durchstich validieren (1–2 Sessions):
-  A1. Echten LLM-Transform testen (Demo-Brief + API-Key)
+  A0. Demo-Daten mit echten Quellen ---- ERLEDIGT (Session 16)
+  A1. Echten LLM-Transform testen (Demo-Rezept + API-Key)
   A2. Few-Shot-Beispiele in Prompt-Assembly
   A3. Bruchstellen dokumentieren und fixen
 
@@ -694,7 +704,8 @@ DocumentModel-Umbau, Test-Coverage 80%, teiModeller, CodeMirror 6, Normdaten, Da
 | MODULES.md | API-Referenz |
 | STORIES.md | User Stories + Testkriterien |
 | DECISIONS.md | Entscheidungen + offene Punkte |
-| JOURNAL.md | Chronik (14 Sessions) |
+| JOURNAL.md | Chronik (16 Sessions) |
+| KNOWLEDGE.md (Root) | Komplett-Synthese aller Dokumente |
 
 ---
 
@@ -702,16 +713,18 @@ DocumentModel-Umbau, Test-Coverage 80%, teiModeller, CodeMirror 6, Normdaten, Da
 
 | Metrik | Wert |
 |--------|------|
-| JavaScript | 4159 Zeilen, 14 Module |
+| JavaScript | ~4200 Zeilen, 14 Module |
 | CSS | 2643 Zeilen, 98 Custom Properties |
 | HTML | 82 Zeilen |
 | Schema-Elemente | 27 (DTABf-Subset) |
 | ANNOTATION_TAGS | 9 |
 | LLM-Provider | 6 |
-| Modelle im Katalog | 15+ |
+| Modelle im Katalog | 17 |
+| Quellentypen | 5 (correspondence, print, recipe, bookkeeping, generic) |
+| Demo-Datensaetze | 3 (2 mit echten Daten, 1 Platzhalter) |
 | Unit-Tests | 60 (19 + 23 + 18) |
 | Test-Coverage | ~21% |
 | Integrierte Module | 7/14 |
 | User Stories | 22 (10 fertig, 11 in Arbeit, 1 offen) |
-| Knowledge-Dokumente | 15 |
-| Sessions | 15 |
+| Knowledge-Dokumente | 15 + KNOWLEDGE.md im Root |
+| Sessions | 16 |

@@ -1,8 +1,8 @@
 # teiCrafter – Synthese
 
-Kompaktes Gesamtbild des Projekts. Destilliert aus 13 Wissensdokumenten, 14 Sessions, und einer Marktanalyse. Ziel: Jeder Mensch oder Agent kann mit diesem Dokument in 5 Minuten den vollen Kontext erfassen.
+Kompaktes Gesamtbild des Projekts. Destilliert aus 15 Wissensdokumenten, 16 Sessions, und einer Marktanalyse. Ziel: Jeder Mensch oder Agent kann mit diesem Dokument in 5 Minuten den vollen Kontext erfassen.
 
-Stand: 2026-02-18 (Session 14)
+Stand: 2026-02-18 (Session 16)
 
 ---
 
@@ -62,8 +62,8 @@ docs/
 │       ├── constants.js # ANNOTATION_TAGS, Enums, Configs, Icons
 │       └── dom.js       # $, $$, escHtml, showToast, showDialog
 ├── schemas/dtabf.json   # 30+ TEI-Elemente
-├── tests/               # 51 Unit-Tests (tokenizer, model, validator)
-└── data/demo/           # 3 Demos (Brief, Druck, Rezept)
+├── tests/               # 60 Unit-Tests (tokenizer, model, validator)
+└── data/demo/           # 2 echte Demos (Rezept, Rentrechnung) + 1 Platzhalter
 ```
 
 ### Workflow (5 Schritte)
@@ -76,8 +76,8 @@ Import → Mapping → Transform → Validate → Export
 
 **Was funktioniert:**
 - Alle 14 Module implementiert, 7 direkt in app.js integriert
-- Import: Dropzone, .txt/.md/.xml/.docx, 3 Demo-Karten
-- Mapping: Quellentyp-Auswahl, editierbare Regeln, Kontext-Felder
+- Import: Dropzone, .txt/.md/.xml/.docx, 3 Demo-Karten (2 mit echten Daten)
+- Mapping: Quellentyp-Auswahl (5 Typen inkl. bookkeeping), editierbare Regeln, Kontext-Felder
 - Transform: Echter LLM-Aufruf via transform.js → llm.js, Demo-Modus, Cancel-Support
 - Validate: Plaintext-Vergleich, Wohlgeformtheit, Schema-Validierung
 - Export: Attribut-Bereinigung (@confidence, @resp), Download, Clipboard
@@ -87,7 +87,7 @@ Import → Mapping → Transform → Validate → Export
 **Was fehlt:**
 - View-Module (editor.js, preview.js, source.js) nicht in app.js → Vorschau ist Regex-basiertes Inline-HTML
 - DocumentModel nicht als State-Quelle → kein Undo/Redo im UI, keine Observer-Sync
-- Noch nie mit echtem LLM-Transform end-to-end getestet
+- Noch nie mit echtem LLM-Transform end-to-end getestet (Phase A1 vorbereitet: Demo-Daten vorhanden)
 - Review-Workflow (Accept/Reject/Edit) nur in preview.js implementiert, nicht in app.js erreichbar
 
 ### Schlüssel-Patterns
@@ -148,7 +148,8 @@ Statt Architektur polieren (DocumentModel, View-Module, Tests) zuerst beweisen, 
 
 ```
 Phase A – Durchstich validieren (1–2 Sessions):
-  A1. Echten LLM-Transform testen (Demo-Brief + API-Key)
+  A0. Demo-Daten mit echten Quellen (CoReMA-Rezept, DEPCHA-Rentrechnung) ---- ERLEDIGT
+  A1. Echten LLM-Transform testen (Demo-Rezept + API-Key)
   A2. Few-Shot-Beispiele in Prompt-Assembly einbauen
   A3. Bruchstellen dokumentieren und fixen
 
@@ -212,9 +213,11 @@ SYNTHESIS.md (dieses Dokument – Gesamtbild)
     ├── STORIES.md         Was muss getestet werden?
     ├── DECISIONS.md       Was wurde entschieden?
     └── JOURNAL.md         Was wurde wann gemacht?
+
+KNOWLEDGE.md (Projekt-Root)   Komplett-Synthese aller Dokumente
 ```
 
-14 Dokumente, ~6000 Zeilen, rein Standard-Markdown. Kein Build-Step, keine Obsidian-Features.
+15 Knowledge-Dokumente + KNOWLEDGE.md im Root, ~7000 Zeilen, rein Standard-Markdown. Kein Build-Step, keine Obsidian-Features.
 
 ---
 
@@ -225,13 +228,14 @@ SYNTHESIS.md (dieses Dokument – Gesamtbild)
 | JS-Module | 14 (alle implementiert) |
 | Davon in app.js integriert | 7 Services + Utilities |
 | Davon nicht integriert | 3 View-Module + model.js |
-| Unit-Tests | 51 (tokenizer: 17, model: 21, validator: 13) |
+| Unit-Tests | 60 (tokenizer: 19, model: 23, validator: 18) |
 | Test-Coverage | ~21% |
 | CSS | ~2645 Zeilen |
 | app.js | ~1031 Zeilen |
 | LLM-Provider | 6 (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama) |
 | Modelle im Katalog | 17 |
-| Demo-Datensätze | 3 (Brief, Druck, Rezept) |
-| User Stories | 22 (10 ✅, 11 🔧, 1 ⬜) |
-| Sessions | 14 |
-| Knowledge-Dokumente | 14 |
+| Quellentypen | 5 (correspondence, print, recipe, bookkeeping, generic) |
+| Demo-Datensaetze | 3 (Rezept + Rentrechnung mit echten Daten, Brief als Platzhalter) |
+| User Stories | 22 (10 fertig, 11 in Arbeit, 1 offen) |
+| Sessions | 16 |
+| Knowledge-Dokumente | 15 + KNOWLEDGE.md im Root |

@@ -2,7 +2,7 @@
 
 Zentrales Wissenssystem für das teiCrafter-Projekt. Jedes Dokument hat eine definierte Zuständigkeit, eine Zielgruppe und explizite Abhängigkeiten. Reines Standard-Markdown, keine Obsidian-Features.
 
-Stand: 2026-02-18 (Session 15)
+Stand: 2026-02-18 (Session 16)
 
 ---
 
@@ -25,6 +25,7 @@ Stand: 2026-02-18 (Session 15)
 | [LANDSCAPE](LANDSCAPE.md) | Tool-Landschaft, Marktanalyse, strategische Positionierung | Forschung | Alle, Strategie |
 | [Research Landscape](research-landscape.md) | Wie positioniert sich teiCrafter 2025–2026? | Forschung | Alle, Publikationen |
 | [JOURNAL](JOURNAL.md) | Was wurde wann gemacht? | Prozess | Entwicklung |
+| [KNOWLEDGE](../KNOWLEDGE.md) | **Komplett-Synthese** aller Dokumente (Projekt-Root) | Synthese | Alle, Agents |
 
 **Kategorien:**
 - **Konzept** = Was gebaut werden soll (normativ)
@@ -60,6 +61,8 @@ SYNTHESIS.md (kompaktes Gesamtbild, destilliert aus allen Dokumenten)
 REFERENCE.md (technische Tiefe, destilliert aus Code + Dokumenten)
 LANDSCAPE.md (Tool-Landschaft, informiert VISION und DECISIONS)
 research-landscape.md (eigenständig, informiert VISION)
+
+../KNOWLEDGE.md (Projekt-Root, Komplett-Synthese aller 15 Dokumente)
 ```
 
 Änderungen fließen abwärts. DESIGN.md kann Farben ändern, ohne die Architektur zu berühren. ARCHITECTURE.md kann die Editor-Engine wechseln, ohne das Farbsystem zu verändern. STATUS.md und MODULES.md werden bei jeder Session mit Code-Änderungen aktualisiert.
