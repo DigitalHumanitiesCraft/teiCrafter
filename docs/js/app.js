@@ -5,6 +5,11 @@
 
 import { DEMO_CONFIGS, ICONS, SOURCE_LABELS, MAX_FILE_SIZE, getDefaultMapping } from './utils/constants.js';
 import { $, $$, escHtml, highlightXml, showToast } from './utils/dom.js';
+import { transform, getPromptLayers } from './services/transform.js';
+import { setApiKey, hasApiKey, getProvider, setProvider, getModel, setModel, getProviderConfigs, testConnection } from './services/llm.js';
+import { validate } from './services/validator.js';
+import { loadSchema, isLoaded as isSchemaLoaded } from './services/schema.js';
+import { prepareExport, getExportStats, downloadXml as downloadXmlService, copyToClipboard as copyToClipboardService, getExportFileName } from './services/export.js';
 
 // ---------------------------------------------------------------------------
 // Application State
@@ -20,6 +25,9 @@ const AppState = {
     mappingRules: null,
     context: { language: 'de', epoch: '19c', project: '' },
     outputXml: null,
+    confidenceMap: null,
+    transformStats: null,
+    originalPlaintext: null,
 
     set(updates) { Object.assign(this, updates); },
 
@@ -33,14 +41,19 @@ const AppState = {
         this.mappingRules = null;
         this.context = { language: 'de', epoch: '19c', project: '' };
         this.outputXml = null;
+        this.confidenceMap = null;
+        this.transformStats = null;
+        this.originalPlaintext = null;
     }
 };
+
+let transformController = null;
 
 // ---------------------------------------------------------------------------
 // Step Rendering
 // ---------------------------------------------------------------------------
 
-function renderStep(step) {
+async function renderStep(step) {
     const main = $('.app-main');
     main.classList.remove('step-1', 'step-2', 'step-3', 'step-4', 'step-5');
     main.classList.add('step-' + step);
@@ -50,7 +63,7 @@ function renderStep(step) {
         case 1: renderImportStep(main); break;
         case 2: renderMappingStep(main); break;
         case 3: renderTransformStep(main); break;
-        case 4: renderValidateStep(main); break;
+        case 4: await renderValidateStep(main); break;
         case 5: renderExportStep(main); break;
     }
 
@@ -351,7 +364,16 @@ function renderTransformStep(container) {
                         : '<p class="placeholder-text">Klicken Sie "Transformieren" um TEI-XML zu generieren</p>') +
                 '</div>' +
             '</div>' +
-            '<div class="panel-footer"><span id="line-count">' + lineCount + ' Zeilen</span></div>' +
+            '<div class="panel-footer"><span id="line-count">' + lineCount + ' Zeilen</span>' +
+                (AppState.transformStats
+                    ? '<span class="transform-stats">' +
+                        AppState.transformStats.total + ' Annotationen: ' +
+                        '<span class="stat-sicher">' + AppState.transformStats.sicher + ' sicher</span> · ' +
+                        '<span class="stat-pruefenswert">' + AppState.transformStats.pruefenswert + ' prüfenswert</span> · ' +
+                        '<span class="stat-problematisch">' + AppState.transformStats.problematisch + ' problematisch</span>' +
+                      '</span>'
+                    : '') +
+            '</div>' +
         '</section>' +
         '<section class="panel panel-preview">' +
             '<div class="panel-header">' +
@@ -383,76 +405,144 @@ function renderTransformStep(container) {
 async function performTransform() {
     const btn = $('#btn-transform');
     btn.disabled = true;
-    btn.textContent = 'Transformiere\u2026';
+    btn.textContent = 'Transformiere…';
 
     try {
-        let xml;
+        // Demo mode: fetch expected output directly
         if (AppState.demoId && DEMO_CONFIGS[AppState.demoId]) {
             const resp = await fetch(DEMO_CONFIGS[AppState.demoId].files.expectedOutput);
             if (!resp.ok) throw new Error('HTTP ' + resp.status);
-            xml = await resp.text();
-        } else {
-            xml = generateBasicTei(AppState.inputContent, AppState.sourceType);
+            const xml = await resp.text();
+            AppState.set({ outputXml: xml, originalPlaintext: AppState.inputContent });
+            renderStep(3);
+            return;
         }
-        AppState.set({ outputXml: xml });
+
+        // Real mode: check API key
+        if (!hasApiKey()) {
+            showToast('Bitte zuerst LLM-Provider konfigurieren.', 'warning');
+            await openSettingsDialog();
+            btn.disabled = false;
+            btn.textContent = 'Transformieren';
+            return;
+        }
+
+        // Show loading UI
+        const wrapper = $('#editor-wrapper');
+        if (wrapper) {
+            wrapper.innerHTML =
+                '<div class="transform-loading">' +
+                    '<div class="spinner"></div>' +
+                    '<p>LLM-Transformation läuft…</p>' +
+                    '<button class="btn-secondary btn-sm" id="btn-cancel-transform">Abbrechen</button>' +
+                '</div>';
+        }
+
+        // Set up AbortController
+        transformController = new AbortController();
+        const cancelBtn = $('#btn-cancel-transform');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                transformController?.abort();
+            });
+        }
+
+        // Save original plaintext for validation later
+        AppState.set({ originalPlaintext: AppState.inputContent });
+
+        // Call transform service
+        const result = await transform({
+            xmlContent: AppState.inputContent,
+            sourceType: AppState.sourceType,
+            context: AppState.context,
+            mappingRules: AppState.mappingRules
+        }, { signal: transformController.signal });
+
+        AppState.set({
+            outputXml: result.xml,
+            confidenceMap: result.confidenceMap,
+            transformStats: result.stats
+        });
+        transformController = null;
         renderStep(3);
+
     } catch (e) {
-        console.error('Transform failed:', e);
-        showToast('Transformation fehlgeschlagen: ' + e.message, 'error');
+        transformController = null;
+        if (e.name === 'AbortError') {
+            showToast('Transformation abgebrochen.', 'warning');
+        } else {
+            console.error('Transform failed:', e);
+            showToast('Transformation fehlgeschlagen: ' + e.message, 'error');
+        }
         btn.disabled = false;
         btn.textContent = 'Transformieren';
     }
-}
-
-function generateBasicTei(txt, type) {
-    const lines = txt.split('\n').map(l => '        <p>' + escHtml(l) + '</p>').join('\n');
-    return '<?xml version="1.0" encoding="UTF-8"?>\n' +
-        '<TEI xmlns="http://www.tei-c.org/ns/1.0">\n' +
-        '  <teiHeader>\n' +
-        '    <fileDesc>\n' +
-        '      <titleStmt><title>Untitled Document</title></titleStmt>\n' +
-        '      <publicationStmt><p>Generated by teiCrafter</p></publicationStmt>\n' +
-        '      <sourceDesc><p>Transformed from plaintext</p></sourceDesc>\n' +
-        '    </fileDesc>\n' +
-        '  </teiHeader>\n' +
-        '  <text>\n' +
-        '    <body>\n' +
-        '      <div type="' + escHtml(type) + '">\n' +
-        lines + '\n' +
-        '      </div>\n' +
-        '    </body>\n' +
-        '  </text>\n' +
-        '</TEI>';
 }
 
 // ---------------------------------------------------------------------------
 // Step 4: Validate
 // ---------------------------------------------------------------------------
 
-function renderValidateStep(container) {
-    const origText = AppState.inputContent || '';
+async function renderValidateStep(container) {
+    const origText = AppState.originalPlaintext || AppState.inputContent || '';
     const extracted = extractPlaintext(AppState.outputXml || '');
-    const similarity = calculateSimilarity(origText, extracted);
-    const wellformed = isWellFormedXml(AppState.outputXml || '');
     const lineCount = AppState.outputXml ? AppState.outputXml.split('\n').length : 0;
 
-    const simClass = similarity >= 90 ? 'valid' : 'warning';
-    const simIcon = similarity >= 90 ? '&#10003;' : '!';
-    const xmlClass = wellformed ? 'valid' : 'error';
-    const xmlIcon = wellformed ? '&#10003;' : '&#10007;';
+    // Lazy-load schema
+    if (!isSchemaLoaded()) {
+        try { await loadSchema(); } catch (e) {
+            console.warn('Schema could not be loaded:', e);
+        }
+    }
+
+    // Run validation via validator.js
+    let messages = [];
+    try {
+        messages = validate({
+            xml: AppState.outputXml || '',
+            originalPlaintext: origText,
+            reviewStatusMap: null
+        });
+    } catch (e) {
+        console.error('Validation failed:', e);
+        messages = [{ level: 'error', source: 'system', message: 'Validierung fehlgeschlagen: ' + e.message }];
+    }
+
+    // Count by level
+    const errors = messages.filter(m => m.level === 'error');
+    const warnings = messages.filter(m => m.level === 'warning');
+    const infos = messages.filter(m => m.level === 'info');
+    const hasErrors = errors.length > 0;
+
+    // Render validation items
+    function renderMessages(msgs) {
+        if (!msgs.length) return '<div class="validation-item success"><span class="validation-icon">&#10003;</span><div class="validation-info"><strong>Alle Prüfungen bestanden</strong></div></div>';
+        return msgs.map(m => {
+            const cls = m.level === 'error' ? 'error' : (m.level === 'warning' ? 'warning' : 'success');
+            const icon = m.level === 'error' ? '&#10007;' : (m.level === 'warning' ? '!' : '&#10003;');
+            return '<div class="validation-item ' + cls + '">' +
+                '<span class="validation-icon">' + icon + '</span>' +
+                '<div class="validation-info">' +
+                    '<strong>' + escHtml(m.source) + '</strong>' +
+                    '<p>' + escHtml(m.message) + '</p>' +
+                    (m.line ? '<span class="validation-line">Zeile ' + m.line + '</span>' : '') +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
 
     container.innerHTML =
         '<section class="panel panel-compare">' +
             '<div class="panel-header"><span class="panel-label">Plaintext-Vergleich</span></div>' +
             '<div class="panel-content compare-content">' +
                 '<div class="compare-box"><h4>Original</h4><pre class="compare-text">' +
-                    escHtml(origText.substring(0, 500)) + (origText.length > 500 ? '\u2026' : '') +
+                    escHtml(origText.substring(0, 500)) + (origText.length > 500 ? '…' : '') +
                 '</pre></div>' +
                 '<div class="compare-box"><h4>Extrahiert</h4><pre class="compare-text">' +
-                    escHtml(extracted.substring(0, 500)) + (extracted.length > 500 ? '\u2026' : '') +
+                    escHtml(extracted.substring(0, 500)) + (extracted.length > 500 ? '…' : '') +
                 '</pre></div>' +
             '</div>' +
-            '<div class="panel-footer"><span>\u00c4hnlichkeit: ' + similarity + '%</span></div>' +
+            '<div class="panel-footer"><span>' + origText.split(/\s+/).length + ' Wörter original</span></div>' +
         '</section>' +
         '<section class="panel panel-editor">' +
             '<div class="panel-header"><span class="panel-label">TEI-XML (readonly)</span></div>' +
@@ -460,24 +550,13 @@ function renderValidateStep(container) {
             '<div class="panel-footer"><span>' + lineCount + ' Zeilen</span></div>' +
         '</section>' +
         '<section class="panel panel-validation">' +
-            '<div class="panel-header"><span class="panel-label">Validierung</span></div>' +
+            '<div class="panel-header"><span class="panel-label">Validierung (' + errors.length + ' Fehler, ' + warnings.length + ' Warnungen)</span></div>' +
             '<div class="panel-content validation-list">' +
-                '<div class="validation-item ' + simClass + '">' +
-                    '<span class="validation-icon">' + simIcon + '</span>' +
-                    '<div class="validation-info"><strong>Plaintext-Vergleich</strong><p>' + similarity + '% \u00dcbereinstimmung</p></div>' +
-                '</div>' +
-                '<div class="validation-item ' + xmlClass + '">' +
-                    '<span class="validation-icon">' + xmlIcon + '</span>' +
-                    '<div class="validation-info"><strong>XML-Syntax</strong><p>' + (wellformed ? 'Wohlgeformt' : 'Syntaxfehler') + '</p></div>' +
-                '</div>' +
-                '<div class="validation-item info">' +
-                    '<span class="validation-icon">?</span>' +
-                    '<div class="validation-info"><strong>Schema-Validierung</strong><p>TEI-All (nicht gepr\u00fcft)</p></div>' +
-                '</div>' +
+                renderMessages(messages) +
             '</div>' +
             '<div class="panel-footer">' +
-                '<button class="btn-secondary btn-sm" id="btn-back-transform">Zur\u00fcck</button>' +
-                '<button class="btn-primary btn-sm" id="btn-to-export" ' + (wellformed ? '' : 'disabled') + '>Weiter</button>' +
+                '<button class="btn-secondary btn-sm" id="btn-back-transform">Zurück</button>' +
+                '<button class="btn-primary btn-sm" id="btn-to-export" ' + (hasErrors ? 'disabled' : '') + '>Weiter</button>' +
             '</div>' +
         '</section>';
 
@@ -491,8 +570,17 @@ function renderValidateStep(container) {
 
 function renderExportStep(container) {
     const xml = AppState.outputXml || '';
-    const lineCount = xml.split('\n').length;
-    const entities = countEntities(xml);
+    const stats = getExportStats(xml);
+    const exportFileName = getExportFileName(AppState.fileName || 'document.xml');
+
+    // Build entity summary
+    const entityParts = [];
+    if (stats.entityCounts) {
+        for (const [tag, count] of Object.entries(stats.entityCounts)) {
+            if (count > 0) entityParts.push(count + ' ' + escHtml(tag));
+        }
+    }
+    const entitySummary = entityParts.length ? entityParts.join(', ') : 'keine';
 
     container.innerHTML =
         '<section class="export-center">' +
@@ -502,14 +590,18 @@ function renderExportStep(container) {
                     '<h2>Transformation erfolgreich</h2>' +
                 '</div>' +
                 '<div class="export-stats">' +
-                    '<div class="stat"><span class="stat-label">Dokument</span><span class="stat-value">' + escHtml(AppState.fileName || 'document.xml') + '</span></div>' +
-                    '<div class="stat"><span class="stat-label">Zeilen</span><span class="stat-value">' + lineCount + '</span></div>' +
-                    '<div class="stat"><span class="stat-label">Entit\u00e4ten</span><span class="stat-value">' + entities.total + ' (' + entities.persons + ' Personen, ' + entities.places + ' Orte)</span></div>' +
+                    '<div class="stat"><span class="stat-label">Dokument</span><span class="stat-value">' + escHtml(exportFileName) + '</span></div>' +
+                    '<div class="stat"><span class="stat-label">Zeilen</span><span class="stat-value">' + stats.lineCount + '</span></div>' +
+                    '<div class="stat"><span class="stat-label">Entitäten</span><span class="stat-value">' + stats.totalEntities + ' (' + entitySummary + ')</span></div>' +
                 '</div>' +
                 '<div class="export-format">' +
                     '<h3>Export-Format</h3>' +
-                    '<label class="radio-option"><input type="radio" name="export-format" value="full" checked> TEI-XML vollst\u00e4ndig</label>' +
+                    '<label class="radio-option"><input type="radio" name="export-format" value="full" checked> TEI-XML vollständig</label>' +
                     '<label class="radio-option"><input type="radio" name="export-format" value="body"> TEI-XML nur Body</label>' +
+                '</div>' +
+                '<div class="export-options">' +
+                    '<label><input type="checkbox" id="opt-keep-confidence"> Konfidenz-Attribute beibehalten</label>' +
+                    '<label><input type="checkbox" id="opt-keep-resp"> Resp-Attribute beibehalten</label>' +
                 '</div>' +
                 '<div class="export-actions">' +
                     '<button class="btn-primary btn-lg" id="btn-download">Download TEI-XML</button>' +
@@ -521,37 +613,32 @@ function renderExportStep(container) {
             '</div>' +
         '</section>';
 
-    $('#btn-download').addEventListener('click', downloadTei);
-    $('#btn-copy').addEventListener('click', copyToClipboard);
-    $('#btn-new-doc').addEventListener('click', () => { AppState.reset(); goToStep(1); });
-}
-
-function getExportContent() {
-    const format = $('input[name="export-format"]:checked')?.value || 'full';
-    let content = AppState.outputXml || '';
-    if (format === 'body') {
-        const m = content.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-        content = m ? m[1].trim() : content;
+    function getExportOptions() {
+        return {
+            format: $('input[name="export-format"]:checked')?.value || 'full',
+            keepConfidence: $('#opt-keep-confidence')?.checked || false,
+            keepResp: $('#opt-keep-resp')?.checked || false
+        };
     }
-    return content;
-}
 
-function downloadTei() {
-    const content = getExportContent();
-    const blob = new Blob([content], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (AppState.fileName || 'document').replace(/\.[^.]+$/, '') + '-tei.xml';
-    a.click();
-    URL.revokeObjectURL(url);
-}
+    $('#btn-download').addEventListener('click', () => {
+        const opts = getExportOptions();
+        const content = prepareExport(xml, opts);
+        downloadXmlService(content, exportFileName);
+    });
 
-function copyToClipboard() {
-    const content = getExportContent();
-    navigator.clipboard.writeText(content)
-        .then(() => showToast('In Zwischenablage kopiert!', 'success'))
-        .catch(e => showToast('Kopieren fehlgeschlagen: ' + e.message, 'error'));
+    $('#btn-copy').addEventListener('click', async () => {
+        const opts = getExportOptions();
+        const content = prepareExport(xml, opts);
+        const ok = await copyToClipboardService(content);
+        if (ok) {
+            showToast('In Zwischenablage kopiert!', 'success');
+        } else {
+            showToast('Kopieren fehlgeschlagen.', 'error');
+        }
+    });
+
+    $('#btn-new-doc').addEventListener('click', () => { AppState.reset(); goToStep(1); });
 }
 
 // ---------------------------------------------------------------------------
@@ -603,29 +690,11 @@ function extractPlaintext(xml) {
     } catch (e) { return ''; }
 }
 
-function calculateSimilarity(a, b) {
-    a = a.replace(/\s+/g, ' ').trim().toLowerCase();
-    b = b.replace(/\s+/g, ' ').trim().toLowerCase();
-    if (!a || !b) return 0;
-    const words1 = new Set(a.split(' '));
-    const words2 = new Set(b.split(' '));
-    let common = 0;
-    words1.forEach(w => { if (words2.has(w)) common++; });
-    return Math.round((common / Math.max(words1.size, words2.size)) * 100);
-}
-
 function isWellFormedXml(xml) {
     try {
         const doc = new DOMParser().parseFromString(xml, 'application/xml');
         return !doc.querySelector('parsererror');
     } catch (e) { return false; }
-}
-
-function countEntities(xml) {
-    const persons = (xml.match(/<persName/g) || []).length;
-    const places = (xml.match(/<placeName/g) || []).length;
-    const dates = (xml.match(/<date/g) || []).length;
-    return { persons, places, dates, total: persons + places + dates };
 }
 
 // ---------------------------------------------------------------------------
@@ -677,7 +746,138 @@ function goToStep(step) {
 }
 
 // ---------------------------------------------------------------------------
+// LLM Settings Dialog
+// ---------------------------------------------------------------------------
+
+function updateModelBadge() {
+    const el = $('#model-name');
+    if (!el) return;
+    const provider = getProvider();
+    const model = getModel();
+    if (provider && hasApiKey()) {
+        el.textContent = model || provider;
+        el.closest('.model-badge')?.classList.add('connected');
+    } else {
+        el.textContent = 'Kein Modell';
+        el.closest('.model-badge')?.classList.remove('connected');
+    }
+}
+
+async function openSettingsDialog() {
+    const configs = getProviderConfigs();
+    const currentProvider = getProvider() || 'gemini';
+    const currentModel = getModel() || configs[currentProvider]?.defaultModel || '';
+
+    const providerOptions = Object.entries(configs).map(([id, cfg]) =>
+        '<option value="' + escHtml(id) + '"' + (id === currentProvider ? ' selected' : '') + '>' +
+            escHtml(cfg.name) +
+        '</option>'
+    ).join('');
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'dialog-backdrop';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'dialog dialog-settings';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', 'LLM-Einstellungen');
+
+    dialog.innerHTML =
+        '<h3 class="dialog-title">LLM-Einstellungen</h3>' +
+        '<div class="dialog-body">' +
+            '<div class="settings-grid">' +
+                '<label for="settings-provider">Provider</label>' +
+                '<select id="settings-provider">' + providerOptions + '</select>' +
+                '<label for="settings-model">Modell</label>' +
+                '<input type="text" id="settings-model" value="' + escHtml(currentModel) + '" placeholder="Default-Modell">' +
+                '<label for="settings-apikey">API-Key</label>' +
+                '<input type="password" id="settings-apikey" placeholder="' +
+                    (hasApiKey(currentProvider) ? '••••••• (gesetzt)' : 'API-Key eingeben') + '">' +
+            '</div>' +
+            '<div class="settings-info" id="settings-info"></div>' +
+        '</div>' +
+        '<div class="dialog-actions">' +
+            '<button class="btn-secondary" id="settings-test">Verbindung testen</button>' +
+            '<button class="btn-secondary" id="settings-cancel">Abbrechen</button>' +
+            '<button class="btn-primary" id="settings-save">Speichern</button>' +
+        '</div>';
+
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+
+    const providerSelect = dialog.querySelector('#settings-provider');
+    const modelInput = dialog.querySelector('#settings-model');
+    const keyInput = dialog.querySelector('#settings-apikey');
+    const infoEl = dialog.querySelector('#settings-info');
+
+    providerSelect.addEventListener('change', () => {
+        const pid = providerSelect.value;
+        const cfg = configs[pid];
+        modelInput.value = cfg?.defaultModel || '';
+        keyInput.value = '';
+        keyInput.placeholder = hasApiKey(pid) ? '••••••• (gesetzt)' : 'API-Key eingeben';
+        if (cfg?.authType === 'none') {
+            keyInput.placeholder = 'Nicht benötigt (lokal)';
+            keyInput.disabled = true;
+        } else {
+            keyInput.disabled = false;
+        }
+    });
+
+    // Trigger initial state for auth type
+    if (configs[currentProvider]?.authType === 'none') {
+        keyInput.placeholder = 'Nicht benötigt (lokal)';
+        keyInput.disabled = true;
+    }
+
+    dialog.querySelector('#settings-test').addEventListener('click', async () => {
+        // Apply settings temporarily for test
+        const pid = providerSelect.value;
+        setProvider(pid);
+        if (modelInput.value) setModel(modelInput.value);
+        if (keyInput.value) setApiKey(pid, keyInput.value);
+
+        infoEl.textContent = 'Teste Verbindung…';
+        infoEl.className = 'settings-info';
+        try {
+            const result = await testConnection();
+            if (result.success) {
+                infoEl.textContent = '✓ ' + result.message;
+                infoEl.className = 'settings-info settings-success';
+            } else {
+                infoEl.textContent = '✗ ' + result.message;
+                infoEl.className = 'settings-info settings-error';
+            }
+        } catch (e) {
+            infoEl.textContent = '✗ ' + e.message;
+            infoEl.className = 'settings-info settings-error';
+        }
+    });
+
+    dialog.querySelector('#settings-cancel').addEventListener('click', () => {
+        backdrop.remove();
+    });
+
+    dialog.querySelector('#settings-save').addEventListener('click', () => {
+        const pid = providerSelect.value;
+        setProvider(pid);
+        if (modelInput.value) setModel(modelInput.value);
+        if (keyInput.value) setApiKey(pid, keyInput.value);
+        updateModelBadge();
+        backdrop.remove();
+        showToast('Einstellungen gespeichert.', 'success');
+    });
+
+    backdrop.addEventListener('click', e => {
+        if (e.target === backdrop) backdrop.remove();
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Initialization
 // ---------------------------------------------------------------------------
 
+$('#btn-settings')?.addEventListener('click', openSettingsDialog);
+updateModelBadge();
 renderStep(1);

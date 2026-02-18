@@ -2481,3 +2481,131 @@ body {
     font-size: 10px;
     background: rgba(255,255,255,0.1);
 }
+
+/* -----------------------------------------------------------------------------
+   Settings Dialog
+   ----------------------------------------------------------------------------- */
+.dialog-settings {
+    max-width: 480px;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-sm) var(--space-md);
+    align-items: center;
+}
+
+.settings-grid label {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+}
+
+.settings-grid input,
+.settings-grid select {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-family: var(--font-ui);
+    font-size: var(--font-size-sm);
+    background: var(--color-panel);
+    color: var(--color-text);
+}
+
+.settings-grid input:focus,
+.settings-grid select:focus {
+    outline: none;
+    border-color: var(--color-blue);
+    box-shadow: 0 0 0 2px var(--color-blue-light);
+}
+
+.settings-grid input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.settings-info {
+    margin-top: var(--space-sm);
+    font-size: var(--font-size-sm);
+    min-height: 1.5em;
+}
+
+.settings-info.settings-success {
+    color: var(--color-confident);
+}
+
+.settings-info.settings-error {
+    color: var(--color-problem);
+}
+
+.model-badge.connected .model-icon {
+    color: var(--color-confident);
+}
+
+/* -----------------------------------------------------------------------------
+   Transform Stats
+   ----------------------------------------------------------------------------- */
+.transform-stats {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.transform-stats .stat-sicher {
+    color: var(--color-confident);
+}
+
+.transform-stats .stat-pruefenswert {
+    color: var(--color-review);
+}
+
+.transform-stats .stat-problematisch {
+    color: var(--color-problem);
+}
+
+/* -----------------------------------------------------------------------------
+   Export Options
+   ----------------------------------------------------------------------------- */
+.export-options {
+    display: flex;
+    gap: var(--space-lg);
+    margin: var(--space-md) 0;
+}
+
+.export-options label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+/* -----------------------------------------------------------------------------
+   Transform Loading
+   ----------------------------------------------------------------------------- */
+.transform-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-xl);
+    color: var(--color-text-secondary);
+}
+
+.transform-loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
