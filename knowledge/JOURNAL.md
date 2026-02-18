@@ -48,6 +48,40 @@ Chronologisches Arbeitsprotokoll des teiCrafter-Projekts.
 
 **Alle 12 korrigiert.** Aktualisierte Zahlen: 4 ✅ integriert (statt 7), 17 🔧 Modul da (statt 14), 2/14 Module in app.js integriert (statt 3), 51 Tests (statt 54).
 
+### Session 14: Strategiebericht und Knowledge-Update
+
+**Auslöser:** Nach Abschluss des Refactorings (Session 13) stellte sich die Frage: Was sind die nächsten Schritte? Statt direkt mit Stufe 14 (DocumentModel) weiterzumachen, wurde eine strategische Analyse durchgeführt.
+
+**Durchgeführt:**
+
+1. **Marktanalyse** – Zwei parallele Recherche-Agenten analysierten:
+   - Tool-Landschaft: 10+ TEI-Annotationswerkzeuge verglichen (Oxygen, ediarum, TEI Publisher, CATMA, Transkribus, eScriptorium, FromThePage, LEAF-Writer, EVT, TextGrid)
+   - LLM-Annotation: State of the Art, Failure Modes, Prompt-Best-Practices
+   - Review-Workflows: Accept/Reject/Edit-Patterns, Konfidenz-Anzeige, Batch vs. Inline
+   - State Management: EventTarget, Snapshot-Undo, Walking Skeleton Pattern
+
+2. **Zentraler Befund:** Kein bestehendes Tool kombiniert TEI-Annotation + LLM-Unterstützung + Human Review. teiCrafter ist First Mover.
+
+3. **Strategieentscheidung: Durchstich-first** – Statt Architektur polieren (DocumentModel, View-Module, Tests) zuerst den Walking Skeleton mit echtem LLM-Transform validieren. Begründung: SW-Literatur (Cockburn, Freeman/Pryce, Hunt/Thomas) eindeutig; Review-Workflow ist der Differentiator; wir wissen nicht, ob der Transform brauchbare Ergebnisse liefert.
+
+4. **Neues Wissensdokument: LANDSCAPE.md** – Tool-Landschaft, Vergleichsmatrix, LLM-Failure-Modes, Best Practices für Review-Workflows, Prompt Engineering, State Management, strategische Differenziatoren, bekannte Lücken. ~250 Zeilen, 9 Abschnitte.
+
+5. **SYNTHESIS.md** (NEU) – Kompaktes Gesamtbild des gesamten Projekts. Destilliert aus allen 13 Wissensdokumenten. ~200 Zeilen. Ziel: 5-Minuten-Onboarding für Menschen und Agenten.
+
+6. **Aktualisierte Dokumente (7):**
+   - **VISION.md** – Alleinstellungsmerkmal (4 Differenziatoren), Provider-Zahl korrigiert, Service-Integration-Status aktualisiert
+   - **DECISIONS.md** – 3 neue Entscheidungen (Durchstich-first, Preview vor Editor, Few-Shot-Beispiele), DocumentModel-Bewertung aktualisiert, neue Implementierungsreihenfolge (Phase A/B/C)
+   - **STATUS.md** – Prioritäten umgeordnet: Durchstich (Phase A/B) vor View-Integration, Erfolgskriterium definiert
+   - **WORKFLOW.md** – §4.4 LLM-Failure-Modes (8 Modi mit Mitigation-Status), §4.5 Prompt-Best-Practices (6 Punkte)
+   - **STORIES.md** – Neue Story E2E.1 (Vollständiger LLM-Durchstich), Zusammenfassung 21→22 Stories
+   - **INDEX.md** – LANDSCAPE.md aufgenommen, 3 neue Kernbegriffe (Walking Skeleton, Few-Shot, First Mover)
+   - **JOURNAL.md** – Dieser Eintrag
+
+**Nächste Schritte (priorisiert):**
+- Phase A: Echten LLM-Transform testen + Few-Shot-Beispiele + Bruchstellen fixen
+- Phase B: preview.js einbinden (Inline-Review + Batch-Review + Konfidenz)
+- Phase C: Gezielte Architektur nur wo nötig
+
 ### Session 13: Code-Qualität-Refactoring (4 Phasen)
 
 **Auslöser:** Umfassende Code-Analyse aller 14 JS-Module, HTML und CSS (2600+ Zeilen). Gesamtqualität 8.7/10, aber app.js hatte strukturelle Schulden die Weiterentwicklung behindern.

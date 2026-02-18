@@ -2,7 +2,7 @@
 
 User Stories für den teiCrafter-Prototyp (Phase 2) und ausgewählte Stories für Phase 3. Jede Story folgt dem Schema "Als [Rolle] möchte ich [Aktion], damit [Nutzen]" und enthält einen manuell durchführbaren Testfall.
 
-Stand: 2026-02-18 (Session 11)
+Stand: 2026-02-18 (Session 14)
 
 **Abhängigkeiten:** [DESIGN.md](DESIGN.md), [ARCHITECTURE.md](ARCHITECTURE.md), [WORKFLOW.md](WORKFLOW.md), [teiModeller.md](teiModeller.md), [DECISIONS.md](DECISIONS.md)
 
@@ -397,6 +397,37 @@ Diese Stories sind nicht Teil des Prototyps. Sie dokumentieren die geplante Funk
 
 ---
 
+## Querschnitt – Durchstich-Story (Session 14)
+
+### Story E2E.1 – Vollständiger LLM-Durchstich ⬜
+
+**Referenz:** [LANDSCAPE.md](LANDSCAPE.md) (Walking Skeleton), [DECISIONS.md](DECISIONS.md) (Durchstich-first-Strategie)
+
+**Als** Editorin **möchte ich** den vollständigen Workflow (Import → Transform mit echtem LLM → Review mit Konfidenz → Validate → Export) an einem realen Dokument durchspielen, **damit** bewiesen ist, dass der Kernwert von teiCrafter funktioniert.
+
+**Gegeben** den HSA-Demo-Brief (hsa-letter-benndorf.txt), ein konfigurierter API-Key für mindestens einen Provider, und die vorausgefüllten Mapping-Regeln für Korrespondenz,
+**wenn** ich den vollständigen Workflow durchspiele:
+1. Import des Demo-Briefs
+2. Mapping-Regeln prüfen, ggf. anpassen
+3. Transform auslösen (echter LLM-Aufruf)
+4. Annotiertes Ergebnis mit Konfidenz-Farben in der Vorschau sehen
+5. Mindestens 5 Annotationen per Review durchgehen (Accept/Reject/Edit)
+6. Validierung prüfen (Plaintext-Vergleich, Schema, Wohlgeformtheit)
+7. Export als TEI-XML
+
+**dann** entsteht eine valide TEI-XML-Datei, die die annotierten Entitäten enthält, der Plaintext-Vergleich besteht, und keine Konsolen-Fehler auftreten.
+
+**Prüfschritte:**
+- LLM-Response wird korrekt geparsed (XML-Extraktion aus Markdown-Block)
+- `@confidence`-Attribute werden korrekt zu Konfidenz-Kategorien gemappt
+- Plaintext-Vergleich zeigt ≥95% Ähnlichkeit
+- Exportierte Datei ist wohlgeformt und öffnet sich in oXygen/VS Code
+- Browser-Konsole zeigt keine Fehler
+
+**Anmerkung:** Dies ist die zentrale Validierungs-Story für die Durchstich-first-Strategie. Sie bindet die Stories 1.1, 2.1, 3.1, 3.3, 4.1, 5.1, 5.2, 6.1 zusammen. Ihr Ergebnis bestimmt, welche Architektur-Verbesserungen tatsächlich nötig sind.
+
+---
+
 ## Zusammenfassung
 
 ### Prototyp-Scope
@@ -411,7 +442,8 @@ Diese Stories sind nicht Teil des Prototyps. Sie dokumentieren die geplante Funk
 | 5 – Validierung | 5.1, 5.2 | 2 | 0 | 0 |
 | 6 – Export | 6.1, 6.2 | 1 | 1 | 0 |
 | Q – LLM-Konfiguration | Q.1, Q.2 | 2 | 0 | 0 |
-| **Gesamt Prototyp** | **21** | **10** | **11** | **0** |
+| E2E – Durchstich | E2E.1 | 0 | 0 | 1 |
+| **Gesamt Prototyp** | **22** | **10** | **11** | **1** |
 | M – teiModeller (Phase 3) | M.1, M.2 | — | — | ⏳ 2 |
 
 **Zusammenfassung:** Alle 21 Prototyp-Stories haben implementierte Module. 10 sind voll integriert (UI + Service): Import 1.1–1.3, Mapping 2.1, Transform 3.1, Validierung 5.1–5.2, Export 6.1, LLM-Konfiguration Q.1–Q.2. 11 haben funktionierende Module, die aber noch nicht durchgängig in der UI verdrahtet sind (Editor-Fundament 0.1–0.4 weil editor.js nicht importiert, Review 4.1–4.3 weil preview.js nicht importiert, Transform 3.2–3.3 weil Diff-Ansicht und Konfidenz-Visualisierung preview.js benötigen, Export 6.2 weil Export-Warnung-Dialog fehlt). Siehe [STATUS.md](STATUS.md) für Details.

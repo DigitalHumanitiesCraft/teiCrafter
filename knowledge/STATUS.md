@@ -1,6 +1,6 @@
 # Implementierungs-Status
 
-Stand: 2026-02-18 (Session 13)
+Stand: 2026-02-18 (Session 14)
 
 Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Beantwortet: Was funktioniert? Was ist Stub? Was fehlt?
 
@@ -127,19 +127,31 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 
 Stufen 11–13 abgeschlossen: transform.js + llm.js (Schritt 3), validator.js + schema.js (Schritt 4), export.js (Schritt 5) sind in app.js verdrahtet. Settings-Dialog, Cancel-Support, Export-Optionen implementiert. Inline-Dummys (`generateBasicTei`, `calculateSimilarity`, `countEntities`, `getExportContent`, `downloadTei`) gelöscht.
 
-### Priorität 1 (NEU): View-Integration
+### Priorität 1 (NEU, Session 14): Durchstich validieren (Walking Skeleton)
 
-4. **model.js statt AppState verwenden** (Stufe 14)
-   - DocumentModel als zentrale State-Quelle
-   - Views als Observer registrieren
-   - Undo/Redo-Keybindings (Ctrl+Z/Y) in app.js
+Strategieentscheidung: Erst beweisen, dass der Kern funktioniert, bevor Architektur polieren. Begründung: [LANDSCAPE.md](LANDSCAPE.md), [DECISIONS.md](DECISIONS.md).
 
-5. **editor.js + preview.js + source.js einbinden** (Stufe 15)
-   - `createOverlayEditor()` statt contenteditable-div
-   - `createPreview()` statt Inline-HTML-Rendering
-   - `createSourcePanel()` statt statischer `<pre>`
+**Phase A – Durchstich validieren (1–2 Sessions):**
+1. Echten LLM-Transform testen (Demo-Brief + API-Key, Bruchstellen dokumentieren)
+2. Few-Shot-Beispiele zu Prompt-Assembly hinzufügen (höchster Hebel für LLM-Qualität)
+3. Bruchstellen fixen (Response-Parsing, Plaintext-Veränderung, halluzinierte Attribute)
 
-### Priorität 2: Test-Coverage (Stufe 16)
+**Phase B – Review-Workflow erlebbar machen (1–2 Sessions):**
+4. preview.js in app.js einbinden (Inline-Review: Accept/Reject/Edit, Konfidenz-Visualisierung)
+5. Batch-Review aktivieren (Tastaturnavigation N/P/A/R/E, Fortschrittsbalken)
+
+**Phase C – Gezielte Architektur (nur was der Durchstich erfordert):**
+6. DocumentModel einführen – nur wenn Undo/Redo sich als nötig erweist
+7. editor.js einbinden – nur wenn Regex-XML-Darstellung nicht reicht
+8. Tests gezielt für Bruchstellen schreiben
+
+**Erfolgskriterium:** Editorin lädt HSA-Demo-Brief → konfiguriert API-Key → klickt „Transformieren" → sieht annotiertes Ergebnis mit Konfidenz-Farben → geht 5 Annotationen per Batch-Review durch → validiert → exportiert valides TEI-XML.
+
+### ~~Priorität 2 (vorher Priorität 1): View-Integration (verschoben)~~
+
+DocumentModel (Stufe 14) und editor.js/source.js (Stufe 15) wurden nach Strategieentscheidung in Phase C zurückgestuft. Werden nur umgesetzt wenn der Durchstich Bedarf ergibt.
+
+### Priorität 3: Test-Coverage (Stufe 16)
 
 6. **Service-Tests** – llm.js (Mock-Fetch), transform.js, schema.js, export.js
 7. **View-Tests** – editor.js, preview.js (DOM-basiert)

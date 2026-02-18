@@ -2,7 +2,7 @@
 
 Konsolidierte Übersicht aller offenen und entschiedenen Punkte im teiCrafter-Projekt. Jede Entscheidung verweist auf das Dokument, das den fachlichen Kontext liefert.
 
-Stand: 2026-02-18 (Session 13)
+Stand: 2026-02-18 (Session 14)
 
 ---
 
@@ -22,6 +22,9 @@ Stand: 2026-02-18 (Session 13)
 | LLM-Provider-Auswahl | 6 Provider: Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama | Breite Abdeckung: 3 US-Cloud + 2 CN-Cloud + 1 Lokal. DeepSeek/Qwen nutzen OpenAI-kompatibles Format. MODEL_CATALOG mit Preisen/Reasoning-Flag. | 2026-02-18 |
 | Event-Management in app.js | Event-Delegation statt individuelle Listener | Ein Click-Listener auf `.app-main` mit `data-action`-Attributen. Eliminiert Listener-Leaks bei Step-Wechseln. Drag-and-Drop via `stepCleanup`-Pattern. Tab-Clicks ebenfalls delegiert. | 2026-02-18 |
 | ANNOTATION_TAGS-Zentralisierung | Zentrale Liste in constants.js | Tag-Liste war 5× dupliziert (transform, validator, export, preview, editor). Jetzt 1 Quelle, 3 Konsumenten (validator/editor haben keine hardcodierte Liste). | 2026-02-18 |
+| Entwicklungsstrategie Phase 2→3 | Durchstich-first (Walking Skeleton validieren), dann gezielte Architekturverbesserung | Marktanalyse ([LANDSCAPE.md](LANDSCAPE.md)) bestätigt: kein vergleichbares Tool existiert. SW-Literatur (Cockburn, Freeman/Pryce, Hunt/Thomas) eindeutig: Skeleton unter Realbedingungen validieren bevor Architektur polieren. Review-Workflow ist der Differentiator. | 2026-02-18 |
+| Preview vor Editor integrieren | preview.js hat Vorrang vor editor.js bei View-Integration | DH-Scholars wollen visuelles Feedback, nicht rohe Spitzklammern. Die Vorschau ist das Arbeitsinstrument für alle; der Editor ist Werkzeug für Fortgeschrittene. | 2026-02-18 |
+| Few-Shot-Beispiele als Prompt-Hebel | 2–3 annotierte Beispiele pro Quellentyp in Mapping-Schicht | Forschungslage eindeutig: Few-Shot effektiver als verbose Regeln. Höchster Hebel für bessere LLM-Ergebnisse bei minimalem Aufwand. | 2026-02-18 |
 
 ---
 
@@ -36,6 +39,8 @@ Stand: 2026-02-18 (Session 13)
 **Optionen:**
 - AppState durch DocumentModel ersetzen (sauber, aber großer Umbau)
 - DocumentModel als Ergänzung zu AppState für XML-spezifischen State (inkrementell)
+
+**Neue Bewertung (Session 14):** DocumentModel-Umbau kann warten. Erst beweisen, dass der Durchstich (LLM-Transform + Review) mit AppState funktioniert. Wenn der Durchstich zeigt, dass Undo/Redo oder Observer-Sync tatsächlich fehlen, dann gezielt umbauen.
 
 **Kriterium:** Welcher Ansatz ermöglicht schnellsten Weg zum durchgängigen Workflow?
 
@@ -163,15 +168,31 @@ Stand: 2026-02-18 (Session 13)
 10. ✅ Export (Attribut-Bereinigung, Download, Clipboard)
 ```
 
-**Nächste Reihenfolge (Service-Integration):**
+**Nächste Reihenfolge (Durchstich-first, Session 14):**
+
+```
+Phase A – Durchstich validieren:
+  A1. ⬜ Echten LLM-Transform testen (Demo-Brief + API-Key)
+  A2. ⬜ Few-Shot-Beispiele zu Prompt-Assembly hinzufügen
+  A3. ⬜ Bruchstellen dokumentieren und fixen
+
+Phase B – Review-Workflow erlebbar machen:
+  B1. ⬜ preview.js in app.js einbinden (Inline-Review + Konfidenz)
+  B2. ⬜ Batch-Review aktivieren (Tastaturnavigation N/P/A/R/E)
+  B3. ⬜ Konfidenz-Visualisierung (Dual-Channel statt Regex)
+
+Phase C – Gezielte Architektur (nur was der Durchstich erfordert):
+  C1. ⬜ DocumentModel einführen (nur wenn Undo/Redo sich als nötig erweist)
+  C2. ⬜ editor.js einbinden (nur wenn Regex-XML-Darstellung nicht reicht)
+  C3. ⬜ Tests gezielt für Bruchstellen schreiben
+```
+
+**Vorherige Reihenfolge (Service-Integration, abgeschlossen):**
 
 ```
 11. ✅ app.js → transform.js + llm.js verdrahten (Schritt 3) + Settings-Dialog
 12. ✅ app.js → validator.js + schema.js verdrahten (Schritt 4)
 13. ✅ app.js → export.js verdrahten (Schritt 5) + Export-Optionen
-14. ⬜ DocumentModel als zentrale State-Quelle einführen
-15. ⬜ View-Module (editor.js, preview.js, source.js) einbinden
-16. ⬜ Test-Coverage erweitern (Service-Tests, View-Tests)
 ```
 
 ---
@@ -179,6 +200,7 @@ Stand: 2026-02-18 (Session 13)
 **Referenzierte Dokumente:**
 - [STATUS.md](STATUS.md) — Implementierungs-Ist-Stand
 - [MODULES.md](MODULES.md) — Technische Modul-Referenz
+- [LANDSCAPE.md](LANDSCAPE.md) — Tool-Landschaft und Positionierung
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [WORKFLOW.md](WORKFLOW.md)
 - [DESIGN.md](DESIGN.md)

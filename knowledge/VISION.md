@@ -34,6 +34,15 @@ teiCrafter adressiert die Lücke zwischen automatisierter Texterkennung und manu
 
 teiCrafter ist kein Ersatz für oXygen oder ediarum, sondern eine vorgelagerte Arbeitsumgebung. oXygen und ediarum setzen voraus, dass Modellierungsentscheidungen bereits getroffen wurden. teiCrafter unterstützt genau diesen Entscheidungsprozess und liefert als Ergebnis annotiertes TEI-XML, das in bestehende Editionsumgebungen importiert werden kann.
 
+### Alleinstellungsmerkmal (Stand 2026-02)
+
+Eine Marktanalyse (siehe [LANDSCAPE.md](LANDSCAPE.md)) bestätigt: **Kein bestehendes, produktionsreifes Tool kombiniert eine TEI-Annotationsoberfläche mit LLM-gestützter Markup-Generierung.** teiCrafter ist First Mover in dieser Nische. Die vier strategischen Differenziatoren sind:
+
+1. **Zero Infrastructure** – Kein Server, kein Account, kein Install. Eliminiert die #1-Adoptionsbarriere in der DH-Tool-Landschaft.
+2. **LLM als First-Pass-Annotator mit obligatorischem Human Review** – Adressiert Tedium-Problem und wissenschaftliche Accountability gleichzeitig.
+3. **Schema-Profil-geführter LLM-Output** – JSON-Schema-Profil verhindert halluziniertes Markup.
+4. **Bring Your Own API Key** – Kein Vendor Lock-in, 6 Provider (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama).
+
 ---
 
 ## Erfolgskriterien
@@ -56,11 +65,13 @@ Entwicklung des User Interface und des visuellen Designs. Klickbarer Prototyp, d
 
 Funktionsfähiger Durchstich des vollständigen Workflows.
 
-- ✅ LLM-Provider-Anbindung (4 Provider: Gemini, OpenAI, Anthropic, Ollama)
+- ✅ LLM-Provider-Anbindung (6 Provider: Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama)
 - ✅ Dreischichten-Prompt-Assemblierung (Basis + Kontext + Mapping)
 - ✅ Plaintext-Vergleich als fundamentale Validierung
 - ✅ Export als TEI-XML mit Attribut-Bereinigung
-- ❌ Service-Integration in app.js (Module existieren, sind aber nicht verdrahtet)
+- ✅ Service-Integration in app.js (transform, validator, schema, export verdrahtet)
+- ❌ View-Integration: editor.js, preview.js, source.js nicht in app.js eingebunden
+- ❌ DocumentModel nicht als State-Quelle (AppState statt model.js)
 
 **Aktueller Detailstatus:** Siehe [STATUS.md](STATUS.md)
 
@@ -144,6 +155,7 @@ https://github.com/DigitalHumanitiesCraft/teiCrafter
 
 **Wissensbasis:**
 - [STATUS.md](STATUS.md) — Implementierungs-Ist-Stand
+- [LANDSCAPE.md](LANDSCAPE.md) — Tool-Landschaft und strategische Positionierung
 - [DESIGN.md](DESIGN.md) — Visuelle Spezifikation
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Technische Architektur
 - [WORKFLOW.md](WORKFLOW.md) — Annotation, Review, Validierung

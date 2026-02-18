@@ -137,6 +137,34 @@ Der Transform kann jederzeit abgebrochen werden (Abort-Button oder Escape). Bei 
 
 ---
 
+## 4.4 Bekannte LLM-Failure-Modes bei TEI-XML
+
+Basierend auf Marktanalyse und Forschungsliteratur (siehe [LANDSCAPE.md](LANDSCAPE.md) §4):
+
+| Failure Mode | Beschreibung | Mitigation |
+|---|---|---|
+| Malformed XML | Nicht geschlossene Tags, überlappende Hierarchien | Well-Formedness-Check via DOMParser ✅ |
+| Text-Alteration | „Korrektur" historischer Schreibweisen, stille Zeichenlöschung | Plaintext-Vergleich ✅ |
+| Halluzinierte Attribute | Erfundene Attributnamen/-werte (z.B. `@role` auf `<persName>`) | Schema-Validierung ✅, Export-Bereinigung ✅ |
+| Über-Annotation | Alles Mögliche wird annotiert (Recall > Precision) | Prompt-Regel „Präzision vor Recall" ✅, Konfidenz ✅ |
+| Unter-Annotation | Entitäten in Abkürzungen/hist. Schreibweisen übersehen | 📋 Multi-Pass, „Suggest more" |
+| Namespace-Verwechslung | TEI P5 mit anderen XML-Vocabularies gemischt | ANNOTATION_TAGS Whitelist ✅ |
+| Struktur vs. Semantik | LLM ändert `<div>`/`<p>` statt nur NER | selectedTypes-Filter ✅ |
+| Inkonsistenz | Gleiche Entität unterschiedlich annotiert über das Dokument | 📋 Konsistenz-Check (Phase 3) |
+
+### 4.5 Prompt-Best-Practices
+
+Aus der Forschungslage destilliert (siehe [LANDSCAPE.md](LANDSCAPE.md) §6):
+
+1. **Few-Shot-Beispiele** sind essenzieller als verbose Regeln. 2–3 annotierte Beispiele pro Quellentyp in die Mapping-Schicht einfügen. **(Höchster einzelner Hebel für bessere Ergebnisse.)**
+2. **Niedrige Temperature** (0.1–0.3) für Markup-Generierung. Aktuell 0.2 für OpenAI – korrekt.
+3. **Selbsteinschätzung anfordern** – `@confidence`-Attribute. LLMs sind bei NER-Certainty brauchbar kalibriert.
+4. **Output-Format strikt einschränken** – „Nur annotiertes XML, keine Erklärungen." Bereits implementiert.
+5. **Dokument-Chunking** bei langen Texten – absatzweise senden reduziert Text-Alteration. 📋 Noch nicht implementiert.
+6. **Separate Passes** für strukturelles vs. semantisches Markup. 📋 Noch nicht implementiert.
+
+---
+
 ## 5. Nach dem Transform: Diff-Ansicht
 
 ### 5.1 Prinzip

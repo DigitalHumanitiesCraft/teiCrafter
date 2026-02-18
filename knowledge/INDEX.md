@@ -2,7 +2,7 @@
 
 Zentrales Wissenssystem für das teiCrafter-Projekt. Jedes Dokument hat eine definierte Zuständigkeit, eine Zielgruppe und explizite Abhängigkeiten. Reines Standard-Markdown, keine Obsidian-Features.
 
-Stand: 2026-02-18
+Stand: 2026-02-18 (Session 14)
 
 ---
 
@@ -10,6 +10,7 @@ Stand: 2026-02-18
 
 | Dokument | Beantwortet | Kategorie | Zielgruppe |
 |---|---|---|---|
+| [SYNTHESIS](SYNTHESIS.md) | **Kompaktes Gesamtbild** – alles in einem Dokument | Synthese | Alle, Onboarding |
 | [VISION](VISION.md) | Was ist das Projekt, warum existiert es? | Konzept | Alle |
 | [STATUS](STATUS.md) | Was funktioniert, was ist Stub, was fehlt? | Ist-Stand | Alle |
 | [MODULES](MODULES.md) | Welche Module gibt es, welche API haben sie? | Ist-Stand | Entwicklung |
@@ -20,6 +21,7 @@ Stand: 2026-02-18
 | [DECISIONS](DECISIONS.md) | Was ist offen, was wurde entschieden? | Prozess | Alle |
 | [STORIES](STORIES.md) | Was muss implementiert und getestet werden? | Prozess | Entwicklung, Testing |
 | [DISTILLATION](DISTILLATION.md) | Wie entstehen die TEI-Wissensmodule? | Konzept | Phase 3 |
+| [LANDSCAPE](LANDSCAPE.md) | Tool-Landschaft, Marktanalyse, strategische Positionierung | Forschung | Alle, Strategie |
 | [Research Landscape](research-landscape.md) | Wie positioniert sich teiCrafter 2025–2026? | Forschung | Alle, Publikationen |
 | [JOURNAL](JOURNAL.md) | Was wurde wann gemacht? | Prozess | Entwicklung |
 
@@ -53,6 +55,8 @@ STATUS.md + MODULES.md (beschreiben den Ist-Stand aller obigen Konzepte)
 STORIES.md (konsumiert DESIGN + ARCHITECTURE + WORKFLOW, trackt via STATUS)
 DECISIONS.md (querschnittlich, konsumiert alle Dokumente)
 JOURNAL.md (chronologisch, referenziert beliebige Dokumente)
+SYNTHESIS.md (kompaktes Gesamtbild, destilliert aus allen Dokumenten)
+LANDSCAPE.md (Tool-Landschaft, informiert VISION und DECISIONS)
 research-landscape.md (eigenständig, informiert VISION)
 ```
 
@@ -76,7 +80,10 @@ research-landscape.md (eigenständig, informiert VISION)
 | Batch-Review | Tastaturgesteuerte sequentielle Prüfung aller offenen Annotationen | WORKFLOW |
 | Fünf Validierungsebenen | Plaintext-Vergleich, Schema, XPath, LLM-as-a-Judge, Expert-in-the-Loop | WORKFLOW |
 | Schema-Führung (ODD) | Kontextsensitive Validierung basierend auf dem ODD-Profil | ARCHITECTURE |
-| Service-Integration | Verdrahtung der Service-Module mit der UI-Shell (app.js) – **aktuell die kritische Lücke** | STATUS |
+| Service-Integration | Verdrahtung der Service-Module mit der UI-Shell (app.js) – ✅ abgeschlossen (Session 11) | STATUS |
+| Walking Skeleton / Durchstich | Dünnster möglicher End-to-End-Durchstich um die Tragfähigkeit der Architektur zu validieren | LANDSCAPE, DECISIONS |
+| Few-Shot-Beispiele | 2–3 annotierte Beispiele pro Quellentyp im Prompt – höchster Einzelhebel für LLM-Qualität | WORKFLOW, LANDSCAPE |
+| First Mover | Kein vergleichbares Tool kombiniert TEI-Annotation + LLM + Human Review (Stand 2026-02) | LANDSCAPE, VISION |
 | teiModeller | LLM-gestützte Modellierungsberatung auf Basis destillierter TEI-Module | teiModeller |
 | Destillations-Pipeline | Dreistufiger Prozess (Scraping → Destillation → Validierung) zur Erzeugung von TEI-Wissensmodulen | DISTILLATION |
 
