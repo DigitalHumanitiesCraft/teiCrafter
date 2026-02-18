@@ -6,7 +6,7 @@
 import { DEMO_CONFIGS, ICONS, SOURCE_LABELS, MAX_FILE_SIZE, getDefaultMapping } from './utils/constants.js';
 import { $, $$, escHtml, highlightXml, showToast } from './utils/dom.js';
 import { transform, getPromptLayers } from './services/transform.js';
-import { setApiKey, hasApiKey, getProvider, setProvider, getModel, setModel, getProviderConfigs, testConnection } from './services/llm.js';
+import { setApiKey, hasApiKey, getProvider, setProvider, getModel, setModel, getProviderConfigs, getModelCatalog, getModelsForProvider, testConnection } from './services/llm.js';
 import { validate } from './services/validator.js';
 import { loadSchema, isLoaded as isSchemaLoaded } from './services/schema.js';
 import { prepareExport, getExportStats, downloadXml as downloadXmlService, copyToClipboard as copyToClipboardService, getExportFileName } from './services/export.js';
@@ -763,16 +763,43 @@ function updateModelBadge() {
     }
 }
 
+function buildModelOptions(providerId, selectedModel) {
+    const catalog = getModelCatalog();
+    const models = getModelsForProvider(providerId);
+    const isOllama = providerId === 'ollama';
+
+    return models.map(mid => {
+        const meta = catalog[mid];
+        let label = mid;
+        if (meta) {
+            const ctx = meta.context >= 1000000 ? (meta.context / 1000000) + 'M' : Math.round(meta.context / 1000) + 'k';
+            label = meta.name + ' – $' + meta.input.toFixed(2) + '/$' + meta.output.toFixed(2) + ' · ' + ctx;
+            if (meta.reasoning) label += ' · Reasoning';
+        } else if (isOllama) {
+            label = mid + ' (lokal)';
+        }
+        return '<option value="' + escHtml(mid) + '"' + (mid === selectedModel ? ' selected' : '') + '>' +
+            escHtml(label) + '</option>';
+    }).join('');
+}
+
+function getProviderInfo(providerId) {
+    if (providerId === 'ollama') return 'Lokal · Kostenlos · Ollama muss laufen (localhost:11434)';
+    return 'API-Key erforderlich · Kosten pro Nutzung';
+}
+
 async function openSettingsDialog() {
     const configs = getProviderConfigs();
-    const currentProvider = getProvider() || 'gemini';
-    const currentModel = getModel() || configs[currentProvider]?.defaultModel || '';
+    const curProvider = getProvider() || 'gemini';
+    const curModel = getModel() || configs[curProvider]?.defaultModel || '';
 
     const providerOptions = Object.entries(configs).map(([id, cfg]) =>
-        '<option value="' + escHtml(id) + '"' + (id === currentProvider ? ' selected' : '') + '>' +
+        '<option value="' + escHtml(id) + '"' + (id === curProvider ? ' selected' : '') + '>' +
             escHtml(cfg.name) +
         '</option>'
     ).join('');
+
+    const isOllama = curProvider === 'ollama';
 
     const backdrop = document.createElement('div');
     backdrop.className = 'dialog-backdrop';
@@ -789,11 +816,15 @@ async function openSettingsDialog() {
             '<div class="settings-grid">' +
                 '<label for="settings-provider">Provider</label>' +
                 '<select id="settings-provider">' + providerOptions + '</select>' +
+                '<div></div><div class="provider-info" id="provider-info">' + escHtml(getProviderInfo(curProvider)) + '</div>' +
                 '<label for="settings-model">Modell</label>' +
-                '<input type="text" id="settings-model" value="' + escHtml(currentModel) + '" placeholder="Default-Modell">' +
+                '<select id="settings-model">' + buildModelOptions(curProvider, curModel) + '</select>' +
+                '<label for="settings-custom-model" id="settings-custom-label"' + (!isOllama ? ' style="display:none"' : '') + '>Custom</label>' +
+                '<input type="text" id="settings-custom-model" placeholder="Eigene Modell-ID"' + (!isOllama ? ' style="display:none"' : '') + '>' +
                 '<label for="settings-apikey">API-Key</label>' +
                 '<input type="password" id="settings-apikey" placeholder="' +
-                    (hasApiKey(currentProvider) ? '••••••• (gesetzt)' : 'API-Key eingeben') + '">' +
+                    (isOllama ? 'Nicht benötigt (lokal)' : hasApiKey(curProvider) ? '••••••• (gesetzt)' : 'API-Key eingeben') + '"' +
+                    (isOllama ? ' disabled' : '') + '>' +
             '</div>' +
             '<div class="settings-info" id="settings-info"></div>' +
         '</div>' +
@@ -807,35 +838,53 @@ async function openSettingsDialog() {
     document.body.appendChild(backdrop);
 
     const providerSelect = dialog.querySelector('#settings-provider');
-    const modelInput = dialog.querySelector('#settings-model');
+    const modelSelect = dialog.querySelector('#settings-model');
+    const customModelInput = dialog.querySelector('#settings-custom-model');
+    const customModelLabel = dialog.querySelector('#settings-custom-label');
     const keyInput = dialog.querySelector('#settings-apikey');
     const infoEl = dialog.querySelector('#settings-info');
+    const providerInfoEl = dialog.querySelector('#provider-info');
 
     providerSelect.addEventListener('change', () => {
         const pid = providerSelect.value;
         const cfg = configs[pid];
-        modelInput.value = cfg?.defaultModel || '';
+        const pidIsOllama = cfg?.authType === 'none';
+
+        // Update model dropdown
+        modelSelect.innerHTML = buildModelOptions(pid, cfg?.defaultModel || '');
+
+        // Toggle custom model field for Ollama
+        customModelInput.style.display = pidIsOllama ? '' : 'none';
+        customModelLabel.style.display = pidIsOllama ? '' : 'none';
+        customModelInput.value = '';
+
+        // Update provider info
+        providerInfoEl.textContent = getProviderInfo(pid);
+
+        // Update API key field
         keyInput.value = '';
-        keyInput.placeholder = hasApiKey(pid) ? '••••••• (gesetzt)' : 'API-Key eingeben';
-        if (cfg?.authType === 'none') {
+        if (pidIsOllama) {
             keyInput.placeholder = 'Nicht benötigt (lokal)';
             keyInput.disabled = true;
         } else {
+            keyInput.placeholder = hasApiKey(pid) ? '••••••• (gesetzt)' : 'API-Key eingeben';
             keyInput.disabled = false;
         }
     });
 
-    // Trigger initial state for auth type
-    if (configs[currentProvider]?.authType === 'none') {
-        keyInput.placeholder = 'Nicht benötigt (lokal)';
-        keyInput.disabled = true;
+    function getSelectedModel() {
+        const pid = providerSelect.value;
+        const cfg = configs[pid];
+        if (cfg?.authType === 'none' && customModelInput.value.trim()) {
+            return customModelInput.value.trim();
+        }
+        return modelSelect.value;
     }
 
     dialog.querySelector('#settings-test').addEventListener('click', async () => {
-        // Apply settings temporarily for test
         const pid = providerSelect.value;
         setProvider(pid);
-        if (modelInput.value) setModel(modelInput.value);
+        setModel(getSelectedModel());
         if (keyInput.value) setApiKey(pid, keyInput.value);
 
         infoEl.textContent = 'Teste Verbindung…';
@@ -843,14 +892,14 @@ async function openSettingsDialog() {
         try {
             const result = await testConnection();
             if (result.success) {
-                infoEl.textContent = '✓ ' + result.message;
+                infoEl.textContent = '\u2713 ' + result.message;
                 infoEl.className = 'settings-info settings-success';
             } else {
-                infoEl.textContent = '✗ ' + result.message;
+                infoEl.textContent = '\u2717 ' + result.message;
                 infoEl.className = 'settings-info settings-error';
             }
         } catch (e) {
-            infoEl.textContent = '✗ ' + e.message;
+            infoEl.textContent = '\u2717 ' + e.message;
             infoEl.className = 'settings-info settings-error';
         }
     });
@@ -862,7 +911,7 @@ async function openSettingsDialog() {
     dialog.querySelector('#settings-save').addEventListener('click', () => {
         const pid = providerSelect.value;
         setProvider(pid);
-        if (modelInput.value) setModel(modelInput.value);
+        setModel(getSelectedModel());
         if (keyInput.value) setApiKey(pid, keyInput.value);
         updateModelBadge();
         backdrop.remove();

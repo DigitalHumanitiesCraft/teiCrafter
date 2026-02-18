@@ -32,6 +32,8 @@ export const LLM_PROVIDERS = Object.freeze({
     GEMINI: 'gemini',
     OPENAI: 'openai',
     ANTHROPIC: 'anthropic',
+    DEEPSEEK: 'deepseek',
+    QWEN: 'qwen',
     OLLAMA: 'ollama'
 });
 

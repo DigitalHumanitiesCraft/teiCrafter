@@ -2539,6 +2539,12 @@ body {
     color: var(--color-problem);
 }
 
+.provider-info {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--color-text-secondary);
+    padding: 0 0 var(--space-xs) 0;
+}
+
 .model-badge.connected .model-icon {
     color: var(--color-confident);
 }

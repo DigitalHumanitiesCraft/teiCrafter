@@ -1,6 +1,6 @@
 # Implementierungs-Status
 
-Stand: 2026-02-18 (Session 11)
+Stand: 2026-02-18 (Session 12)
 
 Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Beantwortet: Was funktioniert? Was ist Stub? Was fehlt?
 
@@ -49,7 +49,7 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 | UI | ✅ | 3-Panel-Layout, Source-Tabs, Editor, Vorschau-Tabs |
 | LLM-Aufruf | ✅ | app.js → transform.js → llm.js, echte Prompt-Assembly + Response-Parsing |
 | Demo-Modus | ✅ | Demo-Dateien werden weiterhin direkt gefetcht (kein LLM nötig) |
-| Settings-Dialog | ✅ | Provider-Auswahl, Modell, API-Key, Verbindungstest |
+| Settings-Dialog | ✅ | 6 Provider, Modell-Dropdown mit Preisen/Reasoning-Badge, API-Key, Verbindungstest |
 | Konfidenz-Mapping | ✅ | extractConfidenceMap() → AppState.confidenceMap + transformStats |
 | Cancel-Support | ✅ | AbortController, Cancel-Button während Transform |
 | Vorschau | ⚠️ | Regex-basierte TEI→HTML-Konvertierung in app.js (nicht preview.js) |
@@ -93,7 +93,7 @@ Single Source of Truth für den aktuellen Zustand des teiCrafter-Prototyps. Bean
 | editor.js | View | ✅ | ❌ | ❌ | `computeLineConfidence()` ist Stub (returns empty Map) |
 | preview.js | View | ✅ | ❌ | ❌ | ID-Generierung nicht-deterministisch bei Re-Render |
 | source.js | View | ✅ | ❌ | ❌ | Digitalisat-Tab ist Platzhalter |
-| llm.js | Service | ✅ | ✅ | ❌ | 4 Provider konfiguriert, Anthropic-Browser-Header |
+| llm.js | Service | ✅ | ✅ | ❌ | 6 Provider (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama), MODEL_CATALOG mit Preisen |
 | transform.js | Service | ✅ | ✅ | ❌ | 3-Schichten-Prompt, Fallback-Extraktion |
 | validator.js | Service | ✅ | ✅ | ✅ 13 | Level 4 (XPath) ist Phase 3 |
 | schema.js | Service | ✅ | ✅ | ❌ | Permissiv wenn Schema nicht geladen, lazy-loaded |
@@ -164,6 +164,7 @@ Stufen 11–13 abgeschlossen: transform.js + llm.js (Schritt 3), validator.js + 
 | 11 | Service-Integration: Transform + LLM + Settings-Dialog | — | 2026-02 |
 | 12 | Service-Integration: Validator + Schema | — | 2026-02 |
 | 13 | Service-Integration: Export + Optionen-UI | — | 2026-02 |
+| — | LLM-Provider-Update: 6 Provider, MODEL_CATALOG, Modell-Dropdown | — | 2026-02 |
 
 ---
 

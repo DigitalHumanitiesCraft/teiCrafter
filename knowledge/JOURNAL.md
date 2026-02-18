@@ -48,6 +48,46 @@ Chronologisches Arbeitsprotokoll des teiCrafter-Projekts.
 
 **Alle 12 korrigiert.** Aktualisierte Zahlen: 4 ✅ integriert (statt 7), 17 🔧 Modul da (statt 14), 2/14 Module in app.js integriert (statt 3), 51 Tests (statt 54).
 
+### Session 12: LLM-Provider-Update (6 Provider, MODEL_CATALOG)
+
+**Auslöser:** User wünscht aktuelle Modelle, mehr Provider (DeepSeek, Qwen), Preistransparenz und Reasoning-Kennzeichnung.
+
+**Durchgeführt:**
+
+1. **constants.js** – `LLM_PROVIDERS` um DEEPSEEK und QWEN erweitert (4→6 Provider)
+
+2. **llm.js** – Umfassend überarbeitet:
+   - `MODEL_CATALOG` eingefügt: 17 Modelle mit Metadaten (Name, Input/Output-Preis in USD/1M Tokens, Kontextfenster, Reasoning-Flag)
+   - Bestehende Provider aktualisiert: Gemini 2.0-flash→2.5-flash, GPT-4o→4.1-mini, Claude→4.5-20250514, Ollama llama3.1→3.3
+   - 2 neue Provider: DeepSeek (api.deepseek.com, bearer auth, OpenAI-kompatibel) und Qwen/DashScope (dashscope.aliyuncs.com, bearer auth, OpenAI-kompatibel)
+   - Jeder Provider hat `models`-Array für Dropdown-Befüllung
+   - Neue Exports: `getModelCatalog()`, `getModelsForProvider(provider)`
+   - `getProviderConfigs()` gibt jetzt auch `models`-Array zurück
+
+3. **app.js** – Settings-Dialog überarbeitet:
+   - Modell: Freitextfeld → `<select>` mit Modellnamen, Preisen und Reasoning-Kennzeichnung
+   - Ollama: Zusätzliches Custom-Eingabefeld für eigene Modell-IDs
+   - Provider-Info-Zeile unter dem Provider-Dropdown
+   - Neue Hilfsfunktionen: `buildModelOptions()`, `getProviderInfo()`
+   - Neuer Import: `getModelCatalog`, `getModelsForProvider` aus llm.js
+
+4. **style.css** – `.provider-info` CSS-Klasse ergänzt
+
+5. **Knowledge-Docs** aktualisiert: STATUS.md, MODULES.md, JOURNAL.md
+
+**Modell-Übersicht:**
+
+| Provider | Default | Modelle | Preisrange (In/Out) |
+|----------|---------|---------|---------------------|
+| Gemini | 2.5 Flash | 3 (2.5-flash, 2.5-pro, 2.0-flash) | $0.10–$10.00 |
+| OpenAI | 4.1 Mini | 5 (4.1, 4.1-mini, 4.1-nano, o4-mini, o3) | $0.10–$8.00 |
+| Anthropic | Sonnet 4.5 | 2 (sonnet-4.5, haiku-3.5) | $0.80–$15.00 |
+| DeepSeek | V3 Chat | 2 (chat, reasoner) | $0.27–$2.19 |
+| Qwen | Plus | 3 (max, plus, turbo) | $0.10–$6.40 |
+| Ollama | llama3.3 | 5 Empfehlungen (llama3.3, qwen2.5, mistral, gemma2, phi4) | Kostenlos |
+
+**Nächste Schritte:** Stufe 14 (DocumentModel statt AppState) → Stufe 15 (View-Module einbinden) → Stufe 16 (Test-Coverage).
+
 ### Session 11: Service-Integration (Stufen 11–13)
 
 **Auslöser:** Nächster Schritt nach Knowledge-Vault-Refactoring. Die kritische Lücke war die fehlende Verdrahtung der Service-Module in app.js.

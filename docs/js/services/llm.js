@@ -13,12 +13,41 @@ import { getSetting, setSetting } from './storage.js';
 // --- Module-scoped secrets (never exported, never on window) ---
 const apiKeys = new Map();
 
+// --- Model catalog (pricing in USD per 1M tokens) ---
+const MODEL_CATALOG = Object.freeze({
+    // Google Gemini
+    'gemini-2.5-flash':  { name: 'Gemini 2.5 Flash',  input: 0.15,  output: 0.60,  context: 1048576, reasoning: false },
+    'gemini-2.5-pro':    { name: 'Gemini 2.5 Pro',     input: 1.25,  output: 10.00, context: 1048576, reasoning: true  },
+    'gemini-2.0-flash':  { name: 'Gemini 2.0 Flash',   input: 0.10,  output: 0.40,  context: 1048576, reasoning: false },
+
+    // OpenAI
+    'gpt-4.1':           { name: 'GPT-4.1',            input: 2.00,  output: 8.00,  context: 1047576, reasoning: false },
+    'gpt-4.1-mini':      { name: 'GPT-4.1 Mini',       input: 0.40,  output: 1.60,  context: 1047576, reasoning: false },
+    'gpt-4.1-nano':      { name: 'GPT-4.1 Nano',       input: 0.10,  output: 0.40,  context: 1047576, reasoning: false },
+    'o4-mini':            { name: 'o4 Mini',             input: 1.10,  output: 4.40,  context: 200000,  reasoning: true  },
+    'o3':                 { name: 'o3',                  input: 2.00,  output: 8.00,  context: 200000,  reasoning: true  },
+
+    // Anthropic
+    'claude-sonnet-4-5-20250514': { name: 'Claude Sonnet 4.5', input: 3.00, output: 15.00, context: 200000, reasoning: true  },
+    'claude-haiku-3-5-20241022':  { name: 'Claude Haiku 3.5',  input: 0.80, output: 4.00,  context: 200000, reasoning: false },
+
+    // DeepSeek
+    'deepseek-chat':      { name: 'DeepSeek V3',        input: 0.27,  output: 1.10,  context: 131072, reasoning: false },
+    'deepseek-reasoner':  { name: 'DeepSeek R1',        input: 0.55,  output: 2.19,  context: 131072, reasoning: true  },
+
+    // Qwen (DashScope)
+    'qwen-max':           { name: 'Qwen Max',           input: 1.60,  output: 6.40,  context: 131072, reasoning: false },
+    'qwen-plus':          { name: 'Qwen Plus',          input: 0.40,  output: 1.20,  context: 131072, reasoning: false },
+    'qwen-turbo':         { name: 'Qwen Turbo',         input: 0.10,  output: 0.30,  context: 131072, reasoning: false },
+});
+
 // --- Provider configurations ---
 const PROVIDER_CONFIGS = Object.freeze({
     [LLM_PROVIDERS.GEMINI]: {
         name: 'Google Gemini',
         endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
-        defaultModel: 'gemini-2.0-flash',
+        defaultModel: 'gemini-2.5-flash',
+        models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
         authType: 'url-param', // ?key=...
         buildRequest(prompt) {
             return {
@@ -32,7 +61,8 @@ const PROVIDER_CONFIGS = Object.freeze({
     [LLM_PROVIDERS.OPENAI]: {
         name: 'OpenAI',
         endpoint: 'https://api.openai.com/v1/chat/completions',
-        defaultModel: 'gpt-4o',
+        defaultModel: 'gpt-4.1-mini',
+        models: ['gpt-4.1', 'gpt-4.1-mini', 'gpt-4.1-nano', 'o4-mini', 'o3'],
         authType: 'bearer',
         buildRequest(prompt, model) {
             return {
@@ -48,7 +78,8 @@ const PROVIDER_CONFIGS = Object.freeze({
     [LLM_PROVIDERS.ANTHROPIC]: {
         name: 'Anthropic',
         endpoint: 'https://api.anthropic.com/v1/messages',
-        defaultModel: 'claude-sonnet-4-5-20250929',
+        defaultModel: 'claude-sonnet-4-5-20250514',
+        models: ['claude-sonnet-4-5-20250514', 'claude-haiku-3-5-20241022'],
         authType: 'x-api-key',
         buildRequest(prompt, model) {
             return {
@@ -61,10 +92,45 @@ const PROVIDER_CONFIGS = Object.freeze({
             return data?.content?.[0]?.text || '';
         }
     },
+    [LLM_PROVIDERS.DEEPSEEK]: {
+        name: 'DeepSeek',
+        endpoint: 'https://api.deepseek.com/chat/completions',
+        defaultModel: 'deepseek-chat',
+        models: ['deepseek-chat', 'deepseek-reasoner'],
+        authType: 'bearer',
+        buildRequest(prompt, model) {
+            return {
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.2
+            };
+        },
+        extractResponse(data) {
+            return data?.choices?.[0]?.message?.content || '';
+        }
+    },
+    [LLM_PROVIDERS.QWEN]: {
+        name: 'Qwen (DashScope)',
+        endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+        defaultModel: 'qwen-plus',
+        models: ['qwen-max', 'qwen-plus', 'qwen-turbo'],
+        authType: 'bearer',
+        buildRequest(prompt, model) {
+            return {
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.2
+            };
+        },
+        extractResponse(data) {
+            return data?.choices?.[0]?.message?.content || '';
+        }
+    },
     [LLM_PROVIDERS.OLLAMA]: {
         name: 'Ollama (lokal)',
         endpoint: 'http://localhost:11434/api/chat',
-        defaultModel: 'llama3.1',
+        defaultModel: 'llama3.3',
+        models: ['llama3.3', 'qwen2.5', 'mistral', 'gemma2', 'phi4'],
         authType: 'none',
         buildRequest(prompt, model) {
             return {
@@ -166,11 +232,29 @@ export function getProviderConfigs() {
         configs[id] = {
             name: cfg.name,
             defaultModel: cfg.defaultModel,
+            models: cfg.models || [],
             hasKey: hasApiKey(id),
             authType: cfg.authType
         };
     }
     return configs;
+}
+
+/**
+ * Get the model catalog with metadata (pricing, context, reasoning).
+ * @returns {Object} MODEL_CATALOG
+ */
+export function getModelCatalog() {
+    return MODEL_CATALOG;
+}
+
+/**
+ * Get available models for a provider.
+ * @param {string} provider
+ * @returns {string[]}
+ */
+export function getModelsForProvider(provider) {
+    return PROVIDER_CONFIGS[provider]?.models ?? [];
 }
 
 /**

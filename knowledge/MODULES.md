@@ -2,7 +2,7 @@
 
 Technische Dokumentation aller JavaScript-Module mit Public API, Abhängigkeiten und bekannten Issues. Aktualisiert bei API-Änderungen.
 
-Stand: 2026-02-18 (Session 11)
+Stand: 2026-02-18 (Session 12)
 
 ---
 
@@ -52,8 +52,10 @@ services/llm.js ─────────────────── consta
 - `renderExportStep(container)` — Nutzt export.js (prepareExport, getExportStats, downloadXml, copyToClipboard)
 
 **LLM-Funktionen:**
-- `openSettingsDialog()` — Provider, Modell, API-Key, Verbindungstest
+- `openSettingsDialog()` — 6 Provider, Modell-Dropdown mit Preisen/Reasoning, Custom-Feld für Ollama, Verbindungstest
 - `updateModelBadge()` — Header-Badge aktualisieren
+- `buildModelOptions(providerId, selectedModel)` — Modell-Optionen mit Metadaten rendern
+- `getProviderInfo(providerId)` — Provider-Info-Text (lokal vs. Cloud)
 - `performTransform()` — Demo-Modus oder LLM-Aufruf via transform.js
 
 **Bekannte Issues:**
@@ -222,7 +224,7 @@ services/llm.js ─────────────────── consta
 
 ### llm.js — Multi-Provider LLM-Service
 
-**Pfad:** `docs/js/services/llm.js` (~260 Zeilen)
+**Pfad:** `docs/js/services/llm.js` (~320 Zeilen)
 
 **Exports:**
 
@@ -232,11 +234,15 @@ services/llm.js ─────────────────── consta
 | `hasApiKey(provider?)` | Prüfen ob Key vorhanden (Ollama: immer true) |
 | `setProvider(provider)` / `getProvider()` | Aktiven Provider setzen/lesen (persistiert in storage) |
 | `setModel(model)` / `getModel()` | Aktives Modell setzen/lesen |
-| `getProviderConfigs()` | Sanitisierte Configs → `{ [providerId]: { name, defaultModel, hasKey, authType } }` (keine Keys exponiert) |
+| `getProviderConfigs()` | Sanitisierte Configs → `{ [providerId]: { name, defaultModel, models, hasKey, authType } }` |
+| `getModelCatalog()` | MODEL_CATALOG mit Metadaten (name, input/output-Preis, context, reasoning) |
+| `getModelsForProvider(provider)` | Verfügbare Modell-IDs für einen Provider |
 | `complete(prompt, {signal?})` | LLM-Aufruf an aktiven Provider |
 | `testConnection()` | Verbindungstest mit Minimal-Prompt |
 
-**Provider:** Gemini (`gemini-2.0-flash`), OpenAI (`gpt-4o`), Anthropic (`claude-sonnet-4-5-20250929`), Ollama (`llama3.1`)
+**Provider (6):** Gemini (`gemini-2.5-flash`), OpenAI (`gpt-4.1-mini`), Anthropic (`claude-sonnet-4-5-20250514`), DeepSeek (`deepseek-chat`), Qwen (`qwen-plus`), Ollama (`llama3.3`)
+
+**MODEL_CATALOG:** 17 Modelle mit Metadaten (Preise in USD/1M Tokens, Kontextfenster, Reasoning-Flag). DeepSeek und Qwen nutzen OpenAI-kompatibles API-Format.
 
 **Sicherheit:** Keys in module-scoped Map (nie localStorage/DOM/window), Input-Validierung (256 Chars, printable ASCII), `credentials: 'omit'`, Error-Messages truncated (200 Chars)
 
@@ -342,7 +348,7 @@ services/llm.js ─────────────────── consta
 
 **Pfad:** `docs/js/utils/constants.js` (~119 Zeilen)
 
-**Exports:** `CONFIDENCE`, `REVIEW_STATUS`, `ENTITY_TYPES`, `LLM_PROVIDERS`, `MAX_UNDO`, `KEYSTROKE_DEBOUNCE`, `MAX_FILE_SIZE`, `TOAST_DURATION`, `TOAST_DURATION_ERROR`, `SOURCE_LABELS`, `DEMO_CONFIGS`, `ICONS`, `getDefaultMapping(sourceType)`
+**Exports:** `CONFIDENCE`, `REVIEW_STATUS`, `ENTITY_TYPES`, `LLM_PROVIDERS` (6: gemini, openai, anthropic, deepseek, qwen, ollama), `MAX_UNDO`, `KEYSTROKE_DEBOUNCE`, `MAX_FILE_SIZE`, `TOAST_DURATION`, `TOAST_DURATION_ERROR`, `SOURCE_LABELS`, `DEMO_CONFIGS`, `ICONS`, `getDefaultMapping(sourceType)`
 
 ### dom.js — DOM-Utilities
 
