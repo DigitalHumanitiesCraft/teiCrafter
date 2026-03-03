@@ -55,20 +55,20 @@ export const TOAST_DURATION_ERROR = 8000;
 // --- Source Types ---
 
 export const SOURCE_LABELS = Object.freeze({
-    correspondence: 'Korrespondenz',
-    bookkeeping: 'Rechnungsbuch',
-    print: 'Druck',
-    recipe: 'Rezept',
-    generic: 'Dokument'
+    correspondence: 'Correspondence',
+    bookkeeping: 'Account Book',
+    print: 'Print',
+    recipe: 'Recipe',
+    generic: 'Document'
 });
 
 // --- Demo Configurations ---
 
 export const DEMO_CONFIGS = Object.freeze({
     'bookkeeping': {
-        name: 'Rechnungsbuch',
+        name: 'Account Book',
         subtitle: 'DEPCHA',
-        desc: 'Finanzdokument',
+        desc: 'Financial document',
         icon: 'book',
         sourceType: 'bookkeeping',
         files: {
@@ -78,9 +78,9 @@ export const DEMO_CONFIGS = Object.freeze({
         }
     },
     'recipe': {
-        name: 'Rezept',
+        name: 'Recipe',
         subtitle: 'DoCTA',
-        desc: 'Mittelalterlich',
+        desc: 'Medieval',
         icon: 'recipe',
         sourceType: 'recipe',
         files: {

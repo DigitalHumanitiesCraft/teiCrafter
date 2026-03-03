@@ -1,13 +1,13 @@
 /**
  * teiCrafter – Transform Service
- * Dreischichten-Prompt-Assemblierung (Basis + Kontext + Mapping)
+ * Three-layer prompt assembly (Base + Context + Mapping)
  * Response parsing: XML extraction, confidence mapping.
  */
 
 import { complete } from './llm.js';
 import { ANNOTATION_TAGS } from '../utils/constants.js';
 
-// --- Basisschicht (generisch, von teiCrafter vorgegeben) ---
+// --- Base layer (generic, provided by teiCrafter) ---
 const BASE_PROMPT = `You are a TEI-XML annotation assistant. Your task is to annotate the given text with TEI-XML markup.
 
 RULES:
@@ -116,13 +116,13 @@ export async function transform(params, options = {}) {
     const xml = extractXmlFromResponse(response);
 
     if (!xml) {
-        throw new Error('Keine g\u00fcltige XML-Antwort erhalten.');
+        throw new Error('No valid XML response received.');
     }
 
     // Validate well-formedness
     const doc = new DOMParser().parseFromString(xml, 'application/xml');
     if (doc.querySelector('parsererror')) {
-        throw new Error('LLM-Antwort ist kein wohlgeformtes XML: ' +
+        throw new Error('LLM response is not well-formed XML: ' +
             doc.querySelector('parsererror').textContent.slice(0, 200));
     }
 

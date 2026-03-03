@@ -308,14 +308,14 @@ export async function complete(prompt, options = {}) {
 
     if (!response.ok) {
         const errorText = await response.text().catch(() => '');
-        throw new Error(config.name + ' API Fehler ' + response.status + ': ' + errorText.slice(0, 200));
+        throw new Error(config.name + ' API error ' + response.status + ': ' + errorText.slice(0, 200));
     }
 
     const data = await response.json();
     const text = config.extractResponse(data);
 
     if (!text) {
-        throw new Error('Leere Antwort von ' + config.name);
+        throw new Error('Empty response from ' + config.name);
     }
 
     return text;

@@ -1,153 +1,425 @@
-# teiCrafter – Technische Referenz
+# teiCrafter -- Technical Reference
 
-Vollständige technische Dokumentation des Projekts. Destilliert aus 15 Wissensdokumenten, 14 JS-Modulen, 2643 Zeilen CSS, 27 Schema-Elementen und 60 Unit-Tests. Ziel: Ein Agent oder Entwickler kann mit diesem Dokument ohne Quellcode-Zugriff arbeiten.
+Last updated: 2026-03-03
 
-Stand: 2026-02-18 (Session 16)
-
-Abgrenzung zu SYNTHESIS.md: SYNTHESIS.md ist das 5-Minuten-Onboarding (Was, Warum, Wohin). REFERENCE.md ist die technische Tiefe (Wie, Womit, Welche Grenzen).
+Consolidated technical reference for the teiCrafter prototype. Merges per-module API documentation, implementation status, data structures, LLM provider details, and known problems into a single developer-oriented document.
 
 ---
 
-## 1. Systemübersicht
+## 1. Module Overview
 
-### 1.1 Was ist teiCrafter?
-
-Browserbasiertes Werkzeug zur LLM-gestützten TEI-XML-Annotation von Plaintext. Kein Server, kein Account, kein Build-Step. Statische Webseite, deployed via GitHub Pages aus `/docs`.
-
-### 1.2 Pipeline-Position
+### 1.1 Dependency Diagram
 
 ```
-Bild → coOCR HTR → teiCrafter → ediarum/GAMS/Publikation
-       (Transkription)  (Annotation)    (Tiefenerschließung)
+app.js ──────────────────────────── constants.js, dom.js
+   │
+   ├──▶ services/transform.js ───── services/llm.js ─── services/storage.js
+   ├──▶ services/llm.js (direct)
+   ├──▶ services/validator.js ────── services/schema.js
+   ├──▶ services/schema.js (direct)
+   ├──▶ services/export.js
+   │
+   │  (PLANNED, not yet wired:)
+   ├──▶ model.js ────────────────── constants.js
+   ├──▶ editor.js ───────────────── tokenizer.js, dom.js
+   ├──▶ preview.js ──────────────── constants.js, dom.js
+   └──▶ source.js ───────────────── dom.js
+
+services/llm.js ─────────────────── constants.js, services/storage.js
 ```
 
-### 1.3 Epistemische Grundlage
+### 1.2 Integration Matrix
 
-LLMs erzeugen plausible Annotationen, können deren Korrektheit nicht zuverlässig beurteilen. Der Mensch ist strukturell notwendig. Designkonsequenz: Keine Annotation wird automatisch akzeptiert. Jede durchläuft Human Review (Accept/Edit/Reject).
+| Module | Type | Lines | Implemented | Integrated in app.js | Unit Tests | Known Issues Summary |
+|--------|------|------:|:-----------:|:--------------------:|:----------:|----------------------|
+| app.js | Shell | 956 | Done | -- | Missing | No error boundary; HTML string concatenation |
+| model.js | State | 247 | Done | Missing | 23 tests | Validation not in undo snapshots |
+| tokenizer.js | Parser | 199 | Done | Missing (editor.js not wired) | 19 tests | No numeric entities; CDATA edge case |
+| editor.js | View | 242 | Done | Missing | Missing | `computeLineConfidence()` is stub |
+| preview.js | View | 501 | Done | Missing | Missing | Non-deterministic ID generation |
+| source.js | View | 67 | Done | Missing | Missing | Digitalisat tab is placeholder |
+| llm.js | Service | 343 | Done | Done | Missing | No request timeout |
+| transform.js | Service | 223 | Done | Done | Missing | ID counter resets per call |
+| validator.js | Service | 303 | Done | Done | 18 tests | XPath validation deferred to Phase 3 |
+| schema.js | Service | 93 | Done | Done | Missing | Permissive when no schema loaded |
+| export.js | Service | 165 | Done | Done | Missing | No pretty-print; no encoding declaration |
+| storage.js | Service | 68 | Done | Partial (via llm.js) | Missing | Only provider/model settings |
+| constants.js | Utility | 117 | Done | Done | Missing | -- |
+| dom.js | Utility | 171 | Done | Done | Missing | -- |
 
-### 1.4 Strategische Differenziatoren
-
-1. **Zero Infrastructure** — Eliminiert die #1-Adoptionsbarriere in DH
-2. **LLM + obligatorischer Human Review** — Tedium reduziert, wissenschaftliche Autorität bewahrt
-3. **Schema-Profil-geführter Output** — JSON-Schema verhindert halluziniertes Markup
-4. **Bring Your Own API Key (6 Provider)** — Kein Vendor Lock-in
-
-### 1.5 Marktposition (Stand 2026-02)
-
-Analyse von 10+ DH-Werkzeugen (Oxygen, ediarum, TEI Publisher, CATMA, Transkribus, eScriptorium, LEAF-Writer, JinnTap, FromThePage, EVT, TextGrid) bestätigt: Kein Tool kombiniert TEI-Annotation + LLM + Human Review + Browser-only. teiCrafter ist First Mover in dieser Nische. Nächster Vergleichspunkt: JinnTap (e-editiones, TEI 2025) — WYSIWYM-Editor, aber ohne LLM-Integration.
+**Summary:** 14/14 modules implemented. 7/14 directly integrated in app.js (constants, dom, llm, transform, validator, schema, export). 1/14 indirectly integrated (storage via llm). 3/14 have unit tests (60 tests total). Approximate test coverage: 21%.
 
 ---
 
-## 2. Dateistruktur
+## 2. Per-Module API Reference
 
-```
-docs/
-├── index.html              82 Zeilen, Entry Point, 5-Step-Stepper
-├── css/style.css           2643 Zeilen, 98 Custom Properties, TEI-Farbsystem
-├── js/
-│   ├── app.js              956 Zeilen, Application Shell, Workflow-Orchestrierung
-│   ├── model.js            248 Zeilen, DocumentModel (EventTarget), 4 Layers, Undo/Redo
-│   ├── tokenizer.js        200 Zeilen, State-Machine XML-Tokenizer, 9 Token-Typen
-│   ├── editor.js           243 Zeilen, Overlay-Editor (Textarea + Pre + Gutter)
-│   ├── preview.js          502 Zeilen, Interaktive Vorschau, Inline/Batch-Review
-│   ├── source.js            68 Zeilen, Source-Panel (Plaintext/Digitalisat-Tabs)
-│   ├── services/
-│   │   ├── llm.js          344 Zeilen, 6 Provider, MODEL_CATALOG, API-Key-Isolation
-│   │   ├── transform.js    224 Zeilen, 3-Layer-Prompt, Response-Parsing, Konfidenz
-│   │   ├── validator.js    304 Zeilen, 4 Validierungsebenen
-│   │   ├── schema.js        94 Zeilen, JSON-Schema-Profil, Lazy Loading
-│   │   ├── export.js       166 Zeilen, Attribut-Bereinigung, Download, Clipboard
-│   │   └── storage.js       69 Zeilen, localStorage-Wrapper (nur Provider/Model)
-│   └── utils/
-│       ├── constants.js    ~180 Zeilen, Enums, Configs, Icons, ANNOTATION_TAGS, DEMO_CONFIGS
-│       └── dom.js          172 Zeilen, $, $$, escHtml, showToast, showDialog
-├── schemas/dtabf.json      27 TEI-Elemente, DTABf-Subset
-├── tests/                  60 Unit-Tests (tokenizer: 19, model: 23, validator: 18)
-└── data/demo/              2 echte Demos (Rezept, Rentrechnung) + 1 Platzhalter (Brief)
-    ├── plaintext/          recipe-medieval.txt, rentrechnung-1718.txt
-    ├── mappings/           recipe-docta.md, bookkeeping-depcha.md
-    └── expected-output/    recipe-medieval-tei.xml, rentrechnung-1718-tei.xml
-```
+### 2.1 app.js -- Application Shell
 
-Gesamt: 4159 Zeilen JavaScript, 2643 Zeilen CSS, 82 Zeilen HTML.
+**Path:** `docs/js/app.js` (956 lines)
 
----
+**Imports:** `constants.js`, `dom.js`, `transform.js`, `llm.js`, `validator.js`, `schema.js`, `export.js`
+**Not imported (open):** model.js, editor.js, preview.js, source.js, storage.js
 
-## 3. Modularchitektur
+**Internal State:**
 
-### 3.1 Integrationsmatrix
+| Symbol | Description |
+|--------|-------------|
+| `INITIAL_STATE` | Frozen object with default values for all workflow fields |
+| `AppState` | Mutable object spread from `INITIAL_STATE`; provides `set(partial)` and `reset()` (via `structuredClone`) |
+| `transformController` | Module-scoped `AbortController` for cancel support |
+| `transformInProgress` | Boolean guard against double-click during transform |
+| `stepCleanup` | Cleanup function for step-specific listeners (e.g., drag-and-drop) |
 
-| Modul | Typ | In app.js integriert | Tests | Abhängigkeiten |
-|-------|-----|---------------------|-------|----------------|
-| app.js | Shell | — | Nein | Alle außer source.js |
-| model.js | State | Importiert, nicht genutzt | 23 | Keine |
-| tokenizer.js | Parser | Via editor.js | 19 | Keine |
-| editor.js | View | Importiert, nicht genutzt | Nein | tokenizer.js |
-| preview.js | View | Importiert, nicht genutzt | Nein | Keine |
-| source.js | View | Importiert, nicht genutzt | Nein | Keine |
-| llm.js | Service | Ja | Nein | storage.js |
-| transform.js | Service | Ja | Nein | llm.js |
-| validator.js | Service | Ja | 18 | schema.js |
-| schema.js | Service | Ja | Nein | Keine |
-| export.js | Service | Ja | Nein | constants.js |
-| storage.js | Service | Indirekt (via llm.js) | Nein | Keine |
-| constants.js | Utility | Ja | Nein | Keine |
-| dom.js | Utility | Ja | Nein | Keine |
+**Event Delegation:**
 
-Kernproblem: 3 View-Module + model.js sind implementiert aber nicht verdrahtet. app.js rendert alle Steps via Inline-HTML und Regex-basierter XML-Darstellung.
+A single `click` listener on `.app-main` routes actions via `data-action` attributes. Actions include: `go-step-N`, `select-file`, `load-demo`, `save-mapping`, `transform`, `cancel-transform`, `download-export`, `copy-export`, `new-document`. Tab clicks are delegated via `.tab[data-tab]`.
 
-### 3.2 Datenfluss
+| Function | Description |
+|----------|-------------|
+| `handleAction(action, e)` | Central switch for approximately 13 actions |
+| `buildSettingsHtml(configs, curProvider, curModel)` | Pure HTML string for the LLM settings dialog |
+| `attachSettingsListeners(dialog, backdrop, configs)` | Event binding for the settings dialog |
+| `openSettingsDialog()` | Orchestration: creates backdrop + dialog, invokes the above |
+| `updateModelBadge()` | Updates the header badge with current model info |
+| `buildModelOptions(providerId, selectedModel)` | Renders model option elements with metadata |
+| `getProviderInfo(providerId)` | Returns provider info text (local vs. cloud) |
 
-```
-User → Import (app.js)
-         │
-         ├── processFile(file) → AppState.inputContent
-         │     Format-Erkennung: .txt/.md/.xml/.docx
-         │     DOCX: JSZip → word/document.xml → DOMParser → Textextraktion
-         │     Quellentyp: Heuristik (Substring-Matching)
-         │
-         ▼
-       Mapping (app.js)
-         │
-         ├── Quellentyp-Auswahl → DEFAULT_MAPPINGS[type]
-         ├── Editierbare Regeln (Textarea)
-         ├── Kontext: { language, epoch, project }
-         │
-         ▼
-       Transform (transform.js → llm.js)
-         │
-         ├── assemblePrompt(basis + kontext + mapping + inputContent)
-         ├── llm.complete(prompt, {signal}) → LLM-Response
-         ├── extractXmlFromResponse(response) → XML-String
-         ├── DOMParser-Validierung
-         ├── extractConfidenceMap(xml) → Map<elementId, confidence>
-         ├── Statistik: {total, sicher, pruefenswert, problematisch}
-         │
-         ▼
-       Validate (validator.js + schema.js)
-         │
-         ├── Level 1: Wohlgeformtheit (DOMParser)
-         ├── Level 2: Plaintext-Vergleich (Wort-Similarität, Schwelle 95%)
-         ├── Level 3: Schema-Validierung (Element/Attribut/Parent-Child)
-         ├── Level 4: XPath-Regeln (Phase 3)
-         ├── Level 5: Expert-Review (Zählung ungeprüfter Annotationen)
-         │
-         ▼
-       Export (export.js)
-         │
-         ├── prepareExport(xml, {format, keepConfidence, keepResp})
-         │     Entfernt: @confidence, @resp="#machine"
-         │     Optional: @resp → "#teiCrafter"
-         │     Format: full (ganzes TEI) oder body-only
-         ├── downloadXml(content, fileName) → Blob + <a>-Click
-         └── copyToClipboard(content) → navigator.clipboard (+ Fallback)
-```
+**Known Issues:**
+- No error boundary -- renderer errors break the entire UI
+- HTML via string concatenation -- fragile, no templating engine
+- `extractPlaintext()` and `isWellFormedXml()` remain inline (for compare panel and import validation respectively)
 
 ---
 
-## 4. Zentrale Datenstrukturen
+### 2.2 model.js -- Reactive Document Model
 
-### 4.1 AppState (app.js)
+**Path:** `docs/js/model.js` (247 lines)
+**Export:** `class DocumentModel extends EventTarget`
+
+**Four state layers:**
+
+| Layer | Type | Getter | Setter |
+|-------|------|--------|--------|
+| Document | `string` | `get xml` | `setXml(xml, {label?, undoable?})`, `keystroke(xml)` |
+| Confidence | `Map<id, level>` | `get confidenceMap`, `getConfidence(id)` | `setConfidence(id, level)`, `setConfidenceMap(map)` |
+| Validation | `Array<Message>` | `get validationMessages` | `setValidationMessages(msgs)` |
+| Review | `Map<id, status>` | `get reviewStatus`, `getReviewStatus(id)`, `get reviewStats` | `setReviewStatus(id, status)` |
+
+**Events:**
+
+| Event | Detail | Trigger |
+|-------|--------|---------|
+| `documentChanged` | `{ xml }` | `setXml()`, `keystroke()` |
+| `confidenceChanged` | `{ elementId, level }` or `{ bulk: true }` | `setConfidence()`, `setConfidenceMap()` |
+| `validationComplete` | `{ messages }` | `setValidationMessages()` |
+| `reviewAction` | `{ elementId, status, prevStatus }` | `setReviewStatus()` |
+| `undoRedo` | `{ action, label }` | `undo()`, `redo()` |
+
+**Undo/Redo:**
+- `canUndo`, `canRedo` -- boolean getters
+- `undo()`, `redo()` -- snapshot-based, MAX_UNDO = 100
+- `keystroke()` -- groups consecutive inputs (500 ms debounce)
+- Snapshots contain: XML + Confidence + Review (not Validation)
+
+**Additional Public API:**
+
+| Member | Description |
+|--------|-------------|
+| `reset()` | Reset all layers (XML, Confidence, Review, Undo stack) |
+| `get fileName` / `set fileName` | File name of the loaded document |
+| `get sourceType` / `set sourceType` | Source type (`generic`, `correspondence`, `print`, `recipe`, `bookkeeping`) |
+
+**Tests:** 23 tests in `model.test.js`
+
+**Known Issues:**
+- Validation messages are not included in undo snapshots, causing desync after undo/redo
+- No input validation for element IDs or status values
+- Orphaned confidence/review entries possible for non-existent elements
+
+---
+
+### 2.3 tokenizer.js -- XML State-Machine Tokenizer
+
+**Path:** `docs/js/tokenizer.js` (199 lines)
+**Exports:** `tokenize(xml)` returns `Token[]`; `TOKEN` enum
+
+**Nine token types:** `ELEMENT`, `ATTR_NAME`, `ATTR_VALUE`, `DELIMITER`, `COMMENT`, `PI`, `NAMESPACE`, `ENTITY`, `TEXT`
+
+**Token structure:** `{ type, value, start, end }`
+
+**Properties:**
+- Pure function, no side effects
+- O(n) linear scan, no backtracking
+- Contiguity invariant: `token[i].end === token[i+1].start`
+- Graceful degradation on malformed XML (never throws)
+
+**Tests:** 19 tests in `tokenizer.test.js` (including performance benchmark: less than 50 ms for 500 lines)
+
+**Known Issues:**
+- Numeric entity references (`&#123;`, `&#xAB;`) not recognized
+- CDATA sections with embedded `]]>` terminate prematurely
+- Entity length heuristic: maximum 12 characters
+
+---
+
+### 2.4 editor.js -- Overlay Editor
+
+**Path:** `docs/js/editor.js` (242 lines)
+**Export:** `createOverlayEditor(container, options)` returns `EditorInstance`
+
+**Options:** `{ value?, readOnly?, onChange?, showGutter? }`
+
+**EditorInstance API:**
+
+| Method | Description |
+|--------|-------------|
+| `getValue()` | Return the current XML string |
+| `setValue(xml)` | Set XML and refresh syntax highlighting |
+| `setLineConfidence(map)` | Color gutter markers by confidence map |
+| `getLineCount()` | Return line count |
+| `destroy()` | Cleanup (remove event listeners) |
+
+**Architecture:** Transparent textarea (caret visible) overlaid on a `<pre>` element (syntax highlighting). Scroll synchronization via the `scroll` event. Input handling via `requestAnimationFrame` debounce.
+
+**Known Issues:**
+- `computeLineConfidence()` is a stub -- always returns an empty Map (gutter markers are decorative)
+- No incremental tokenizing -- entire document retokenized on every keystroke
+- Tab handling: inserts 2 spaces, no smart indent
+- No virtual scrolling for large documents
+- Memory leak: Tab keydown listener is not removed in `destroy()`
+
+---
+
+### 2.5 preview.js -- Interactive Preview and Review
+
+**Path:** `docs/js/preview.js` (501 lines)
+**Export:** `createPreview(container, options)` returns `PreviewInstance`
+
+**Options:** `{ xml?, confidenceMap?, reviewStatusMap?, onReview?, onFocus? }`
+
+**PreviewInstance API:**
+
+| Method | Description |
+|--------|-------------|
+| `updateXml(xml)` | Re-render XML (full DOM rebuild) |
+| `updateConfidence(map)` | Update confidence classes in-place |
+| `updateReviewStatus(map)` | Update review status classes in-place |
+| `startBatchReview()` | Start batch mode (keyboard: N/P/A/R/E/Esc) |
+| `stopBatchReview()` | End batch mode |
+| `focusAnnotation(id)` | Focus and scroll to an annotation |
+| `getStats()` | Returns `{ total, reviewed, remaining, sicher, pruefenswert, problematisch }` |
+| `annotations` | Read-only array of all recognized annotations |
+| `destroy()` | Cleanup |
+
+**Recognized annotation tags:** `persName`, `placeName`, `orgName`, `date`, `name`, `bibl`, `term`, `measure`, `foreign`
+
+**Review Actions:**
+- Accept (A): status becomes `akzeptiert`, confidence becomes `sicher`
+- Edit (E): status becomes `editiert`, confidence becomes `manuell`
+- Reject (R): status becomes `verworfen`, confidence unchanged
+
+**Known Issues:**
+- Auto-ID generation (`persName-1`) is non-deterministic on re-render, causing review map keys to become stale
+- Hover bar does not reposition at viewport edges
+- Full DOM rebuild on `updateXml()` -- no diffing
+
+---
+
+### 2.6 source.js -- Source Panel
+
+**Path:** `docs/js/source.js` (67 lines)
+**Export:** `createSourcePanel(container, options)` returns `SourceInstance`
+
+**Options:** `{ content, fileName?, showDigitalisat? }`
+
+**SourceInstance API:**
+
+| Method | Description |
+|--------|-------------|
+| `setContent(text)` | Update text content |
+| `destroy()` | Cleanup |
+
+**Known Issues:**
+- Digitalisat tab is a placeholder ("not available")
+- No line numbers, no syntax highlighting
+- No scroll synchronization with editor
+
+---
+
+### 2.7 llm.js -- Multi-Provider LLM Service
+
+**Path:** `docs/js/services/llm.js` (343 lines)
+
+**Exports:**
+
+| Function | Description |
+|----------|-------------|
+| `setApiKey(provider, key)` | Validate key and store in module-scoped Map |
+| `hasApiKey(provider?)` | Check whether a key exists (Ollama: always true) |
+| `setProvider(provider)` / `getProvider()` | Set/get active provider (persisted in storage) |
+| `setModel(model)` / `getModel()` | Set/get active model |
+| `getProviderConfigs()` | Sanitized configs: `{ [providerId]: { name, defaultModel, models, hasKey, authType } }` |
+| `getModelCatalog()` | `MODEL_CATALOG` with metadata (name, input/output price, context, reasoning) |
+| `getModelsForProvider(provider)` | Available model IDs for a provider |
+| `complete(prompt, {signal?})` | LLM call to the active provider |
+| `testConnection()` | Connection test with a minimal prompt |
+
+**Providers (6):** Gemini (`gemini-2.5-flash`), OpenAI (`gpt-4.1-mini`), Anthropic (`claude-sonnet-4-5-20250514`), DeepSeek (`deepseek-chat`), Qwen (`qwen-plus`), Ollama (`llama3.3`)
+
+**Security:** Keys stored in a module-scoped `Map` (never exported, never in localStorage / DOM / window). Input validation: max 256 characters, printable ASCII (`/^[\x20-\x7E]*$/`). Fetch uses `credentials: 'omit'`. Error messages truncated to 200 characters.
+
+**Known Issues:**
+- No explicit request timeout (relies on browser default of 30-60 seconds)
+
+---
+
+### 2.8 transform.js -- Prompt Assembly and Response Parsing
+
+**Path:** `docs/js/services/transform.js` (223 lines)
+
+**Exports:**
+
+| Function | Description |
+|----------|-------------|
+| `assemblePrompt(params)` | Build three-layer prompt (base + context + mapping) |
+| `getPromptLayers(params)` | Return layers separately (for UI preview) |
+| `transform(params, {signal?})` | Full pipeline: prompt, LLM call, XML parse, confidence extraction |
+| `extractXmlFromResponse(response)` | Extract XML from LLM response (3 fallback strategies) |
+| `extractConfidenceMap(doc)` | Read confidence attributes from parsed XML DOM. Iterates over 9 annotation tags. Generates auto-IDs when `xml:id` is absent. Maps: high to sicher, medium to pruefenswert, low to problematisch, missing to pruefenswert |
+| `compareText(original, transformed)` | Check text preservation |
+
+**Transform Result:** `{ xml, confidenceMap, stats: { total, sicher, pruefenswert, problematisch } }`
+
+**Known Issues:**
+- ID counter resets per invocation, causing potential collisions across calls
+
+---
+
+### 2.9 validator.js -- Multi-Level Validation
+
+**Path:** `docs/js/services/validator.js` (303 lines)
+
+**Exports:**
+
+| Function | Description |
+|----------|-------------|
+| `validate(params)` | Execute all available validation levels |
+| `checkWellFormedness(xml)` | Level 2: DOMParser check returning `{ doc, errors }` |
+| `checkPlaintext(doc, original)` | Level 1: Text preservation via word similarity |
+| `checkSchema(doc, xml)` | Level 3: Element/attribute validation against loaded schema |
+| `checkUnreviewed(reviewStatusMap)` | Level 5: Warning for unreviewed annotations |
+
+**Tests:** 18 tests in `validator.test.js`
+
+**Known Issues:**
+- Level 4 (XPath) deferred to Phase 3
+- `checkPlaintext()` has no null guard for `doc`
+
+---
+
+### 2.10 schema.js -- Schema Profile Queries
+
+**Path:** `docs/js/services/schema.js` (93 lines)
+
+**Exports:**
+
+| Function | Description |
+|----------|-------------|
+| `loadSchema(url?)` | Load JSON profile (default: `../schemas/dtabf.json`) |
+| `isLoaded()` | Is a schema currently loaded? |
+| `getSchemaName()` | Profile name |
+| `isKnownElement(tag)` | Is the element in the schema? |
+| `isChildAllowed(parent, child)` | Is the parent-child relationship permitted? |
+| `isAttributeKnown(tag, attr)` | Is the attribute known for the element? |
+| `getAllowedChildren(tag)` | Allowed child elements |
+| `getElementDef(tag)` | Full element definition |
+
+**Behavior when no schema is loaded:** Permissive -- all queries return `true`. Always-allowed attributes: `xml:id`, `xml:lang`, `xmlns`, `n`.
+
+---
+
+### 2.11 export.js -- Export Service
+
+**Path:** `docs/js/services/export.js` (165 lines)
+
+**Exports:**
+
+| Function | Description |
+|----------|-------------|
+| `prepareExport(xml, options?)` | Attribute cleanup, optional body-only extraction |
+| `getExportStats(xml)` | Line count and entity counts (9 tag types) |
+| `downloadXml(content, fileName)` | Browser download via Blob |
+| `copyToClipboard(content)` | Clipboard with fallback for older browsers |
+| `getExportFileName(originalName)` | Clean filename with `-tei.xml` suffix |
+
+**Export Options:** `{ format: 'full' | 'body', keepConfidence: boolean, keepResp: boolean }`
+
+**Cleanup Logic:** `@confidence` removed by default. `@resp="#machine"` removed or replaced with `"#teiCrafter"`.
+
+**Known Issues:**
+- No pretty-print
+- No XML encoding declaration
+
+---
+
+### 2.12 storage.js -- localStorage Wrapper
+
+**Path:** `docs/js/services/storage.js` (68 lines)
+
+**Exports:** `getSetting(key, default?)`, `setSetting(key, value)`, `removeSetting(key)`, `getAllSettings()`
+
+**Namespace:** `teiCrafter_` prefix. Currently used for: `provider`, `model`.
+
+**Security:** No API keys stored. Only non-sensitive settings.
+
+---
+
+### 2.13 constants.js -- Enums, Configuration, Icons
+
+**Path:** `docs/js/utils/constants.js` (117 lines)
+
+**Exports:**
+
+| Export | Description |
+|--------|-------------|
+| `CONFIDENCE` | Frozen enum: `SICHER`, `PRUEFENSWERT`, `PROBLEMATISCH`, `MANUELL` |
+| `REVIEW_STATUS` | Frozen enum: `OFFEN`, `AKZEPTIERT`, `EDITIERT`, `VERWORFEN` |
+| `ENTITY_TYPES` | Frozen enum: `PERS_NAME`, `PLACE_NAME`, `ORG_NAME`, `DATE`, `BIBL`, `TERM` |
+| `LLM_PROVIDERS` | Frozen enum: `GEMINI`, `OPENAI`, `ANTHROPIC`, `DEEPSEEK`, `QWEN`, `OLLAMA` |
+| `ANNOTATION_TAGS` | Frozen array of 9 tag names (used by transform, export, preview) |
+| `MAX_UNDO` | 100 |
+| `KEYSTROKE_DEBOUNCE` | 500 (ms) |
+| `MAX_FILE_SIZE` | 10 MB (10 * 1024 * 1024) |
+| `TOAST_DURATION` | 4000 (ms) |
+| `TOAST_DURATION_ERROR` | 8000 (ms) |
+| `SOURCE_LABELS` | 5 source types: correspondence, bookkeeping, print, recipe, generic |
+| `DEMO_CONFIGS` | 2 demo configurations: bookkeeping, recipe |
+| `ICONS` | SVG icon strings: letter, book, recipe, upload, success, settings |
+| `getDefaultMapping(sourceType)` | Returns default mapping rules for a given source type |
+
+---
+
+### 2.14 dom.js -- DOM Utilities
+
+**Path:** `docs/js/utils/dom.js` (171 lines)
+
+**Exports:**
+
+| Function | Description |
+|----------|-------------|
+| `$(selector, root?)` | `querySelector` shorthand |
+| `$$(selector, root?)` | `querySelectorAll` shorthand |
+| `escHtml(str)` | Escapes `& < > " '` -- used before every `innerHTML` assignment |
+| `highlightXml(xml)` | XML syntax highlighting for display |
+| `showToast(msg, type?)` | Toast notification |
+| `showDialog(options)` | Modal dialog |
+| `setAriaLive(msg)` | Accessibility: live region announcement |
+
+---
+
+## 3. Data Structures
+
+### 3.1 AppState (app.js)
 
 ```javascript
 {
@@ -168,563 +440,466 @@ User → Import (app.js)
 
 Reset via `structuredClone(INITIAL_STATE)`.
 
-### 4.2 DocumentModel (model.js) — nicht als State-Quelle genutzt
+### 3.2 DocumentModel Layers (model.js)
 
 ```javascript
 class DocumentModel extends EventTarget {
-  // 4 Zustandsschichten:
   #xmlString: string
-  #confidenceMap: Map<elementId, 'sicher'|'pruefenswert'|'problematisch'|'manuell'>
+  #confidenceMap: Map<elementId, 'sicher' | 'pruefenswert' | 'problematisch' | 'manuell'>
   #validationMessages: ValidationMessage[]
-  #reviewStatus: Map<elementId, 'offen'|'akzeptiert'|'editiert'|'verworfen'>
+  #reviewStatus: Map<elementId, 'offen' | 'akzeptiert' | 'editiert' | 'verworfen'>
 
-  // Undo/Redo:
-  #undoStack: Snapshot[]      // Max 100
+  #undoStack: Snapshot[]      // max 100
   #redoStack: Snapshot[]
-  #keystrokeTimer              // 500ms Debounce
+  #keystrokeTimer              // 500 ms debounce
   #lastKeystrokeSnapshot
-
-  // Events:
-  // 'documentChanged'    → { xml }
-  // 'confidenceChanged'  → { elementId, level } | { bulk: true }
-  // 'validationComplete' → { messages }
-  // 'reviewAction'       → { elementId, status, prevStatus } | { bulk: true }
-  // 'undoRedo'           → { action: 'undo'|'redo', label }
 }
 ```
 
-### 4.3 Token (tokenizer.js)
+Note: `DocumentModel` is fully implemented but not used as the state source. `AppState` serves that role in the current prototype.
+
+### 3.3 Token Types (tokenizer.js)
 
 ```javascript
 { type: TOKEN.*, value: string, start: number, end: number }
-// TOKEN: ELEMENT, ATTR_NAME, ATTR_VALUE, DELIMITER, COMMENT, PI, NAMESPACE, ENTITY, TEXT
 ```
 
-Invariante: Alle Tokens bilden lückenlose Abdeckung des Inputs. Kein throw — graceful degradation bei Malformed XML.
+Nine types: `ELEMENT`, `ATTR_NAME`, `ATTR_VALUE`, `DELIMITER`, `COMMENT`, `PI`, `NAMESPACE`, `ENTITY`, `TEXT`.
 
-### 4.4 Annotation (preview.js)
+Invariant: all tokens form a contiguous, gap-free coverage of the input string. No exceptions are thrown; malformed XML degrades gracefully.
+
+### 3.4 Annotation (preview.js)
 
 ```javascript
 {
-  id: string,              // xml:id oder generiert ({tagName}-{counter})
+  id: string,              // xml:id or generated ({tagName}-{counter})
   tagName: string,         // persName, placeName, orgName, date, ...
-  text: string,            // Textinhalt des Elements
+  text: string,            // Text content of the element
   confidence: string,      // sicher, pruefenswert, problematisch, manuell
   reviewStatus: string     // offen, akzeptiert, editiert, verworfen
 }
 ```
 
-### 4.5 ValidationMessage (validator.js)
+### 3.5 ValidationMessage (validator.js)
 
 ```javascript
 {
   level: 'error' | 'warning' | 'info',
   source: 'wellformed' | 'plaintext' | 'schema' | 'xpath' | 'expert',
   message: string,
-  line?: number,           // 1-basiert
+  line?: number,           // 1-based
   elementId?: string
 }
 ```
 
-### 4.6 ANNOTATION_TAGS (constants.js)
+### 3.6 ANNOTATION_TAGS (constants.js)
 
 ```javascript
 ['persName', 'placeName', 'orgName', 'date', 'name', 'bibl', 'term', 'measure', 'foreign']
 ```
 
-Zentralisiert, importiert von transform.js, validator.js, export.js, preview.js.
+Centralized constant imported by transform.js, validator.js, export.js, and preview.js.
+
+### 3.7 MODEL_CATALOG (llm.js)
+
+```javascript
+{
+  'model-id': {
+    name: string,        // Human-readable name
+    input: number,       // USD per 1M input tokens
+    output: number,      // USD per 1M output tokens
+    context: number,     // Context window in tokens
+    reasoning: boolean   // Whether the model supports reasoning mode
+  }
+}
+```
+
+Contains 17 models across 6 providers. See Section 4 for the complete listing.
 
 ---
 
-## 5. LLM-Integration
+## 4. LLM Provider Details
 
-### 5.1 Provider-Konfiguration (llm.js)
+### 4.1 Provider Configuration
 
-| Provider | Default-Modell | Auth-Typ | Endpoint |
-|----------|---------------|----------|----------|
-| Gemini | gemini-2.5-flash | URL-Param (`?key=`) | generativelanguage.googleapis.com |
-| OpenAI | gpt-4.1-mini | Bearer Token | api.openai.com/v1/chat/completions |
-| Anthropic | claude-sonnet-4-5-20250514 | x-api-key + anthropic-version | api.anthropic.com/v1/messages |
-| DeepSeek | deepseek-chat | Bearer Token | api.deepseek.com/chat/completions |
-| Qwen | qwen-plus | Bearer Token | dashscope.aliyuncs.com |
-| Ollama | llama3.3 | Keine | localhost:11434/api/chat |
+| Provider | Default Model | Auth Type | Endpoint |
+|----------|--------------|-----------|----------|
+| Gemini | `gemini-2.5-flash` | URL parameter (`?key=`) | `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` |
+| OpenAI | `gpt-4.1-mini` | Bearer token | `https://api.openai.com/v1/chat/completions` |
+| Anthropic | `claude-sonnet-4-5-20250514` | `x-api-key` + `anthropic-version` | `https://api.anthropic.com/v1/messages` |
+| DeepSeek | `deepseek-chat` | Bearer token | `https://api.deepseek.com/chat/completions` |
+| Qwen | `qwen-plus` | Bearer token | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` |
+| Ollama | `llama3.3` | None | `http://localhost:11434/api/chat` |
 
-MODEL_CATALOG: 15+ Modelle mit Input/Output-Preisen pro 1M Tokens, Kontextlänge, Reasoning-Flag.
+DeepSeek and Qwen use the OpenAI-compatible chat completions format.
 
-### 5.2 Sicherheitsmodell
+### 4.2 Request Formats
 
-- API-Keys: Module-scoped `Map` in llm.js. Nie exportiert, nie in DOM, localStorage, window, cookies, IndexedDB.
-- Key-Validierung: Max 256 Zeichen, printable ASCII (`/^[\x20-\x7E]*$/`).
-- Fetch: `credentials: 'omit'`.
-- Storage: Nur Provider-Name und Modell-Name in localStorage (Prefix: `teiCrafter_`).
+**Gemini:**
+```json
+{ "contents": [{ "parts": [{ "text": "<prompt>" }] }] }
+```
 
-### 5.3 Request-Formate (pro Provider)
+**OpenAI / DeepSeek / Qwen:**
+```json
+{ "model": "<model>", "messages": [{"role": "user", "content": "<prompt>"}], "temperature": 0.2 }
+```
 
-- **Gemini:** `{ contents: [{ parts: [{ text }] }] }`
-- **OpenAI/DeepSeek/Qwen:** `{ model, messages: [{role: 'user', content}], temperature: 0.2 }`
-- **Anthropic:** `{ model, max_tokens: 8192, messages: [{role: 'user', content}] }` + `anthropic-dangerous-direct-browser-access: true`
-- **Ollama:** `{ model, messages: [{role: 'user', content}], stream: false }`
+**Anthropic:**
+```json
+{ "model": "<model>", "max_tokens": 8192, "messages": [{"role": "user", "content": "<prompt>"}] }
+```
+Additional headers: `anthropic-version: 2023-06-01`, `anthropic-dangerous-direct-browser-access: true`.
 
-### 5.4 Response-Extraktion
+**Ollama:**
+```json
+{ "model": "<model>", "messages": [{"role": "user", "content": "<prompt>"}], "stream": false }
+```
 
-- **Gemini:** `data.candidates[0].content.parts[0].text`
-- **OpenAI/DeepSeek/Qwen:** `data.choices[0].message.content`
-- **Anthropic:** `data.content[0].text`
-- **Ollama:** `data.message.content`
+### 4.3 Response Extraction
 
-### 5.5 Dreischichten-Prompt (transform.js)
+| Provider | Path to response text |
+|----------|-----------------------|
+| Gemini | `data.candidates[0].content.parts[0].text` |
+| OpenAI / DeepSeek / Qwen | `data.choices[0].message.content` |
+| Anthropic | `data.content[0].text` |
+| Ollama | `data.message.content` |
 
-**Layer 1 — Basis (generische TEI-Regeln):**
-- Wohlgeformtes XML erzeugen
-- Text nicht verändern — exakt erhalten
-- `@confidence="high"|"medium"|"low"` hinzufügen
-- `@resp="#machine"` hinzufügen
-- Präzision vor Recall
-- Bestehende Annotationen erhalten
-- Nur XML in Markdown-Codeblock, keine Erklärungen
+### 4.4 Model Catalog
 
-**Layer 2 — Kontext:**
-- Quellentyp (correspondence, print, recipe, generic)
-- Sprache (de, la, mhd)
-- Epoche (19c, 18c, medieval)
-- Projektname (optional)
+**Gemini Models:**
 
-**Layer 3 — Mapping:**
-- Vom User editierte Markdown-Regeln
-- Format: `* <tag> Beschreibung`
-- Optional gefiltert nach selectedTypes
+| Model ID | Display Name | Input (USD/1M) | Output (USD/1M) | Context | Reasoning |
+|----------|-------------|---------------:|----------------:|--------:|:---------:|
+| `gemini-2.5-flash` | Gemini 2.5 Flash | 0.15 | 0.60 | 1,048,576 | No |
+| `gemini-2.5-pro` | Gemini 2.5 Pro | 1.25 | 10.00 | 1,048,576 | Yes |
+| `gemini-2.0-flash` | Gemini 2.0 Flash | 0.10 | 0.40 | 1,048,576 | No |
 
-### 5.6 Response-Parsing
+**OpenAI Models:**
 
-3 Fallback-Strategien:
-1. ` ```xml\n...\n``` ` (Markdown mit xml-Tag)
-2. ` ```\n...\n``` ` (generischer Markdown-Codeblock)
-3. Raw `<...>` (unquotiertes XML)
+| Model ID | Display Name | Input (USD/1M) | Output (USD/1M) | Context | Reasoning |
+|----------|-------------|---------------:|----------------:|--------:|:---------:|
+| `gpt-4.1` | GPT-4.1 | 2.00 | 8.00 | 1,047,576 | No |
+| `gpt-4.1-mini` | GPT-4.1 Mini | 0.40 | 1.60 | 1,047,576 | No |
+| `gpt-4.1-nano` | GPT-4.1 Nano | 0.10 | 0.40 | 1,047,576 | No |
+| `o4-mini` | o4 Mini | 1.10 | 4.40 | 200,000 | Yes |
+| `o3` | o3 | 2.00 | 8.00 | 200,000 | Yes |
 
-### 5.7 Konfidenz-Mapping
+**Anthropic Models:**
 
-| LLM-Output | Anwendungskategorie | Farbe |
-|------------|-------------------|-------|
-| high | sicher | Grün (#2D8A70) |
-| medium | pruefenswert | Gold (#CC8A1E) |
-| low | problematisch | Rot (#C0392B) |
-| fehlend | pruefenswert (konservativ) | Gold |
+| Model ID | Display Name | Input (USD/1M) | Output (USD/1M) | Context | Reasoning |
+|----------|-------------|---------------:|----------------:|--------:|:---------:|
+| `claude-sonnet-4-5-20250514` | Claude Sonnet 4.5 | 3.00 | 15.00 | 200,000 | Yes |
+| `claude-haiku-3-5-20241022` | Claude Haiku 3.5 | 0.80 | 4.00 | 200,000 | No |
+
+**DeepSeek Models:**
+
+| Model ID | Display Name | Input (USD/1M) | Output (USD/1M) | Context | Reasoning |
+|----------|-------------|---------------:|----------------:|--------:|:---------:|
+| `deepseek-chat` | DeepSeek V3 | 0.27 | 1.10 | 131,072 | No |
+| `deepseek-reasoner` | DeepSeek R1 | 0.55 | 2.19 | 131,072 | Yes |
+
+**Qwen Models (DashScope):**
+
+| Model ID | Display Name | Input (USD/1M) | Output (USD/1M) | Context | Reasoning |
+|----------|-------------|---------------:|----------------:|--------:|:---------:|
+| `qwen-max` | Qwen Max | 1.60 | 6.40 | 131,072 | No |
+| `qwen-plus` | Qwen Plus | 0.40 | 1.20 | 131,072 | No |
+| `qwen-turbo` | Qwen Turbo | 0.10 | 0.30 | 131,072 | No |
+
+**Ollama Models (local, no pricing):**
+
+| Model ID |
+|----------|
+| `llama3.3` |
+| `qwen2.5` |
+| `mistral` |
+| `gemma2` |
+| `phi4` |
+
+### 4.5 Three-Layer Prompt System (transform.js)
+
+**Layer 1 -- Base (generic TEI rules):**
+- Produce well-formed XML
+- Preserve text exactly -- no alterations
+- Add `@confidence="high"|"medium"|"low"` to annotations
+- Add `@resp="#machine"` to annotations
+- Prioritize precision over recall
+- Preserve existing annotations
+- Return only XML in a Markdown code block, no explanations
+
+**Layer 2 -- Context:**
+- Source type (correspondence, print, recipe, bookkeeping, generic)
+- Language (de, la, mhd)
+- Epoch (19c, 18c, medieval)
+- Project name (optional)
+
+**Layer 3 -- Mapping:**
+- User-edited Markdown rules
+- Format: `* <tag> Description`
+- Optionally filtered by `selectedTypes`
+
+### 4.6 Response Parsing
+
+Three fallback strategies for extracting XML from LLM output:
+
+1. ` ```xml\n...\n``` ` -- Markdown code block with xml language tag
+2. ` ```\n...\n``` ` -- Generic Markdown code block
+3. Raw `<...>` -- Unquoted XML content
+
+### 4.7 Confidence Mapping
+
+| LLM Output Attribute | Application Category | Color |
+|---------------------|---------------------|-------|
+| `high` | sicher | Green (#2D8A70) |
+| `medium` | pruefenswert | Gold (#CC8A1E) |
+| `low` | problematisch | Red (#C0392B) |
+| missing | pruefenswert (conservative default) | Gold |
 
 ---
 
-## 6. Validierung
+## 5. Validation System
 
-### 6.1 Fünf Ebenen
+### 5.1 Five Validation Levels
 
-| Ebene | Implementiert | Blockiert Export | Beschreibung |
-|-------|-------------|-----------------|--------------|
-| 1: Wohlgeformtheit | Ja | Ja | DOMParser + parsererror-Check |
-| 2: Plaintext-Vergleich | Ja | Nein (Warnung) | Wort-Similarität, Schwelle 95% |
-| 3: Schema-Validierung | Ja | Nein (Warnung) | Element, Attribut, Parent-Child gegen dtabf.json |
-| 4: XPath-Regeln | Nein (Phase 3) | — | — |
-| 5: Expert-Review | Ja | Nein (Warnung) | Zählung ungeprüfter Annotationen |
+| Level | Name | Implemented | Blocks Export | Description |
+|------:|------|:-----------:|:------------:|-------------|
+| 1 | Plaintext Comparison | Done | No (warning) | Word similarity check, threshold 95% |
+| 2 | Well-Formedness | Done | Yes | `DOMParser` + `parsererror` check |
+| 3 | Schema Validation | Done | No (warning) | Element, attribute, and parent-child validation against `dtabf.json` |
+| 4 | XPath Rules | Missing (Phase 3) | -- | -- |
+| 5 | Expert Review | Done | No (warning) | Count of unreviewed annotations |
 
-### 6.2 Plaintext-Vergleich-Algorithmus
+### 5.2 Plaintext Comparison Algorithm
 
 ```
 extracted = body.textContent.replace(/\s+/g, ' ').trim()
 original  = originalPlaintext.replace(/\s+/g, ' ').trim()
-Wort-Similarität = |Schnittmenge| / max(|SetA|, |SetB|) × 100
-≥ 95%: Warnung. < 95%: Fehler. = 100%: Info.
+
+Word Similarity = |Intersection| / max(|SetA|, |SetB|) * 100
+
+>= 95%:  Warning (minor text alteration)
+<  95%:  Error (significant text alteration)
+== 100%: Info (text perfectly preserved)
 ```
 
-### 6.3 Schema-Profil (dtabf.json)
+### 5.3 Schema Profile Details (dtabf.json)
 
-27 TEI-Elemente: TEI, teiHeader, fileDesc, titleStmt, title, publicationStmt, sourceDesc, profileDesc, correspDesc, correspAction, text, body, div, p, head, opener, closer, dateline, salute, signed, pb, lb, persName, placeName, orgName, date, name, bibl, term, measure, material, foreign.
+**27 TEI elements:** TEI, teiHeader, fileDesc, titleStmt, title, publicationStmt, sourceDesc, profileDesc, correspDesc, correspAction, text, body, div, p, head, opener, closer, dateline, salute, signed, pb, lb, persName, placeName, orgName, date, name, bibl, term, measure, material, foreign.
 
-Jedes Element definiert: `allowedChildren`, `allowedParents`, `attributes`, optional `selfClosing`.
+Each element defines: `allowedChildren`, `allowedParents`, `attributes`, and optionally `selfClosing`.
 
-Attribut-Typen: uri, date, enum, string, number, language.
+**Attribute types:** uri, date, enum, string, number, language.
 
-Permissives Verhalten: Wenn kein Schema geladen, gelten alle Elemente/Attribute als gültig.
-
----
-
-## 7. Review-Workflow
-
-### 7.1 Inline-Review (preview.js)
-
-- Hover auf Annotation → Compact Action Bar (Accept ✓, Edit ✎, Reject ✕)
-- Accept: Konfidenz → sicher, Status → akzeptiert
-- Edit: Konfidenz → manuell, Status → editiert
-- Reject: Tag entfernt, Text erhalten, Status → verworfen
-- 150ms Hover-Delay
-
-### 7.2 Batch-Review (preview.js)
-
-Tastaturgesteuert:
-- **N** = Nächste ungeprüfte
-- **P** = Vorherige ungeprüfte
-- **A** = Akzeptieren + Weiter
-- **R** = Verwerfen + Weiter
-- **E** = Editieren + Weiter
-- **Esc** = Batch-Modus beenden
-
-Fortschrittsanzeige: "7/12 reviewed" mit proportionalem Gold-Balken.
-
-### 7.3 Status: Nicht in app.js erreichbar
-
-Beide Review-Modi sind vollständig in preview.js implementiert, aber preview.js ist nicht in app.js integriert. Die aktuelle Vorschau in app.js ist Regex-basiertes Inline-HTML ohne Review-Funktionalität.
+**Permissive behavior:** When no schema is loaded, all elements and attributes are considered valid. Always-allowed attributes regardless of schema: `xml:id`, `xml:lang`, `xmlns`, `n`.
 
 ---
 
-## 8. Visuelles System (CSS)
+## 6. Implementation Status
 
-### 8.1 Design-Tokens (98 Custom Properties)
+### 6.1 Phase Overview
 
-**Farben:**
-- Oberfläche: `--color-surface: #FAFAF7`, `--color-panel: #FFFFFF`
-- Header: `--color-header: #1E3A5F` (Navy)
-- Akzent: `--color-gold: #CC8A1E`, `--color-blue: #2B5EA7`
-- Konfidenz: `--color-confident: #2D8A70`, `--color-review: #CC8A1E`, `--color-problem: #C0392B`
+| Phase | Description | Status |
+|-------|-------------|--------|
+| Phase 1 | UI design, prompt prototyping | Done |
+| Phase 2 | Prototype (10 stages) | Partial -- UI shell complete, view integration open |
+| Phase 3 | teiModeller, distillation, consolidation | Planned |
 
-**Typografie:**
-- UI: Inter. Code: JetBrains Mono. Vorschau: Georgia.
-- Größen: xs (0.75rem), sm (0.8125rem), base (0.875rem), lg (1.125rem)
+### 6.2 Workflow Step: Import
 
-**Spacing:** 8px-Raster (4, 8, 12, 16, 24, 32px)
+| Aspect | Status | Details |
+|--------|--------|---------|
+| UI | Done | Dropzone, file chooser, demo cards, format badges |
+| File formats | Done | .txt, .md, .xml, .docx (DOCX via JSZip CDN) |
+| Demo data | Done | 2 demos with real data: CoReMA recipe, DEPCHA ledger (SZD letter pending) |
+| Validation | Done | File size (10 MB), file type, XML well-formedness |
+| Service integration | Done | No service required |
+| Known gaps | -- | Source type detection uses simple keyword matching |
 
-**Z-Index:** 0 (Basis), 10 (Toolbar), 50 (Review-Hover), 100 (Dropdown), 200 (Modal/Dialog), 300 (Toast), 400 (Dialog)
+### 6.3 Workflow Step: Mapping
 
-### 8.2 TEI-Annotationsfarben (Dual-Channel-Encoding)
+| Aspect | Status | Details |
+|--------|--------|---------|
+| UI | Done | Source type selector, mapping textarea, context fields |
+| Default mappings | Done | 5 source types with pre-filled rules |
+| Service integration | Partial | schema.js not wired (no mapping rule validation) |
+| Known gaps | -- | No syntax check, no autocompletion, no preset management |
 
-**Kanal 1 — Typ (Unterstreichungsfarbe):**
+### 6.4 Workflow Step: Transform
 
-| Tag | Farbe | Hex |
-|-----|-------|-----|
-| persName | Blau | #3B7DD8 |
-| placeName | Teal | #2A9D8F |
-| orgName | Violett | #7B68AE |
-| date | Amber | #B8860B |
-| bibl | Rose | #C47A8A |
-| term | Grau | #6B7280 |
+| Aspect | Status | Details |
+|--------|--------|---------|
+| UI | Done | 3-panel layout, source tabs, editor, preview tabs |
+| LLM call | Done | app.js to transform.js to llm.js; real prompt assembly + response parsing |
+| Demo mode | Done | Demo files fetched directly (no LLM needed) |
+| Settings dialog | Done | 6 providers, model dropdown with pricing/reasoning badge, API key, connection test |
+| Confidence mapping | Done | `extractConfidenceMap()` populating `AppState.confidenceMap` + `transformStats` |
+| Cancel support | Done | `AbortController`, cancel button during transform |
+| Preview | Partial | Regex-based TEI-to-HTML conversion in app.js (not preview.js) |
+| Entity extraction | Partial | Regex-based in app.js, fragile with nested structures |
+| Known gaps | -- | No streaming, no progress bar (spinner only) |
 
-**Kanal 2 — Konfidenz (Hintergrund-Tint + Linienstil):**
+### 6.5 Workflow Step: Validate
 
-| Konfidenz | Tint | Linienstil |
-|-----------|------|-----------|
-| sicher | Grün (#E8F5F0) | solid |
-| pruefenswert | Gold (#FEF5E7) | dashed |
-| problematisch | Rot (#FDECEB) | dotted |
-| manuell | — | double |
+| Aspect | Status | Details |
+|--------|--------|---------|
+| UI | Done | Plaintext comparison, XML view, validation list with error count |
+| Plaintext comparison | Done | Via `validator.js` `checkPlaintext()` (word similarity) |
+| XML well-formedness | Done | Via `validator.js` `checkWellFormedness()` |
+| Schema validation | Done | Via `validator.js` `checkSchema()` + `schema.js` (lazy-loaded) |
+| Unreviewed annotations | Done | Via `validator.js` `checkUnreviewed()` |
+| XPath validation | Missing | Phase 3 |
+| LLM-as-Judge | Missing | Phase 3 |
+| Known gaps | -- | `extractPlaintext()` remains inline in app.js for compare panel |
 
-**Review-Status (Opacity + Dekoration):**
-- akzeptiert: opacity 0.85
-- verworfen: opacity 0.4 + line-through
-- editiert: dashed outline
+### 6.6 Workflow Step: Export
 
-### 8.3 Responsive Breakpoints
+| Aspect | Status | Details |
+|--------|--------|---------|
+| UI | Done | Stats (via `getExportStats`), format selector, download, clipboard |
+| Download | Done | Via `export.js` `prepareExport()` then `downloadXml()` |
+| Clipboard | Done | Via `export.js` `copyToClipboard()` with fallback |
+| Attribute cleanup | Done | `@confidence` and `@resp` removed by default |
+| Export options | Done | Checkboxes: keepConfidence, keepResp |
+| Entity statistics | Done | Via `export.js` `getExportStats()` (9 tag types) |
+| Known gaps | -- | No pretty-print, no encoding declaration |
 
-- Tablet (≤1200px): 2 Spalten, Source ausgeblendet
-- Mobile (≤768px): 1 Spalte, Stepper ausgeblendet
-- `prefers-reduced-motion`: Alle Animationen auf 0.01ms
+### 6.7 Cross-Cutting Concerns
 
-### 8.4 Layout (5-Step-Stepper)
-
-- Step 1 (Import): Zentriert, Dropzone + 3 Demo-Karten
-- Step 2 (Mapping): 2 Spalten (Source schmal + Mapping breit)
-- Step 3 (Transform): 3 Spalten (Source 25% + Editor 45% + Preview 30%)
-- Step 4 (Validate): 2 Spalten (Compare + Checks)
-- Step 5 (Export): Zentriert, Export-Karte
-
----
-
-## 9. Architekturmuster
-
-### 9.1 Event-Delegation (app.js)
-
-Ein Click-Listener auf `.app-main`, Routing via `data-action`-Attribute:
-```html
-<button data-action="start-transform">Transformieren</button>
-```
-`handleAction(action)` als Switch über ~13 Actions. Kein Listener-Leak bei Step-Wechsel.
-
-### 9.2 stepCleanup (app.js)
-
-```javascript
-let stepCleanup = null;
-function renderStep(step) {
-    stepCleanup?.();
-    stepCleanup = null;
-    // ... render
-}
-```
-Für step-spezifische Listener (Drag-and-Drop in Step 1).
-
-### 9.3 Snapshot-Undo (model.js)
-
-Max 100 Snapshots. Keystroke-Gruppierung via 500ms-Timer. Transform = 1 Undo-Unit. Review-Action = 1 Undo-Unit. Snapshot enthält: xml, confidenceMap, reviewStatus (nicht validationMessages).
-
-### 9.4 API-Key-Isolation (llm.js)
-
-Module-scoped `const apiKeys = new Map()`. Nie exportiert, nie in DOM/Storage/window. Validierung: Max 256 Zeichen, printable ASCII. Fetch mit `credentials: 'omit'`.
-
-### 9.5 Graceful Degradation (tokenizer.js)
-
-Unterminated Comments/PIs: Consume bis EOF. Bare Ampersand: als TEXT. Malformed Entities: als TEXT wenn kein `;` in 12 Zeichen. Kein throw.
-
-### 9.6 Permissive Schema (schema.js)
-
-Wenn kein Schema geladen: `isKnownElement()`, `isChildAllowed()`, `isAttributeKnown()` geben alle `true` zurück. Always-allowed Attribute: xml:id, xml:lang, xmlns, n.
+| Concern | Status | Details |
+|---------|--------|---------|
+| Scroll sync editor-to-preview | Missing | Only editor-internal (textarea to pre to gutter) |
+| Cursor coupling | Missing | No cross-panel synchronization |
+| DocumentModel usage | Missing | app.js uses its own `AppState`, not `DocumentModel` |
+| Undo/Redo in UI | Missing | model.js has undo/redo, but no Ctrl+Z handler in app.js |
+| Persistence | Missing | No localStorage for document state (only LLM provider) |
+| Error handling | Partial | try-catch with toast, but no error boundary |
+| Accessibility | Partial | ARIA labels in HTML, focus-visible CSS, but no screen reader testing |
+| Responsive design | Done | 3 breakpoints (desktop, tablet, mobile) |
 
 ---
 
-## 10. Bekannte Probleme
+## 7. Known Problems
 
-### 10.1 Architektur-Lücken
+### 7.1 Critical
 
-| Problem | Auswirkung | Priorität |
-|---------|-----------|-----------|
-| View-Module nicht integriert | Vorschau ist Regex-HTML, kein Review | Hoch (Phase B) |
-| DocumentModel nicht als State-Quelle | Kein Undo/Redo im UI, keine Observer-Sync | Mittel (Phase C) |
-| Nie mit echtem LLM getestet | Kernworkflow unvalidiert, Demo-Daten vorhanden (Phase A0) | Hoch (Phase A1) |
-| Few-Shot-Beispiele fehlen | Höchster Einzelhebel für Qualität | Hoch (Phase A) |
+| Problem | Module | Impact |
+|---------|--------|--------|
+| View modules not integrated | app.js | Preview is regex-based HTML; no review functionality in the UI |
+| Never tested with a real LLM | app.js, transform.js | Core workflow unvalidated; demo data available (Phase A0) |
+| Few-shot examples missing | transform.js | Highest single lever for annotation quality |
 
-### 10.2 Code-Defekte
+### 7.2 Important
 
-| Modul | Problem | Schwere |
-|-------|---------|---------|
-| editor.js | `computeLineConfidence()` ist Stub (leere Map) | Mittel |
-| editor.js | Tab-Keydown-Listener nicht in `destroy()` entfernt | Niedrig (Memory Leak) |
-| preview.js | ID-Counter resettet bei `updateXml()`, potenzielle Kollision | Niedrig |
-| transform.js | ID-Counter resettet pro Aufruf, potenzielle Kollision | Niedrig |
-| validator.js | `checkPlaintext()` hat keinen Null-Guard für `doc` | Niedrig |
-| app.js | `detectType()` nutzt naive Substring-Heuristik | Niedrig |
-| app.js | DOCX-Textextraktion verliert Formatierung | Niedrig |
-| llm.js | Kein Request-Timeout (nur Browser-Default 30–60s) | Niedrig |
+| Problem | Module | Impact |
+|---------|--------|--------|
+| DocumentModel not used as state source | app.js, model.js | No undo/redo in UI, no observer synchronization |
+| `computeLineConfidence()` is a stub | editor.js | Always returns empty Map; gutter markers are decorative |
+| Non-deterministic ID generation on re-render | preview.js | Review map keys become stale after `updateXml()` |
+| ID counter resets per transform call | transform.js | Potential ID collisions across successive calls |
+| Validation messages not in undo snapshots | model.js | Desync of validation state after undo/redo |
+| No input validation for element IDs | model.js | Orphaned confidence/review entries possible |
+| No explicit request timeout | llm.js | Relies on browser default (30-60 seconds) |
 
-### 10.3 CSS-Defekte
+### 7.3 Minor -- Code Defects
 
-| Problem | Stelle |
+| Problem | Module |
 |---------|--------|
-| Duplizierte `.gutter-line` | Zeilen ~500 und ~2112 |
-| Duplizierte `.source-preview` | Zeilen ~1527 und ~2054 |
-| date (Amber) + pruefenswert (Gold Tint): geringer Kontrast | Dual-Channel-Kombination |
-| placeName (Teal) + sicher (Grün Tint): geringer Kontrast | Dual-Channel-Kombination |
+| Tab keydown listener not removed in `destroy()` | editor.js |
+| `checkPlaintext()` has no null guard for `doc` | validator.js |
+| `detectType()` uses naive substring heuristic | app.js |
+| DOCX text extraction loses formatting | app.js |
+| Hover bar does not reposition at viewport edges | preview.js |
 
-### 10.4 Fehlende Features (nach Phase)
+### 7.4 Minor -- CSS Defects
 
-**Phase A (Durchstich):**
-- Echten LLM-Transform end-to-end testen
-- Few-Shot-Beispiele in Prompt-Assembly
-- Bruchstellen dokumentieren und fixen
+| Problem | Location |
+|---------|----------|
+| Duplicated `.gutter-line` rule | style.css lines ~500 and ~2112 |
+| Duplicated `.source-preview` rule | style.css lines ~1527 and ~2054 |
+| date (amber) + pruefenswert (gold tint): low contrast | Dual-channel color combination |
+| placeName (teal) + sicher (green tint): low contrast | Dual-channel color combination |
 
-**Phase B (Review):**
-- preview.js in app.js integrieren
-- Batch-Review aktivieren
-- Konfidenz-Visualisierung (Dual-Channel statt Regex)
+### 7.5 Architecture Gaps
 
-**Phase C (Architektur):**
-- DocumentModel als State-Quelle (nur wenn nötig)
-- editor.js integrieren (nur wenn Regex nicht reicht)
-- Gezielte Tests für Bruchstellen
-
-**Phase 3 (Konsolidierung):**
-- ODD-Parsing generalisiert (nicht nur dtabf.json)
-- teiModeller (Modellierungsberatung)
-- XPath-Validierung (Ebene 4)
-- LLM-as-a-Judge (Ebene 4)
-- Normdaten-Integration (GND, VIAF, Wikidata)
-- Konsistenz-Checks (gleiche Entität unterschiedlich annotiert)
-- Document Chunking für lange Texte
-- Separate Passes (Struktur vs. Semantik)
+| Gap | Description | Priority |
+|-----|-------------|----------|
+| No error boundary | Renderer errors break the entire UI | Phase B |
+| HTML string concatenation | Fragile, no templating engine | Phase C |
+| No incremental tokenizing | Entire document retokenized on every keystroke | Phase C |
+| No virtual scrolling | Large documents may be slow in editor | Phase 3 |
+| Numeric entity references not recognized | `&#123;`, `&#xAB;` in tokenizer | Phase 3 |
+| CDATA with embedded `]]>` | Premature termination in tokenizer | Phase 3 |
+| Digitalisat tab is placeholder | source.js | Phase 3 |
 
 ---
 
-## 11. Tests
+## 8. Hardcoded Values
 
-### 11.1 Testframework
+| Value | Location | Description |
+|-------|----------|-------------|
+| `MAX_UNDO`: 100 | constants.js | Undo stack size |
+| `KEYSTROKE_DEBOUNCE`: 500 ms | constants.js | Keystroke grouping interval |
+| `MAX_FILE_SIZE`: 10 MB | constants.js | Upload size limit |
+| `TOAST_DURATION`: 4000 ms | constants.js | Toast notification visibility |
+| `TOAST_DURATION_ERROR`: 8000 ms | constants.js | Error toast visibility |
+| Tab width: 2 spaces | editor.js | Tab key behavior |
+| Entity max length: 12 characters | tokenizer.js | Entity recognition heuristic |
+| Similarity threshold: 95% | validator.js | Plaintext comparison pass/fail boundary |
+| Anthropic `max_tokens`: 8192 | llm.js | Maximum output length for Anthropic |
+| Temperature: 0.2 | llm.js (via provider configs) | For OpenAI, DeepSeek, Qwen |
+| Hover delay: 150 ms | preview.js | Review hover bar appearance delay |
+| Confidence priority order | editor.js | problematisch > pruefenswert > sicher > manuell |
+| API key max length: 256 chars | llm.js | Key validation limit |
+| Error message truncation: 200 chars | llm.js | Maximum length of error text from API responses |
+| `anthropic-version`: `2023-06-01` | llm.js | Anthropic API version header |
 
-Browser-basiert, `docs/tests/test-runner.html`. Kein Node.js. Pattern:
+---
+
+## 9. Test Coverage
+
+### 9.1 Test Infrastructure
+
+Browser-based test runner at `docs/tests/test-runner.html`. No Node.js dependency. Pattern:
+
 ```javascript
 const { describe, it, assert, assertEqual } = window.__test;
 ```
 
-### 11.2 Testabdeckung
+### 9.2 Test Distribution
 
-| Modul | Tests | Gruppen | Abgedeckt |
-|-------|-------|---------|-----------|
-| tokenizer.js | 19 | 5 | Alle 9 Token-Typen, Malformed XML, Performance (<50ms/500 Zeilen) |
-| model.js | 23 | 7 | 4 Layers, Undo/Redo, Keystroke-Gruppierung, Events, Reset |
-| validator.js | 18 | 4 | Wohlgeformtheit, Plaintext-Vergleich, Expert-Review, Kaskadierung |
-| **Gesamt** | **60** | **16** | ~21% der Codebase |
+| Module | Test File | Tests | Groups | Coverage Notes |
+|--------|-----------|------:|-------:|----------------|
+| tokenizer.js | `tokenizer.test.js` | 19 | 5 | All 9 token types, malformed XML, performance (less than 50 ms for 500 lines) |
+| model.js | `model.test.js` | 23 | 7 | All 4 layers, undo/redo, keystroke grouping, events, reset |
+| validator.js | `validator.test.js` | 18 | 4 | Well-formedness, plaintext comparison, expert review, cascading |
+| **Total** | | **60** | **16** | Approximately 21% of codebase |
 
-### 11.3 Nicht getestet
+### 9.3 Not Tested
 
-llm.js, transform.js, schema.js, export.js, app.js, editor.js, preview.js, source.js, dom.js, constants.js.
+The following modules have no unit tests: llm.js, transform.js, schema.js, export.js, app.js, editor.js, preview.js, source.js, dom.js, constants.js.
 
-Schema-Validierung (Level 3) importiert aber nicht getestet. CDATA, DOCTYPE, Unicode in Tokenizer nicht getestet.
-
----
-
-## 12. Konfiguration und Hardcoded Values
-
-| Wert | Stelle | Beschreibung |
-|------|--------|-------------|
-| MAX_UNDO: 100 | constants.js | Undo-Stack-Größe |
-| KEYSTROKE_DEBOUNCE: 500ms | constants.js | Keystroke-Gruppierung |
-| MAX_FILE_SIZE: 10MB | constants.js | Upload-Limit |
-| TOAST_DURATION: 4000ms | constants.js | Toast-Sichtbarkeit |
-| TOAST_DURATION_ERROR: 8000ms | constants.js | Fehler-Toast |
-| Tab-Breite: 2 Spaces | editor.js | Tab-Key-Verhalten |
-| Entity-Max-Länge: 12 Zeichen | tokenizer.js | Entity-Erkennung |
-| Similaritäts-Schwelle: 95% | validator.js | Plaintext-Vergleich |
-| Anthropic max_tokens: 8192 | llm.js | Maximale Output-Länge |
-| Temperature: 0.2 | transform.js via llm.js | Für OpenAI/DeepSeek/Qwen |
-| Hover-Delay: 150ms | preview.js | Review-Hover-Bar |
-| Confidence-Priorität | editor.js | problematisch > pruefenswert > sicher > manuell |
+Schema validation (Level 3) is imported but not directly tested. CDATA, DOCTYPE, and Unicode handling in the tokenizer are not tested.
 
 ---
 
-## 13. Demo-System
+## 10. Completed Milestones
 
-3 konfigurierte Demos in `constants.js`:
-
-| ID | Name | Quellentyp | Status | Quelle |
-|----|------|-----------|--------|--------|
-| recipe | Mittelalterliches Rezept | recipe | Echte Daten | CoReMA, Wo1 Bl. 211r-211v (CC BY 4.0) |
-| bookkeeping | Rentrechnung 1718 | bookkeeping | Echte Daten | DEPCHA, Rechnungsbuch (CC BY 4.0) |
-| hsa-letter | Hugo Schuchardt Brief | correspondence | Platzhalter | Dateien fehlen noch |
-
-Demo-Modus in `performTransform()`: Statt LLM-Aufruf wird `expectedOutput`-Datei geladen. CSS fuer Demo-Karten vorhanden.
-
-Demo-Dateien in `data/demo/` (Phase A0, Session 16):
-- `plaintext/recipe-medieval.txt` -- Fruehneuhochdeutsches Rezept (~50 Woerter)
-- `plaintext/rentrechnung-1718.txt` -- Rechnungsbuch-Ausschnitt (~80 Woerter)
-- `mappings/recipe-docta.md` -- DoCTA-konforme Rezept-Annotationsregeln mit Few-Shot-Beispiel
-- `mappings/bookkeeping-depcha.md` -- Bookkeeping-Ontology-Mapping mit bk:-Attributen
-- `expected-output/recipe-medieval-tei.xml` -- Gold-Standard TEI fuer Rezept
-- `expected-output/rentrechnung-1718-tei.xml` -- Gold-Standard TEI fuer Rentrechnung
-
----
-
-## 14. Forschungsgrundlage
-
-### 14.1 LLM-Failure-Modes bei TEI-XML
-
-| Failure Mode | Mitigation in teiCrafter | Status |
-|-------------|------------------------|--------|
-| Malformed XML | DOMParser-Check | Implementiert |
-| Text-Alteration | Plaintext-Vergleich (95%) | Implementiert |
-| Halluzinierte Attribute | Schema-Validierung + Export-Bereinigung | Implementiert |
-| Über-Annotation | Prompt: "Präzision vor Recall" | Implementiert |
-| Unter-Annotation | Separate Passes | Phase 3 |
-| Namespace-Verwechslung | ANNOTATION_TAGS-Whitelist | Implementiert |
-| Struktur vs. Semantik | selectedTypes-Filter | Implementiert |
-| Inkonsistenz über Dokument | Konsistenz-Check | Phase 3 |
-
-### 14.2 Prompt-Best-Practices (2025–2026 Forschung)
-
-1. Few-Shot-Beispiele (2–3/Quellentyp) > verbose Regeln — fehlend
-2. Niedrige Temperature (0.1–0.3) — 0.2 implementiert
-3. @confidence anfordern — implementiert
-4. Striktes Output-Format — implementiert
-5. Document Chunking — Phase 3
-6. Separate Passes — Phase 3
-
-### 14.3 Review-Evidenz
-
-- 3 Konfidenz-Levels optimal (Kay et al. 2016) — implementiert
-- Dual-Channel für Barrierefreiheit — implementiert
-- Hybrid Inline + Batch = Gold-Standard — implementiert (in preview.js)
-- LLM-as-Judge nur 64–68% Übereinstimmung mit Domain-Experten (IUI 2025) — bestätigt Human-Review-Notwendigkeit
-- Alle getesteten LLMs zeigen negativen Bias gegen epistemische Marker (Lee et al. NAACL 2025 EMBER)
-
-### 14.4 Literatur
-
-- Pollin, Fischer, Sahle, Scholger, Vogeler (2025): *Zeitschrift für digitale Geisteswissenschaften*
-- De Cristofaro & Zilio (AIUCD 2025): ChatGPT-4 vs Claude 3.5 für TEI
-- Tudor et al. (LaTeCH-CLfL/NAACL 2025): Zero-Shot NER auf HIPE-2022
-- Gu et al. (arXiv:2411.15594): Survey zu LLM Judges
-- Lee et al. (NAACL 2025): EMBER Benchmark
-- Cockburn (2004), Freeman & Pryce (2009), Hunt & Thomas (1999): Walking Skeleton
-
----
-
-## 15. Strategie und Fahrplan
-
-### 15.1 Aktuelle Phase: Walking Skeleton mit disconnected Components
-
-- 14/14 Module implementiert, 7/14 in app.js integriert
-- Services funktional, Views nicht verdrahtet
-- Kernworkflow nie end-to-end getestet
-
-### 15.2 Naechste Schritte
-
-```
-Phase A — Durchstich validieren (1–2 Sessions):
-  A0. Demo-Daten mit echten Quellen ---- ERLEDIGT (Session 16)
-  A1. Echten LLM-Transform testen (Demo-Rezept + API-Key)
-  A2. Few-Shot-Beispiele in Prompt-Assembly
-  A3. Bruchstellen dokumentieren und fixen
-
-Phase B — Review-Workflow erlebbar (1–2 Sessions):
-  B1. preview.js in app.js einbinden
-  B2. Batch-Review aktivieren (N/P/A/R/E)
-  B3. Konfidenz-Visualisierung (Dual-Channel)
-
-Phase C — Gezielte Architektur:
-  C1. DocumentModel (nur wenn Undo/Redo nötig)
-  C2. editor.js (nur wenn Regex nicht reicht)
-  C3. Tests für Bruchstellen
-```
-
-### 15.3 Erfolgskriterium
-
-> Editorin lädt HSA-Demo-Brief → konfiguriert API-Key → klickt "Transformieren" → sieht annotiertes Ergebnis mit Konfidenz-Farben → geht 5 Annotationen per Batch-Review durch → validiert → exportiert valides TEI-XML.
-
-### 15.4 Bewusst aufgeschoben
-
-DocumentModel-Umbau, Test-Coverage 80%, teiModeller, CodeMirror 6, Normdaten, Dark Mode, Kollaboration, i18n.
-
----
-
-## 16. Wissensbasis
-
-15 Dokumente, ~6500 Zeilen Markdown.
-
-| Dokument | Beantwortet |
-|----------|------------|
-| SYNTHESIS.md | Kompaktes Gesamtbild (5 Minuten) |
-| REFERENCE.md | Technische Tiefe (dieses Dokument) |
-| VISION.md | Was und warum |
-| LANDSCAPE.md | Markt, Positionierung, Forschung |
-| DESIGN.md | Visuelles System |
-| ARCHITECTURE.md | Technisches Fundament |
-| WORKFLOW.md | Annotation, Review, Validierung |
-| teiModeller.md | Modellierungsberatung (Phase 3) |
-| DISTILLATION.md | TEI-Guidelines-Pipeline (Phase 3) |
-| research-landscape.md | Forschungslage 2025–2026 |
-| STATUS.md | Implementierungs-Ist-Stand |
-| MODULES.md | API-Referenz |
-| STORIES.md | User Stories + Testkriterien |
-| DECISIONS.md | Entscheidungen + offene Punkte |
-| JOURNAL.md | Chronik (16 Sessions) |
-| KNOWLEDGE.md (Root) | Komplett-Synthese aller Dokumente |
-
----
-
-## 17. Metriken
-
-| Metrik | Wert |
-|--------|------|
-| JavaScript | ~4200 Zeilen, 14 Module |
-| CSS | 2643 Zeilen, 98 Custom Properties |
-| HTML | 82 Zeilen |
-| Schema-Elemente | 27 (DTABf-Subset) |
-| ANNOTATION_TAGS | 9 |
-| LLM-Provider | 6 |
-| Modelle im Katalog | 17 |
-| Quellentypen | 5 (correspondence, print, recipe, bookkeeping, generic) |
-| Demo-Datensaetze | 3 (2 mit echten Daten, 1 Platzhalter) |
-| Unit-Tests | 60 (19 + 23 + 18) |
-| Test-Coverage | ~21% |
-| Integrierte Module | 7/14 |
-| User Stories | 22 (10 fertig, 11 in Arbeit, 1 offen) |
-| Knowledge-Dokumente | 15 + KNOWLEDGE.md im Root |
-| Sessions | 16 |
+| Stage | Description | Commit | Date |
+|------:|-------------|--------|------|
+| 0 | ES6 module infrastructure | -- | 2026-02 |
+| 0.5 | Visual test matrix (24 combinations) | -- | 2026-02 |
+| 1 | Overlay spike (no scroll drift) | -- | 2026-02 |
+| 2 | Editor foundation (tokenizer + model + tests) | -- | 2026-02 |
+| 3 | Import (source panel) | -- | 2026-02 |
+| 4 | LLM configuration (4 providers) | `d7fea19` | 2026-02 |
+| 5+6 | Mapping + Transform (prompt + parsing) | `dba1b31` | 2026-02 |
+| 7 | Review (inline + batch) | `a126988` | 2026-02 |
+| 8 | Validation (schema + validator) | `3f77725` | 2026-02 |
+| 9 | Export (cleanup + download) | `7742521` | 2026-02 |
+| 11 | Service integration: Transform + LLM + settings dialog | -- | 2026-02 |
+| 12 | Service integration: Validator + Schema | -- | 2026-02 |
+| 13 | Service integration: Export + options UI | -- | 2026-02 |
+| -- | LLM provider update: 6 providers, MODEL_CATALOG, model dropdown | -- | 2026-02 |
+| -- | Refactoring: event delegation, ANNOTATION_TAGS DRY, CSS bugfixes, security fix | -- | 2026-02 |
+| A1 | Phase A1: Demo data with real sources (CoReMA, DEPCHA), bookkeeping sourceType | -- | 2026-02 |

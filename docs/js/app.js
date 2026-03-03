@@ -76,7 +76,7 @@ function renderImportStep(container) {
             '<h3 class="demo-title">' + escHtml(cfg.name) + '</h3>' +
             '<p class="demo-source">' + escHtml(cfg.subtitle) + '</p>' +
             '<p class="demo-type">' + escHtml(cfg.desc) + '</p>' +
-            '<button class="btn-secondary btn-sm" data-action="load-demo">Laden</button>' +
+            '<button class="btn-secondary btn-sm" data-action="load-demo">Load</button>' +
         '</article>'
     ).join('');
 
@@ -85,13 +85,13 @@ function renderImportStep(container) {
             '<div class="import-card">' +
                 '<div class="dropzone" id="dropzone">' +
                     ICONS.upload +
-                    '<h2 class="dropzone-title">Dokument importieren</h2>' +
-                    '<p class="dropzone-hint">Datei hierher ziehen oder klicken</p>' +
+                    '<h2 class="dropzone-title">Import Document</h2>' +
+                    '<p class="dropzone-hint">Drag file here or click to browse</p>' +
                     '<input type="file" id="file-input" accept=".txt,.md,.xml,.docx" hidden>' +
-                    '<button class="btn-primary" data-action="select-file">Datei ausw\u00e4hlen\u2026</button>' +
+                    '<button class="btn-primary" data-action="select-file">Choose file\u2026</button>' +
                 '</div>' +
                 '<div class="format-info">' +
-                    '<p class="format-title">Formate:</p>' +
+                    '<p class="format-title">Formats:</p>' +
                     '<div class="format-list">' +
                         '<span class="format-badge txt">TXT</span> ' +
                         '<span class="format-badge md">MD</span> ' +
@@ -101,7 +101,7 @@ function renderImportStep(container) {
                 '</div>' +
             '</div>' +
             '<div class="demo-section">' +
-                '<p class="demo-divider"><span>oder Demo w\u00e4hlen</span></p>' +
+                '<p class="demo-divider"><span>or choose a demo</span></p>' +
                 '<div class="demo-cards">' + cards + '</div>' +
             '</div>' +
         '</section>';
@@ -136,7 +136,7 @@ function renderImportStep(container) {
 async function processFile(file) {
     // Size validation
     if (file.size > MAX_FILE_SIZE) {
-        showToast('Datei zu gro\u00df (max. 10 MB).', 'error');
+        showToast('File too large (max. 10 MB).', 'error');
         return;
     }
 
@@ -144,7 +144,7 @@ async function processFile(file) {
 
     // Extension validation
     if (!['txt', 'md', 'xml', 'docx'].includes(ext)) {
-        showToast('Nicht unterst\u00fctztes Dateiformat.', 'error');
+        showToast('Unsupported file format.', 'error');
         return;
     }
 
@@ -162,7 +162,7 @@ async function processFile(file) {
 
     // XML well-formedness check
     if (format === 'xml' && !isWellFormedXml(txt)) {
-        showToast('XML ist nicht wohlgeformt. Bitte korrigieren und erneut laden.', 'error');
+        showToast('XML is not well-formed. Please fix and reload.', 'error');
         return;
     }
 
@@ -182,13 +182,13 @@ async function extractDocxText(file) {
         // Dynamic import for JSZip
         const JSZip = window.JSZip;
         if (!JSZip) {
-            showToast('DOCX-Import ben\u00f6tigt JSZip. Bitte TXT oder MD verwenden.', 'error');
+            showToast('DOCX import requires JSZip. Please use TXT or MD instead.', 'error');
             return '';
         }
         const archive = await JSZip.loadAsync(arrayBuffer);
         const docEntry = archive.file('word/document.xml');
         if (!docEntry) {
-            showToast('Ung\u00fcltige DOCX-Datei: word/document.xml nicht gefunden.', 'error');
+            showToast('Invalid DOCX file: word/document.xml not found.', 'error');
             return '';
         }
         const docXml = await docEntry.async('string');
@@ -197,7 +197,7 @@ async function extractDocxText(file) {
         return (doc.body?.textContent || doc.documentElement.textContent || '').replace(/\s+/g, ' ').trim();
     } catch (e) {
         console.error('DOCX extraction failed:', e);
-        showToast('DOCX konnte nicht gelesen werden.', 'error');
+        showToast('Could not read DOCX file.', 'error');
         return '';
     }
 }
@@ -227,7 +227,7 @@ async function loadDemo(id) {
         goToStep(2);
     } catch (e) {
         console.error('Demo load failed:', e);
-        showToast('Demo konnte nicht geladen werden: ' + e.message, 'error');
+        showToast('Could not load demo: ' + e.message, 'error');
     }
 }
 
@@ -244,7 +244,7 @@ function detectType(text) {
 // ---------------------------------------------------------------------------
 
 function renderMappingStep(container) {
-    const label = SOURCE_LABELS[AppState.sourceType] || 'Dokument';
+    const label = SOURCE_LABELS[AppState.sourceType] || 'Document';
     const rules = AppState.mappingRules || getDefaultMapping(AppState.sourceType);
 
     const sourceTypeOptions = ['correspondence', 'print', 'recipe', 'generic'].map(type =>
@@ -255,52 +255,52 @@ function renderMappingStep(container) {
 
     container.innerHTML =
         '<section class="panel panel-source-narrow">' +
-            '<div class="panel-header"><span class="panel-label">Quelltext</span></div>' +
+            '<div class="panel-header"><span class="panel-label">Source Text</span></div>' +
             '<div class="panel-content"><pre class="source-preview">' + escHtml(AppState.inputContent || '') + '</pre></div>' +
             '<div class="panel-footer"><span>' + escHtml(AppState.fileName || '-') + '</span></div>' +
         '</section>' +
         '<section class="panel panel-mapping">' +
-            '<div class="panel-header"><span class="panel-label">Mapping-Konfiguration</span></div>' +
+            '<div class="panel-header"><span class="panel-label">Mapping Configuration</span></div>' +
             '<div class="panel-content mapping-content">' +
                 '<div class="mapping-section">' +
-                    '<h3 class="section-title">Quellentyp</h3>' +
+                    '<h3 class="section-title">Source Type</h3>' +
                     '<div class="source-type-card">' +
                         '<div class="source-type-info"><span class="source-type-name">' + escHtml(label) + '</span></div>' +
                         '<select class="source-type-select" id="source-type-select">' + sourceTypeOptions + '</select>' +
                     '</div>' +
                 '</div>' +
                 '<div class="mapping-section">' +
-                    '<h3 class="section-title">Mapping-Regeln</h3>' +
+                    '<h3 class="section-title">Mapping Rules</h3>' +
                     '<textarea class="mapping-textarea" id="mapping-rules" rows="12">' + escHtml(rules) + '</textarea>' +
                 '</div>' +
                 '<div class="mapping-section">' +
-                    '<h3 class="section-title">Kontext</h3>' +
+                    '<h3 class="section-title">Context</h3>' +
                     '<div class="context-fields">' +
                         '<div class="context-field">' +
-                            '<label>Sprache</label>' +
+                            '<label>Language</label>' +
                             '<select id="ctx-language">' +
-                                '<option value="de" selected>Deutsch</option>' +
-                                '<option value="la">Latein</option>' +
-                                '<option value="mhd">Mittelhochdeutsch</option>' +
+                                '<option value="de" selected>German</option>' +
+                                '<option value="la">Latin</option>' +
+                                '<option value="mhd">Middle High German</option>' +
                             '</select>' +
                         '</div>' +
                         '<div class="context-field">' +
-                            '<label>Epoche</label>' +
+                            '<label>Period</label>' +
                             '<select id="ctx-epoch">' +
-                                '<option value="19c" selected>19. Jh.</option>' +
-                                '<option value="18c">18. Jh.</option>' +
-                                '<option value="medieval">Mittelalter</option>' +
+                                '<option value="19c" selected>19th c.</option>' +
+                                '<option value="18c">18th c.</option>' +
+                                '<option value="medieval">Medieval</option>' +
                             '</select>' +
                         '</div>' +
                         '<div class="context-field">' +
-                            '<label>Projekt</label>' +
-                            '<input type="text" id="ctx-project" placeholder="z.B. HSA">' +
+                            '<label>Project</label>' +
+                            '<input type="text" id="ctx-project" placeholder="e.g. HSA">' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
                 '<div class="mapping-actions">' +
-                    '<button class="btn-secondary" data-action="go-step-1">Zur\u00fcck</button>' +
-                    '<button class="btn-primary btn-lg" data-action="save-mapping">Weiter</button>' +
+                    '<button class="btn-secondary" data-action="go-step-1">Back</button>' +
+                    '<button class="btn-primary btn-lg" data-action="save-mapping">Next</button>' +
                 '</div>' +
             '</div>' +
         '</section>';
@@ -319,7 +319,7 @@ function renderTransformStep(container) {
             '<div class="panel-header">' +
                 '<div class="tab-group">' +
                     '<button class="tab active" data-tab="plaintext">Plaintext</button>' +
-                    '<button class="tab" data-tab="digitalisat">Digitalisat</button>' +
+                    '<button class="tab" data-tab="digitalisat">Facsimile</button>' +
                 '</div>' +
             '</div>' +
             '<div class="panel-content">' +
@@ -327,7 +327,7 @@ function renderTransformStep(container) {
                     '<pre class="source-text">' + escHtml(AppState.inputContent || '') + '</pre>' +
                 '</div>' +
                 '<div class="tab-content" data-tab="digitalisat">' +
-                    '<p class="placeholder-text">Digitalisat-Ansicht (nicht verf\u00fcgbar)</p>' +
+                    '<p class="placeholder-text">Facsimile view (not available)</p>' +
                 '</div>' +
             '</div>' +
             '<div class="panel-footer"><span>' + escHtml(AppState.fileName || '-') + '</span></div>' +
@@ -335,22 +335,22 @@ function renderTransformStep(container) {
         '<section class="panel panel-editor">' +
             '<div class="panel-header">' +
                 '<span class="panel-label">TEI-XML Editor</span>' +
-                '<button class="btn-primary btn-sm" data-action="transform">Transformieren</button>' +
+                '<button class="btn-primary btn-sm" data-action="transform">Transform</button>' +
             '</div>' +
             '<div class="panel-content">' +
                 '<div class="editor-wrapper" id="editor-wrapper">' +
                     (hasOutput
                         ? '<pre class="xml-editor" id="xml-output" contenteditable="true">' + highlightXml(AppState.outputXml) + '</pre>'
-                        : '<p class="placeholder-text">Klicken Sie "Transformieren" um TEI-XML zu generieren</p>') +
+                        : '<p class="placeholder-text">Click "Transform" to generate TEI-XML</p>') +
                 '</div>' +
             '</div>' +
-            '<div class="panel-footer"><span id="line-count">' + lineCount + ' Zeilen</span>' +
+            '<div class="panel-footer"><span id="line-count">' + lineCount + ' lines</span>' +
                 (AppState.transformStats
                     ? '<span class="transform-stats">' +
-                        AppState.transformStats.total + ' Annotationen: ' +
-                        '<span class="stat-sicher">' + AppState.transformStats.sicher + ' sicher</span> · ' +
-                        '<span class="stat-pruefenswert">' + AppState.transformStats.pruefenswert + ' prüfenswert</span> · ' +
-                        '<span class="stat-problematisch">' + AppState.transformStats.problematisch + ' problematisch</span>' +
+                        AppState.transformStats.total + ' annotations: ' +
+                        '<span class="stat-sicher">' + AppState.transformStats.sicher + ' confident</span> · ' +
+                        '<span class="stat-pruefenswert">' + AppState.transformStats.pruefenswert + ' check-worthy</span> · ' +
+                        '<span class="stat-problematisch">' + AppState.transformStats.problematisch + ' problematic</span>' +
                       '</span>'
                     : '') +
             '</div>' +
@@ -358,21 +358,21 @@ function renderTransformStep(container) {
         '<section class="panel panel-preview">' +
             '<div class="panel-header">' +
                 '<div class="tab-group">' +
-                    '<button class="tab active" data-tab="preview">Vorschau</button>' +
-                    '<button class="tab" data-tab="entities">Entit\u00e4ten</button>' +
+                    '<button class="tab active" data-tab="preview">Preview</button>' +
+                    '<button class="tab" data-tab="entities">Entities</button>' +
                 '</div>' +
             '</div>' +
             '<div class="panel-content">' +
                 '<div class="tab-content active" data-tab="preview">' +
-                    (hasOutput ? transformTeiToHtml(AppState.outputXml) : '<p class="placeholder-text">Vorschau erscheint nach Transformation</p>') +
+                    (hasOutput ? transformTeiToHtml(AppState.outputXml) : '<p class="placeholder-text">Preview will appear after transformation</p>') +
                 '</div>' +
                 '<div class="tab-content" data-tab="entities">' +
-                    (hasOutput ? renderEntityList(AppState.outputXml) : '<p class="placeholder-text">Entit\u00e4ten erscheinen nach Transformation</p>') +
+                    (hasOutput ? renderEntityList(AppState.outputXml) : '<p class="placeholder-text">Entities will appear after transformation</p>') +
                 '</div>' +
             '</div>' +
             '<div class="panel-footer">' +
-                '<button class="btn-secondary btn-sm" data-action="go-step-2">Zur\u00fcck</button>' +
-                '<button class="btn-primary btn-sm" data-action="go-step-4" ' + (hasOutput ? '' : 'disabled') + '>Weiter</button>' +
+                '<button class="btn-secondary btn-sm" data-action="go-step-2">Back</button>' +
+                '<button class="btn-primary btn-sm" data-action="go-step-4" ' + (hasOutput ? '' : 'disabled') + '>Next</button>' +
             '</div>' +
         '</section>';
 }
@@ -383,7 +383,7 @@ async function performTransform() {
 
     const btn = $('[data-action="transform"]');
     btn.disabled = true;
-    btn.textContent = 'Transformiere…';
+    btn.textContent = 'Transforming\u2026';
 
     try {
         // Demo mode: fetch expected output directly
@@ -399,11 +399,11 @@ async function performTransform() {
 
         // Real mode: check API key
         if (!hasApiKey()) {
-            showToast('Bitte zuerst LLM-Provider konfigurieren.', 'warning');
+            showToast('Please configure an LLM provider first.', 'warning');
             await openSettingsDialog();
             transformInProgress = false;
             btn.disabled = false;
-            btn.textContent = 'Transformieren';
+            btn.textContent = 'Transform';
             return;
         }
 
@@ -413,8 +413,8 @@ async function performTransform() {
             wrapper.innerHTML =
                 '<div class="transform-loading">' +
                     '<div class="spinner"></div>' +
-                    '<p>LLM-Transformation läuft…</p>' +
-                    '<button class="btn-secondary btn-sm" data-action="cancel-transform">Abbrechen</button>' +
+                    '<p>LLM transformation in progress\u2026</p>' +
+                    '<button class="btn-secondary btn-sm" data-action="cancel-transform">Cancel</button>' +
                 '</div>';
         }
 
@@ -445,13 +445,13 @@ async function performTransform() {
         transformController = null;
         transformInProgress = false;
         if (e.name === 'AbortError') {
-            showToast('Transformation abgebrochen.', 'warning');
+            showToast('Transformation cancelled.', 'warning');
         } else {
             console.error('Transform failed:', e);
-            showToast('Transformation fehlgeschlagen: ' + e.message, 'error');
+            showToast('Transformation failed: ' + e.message, 'error');
         }
         btn.disabled = false;
-        btn.textContent = 'Transformieren';
+        btn.textContent = 'Transform';
     }
 }
 
@@ -481,7 +481,7 @@ async function renderValidateStep(container) {
         });
     } catch (e) {
         console.error('Validation failed:', e);
-        messages = [{ level: 'error', source: 'system', message: 'Validierung fehlgeschlagen: ' + e.message }];
+        messages = [{ level: 'error', source: 'system', message: 'Validation failed: ' + e.message }];
     }
 
     // Count by level
@@ -492,7 +492,7 @@ async function renderValidateStep(container) {
 
     // Render validation items
     function renderMessages(msgs) {
-        if (!msgs.length) return '<div class="validation-item success"><span class="validation-icon">&#10003;</span><div class="validation-info"><strong>Alle Prüfungen bestanden</strong></div></div>';
+        if (!msgs.length) return '<div class="validation-item success"><span class="validation-icon">&#10003;</span><div class="validation-info"><strong>All checks passed</strong></div></div>';
         return msgs.map(m => {
             const cls = m.level === 'error' ? 'error' : (m.level === 'warning' ? 'warning' : 'success');
             const icon = m.level === 'error' ? '&#10007;' : (m.level === 'warning' ? '!' : '&#10003;');
@@ -501,7 +501,7 @@ async function renderValidateStep(container) {
                 '<div class="validation-info">' +
                     '<strong>' + escHtml(m.source) + '</strong>' +
                     '<p>' + escHtml(m.message) + '</p>' +
-                    (m.line ? '<span class="validation-line">Zeile ' + m.line + '</span>' : '') +
+                    (m.line ? '<span class="validation-line">Line ' + m.line + '</span>' : '') +
                 '</div>' +
             '</div>';
         }).join('');
@@ -509,30 +509,30 @@ async function renderValidateStep(container) {
 
     container.innerHTML =
         '<section class="panel panel-compare">' +
-            '<div class="panel-header"><span class="panel-label">Plaintext-Vergleich</span></div>' +
+            '<div class="panel-header"><span class="panel-label">Plaintext Comparison</span></div>' +
             '<div class="panel-content compare-content">' +
                 '<div class="compare-box"><h4>Original</h4><pre class="compare-text">' +
                     escHtml(origText.substring(0, 500)) + (origText.length > 500 ? '…' : '') +
                 '</pre></div>' +
-                '<div class="compare-box"><h4>Extrahiert</h4><pre class="compare-text">' +
+                '<div class="compare-box"><h4>Extracted</h4><pre class="compare-text">' +
                     escHtml(extracted.substring(0, 500)) + (extracted.length > 500 ? '…' : '') +
                 '</pre></div>' +
             '</div>' +
-            '<div class="panel-footer"><span>' + origText.split(/\s+/).length + ' Wörter original</span></div>' +
+            '<div class="panel-footer"><span>' + origText.split(/\s+/).length + ' words original</span></div>' +
         '</section>' +
         '<section class="panel panel-editor">' +
             '<div class="panel-header"><span class="panel-label">TEI-XML (readonly)</span></div>' +
             '<div class="panel-content"><pre class="xml-readonly">' + highlightXml(AppState.outputXml || '') + '</pre></div>' +
-            '<div class="panel-footer"><span>' + lineCount + ' Zeilen</span></div>' +
+            '<div class="panel-footer"><span>' + lineCount + ' lines</span></div>' +
         '</section>' +
         '<section class="panel panel-validation">' +
-            '<div class="panel-header"><span class="panel-label">Validierung (' + errors.length + ' Fehler, ' + warnings.length + ' Warnungen)</span></div>' +
+            '<div class="panel-header"><span class="panel-label">Validation (' + errors.length + ' errors, ' + warnings.length + ' warnings)</span></div>' +
             '<div class="panel-content validation-list">' +
                 renderMessages(messages) +
             '</div>' +
             '<div class="panel-footer">' +
-                '<button class="btn-secondary btn-sm" data-action="go-step-3">Zurück</button>' +
-                '<button class="btn-primary btn-sm" data-action="go-step-5" ' + (hasErrors ? 'disabled' : '') + '>Weiter</button>' +
+                '<button class="btn-secondary btn-sm" data-action="go-step-3">Back</button>' +
+                '<button class="btn-primary btn-sm" data-action="go-step-5" ' + (hasErrors ? 'disabled' : '') + '>Next</button>' +
             '</div>' +
         '</section>';
 }
@@ -553,35 +553,35 @@ function renderExportStep(container) {
             if (count > 0) entityParts.push(count + ' ' + escHtml(tag));
         }
     }
-    const entitySummary = entityParts.length ? entityParts.join(', ') : 'keine';
+    const entitySummary = entityParts.length ? entityParts.join(', ') : 'none';
 
     container.innerHTML =
         '<section class="export-center">' +
             '<div class="export-card">' +
                 '<div class="export-success">' +
                     ICONS.success +
-                    '<h2>Transformation erfolgreich</h2>' +
+                    '<h2>Transformation successful</h2>' +
                 '</div>' +
                 '<div class="export-stats">' +
-                    '<div class="stat"><span class="stat-label">Dokument</span><span class="stat-value">' + escHtml(exportFileName) + '</span></div>' +
-                    '<div class="stat"><span class="stat-label">Zeilen</span><span class="stat-value">' + stats.lineCount + '</span></div>' +
-                    '<div class="stat"><span class="stat-label">Entitäten</span><span class="stat-value">' + stats.totalEntities + ' (' + entitySummary + ')</span></div>' +
+                    '<div class="stat"><span class="stat-label">Document</span><span class="stat-value">' + escHtml(exportFileName) + '</span></div>' +
+                    '<div class="stat"><span class="stat-label">Lines</span><span class="stat-value">' + stats.lineCount + '</span></div>' +
+                    '<div class="stat"><span class="stat-label">Entities</span><span class="stat-value">' + stats.totalEntities + ' (' + entitySummary + ')</span></div>' +
                 '</div>' +
                 '<div class="export-format">' +
-                    '<h3>Export-Format</h3>' +
-                    '<label class="radio-option"><input type="radio" name="export-format" value="full" checked> TEI-XML vollständig</label>' +
-                    '<label class="radio-option"><input type="radio" name="export-format" value="body"> TEI-XML nur Body</label>' +
+                    '<h3>Export Format</h3>' +
+                    '<label class="radio-option"><input type="radio" name="export-format" value="full" checked> TEI-XML complete</label>' +
+                    '<label class="radio-option"><input type="radio" name="export-format" value="body"> TEI-XML body only</label>' +
                 '</div>' +
                 '<div class="export-options">' +
-                    '<label><input type="checkbox" id="opt-keep-confidence"> Konfidenz-Attribute beibehalten</label>' +
-                    '<label><input type="checkbox" id="opt-keep-resp"> Resp-Attribute beibehalten</label>' +
+                    '<label><input type="checkbox" id="opt-keep-confidence"> Keep confidence attributes</label>' +
+                    '<label><input type="checkbox" id="opt-keep-resp"> Keep resp attributes</label>' +
                 '</div>' +
                 '<div class="export-actions">' +
                     '<button class="btn-primary btn-lg" data-action="download-export">Download TEI-XML</button>' +
                 '</div>' +
                 '<div class="export-secondary">' +
-                    '<button class="btn-secondary" data-action="copy-export">In Zwischenablage kopieren</button>' +
-                    '<button class="btn-secondary" data-action="new-document">Neues Dokument</button>' +
+                    '<button class="btn-secondary" data-action="copy-export">Copy to clipboard</button>' +
+                    '<button class="btn-secondary" data-action="new-document">New document</button>' +
                 '</div>' +
             '</div>' +
         '</section>';
@@ -594,9 +594,9 @@ function renderExportStep(container) {
 function transformTeiToHtml(xml) {
     try {
         const doc = new DOMParser().parseFromString(xml, 'application/xml');
-        if (doc.querySelector('parsererror')) return '<p class="placeholder-text">XML-Parsing-Fehler</p>';
+        if (doc.querySelector('parsererror')) return '<p class="placeholder-text">XML parsing error</p>';
         const body = doc.querySelector('body');
-        if (!body) return '<p class="placeholder-text">Kein body-Element gefunden</p>';
+        if (!body) return '<p class="placeholder-text">No body element found</p>';
         let html = body.innerHTML
             .replace(/<head[^>]*>/g, '<h3 class="tei-head">').replace(/<\/head>/g, '</h3>')
             .replace(/<p[^>]*>/g, '<p class="tei-p">').replace(/<\/p>/g, '</p>')
@@ -607,7 +607,7 @@ function transformTeiToHtml(xml) {
             .replace(/<lb[^>]*\/>/g, '<br>');
         return '<div class="tei-preview">' + html + '</div>';
     } catch (e) {
-        return '<p class="placeholder-text">Vorschau-Fehler</p>';
+        return '<p class="placeholder-text">Preview error</p>';
     }
 }
 
@@ -618,7 +618,7 @@ function renderEntityList(xml) {
     while ((m = re.exec(xml)) !== null) {
         entities.push({ type: m[1], text: m[2] });
     }
-    if (!entities.length) return '<p class="placeholder-text">Keine Entit\u00e4ten gefunden</p>';
+    if (!entities.length) return '<p class="placeholder-text">No entities found</p>';
     return '<ul class="entity-list">' +
         entities.map(e =>
             '<li class="entity-item ' + escHtml(e.type) + '">' +
@@ -671,7 +671,7 @@ function updateFooter(step) {
     const footerLeft = $('.footer-left');
     if (!footerLeft) return;
     const statusEl = $('#footer-status');
-    if (statusEl) statusEl.textContent = 'Schritt ' + step + ' von 5';
+    if (statusEl) statusEl.textContent = 'Step ' + step + ' of 5';
 }
 
 // ---------------------------------------------------------------------------
@@ -697,7 +697,7 @@ function updateModelBadge() {
         el.textContent = model || provider;
         el.closest('.model-badge')?.classList.add('connected');
     } else {
-        el.textContent = 'Kein Modell';
+        el.textContent = 'No model';
         el.closest('.model-badge')?.classList.remove('connected');
     }
 }
@@ -723,8 +723,8 @@ function buildModelOptions(providerId, selectedModel) {
 }
 
 function getProviderInfo(providerId) {
-    if (providerId === 'ollama') return 'Lokal · Kostenlos · Ollama muss laufen (localhost:11434)';
-    return 'API-Key erforderlich · Kosten pro Nutzung';
+    if (providerId === 'ollama') return 'Local · Free · Ollama must be running (localhost:11434)';
+    return 'API key required · Pay per use';
 }
 
 function buildSettingsHtml(configs, curProvider, curModel) {
@@ -736,27 +736,27 @@ function buildSettingsHtml(configs, curProvider, curModel) {
 
     const isOllama = curProvider === 'ollama';
 
-    return '<h3 class="dialog-title">LLM-Einstellungen</h3>' +
+    return '<h3 class="dialog-title">LLM Settings</h3>' +
         '<div class="dialog-body">' +
             '<div class="settings-grid">' +
                 '<label for="settings-provider">Provider</label>' +
                 '<select id="settings-provider">' + providerOptions + '</select>' +
                 '<div></div><div class="provider-info" id="provider-info">' + escHtml(getProviderInfo(curProvider)) + '</div>' +
-                '<label for="settings-model">Modell</label>' +
+                '<label for="settings-model">Model</label>' +
                 '<select id="settings-model">' + buildModelOptions(curProvider, curModel) + '</select>' +
                 '<label for="settings-custom-model" id="settings-custom-label"' + (!isOllama ? ' style="display:none"' : '') + '>Custom</label>' +
-                '<input type="text" id="settings-custom-model" placeholder="Eigene Modell-ID"' + (!isOllama ? ' style="display:none"' : '') + '>' +
+                '<input type="text" id="settings-custom-model" placeholder="Custom model ID"' + (!isOllama ? ' style="display:none"' : '') + '>' +
                 '<label for="settings-apikey">API-Key</label>' +
                 '<input type="password" id="settings-apikey" placeholder="' +
-                    (isOllama ? 'Nicht benötigt (lokal)' : hasApiKey(curProvider) ? '••••••• (gesetzt)' : 'API-Key eingeben') + '"' +
+                    (isOllama ? 'Not required (local)' : hasApiKey(curProvider) ? '••••••• (set)' : 'Enter API key') + '"' +
                     (isOllama ? ' disabled' : '') + '>' +
             '</div>' +
             '<div class="settings-info" id="settings-info"></div>' +
         '</div>' +
         '<div class="dialog-actions">' +
-            '<button class="btn-secondary" id="settings-test">Verbindung testen</button>' +
-            '<button class="btn-secondary" id="settings-cancel">Abbrechen</button>' +
-            '<button class="btn-primary" id="settings-save">Speichern</button>' +
+            '<button class="btn-secondary" id="settings-test">Test connection</button>' +
+            '<button class="btn-secondary" id="settings-cancel">Cancel</button>' +
+            '<button class="btn-primary" id="settings-save">Save</button>' +
         '</div>';
 }
 
@@ -791,10 +791,10 @@ function attachSettingsListeners(dialog, backdrop, configs) {
 
         keyInput.value = '';
         if (pidIsOllama) {
-            keyInput.placeholder = 'Nicht benötigt (lokal)';
+            keyInput.placeholder = 'Not required (local)';
             keyInput.disabled = true;
         } else {
-            keyInput.placeholder = hasApiKey(pid) ? '••••••• (gesetzt)' : 'API-Key eingeben';
+            keyInput.placeholder = hasApiKey(pid) ? '••••••• (set)' : 'Enter API key';
             keyInput.disabled = false;
         }
     });
@@ -805,7 +805,7 @@ function attachSettingsListeners(dialog, backdrop, configs) {
         setModel(getSelectedModel());
         if (keyInput.value) setApiKey(pid, keyInput.value);
 
-        infoEl.textContent = 'Teste Verbindung…';
+        infoEl.textContent = 'Testing connection\u2026';
         infoEl.className = 'settings-info';
         try {
             const result = await testConnection();
@@ -826,7 +826,7 @@ function attachSettingsListeners(dialog, backdrop, configs) {
         if (keyInput.value) setApiKey(pid, keyInput.value);
         updateModelBadge();
         backdrop.remove();
-        showToast('Einstellungen gespeichert.', 'success');
+        showToast('Settings saved.', 'success');
     });
 
     backdrop.addEventListener('click', e => {
@@ -846,7 +846,7 @@ async function openSettingsDialog() {
     dialog.className = 'dialog dialog-settings';
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');
-    dialog.setAttribute('aria-label', 'LLM-Einstellungen');
+    dialog.setAttribute('aria-label', 'LLM Settings');
 
     dialog.innerHTML = buildSettingsHtml(configs, curProvider, curModel);
     backdrop.appendChild(dialog);
@@ -913,7 +913,7 @@ function handleAction(action, e) {
             const xml = AppState.outputXml || '';
             const content = prepareExport(xml, opts);
             copyToClipboardService(content).then(ok => {
-                showToast(ok ? 'In Zwischenablage kopiert!' : 'Kopieren fehlgeschlagen.', ok ? 'success' : 'error');
+                showToast(ok ? 'Copied to clipboard!' : 'Copy failed.', ok ? 'success' : 'error');
             });
             break;
         }

@@ -79,7 +79,7 @@ export function checkWellFormedness(xml) {
             errors.push({
                 level: 'error',
                 source: 'wellformed',
-                message: 'XML ist nicht wohlgeformt: ' + parseError.textContent.substring(0, 200)
+                message: 'XML is not well-formed: ' + parseError.textContent.substring(0, 200)
             });
             return { doc: null, errors };
         }
@@ -87,7 +87,7 @@ export function checkWellFormedness(xml) {
         errors.push({
             level: 'info',
             source: 'wellformed',
-            message: 'XML ist wohlgeformt.'
+            message: 'XML is well-formed.'
         });
 
         return { doc, errors };
@@ -95,7 +95,7 @@ export function checkWellFormedness(xml) {
         errors.push({
             level: 'error',
             source: 'wellformed',
-            message: 'XML-Parsing fehlgeschlagen: ' + e.message
+            message: 'XML parsing failed: ' + e.message
         });
         return { doc: null, errors };
     }
@@ -117,7 +117,7 @@ export function checkPlaintext(doc, originalPlaintext) {
         messages.push({
             level: 'warning',
             source: 'plaintext',
-            message: 'Kein body-Element gefunden \u2013 Plaintext-Vergleich nicht m\u00f6glich.'
+            message: 'No body element found -- plaintext comparison not possible.'
         });
         return messages;
     }
@@ -129,7 +129,7 @@ export function checkPlaintext(doc, originalPlaintext) {
         messages.push({
             level: 'info',
             source: 'plaintext',
-            message: 'Plaintext identisch \u2013 kein Textinhalt ver\u00e4ndert.'
+            message: 'Plaintext identical -- no text content altered.'
         });
     } else {
         // Calculate word-level similarity
@@ -139,8 +139,8 @@ export function checkPlaintext(doc, originalPlaintext) {
         messages.push({
             level,
             source: 'plaintext',
-            message: 'Plaintext-Abweichung erkannt (' + similarity + '% \u00c4hnlichkeit). ' +
-                'Der Textinhalt wurde m\u00f6glicherweise durch die Transformation ver\u00e4ndert.'
+            message: 'Plaintext divergence detected (' + similarity + '% similarity). ' +
+                'Text content may have been altered during transformation.'
         });
     }
 
@@ -176,7 +176,7 @@ export function checkSchema(doc, xml) {
                 messages.push({
                     level: 'warning',
                     source: 'schema',
-                    message: 'Unbekanntes Element <' + tag + '>',
+                    message: 'Unknown element <' + tag + '>',
                     line: findLineOfElement(tag, lines)
                 });
             }
@@ -189,7 +189,7 @@ export function checkSchema(doc, xml) {
                     messages.push({
                         level: 'warning',
                         source: 'schema',
-                        message: '<' + tag + '> ist kein erlaubtes Kind von <' + parentTag + '>',
+                        message: '<' + tag + '> is not an allowed child of <' + parentTag + '>',
                         line: findLineOfElement(tag, lines)
                     });
                 }
@@ -204,7 +204,7 @@ export function checkSchema(doc, xml) {
                         messages.push({
                             level: 'warning',
                             source: 'schema',
-                            message: 'Unbekanntes Attribut @' + attrName + ' an <' + tag + '>',
+                            message: 'Unknown attribute @' + attrName + ' on <' + tag + '>',
                             line: findLineOfElement(tag, lines)
                         });
                     }
@@ -220,13 +220,13 @@ export function checkSchema(doc, xml) {
         messages.push({
             level: 'info',
             source: 'schema',
-            message: 'Schema-Validierung: ' + elementCount + ' Elemente gepr\u00fcft, keine Fehler.'
+            message: 'Schema validation: ' + elementCount + ' elements checked, no issues.'
         });
     } else {
         messages.push({
             level: 'warning',
             source: 'schema',
-            message: 'Schema-Validierung: ' + errorCount + ' Hinweise bei ' + elementCount + ' Elementen.'
+            message: 'Schema validation: ' + errorCount + ' issues in ' + elementCount + ' elements.'
         });
     }
 
@@ -250,13 +250,13 @@ export function checkUnreviewed(reviewStatusMap) {
         messages.push({
             level: 'warning',
             source: 'expert',
-            message: unreviewed + ' Annotation' + (unreviewed !== 1 ? 'en' : '') + ' noch nicht gepr\u00fcft.'
+            message: unreviewed + ' annotation' + (unreviewed !== 1 ? 's' : '') + ' not yet reviewed.'
         });
     } else if (reviewStatusMap.size > 0) {
         messages.push({
             level: 'info',
             source: 'expert',
-            message: 'Alle ' + reviewStatusMap.size + ' Annotationen gepr\u00fcft.'
+            message: 'All ' + reviewStatusMap.size + ' annotations reviewed.'
         });
     }
 

@@ -167,7 +167,49 @@ body {
     font-weight: 600;
 }
 
-/* Workflow Stepper (5 Schritte) */
+/* Research Preview Banner */
+.research-banner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-md);
+    background: linear-gradient(90deg, #FEF5E7 0%, #FDF6E3 100%);
+    border-bottom: 1px solid var(--color-gold-light);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-tight);
+}
+
+.research-banner-label {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--color-gold);
+    color: var(--color-text-inverse);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.research-banner-text {
+    flex: 1;
+}
+
+.research-banner-license {
+    white-space: nowrap;
+    color: var(--color-gold-hover);
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+}
+
+.research-banner-license:hover {
+    border-bottom-color: var(--color-gold-hover);
+}
+
+/* Workflow Stepper */
 .workflow-stepper {
     flex: 1;
     display: flex;

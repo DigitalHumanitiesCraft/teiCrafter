@@ -1,20 +1,27 @@
-# teiCrafter -- Claude Code Instruktionen
+# teiCrafter -- Claude Code Instructions
 
-## Sprache und Stil
-- **Keine Emojis** -- nie Emojis in Ausgaben, Dateien oder Commit-Messages verwenden
-- Journal-Eintraege und Commit-Messages auf Deutsch
-- Knowledge-Dokumente in reinem Standard-Markdown (kein Obsidian, kein YAML-Frontmatter)
+## Language and Style
+- **No emojis** -- never use emojis in outputs, files, or commit messages
+- All code, UI text, and documentation in English
+- Knowledge documents in pure standard Markdown (no Obsidian, no YAML frontmatter)
 
-## Projekt
-- Browser-basiertes TEI-XML-Annotationstool fuer Digital Humanities
-- Deployed via GitHub Pages aus `/docs`
-- ES6-Module ohne Bundler, kein Build-Step
-- Knowledge Base in `/knowledge/` (INDEX.md als Einstieg)
+## Project
+- Browser-based TEI-XML annotation tool for Digital Humanities
+- Deployed via GitHub Pages from `/docs`
+- ES6 modules without bundler, no build step
+- Knowledge base in `/knowledge/` (4 consolidated documents)
 
-## Synchronisationsregeln
-Am Ende jeder Session mit Code-Aenderungen:
-1. STATUS.md -- Immer zuerst. Modul-Matrix und Workflow-Status aktualisieren
-2. DECISIONS.md -- Bei neuen Entscheidungen oder erledigten offenen Punkten
-3. STORIES.md -- Bei Status-Aenderungen
-4. JOURNAL.md -- Session-Eintrag mit Datum und Zusammenfassung
-5. MODULES.md -- Nur bei API-Aenderungen (neue Exports, geaenderte Signaturen)
+## Knowledge Base Structure
+| Document | Content |
+|----------|---------|
+| OVERVIEW.md | Vision, market analysis, research landscape, strategic positioning |
+| ARCHITECTURE.md | System design, visual specification, workflow specification |
+| REFERENCE.md | Module API reference, implementation status, known issues |
+| DEVELOPMENT.md | Decision log, user stories, development journal, Phase 3 concepts |
+
+## Synchronization Rules
+At the end of every session with code changes:
+1. REFERENCE.md -- Always first. Update module matrix and implementation status
+2. DEVELOPMENT.md -- For new decisions, resolved open questions, or session log entry
+3. OVERVIEW.md -- Only if strategic positioning or roadmap changes
+4. ARCHITECTURE.md -- Only if architecture, design, or workflow specification changes
