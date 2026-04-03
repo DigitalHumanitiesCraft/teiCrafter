@@ -48,6 +48,35 @@ The design rests on the principle of **epistemic asymmetry** (adapted from coOCR
 
 ---
 
+## Pipeline Mode (szd-htr Integration)
+
+teiCrafter includes a **pipeline mode** for automated batch conversion of OCR/HTR output to Minimal-TEI-XML. This mode is designed for the [szd-htr](https://github.com/chpollin/szd-htr-ocr-pipeline) project (Stefan Zweig Digital) but can process any Page-JSON v0.2 input.
+
+```bash
+# Single file
+node pipeline.mjs --page-json results/o_szd.100_page.json --output tei/
+
+# Batch (entire directory)
+node pipeline.mjs --batch results/lebensdokumente/ --output tei/ --recursive
+
+# Validate only (no file output)
+node pipeline.mjs --page-json input.json --validate-only --verbose
+```
+
+**Pipeline design principles:**
+
+| Aspect | Approach |
+|--------|----------|
+| teiHeader | 100% deterministic (MODS field mapping) |
+| Body structure | Deterministic (layout region types to TEI elements) |
+| div boundaries | Heuristic (heading-based), LLM fallback planned |
+| Entities | None -- Minimal-TEI by design |
+| Validation | Tag matching + structure check + character-level plaintext preservation |
+
+**Verified on 2,030 Stefan Zweig estate objects:** 0 XML parse errors, 100% character-level plaintext fidelity, 50 unit tests passing. Requires Node.js 18+.
+
+---
+
 ## Quick Start
 
 1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/)
@@ -67,29 +96,32 @@ For demo datasets, no API key is required -- expected output is loaded directly.
 teiCrafter is built as a client-only single-page application using vanilla ES6 modules with no build step, no framework, and zero NPM dependencies.
 
 ```
-docs/
-├── index.html              Entry point (GitHub Pages)
-├── css/style.css           Visual design system (~2,645 lines)
-├── js/
-│   ├── app.js              Application shell, 5-step stepper
-│   ├── model.js            Reactive document model (4 state layers)
-│   ├── tokenizer.js        XML state-machine tokenizer
-│   ├── editor.js           Overlay XML editor
-│   ├── preview.js          Interactive preview with review workflow
-│   ├── source.js           Source panel (plaintext / facsimile)
-│   ├── services/
-│   │   ├── llm.js          Multi-provider LLM service (6 providers)
-│   │   ├── transform.js    Three-layer prompt assembly
-│   │   ├── validator.js    Four-level validation engine
-│   │   ├── schema.js       ODD-based schema guidance
-│   │   ├── export.js       Export with attribute cleanup
-│   │   └── storage.js      localStorage wrapper
-│   └── utils/
-│       ├── constants.js    Enums, configurations, tag definitions
-│       └── dom.js          DOM utilities
-├── schemas/dtabf.json      DTABf schema profile (30+ elements)
-├── data/demo/              Demo datasets with expected outputs
-└── tests/                  Unit tests (60 tests)
+teiCrafter/
+├── pipeline.mjs                Node.js CLI for batch Page-JSON to TEI
+├── docs/
+│   ├── index.html              Entry point (GitHub Pages)
+│   ├── css/style.css           Visual design system (~2,645 lines)
+│   ├── js/
+│   │   ├── app.js              Application shell, 5-step stepper
+│   │   ├── model.js            Reactive document model (4 state layers)
+│   │   ├── tokenizer.js        XML state-machine tokenizer
+│   │   ├── editor.js           Overlay XML editor
+│   │   ├── preview.js          Interactive preview with review workflow
+│   │   ├── source.js           Source panel (plaintext / facsimile)
+│   │   ├── services/           LLM, transform, validator, schema, export
+│   │   ├── pipeline/           Pipeline mode modules (ES6, Node+Browser)
+│   │   │   ├── utils.js        XML escaping, element builder
+│   │   │   ├── mods-to-header.js   Page-JSON metadata to teiHeader
+│   │   │   ├── page-to-body.js     Pages + regions to TEI elements
+│   │   │   ├── div-structurer.js   Heading heuristic for div sections
+│   │   │   ├── tei-assembler.js    Full TEI assembly orchestrator
+│   │   │   └── pipeline-validator.js  Tag matching, plaintext check
+│   │   └── utils/              Constants, DOM utilities
+│   ├── schemas/dtabf.json      DTABf schema profile (50+ elements)
+│   ├── data/demo/              Demo datasets with expected outputs
+│   └── tests/                  Browser unit tests (60 tests)
+├── tests/pipeline.test.mjs    Pipeline unit + integration tests (50 tests)
+└── Plan.md                    Pipeline mode implementation plan (Phase P)
 ```
 
 ### Technology Decisions
@@ -241,10 +273,14 @@ Open `http://localhost:8000` in a modern browser (ES6 module support required).
 
 ### Running Tests
 
-Open `docs/tests/test-runner.html` in a browser. The test suite covers:
-- XML tokenizer (19 tests)
-- Document model (23 tests)
-- Validator (18 tests)
+**Browser tests** (interactive mode):
+Open `docs/tests/test-runner.html` in a browser. Covers XML tokenizer (19), document model (23), validator (18).
+
+**Pipeline tests** (Node.js):
+```bash
+node tests/pipeline.test.mjs
+```
+Covers utils (8), header mapping (10), body mapping (5), div structurer (6), assembler (2), validator (4), integration with real Page-JSON (15). Total: 50 tests.
 
 ---
 

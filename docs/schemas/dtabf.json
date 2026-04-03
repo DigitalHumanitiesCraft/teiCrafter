@@ -1,7 +1,7 @@
 {
   "$schema": "teiCrafter Schema Profile v1",
   "name": "DTABf-Subset",
-  "description": "Hardcoded schema profile covering elements from the 3 demo datasets (HSA letter, DTA print, medieval recipe). Based on DTABf (Deutsches Textarchiv Basisformat).",
+  "description": "Schema profile covering DTABf elements for interactive annotation AND pipeline-generated Minimal-TEI. Based on DTABf (Deutsches Textarchiv Basisformat).",
   "elements": {
     "TEI": {
       "allowedChildren": ["teiHeader", "text"],
@@ -11,7 +11,7 @@
       }
     },
     "teiHeader": {
-      "allowedChildren": ["fileDesc", "profileDesc"],
+      "allowedChildren": ["fileDesc", "profileDesc", "encodingDesc", "revisionDesc"],
       "allowedParents": ["TEI"],
       "attributes": {}
     },
@@ -21,7 +21,7 @@
       "attributes": {}
     },
     "titleStmt": {
-      "allowedChildren": ["title"],
+      "allowedChildren": ["title", "author", "editor"],
       "allowedParents": ["fileDesc"],
       "attributes": {}
     },
@@ -32,20 +32,213 @@
         "type": { "type": "enum", "values": ["main", "sub"] }
       }
     },
+    "author": {
+      "allowedChildren": ["#text", "persName"],
+      "allowedParents": ["titleStmt"],
+      "attributes": {
+        "ref": { "type": "uri" }
+      }
+    },
+    "editor": {
+      "allowedChildren": ["#text", "persName"],
+      "allowedParents": ["titleStmt"],
+      "attributes": {
+        "ref": { "type": "uri" }
+      }
+    },
     "publicationStmt": {
-      "allowedChildren": ["p"],
+      "allowedChildren": ["p", "publisher", "availability"],
       "allowedParents": ["fileDesc"],
       "attributes": {}
     },
+    "publisher": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["publicationStmt"],
+      "attributes": {}
+    },
+    "availability": {
+      "allowedChildren": ["licence"],
+      "allowedParents": ["publicationStmt"],
+      "attributes": {}
+    },
+    "licence": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["availability"],
+      "attributes": {
+        "target": { "type": "uri" }
+      }
+    },
     "sourceDesc": {
-      "allowedChildren": ["p", "bibl"],
+      "allowedChildren": ["p", "bibl", "msDesc"],
       "allowedParents": ["fileDesc"],
+      "attributes": {}
+    },
+    "msDesc": {
+      "allowedChildren": ["msIdentifier", "physDesc", "history", "additional"],
+      "allowedParents": ["sourceDesc"],
+      "attributes": {}
+    },
+    "msIdentifier": {
+      "allowedChildren": ["repository", "country", "settlement", "idno"],
+      "allowedParents": ["msDesc"],
+      "attributes": {}
+    },
+    "repository": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["msIdentifier"],
+      "attributes": {
+        "ref": { "type": "uri" }
+      }
+    },
+    "country": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["msIdentifier"],
+      "attributes": {}
+    },
+    "settlement": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["msIdentifier"],
+      "attributes": {}
+    },
+    "idno": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["msIdentifier"],
+      "attributes": {
+        "type": { "type": "string" }
+      }
+    },
+    "physDesc": {
+      "allowedChildren": ["objectDesc", "handDesc"],
+      "allowedParents": ["msDesc"],
+      "attributes": {}
+    },
+    "objectDesc": {
+      "allowedChildren": ["supportDesc"],
+      "allowedParents": ["physDesc"],
+      "attributes": {}
+    },
+    "supportDesc": {
+      "allowedChildren": ["support", "extent"],
+      "allowedParents": ["objectDesc"],
+      "attributes": {}
+    },
+    "support": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["supportDesc"],
+      "attributes": {}
+    },
+    "extent": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["supportDesc"],
+      "attributes": {
+        "type": { "type": "string" }
+      }
+    },
+    "handDesc": {
+      "allowedChildren": ["handNote"],
+      "allowedParents": ["physDesc"],
+      "attributes": {}
+    },
+    "handNote": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["handDesc"],
+      "attributes": {
+        "scribe": { "type": "string" },
+        "medium": { "type": "string" }
+      }
+    },
+    "history": {
+      "allowedChildren": ["origin", "provenance"],
+      "allowedParents": ["msDesc"],
+      "attributes": {}
+    },
+    "origin": {
+      "allowedChildren": ["origPlace", "origDate"],
+      "allowedParents": ["history"],
+      "attributes": {}
+    },
+    "origPlace": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["origin"],
+      "attributes": {
+        "ref": { "type": "uri" }
+      }
+    },
+    "origDate": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["origin"],
+      "attributes": {
+        "when": { "type": "date" },
+        "notBefore": { "type": "date" },
+        "notAfter": { "type": "date" }
+      }
+    },
+    "provenance": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["history"],
+      "attributes": {}
+    },
+    "additional": {
+      "allowedChildren": ["adminInfo"],
+      "allowedParents": ["msDesc"],
+      "attributes": {}
+    },
+    "adminInfo": {
+      "allowedChildren": ["note"],
+      "allowedParents": ["additional"],
       "attributes": {}
     },
     "profileDesc": {
-      "allowedChildren": ["correspDesc"],
+      "allowedChildren": ["correspDesc", "langUsage", "textClass"],
       "allowedParents": ["teiHeader"],
       "attributes": {}
+    },
+    "langUsage": {
+      "allowedChildren": ["language"],
+      "allowedParents": ["profileDesc"],
+      "attributes": {}
+    },
+    "language": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["langUsage"],
+      "attributes": {
+        "ident": { "type": "language", "required": true }
+      }
+    },
+    "textClass": {
+      "allowedChildren": ["classCode"],
+      "allowedParents": ["profileDesc"],
+      "attributes": {}
+    },
+    "classCode": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["textClass"],
+      "attributes": {
+        "scheme": { "type": "string" }
+      }
+    },
+    "encodingDesc": {
+      "allowedChildren": ["projectDesc"],
+      "allowedParents": ["teiHeader"],
+      "attributes": {}
+    },
+    "projectDesc": {
+      "allowedChildren": ["p"],
+      "allowedParents": ["encodingDesc"],
+      "attributes": {}
+    },
+    "revisionDesc": {
+      "allowedChildren": ["change"],
+      "allowedParents": ["teiHeader"],
+      "attributes": {}
+    },
+    "change": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["revisionDesc"],
+      "attributes": {
+        "when": { "type": "date" },
+        "who": { "type": "string" }
+      }
     },
     "correspDesc": {
       "allowedChildren": ["correspAction"],
@@ -65,12 +258,12 @@
       "attributes": {}
     },
     "body": {
-      "allowedChildren": ["div", "p"],
+      "allowedChildren": ["div", "p", "pb"],
       "allowedParents": ["text"],
       "attributes": {}
     },
     "div": {
-      "allowedChildren": ["div", "p", "head", "pb", "lb", "opener", "closer", "dateline", "salute", "signed", "bibl", "persName", "placeName", "orgName", "date", "name", "measure", "term", "foreign"],
+      "allowedChildren": ["div", "p", "head", "pb", "lb", "opener", "closer", "dateline", "salute", "signed", "bibl", "persName", "placeName", "orgName", "date", "name", "measure", "term", "foreign", "note", "fw", "table", "list"],
       "allowedParents": ["body", "div"],
       "attributes": {
         "type": { "type": "string" },
@@ -79,7 +272,7 @@
     },
     "p": {
       "allowedChildren": ["#text", "persName", "placeName", "orgName", "date", "name", "bibl", "term", "measure", "material", "foreign", "lb", "pb"],
-      "allowedParents": ["div", "body", "publicationStmt", "sourceDesc", "opener", "closer"],
+      "allowedParents": ["div", "body", "publicationStmt", "sourceDesc", "opener", "closer", "projectDesc"],
       "attributes": {}
     },
     "head": {
@@ -101,6 +294,49 @@
       "allowedParents": ["p", "head", "div", "dateline", "opener", "closer", "salute", "signed"],
       "attributes": {},
       "selfClosing": true
+    },
+    "fw": {
+      "allowedChildren": ["#text"],
+      "allowedParents": ["div"],
+      "attributes": {
+        "type": { "type": "enum", "values": ["header", "footer", "pageNum", "catch", "sig"] },
+        "place": { "type": "enum", "values": ["top", "bottom"] }
+      }
+    },
+    "table": {
+      "allowedChildren": ["row"],
+      "allowedParents": ["div", "p"],
+      "attributes": {}
+    },
+    "row": {
+      "allowedChildren": ["cell"],
+      "allowedParents": ["table"],
+      "attributes": {}
+    },
+    "cell": {
+      "allowedChildren": ["#text", "persName", "placeName", "orgName", "date"],
+      "allowedParents": ["row"],
+      "attributes": {}
+    },
+    "list": {
+      "allowedChildren": ["item", "head"],
+      "allowedParents": ["div", "p"],
+      "attributes": {
+        "type": { "type": "string" }
+      }
+    },
+    "item": {
+      "allowedChildren": ["#text", "persName", "placeName", "orgName", "date", "bibl"],
+      "allowedParents": ["list"],
+      "attributes": {}
+    },
+    "note": {
+      "allowedChildren": ["#text", "p", "persName", "placeName"],
+      "allowedParents": ["div", "adminInfo"],
+      "attributes": {
+        "type": { "type": "string" },
+        "place": { "type": "string" }
+      }
     },
     "opener": {
       "allowedChildren": ["#text", "dateline", "salute", "persName", "placeName", "date", "lb"],
@@ -129,7 +365,7 @@
     },
     "persName": {
       "allowedChildren": ["#text", "name"],
-      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "salute", "signed", "correspAction", "title", "bibl"],
+      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "salute", "signed", "correspAction", "title", "bibl", "author", "editor", "cell", "note", "item"],
       "attributes": {
         "ref": { "type": "uri" },
         "key": { "type": "string" },
@@ -139,7 +375,7 @@
     },
     "placeName": {
       "allowedChildren": ["#text"],
-      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "correspAction", "title", "bibl"],
+      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "correspAction", "title", "bibl", "cell", "note"],
       "attributes": {
         "ref": { "type": "uri" },
         "key": { "type": "string" },
@@ -149,7 +385,7 @@
     },
     "orgName": {
       "allowedChildren": ["#text"],
-      "allowedParents": ["p", "head", "div"],
+      "allowedParents": ["p", "head", "div", "cell"],
       "attributes": {
         "ref": { "type": "uri" },
         "key": { "type": "string" },
@@ -159,7 +395,7 @@
     },
     "date": {
       "allowedChildren": ["#text"],
-      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "correspAction", "title", "bibl"],
+      "allowedParents": ["p", "head", "div", "opener", "closer", "dateline", "correspAction", "title", "bibl", "cell"],
       "attributes": {
         "when": { "type": "date" },
         "notBefore": { "type": "date" },
@@ -179,7 +415,7 @@
     },
     "bibl": {
       "allowedChildren": ["#text", "title", "persName", "placeName", "date"],
-      "allowedParents": ["p", "div", "sourceDesc"],
+      "allowedParents": ["p", "div", "sourceDesc", "item"],
       "attributes": {
         "confidence": { "type": "enum", "values": ["high", "medium", "low"] },
         "resp": { "type": "string" }

@@ -1,6 +1,6 @@
 # teiCrafter -- Development Log and Planning
 
-Last updated: 2026-03-03
+Last updated: 2026-04-03
 
 This document consolidates architectural decisions, user stories, Phase 3 concepts, and the development journal for the teiCrafter project. It merges content from DECISIONS.md, STORIES.md, JOURNAL.md, teiModeller.md, and DISTILLATION.md into a single English-language reference.
 
@@ -29,6 +29,11 @@ Architectural and design decisions that have been resolved.
 | Few-shot examples as prompt lever | 2--3 annotated examples per source type in the mapping layer | Research is clear: few-shot is more effective than verbose rules. Highest leverage for better LLM results with minimal effort. | 2026-02-18 |
 | Demo data: real sources instead of placeholders | CoReMA recipe (medieval, CC BY 4.0) + DEPCHA ledger (1718, CC BY 4.0) + SZD letter (pending) | Real DH projects from the University of Graz: CoReMA tests historical language/recipe domain, DEPCHA tests Bookkeeping Ontology with bk: attributes, SZD tests correspondence. All three projects known to the user. | 2026-02-18 |
 | Bookkeeping as new sourceType | `bookkeeping` with SOURCE_LABELS, DEFAULT_MAPPINGS, detectType() | Ledgers are an independent source type with specific entities (monetary amounts, accounts, commodities). Bookkeeping Ontology (bk:) requires @ana attributes not found in generic rules. | 2026-02-18 |
+| Pipeline mode: Node.js CLI, not browser | `pipeline.mjs` at project root, modules under `docs/js/pipeline/` | METS/PAGE XML are local files; batch processing needs filesystem access. Modules written as pure ES6 for future browser import. | 2026-04-03 |
+| Pipeline mode: Page-JSON fallback before METS | `--page-json` CLI flag as primary input path | METS export in szd-htr not yet implemented. Page-JSON v0.2 contains all required metadata. Develop and test against Page-JSON, add METS parser later. | 2026-04-03 |
+| Pipeline mode: no LLM for header or body | Deterministic mapping only | MODS-to-TEI and region-type-to-TEI are rule-based mappings. LLM would introduce errors. LLM reserved exclusively for div-boundary detection in complex documents (Konvolute, multi-chapter Werke). | 2026-04-03 |
+| Pipeline mode: letters as single div | `divType === 'letter'` -> no head-splitting | Envelope addresses and letterheads are detected as headings by layout analysis but are not chapter boundaries. Single-div wrapping preserves letter integrity. | 2026-04-03 |
+| DTABf schema: extended for pipeline | +30 elements (msDesc hierarchy, fw, table, list, header elements) | Pipeline-generated TEI requires structured sourceDesc (msDesc/msIdentifier/physDesc/history) and body elements (fw, table, note) not covered by the interactive annotation schema. | 2026-04-03 |
 
 ---
 
@@ -666,6 +671,18 @@ distillation/
 ## 5. Development Journal
 
 Chronological log of all development sessions, most recent first.
+
+### Session 17 -- 2026-04-03: Pipeline Mode Implementation (Phase P)
+
+- **Trigger:** szd-htr OCR/HTR pipeline produces Page-JSON v0.2 with transcriptions and layout data for ~2000 Stefan Zweig estate objects. Need to convert these to Minimal-TEI (rich header, simple body structure, no entities).
+- Analyzed connection between szd-htr and teiCrafter: szd-htr produces text + layout + metadata, teiCrafter annotates. Pipeline mode bridges the gap with deterministic TEI generation.
+- Created Plan.md with Phase P (9 sub-phases, 38 tasks). Key decision: Page-JSON fallback path before METS (which does not exist yet in szd-htr).
+- Implemented 6 pipeline modules under `docs/js/pipeline/`: utils.js (XML helpers), mods-to-header.js (metadata to teiHeader), page-to-body.js (pages/regions to TEI elements), div-structurer.js (heading heuristic), tei-assembler.js (orchestrator), pipeline-validator.js (3 validation checks).
+- Implemented `pipeline.mjs` Node.js CLI: `--page-json`, `--batch`, `--recursive`, `--validate-only`, `--force`, `--verbose`.
+- Extended `dtabf.json` with 30+ elements: msDesc hierarchy (msIdentifier, physDesc, objectDesc, supportDesc, handDesc, handNote, history, origin, origDate, origPlace, provenance), structural elements (fw, table/row/cell, list/item, note), header elements (author, editor, publisher, availability, licence, encodingDesc, projectDesc, revisionDesc, change, langUsage, language, textClass, classCode).
+- Fixed div-structurer: letters use single-div wrapping (envelope addresses and letterheads are not chapter boundaries).
+- Integration tests: 3/3 Page-JSON files pass (o_szd.100 with 15 regions, o_szd.1079 letter, o_szd.2305 without regions). Plaintext preservation 99--100%.
+- **Files changed:** 6 new pipeline modules, pipeline.mjs (new), Plan.md (new), dtabf.json (extended), REFERENCE.md, ARCHITECTURE.md, DEVELOPMENT.md, OVERVIEW.md.
 
 ### Session 16 -- 2026-02-18: Demo Data with Real Sources (Phase A0)
 

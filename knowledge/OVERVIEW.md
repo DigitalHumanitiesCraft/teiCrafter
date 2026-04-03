@@ -1,6 +1,6 @@
 # teiCrafter -- Project Overview and Strategic Positioning
 
-Last updated: 2026-03-03
+Last updated: 2026-04-03
 
 ---
 
@@ -13,12 +13,20 @@ The tool runs entirely in the browser as a static web page -- no server, no user
 ### Pipeline Position
 
 ```
-Image -> coOCR HTR -> teiCrafter -> ediarum / GAMS / Publication
-         (Transcription)  (Annotation &      (Deep indexing &
-                           Modeling)          Publication)
+Image -> szd-htr / coOCR HTR -> teiCrafter -> ediarum / GAMS / Publication
+         (Transcription)          |                (Deep indexing &
+                                  |                 Publication)
+                          +-------+-------+
+                          |               |
+                     Interactive     Pipeline Mode
+                     (single doc,   (batch, szd-htr
+                      browser UI)    Page-JSON/METS)
 ```
 
-teiCrafter addresses the gap between automated text recognition and manual deep indexing. It produces valid, schema-conformant TEI-XML that serves as a qualified starting point for further editorial work in environments such as ediarum.
+teiCrafter addresses the gap between automated text recognition and manual deep indexing. It operates in two modes:
+
+- **Interactive mode** (browser): Single-document annotation with LLM-assisted markup, human review, and iterative refinement. Produces deeply annotated TEI-XML.
+- **Pipeline mode** (Node.js CLI, since 2026-04-03): Batch conversion of szd-htr Page-JSON v0.2 to Minimal-TEI (rich teiHeader, simple body structure, no entities). Deterministic where possible, LLM only for complex div-boundaries.
 
 ### Epistemic Asymmetry
 

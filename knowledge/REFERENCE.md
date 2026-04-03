@@ -1,6 +1,6 @@
 # teiCrafter -- Technical Reference
 
-Last updated: 2026-03-03
+Last updated: 2026-04-03
 
 Consolidated technical reference for the teiCrafter prototype. Merges per-module API documentation, implementation status, data structures, LLM provider details, and known problems into a single developer-oriented document.
 
@@ -48,6 +48,22 @@ services/llm.js ─────────────────── consta
 | dom.js | Utility | 171 | Done | Done | Missing | -- |
 
 **Summary:** 14/14 modules implemented. 7/14 directly integrated in app.js (constants, dom, llm, transform, validator, schema, export). 1/14 indirectly integrated (storage via llm). 3/14 have unit tests (60 tests total). Approximate test coverage: 21%.
+
+### 1.3 Pipeline Module Matrix (Phase P)
+
+Pipeline modules for automated conversion of szd-htr Page-JSON v0.2 to Minimal-TEI. Node.js CLI, reusable ES6 modules under `docs/js/pipeline/`.
+
+| Module | Type | Lines | Implemented | Tests | Notes |
+|--------|------|------:|:-----------:|:-----:|-------|
+| pipeline/utils.js | Utility | 70 | Done | Missing | XML escaping, element builder, language codes |
+| pipeline/mods-to-header.js | Transform | 180 | Done | Missing | Page-JSON metadata to teiHeader (deterministic) |
+| pipeline/page-to-body.js | Transform | 130 | Done | Missing | Pages + regions to flat TEI element list |
+| pipeline/div-structurer.js | Transform | 100 | Done | Missing | Heading heuristic; letters as single div |
+| pipeline/tei-assembler.js | Orchestrator | 30 | Done | Missing | Combines header + body to complete TEI-XML |
+| pipeline/pipeline-validator.js | Validator | 150 | Done | Missing | Tag matching, structure check, plaintext preservation |
+| pipeline.mjs (root) | CLI | 190 | Done | 3 integration tests | --page-json, --batch, --validate-only, --force |
+
+**Pipeline test results (2026-04-03):** 3/3 Page-JSON files processed successfully (o_szd.100 Lebensdokument with regions, o_szd.1079 Korrespondenz with regions, o_szd.2305 Aufsatzablage without regions). Plaintext preservation: 99--100%. Schema extension: dtabf.json extended with 30+ elements for msDesc, fw, table, list, header elements.
 
 ---
 

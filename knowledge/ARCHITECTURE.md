@@ -1,6 +1,6 @@
 # teiCrafter -- Architecture, Design, and Workflow Specification
 
-Last updated: 2026-03-03
+Last updated: 2026-04-03
 
 This document consolidates the system architecture, visual design system, and annotation workflow specification for teiCrafter, a browser-based TEI-XML annotation tool for Digital Humanities research. It merges content previously maintained in three separate German-language documents (ARCHITECTURE.md, DESIGN.md, WORKFLOW.md) into a single English-language reference.
 
@@ -101,8 +101,15 @@ docs/
 |   +-- utils/
 |       |-- constants.js        ( 117 lines)  Configuration values
 |       +-- dom.js              ( 171 lines)  DOM utilities
+|   +-- pipeline/
+|       |-- utils.js            (  70 lines)  XML escaping, element builder
+|       |-- mods-to-header.js   ( 180 lines)  Page-JSON metadata -> teiHeader
+|       |-- page-to-body.js     ( 130 lines)  Pages + regions -> TEI elements
+|       |-- div-structurer.js   ( 100 lines)  Heading heuristic for div sections
+|       |-- tei-assembler.js    (  30 lines)  Full TEI assembly orchestrator
+|       +-- pipeline-validator.js( 150 lines)  Tag matching, plaintext check
 |-- schemas/
-|   +-- dtabf.json              ( 225 lines)  Hardcoded schema profile (Stage 1)
+|   +-- dtabf.json              ( 330 lines)  Schema profile (interactive + pipeline)
 |-- data/
 |   +-- demo/
 |       |-- expected-output/    Reference TEI-XML outputs
@@ -114,6 +121,34 @@ docs/
     |-- tokenizer.test.js       ( 183 lines)  Tokenizer unit tests
     |-- validator.test.js       ( 116 lines)  Validator unit tests
     +-- visual-matrix.html      ( 459 lines)  Visual confidence/entity test matrix
+pipeline.mjs                    ( 190 lines)  Node.js CLI for batch Page-JSON -> TEI
+Plan.md                         Pipeline mode plan (Phase P)
+```
+
+### 2.1 Pipeline Mode Architecture
+
+The pipeline mode runs as a Node.js CLI (`pipeline.mjs`) outside the browser. It reuses the ES6 modules under `docs/js/pipeline/` which are designed to work in both Node.js and browser contexts.
+
+```
+szd-htr Page-JSON v0.2
+        |
+        v
++-- mods-to-header.js -----> teiHeader (deterministic)
+|       MODS fields -> titleStmt, sourceDesc/msDesc,
+|       profileDesc, encodingDesc, revisionDesc
+|
++-- page-to-body.js -------> flat element list
+|       regions -> head/p/table/note/fw
+|       no regions -> paragraphs by double-newline
+|
++-- div-structurer.js -----> nested div structure
+|       letters: single div
+|       others: split at each <head>
+|
++-- tei-assembler.js ------> complete TEI-XML
+|
++-- pipeline-validator.js -> validation report
+        tag matching + structure check + plaintext preservation
 ```
 
 ---
