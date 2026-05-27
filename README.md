@@ -25,6 +25,8 @@ Image --> coOCR HTR --> teiCrafter --> ediarum / GAMS / Publication
 
 teiCrafter bridges the gap between automated text recognition and manual deep encoding. It produces valid, schema-conformant TEI-XML that serves as a qualified starting point for further editorial work in environments such as ediarum or oXygen.
 
+teiCrafter has two paths. The **Generator path**, described in this README, transforms text into annotated TEI with LLM assistance. The **Editor path**, the current development focus, edits existing TEI editions schema-aware, with index management, StandOff apparatus, and project-specific authoring views; its first use case is the Wenzelsbibel (Codex 2759). See [knowledge/INDEX.md](knowledge/INDEX.md) for the full specification of both.
+
 ### Epistemic Foundation
 
 The design rests on the principle of **epistemic asymmetry** (adapted from coOCR HTR): LLMs generate plausible annotations but cannot reliably assess their own correctness. For TEI annotation, this problem is compounded because annotation decisions are often interpretive, schema conformance does not guarantee semantic accuracy, and authority file assignments require contextual knowledge. Human expertise is therefore integrated as a structurally necessary component, not an optional quality check.
@@ -224,7 +226,7 @@ Key findings from the 2025-2026 research landscape:
 - **Post-generation validation** outperforms constrained decoding alone (Schall and de Melo, RANLP 2025)
 - **Expert-LLM agreement** on domain-specific tasks reaches only 64-68% (IUI 2025), confirming the necessity of human review
 
-For the full research survey with citations, see [knowledge/OVERVIEW.md](knowledge/OVERVIEW.md).
+For positioning and the market scan, see [knowledge/project.md](knowledge/project.md).
 
 ---
 
@@ -243,14 +245,18 @@ For the full research survey with citations, see [knowledge/OVERVIEW.md](knowled
 
 ## Knowledge Base
 
-The project maintains a consolidated knowledge base in [`knowledge/`](knowledge/) comprising four documents:
+The project maintains a knowledge base in [`knowledge/`](knowledge/) following the Promptotyping Documents convention (function-separated, with frontmatter). Start at [INDEX.md](knowledge/INDEX.md).
 
-| Document | Content |
-|----------|---------|
-| [OVERVIEW.md](knowledge/OVERVIEW.md) | Vision, market analysis, research landscape, strategic positioning |
-| [ARCHITECTURE.md](knowledge/ARCHITECTURE.md) | System design, visual specification, workflow specification |
-| [REFERENCE.md](knowledge/REFERENCE.md) | Module API reference, implementation status, known issues |
-| [DEVELOPMENT.md](knowledge/DEVELOPMENT.md) | Decision log, user stories, development journal, Phase 3 concepts |
+| Document | Function |
+|----------|----------|
+| [INDEX.md](knowledge/INDEX.md) | Navigation, document map, glossary |
+| [project.md](knowledge/project.md) | Identity, positioning, success criteria |
+| [data.md](knowledge/data.md) | Formats, TEI test corpus, Wenzelsbibel material |
+| [specification.md](knowledge/specification.md) | Two paths, function cores, validation, project modules, decisions |
+| [user-stories.md](knowledge/user-stories.md) | Acceptance scenarios |
+| [architecture.md](knowledge/architecture.md) | Components, data flow, editor engine, status |
+| [design.md](knowledge/design.md) | Design system, UI components |
+| [journal.md](knowledge/journal.md) | Development log |
 
 ---
 
