@@ -50,35 +50,6 @@ The design rests on the principle of **epistemic asymmetry** (adapted from coOCR
 
 ---
 
-## Pipeline Mode (szd-htr Integration)
-
-teiCrafter includes a **pipeline mode** for automated batch conversion of OCR/HTR output to Minimal-TEI-XML. This mode is designed for the [szd-htr](https://github.com/chpollin/szd-htr-ocr-pipeline) project (Stefan Zweig Digital) but can process any Page-JSON v0.2 input.
-
-```bash
-# Single file
-node pipeline.mjs --page-json results/o_szd.100_page.json --output tei/
-
-# Batch (entire directory)
-node pipeline.mjs --batch results/lebensdokumente/ --output tei/ --recursive
-
-# Validate only (no file output)
-node pipeline.mjs --page-json input.json --validate-only --verbose
-```
-
-**Pipeline design principles:**
-
-| Aspect | Approach |
-|--------|----------|
-| teiHeader | 100% deterministic (MODS field mapping) |
-| Body structure | Deterministic (layout region types to TEI elements) |
-| div boundaries | Heuristic (heading-based), LLM fallback planned |
-| Entities | None -- Minimal-TEI by design |
-| Validation | Tag matching + structure check + character-level plaintext preservation |
-
-**Verified on 2,030 Stefan Zweig estate objects:** 0 XML parse errors, 100% character-level plaintext fidelity, 50 unit tests passing. Requires Node.js 18+.
-
----
-
 ## Quick Start
 
 1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/)
@@ -122,8 +93,7 @@ teiCrafter/
 │   ├── schemas/dtabf.json      DTABf schema profile (50+ elements)
 │   ├── data/demo/              Demo datasets with expected outputs
 │   └── tests/                  Browser unit tests (60 tests)
-├── tests/pipeline.test.mjs    Pipeline unit + integration tests (50 tests)
-└── Plan.md                    Pipeline mode implementation plan (Phase P)
+└── tests/pipeline.test.mjs    Pipeline unit + integration tests (50 tests)
 ```
 
 ### Technology Decisions
@@ -238,7 +208,6 @@ For positioning and the market scan, see [knowledge/project.md](knowledge/projec
 | Schliemann Account Books | Bookkeeping ontology, transaction annotation |
 | zbz-ocr-tei | DTA base format, historical print annotation |
 | DoCTA (CoReMA) | Medieval recipe annotation (SiCPAS, BeNASch schemas) |
-| Stefan Zweig Digital | Correspondence, manuscript annotation |
 | DIA-XAI | EQUALIS framework, expert-in-the-loop evaluation |
 
 ---
@@ -281,12 +250,6 @@ Open `http://localhost:8000` in a modern browser (ES6 module support required).
 
 **Browser tests** (interactive mode):
 Open `docs/tests/test-runner.html` in a browser. Covers XML tokenizer (19), document model (23), validator (18).
-
-**Pipeline tests** (Node.js):
-```bash
-node tests/pipeline.test.mjs
-```
-Covers utils (8), header mapping (10), body mapping (5), div structurer (6), assembler (2), validator (4), integration with real Page-JSON (15). Total: 50 tests.
 
 ---
 

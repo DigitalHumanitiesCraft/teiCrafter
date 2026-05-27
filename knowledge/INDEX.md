@@ -32,7 +32,7 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | [data](data.md) | What does the tool consume and produce, what TEI is the test material? | Formats confused, examples cited wrong | project |
 | [specification](specification.md) | What should the system do and why? (two paths, function cores, validation, project modules, decisions) | A requirement or decision was ignored or revised | project, data |
 | [user-stories](user-stories.md) | Who uses it, in which concrete scenarios? | A usage scenario was misunderstood | specification |
-| [architecture](architecture.md) | How is it built? (components, data flow, editor engine, pipeline mode, module status) | Wrong assumptions about components or data flow | specification |
+| [architecture](architecture.md) | How is it built? (components, data flow, editor engine, status) | Wrong assumptions about components or data flow | specification |
 | [design](design.md) | How does it look and behave aesthetically? | UI inconsistency, design-system break | specification |
 | [journal](journal.md) | How did we get here? (decision log, development journal) | Decision logic unclear, repeated dead ends | - |
 
@@ -49,7 +49,7 @@ Action layer lives in the repo root, not here: `CLAUDE.md` configures the coding
 | teiModeller | Supports the modelling decision itself ("how is this textual phenomenon represented in TEI?") and emits mapping rules | specification |
 | Categorical confidence | Three states (confident / review / problematic) instead of numeric scores; inherited from coOCR HTR | design, specification |
 | Plaintext comparison | Fundamental validation: output text nodes must match the input plaintext, else the transformation is flagged | specification |
-| Page-JSON v0.2 | Interchange format between SZD-HTR and teiCrafter; OCR text plus layout plus Dublin Core/MODS metadata per object | data |
+| Facsimile image import | Page images for the Editor's facsimile pane, loaded from a IIIF manifest or METS image references | data |
 | File System Access API | Lets the Editor path read and write large editions locally without a server backend | architecture |
 | Folio-segmenting load | Loading strategy that keeps editions beyond 10 MB (Wenzelsbibel: 78 MB) workable in the browser | architecture |
 

@@ -21,7 +21,7 @@ related: [specification, data, design]
 
 # teiCrafter Architecture
 
-How teiCrafter is built. Client-only, no backend, native ES6 modules without a bundler, deployed via GitHub Pages from `/docs`. All processing (LLM annotation, schema validation, document management) runs in the browser; external LLM APIs are called directly over HTTPS. This document covers the runtime architecture, the data model and editor engine, the pipeline mode, and the current implementation status; the visual layer is in [design](design.md).
+How teiCrafter is built. Client-only, no backend, native ES6 modules without a bundler, deployed via GitHub Pages from `/docs`. All processing (LLM annotation, schema validation, document management) runs in the browser; external LLM APIs are called directly over HTTPS. This document covers the runtime architecture, the data model and editor engine, and the current implementation status; the visual layer is in [design](design.md).
 
 ## Four-Layer Architecture
 
@@ -53,17 +53,10 @@ docs/
     source.js             Source panel
     services/             llm, transform, schema, validator, export, storage
     utils/                constants, dom
-    pipeline/             utils, mods-to-header, page-to-body, div-structurer,
-                          tei-assembler, pipeline-validator
-  schemas/dtabf.json      Schema profile (interactive plus pipeline)
+  schemas/dtabf.json      Schema profile (interactive annotation)
   data/demo/              Plaintext inputs, mapping templates, expected output
   tests/                  Browser test runner, unit tests, visual matrix
-pipeline.mjs              Node.js CLI for batch Page-JSON to TEI
 ```
-
-### Pipeline Mode
-
-A Node.js CLI (`pipeline.mjs`) outside the browser, reusing the `docs/js/pipeline/` ES6 modules (written to run in both Node and browser). Page-JSON v0.2 from SZD-HTR flows through `mods-to-header` (MODS fields to a deterministic teiHeader), `page-to-body` (regions to head/p/table/note/fw, or paragraphs by double newline when no regions), `div-structurer` (letters as a single div, others split at each `<head>`), `tei-assembler` (full TEI), `pipeline-validator` (tag matching, structure, plaintext preservation). Deterministic only, no LLM. The schema profile `dtabf.json` was extended for the pipeline with msDesc hierarchy, structural and header elements.
 
 ## Reactive Document Model
 
@@ -84,16 +77,20 @@ The editor must do syntax highlighting, gutter confidence markers, cursor coupli
 
 A custom XML tokenizer is required independently of that choice: a pure function, character-by-character state machine producing token types (element, attrName, attrValue, delimiter, comment, pi, namespace, entity, text) as `{type, value, start, end}`, reusable in editor, preview and tests. Confidence is mapped in a later layer that compares token positions against the model; per line the dominant category (problematic over review-worthy over confident over manual) drives the gutter marker.
 
+## Editor Path (specified, not yet built)
+
+The Editor-path components are specified in [specification](specification.md) but not yet implemented: local read and write via the File System Access API, a folio-segmenting load strategy for large editions, an in-memory `xml:id`/`corresp` index across files, a facsimile pane (OpenSeadragon) whose page images are loaded from a IIIF manifest or METS image references, form-based authoring views, and StandOff range editing. The production editor engine (CodeMirror 6) is the substrate for this path.
+
 ## Implementation Status
 
 The Generator-path prototype has all modules implemented; the gap is wiring, not implementation. Integrated end to end: Import, Mapping selection, the real Transform path (app.js to transform.js to llm.js with prompt assembly and response parsing), Validation levels 1 and 2, Export with options, LLM configuration. Module-ready but not wired into app.js: the editor (editor.js) and the interactive preview and review (preview.js), and with them gutter confidence, inline review and the diff view.
 
-Known critical gaps: the view modules are not integrated (the live preview is regex-based HTML, no review in the UI); the workflow has never been run against a real LLM (demo data is in place); few-shot examples are not yet in prompt assembly (the highest single quality lever). Important: app.js uses its own state holder rather than the reactive DocumentModel, so there is no undo/redo or observer sync in the UI yet; `computeLineConfidence()` is a stub. XPath validation and LLM-as-a-judge are Phase 3.
+Known critical gaps: the view modules are not integrated (the live preview is regex-based HTML, no review in the UI); the Generator workflow has never been run against a real LLM (demo data is in place); few-shot examples are not yet in prompt assembly (the highest single quality lever). Important: app.js uses its own state holder rather than the reactive DocumentModel, so there is no undo/redo or observer sync in the UI yet; `computeLineConfidence()` is a stub. XPath validation and LLM-as-a-judge are Phase 3. The Editor path is specification only.
 
-Tests: a browser-based runner, no Node dependency. Unit tests cover tokenizer, model and validator; the service and view modules (llm, transform, schema, export, app, editor, preview) are not yet unit-tested. The pipeline mode has its own Node integration checks.
+Tests: a browser-based runner, no Node dependency. Unit tests cover tokenizer, model and validator; the service and view modules (llm, transform, schema, export, app, editor, preview) are not yet unit-tested.
 
 ## Related
 
 - [specification](specification.md) for what the components must do
-- [data](data.md) for the formats flowing through the pipeline
+- [data](data.md) for the formats the editor and generator consume
 - [design](design.md) for the visual and interaction layer

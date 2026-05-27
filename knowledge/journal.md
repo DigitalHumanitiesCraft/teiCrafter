@@ -28,11 +28,7 @@ Chronological log of development sessions, most recent first. A condensed narrat
 - Returned the structure toward the ancestor coOCR HTR (function separation plus INDEX plus glossary), which the four-bucket split had regressed from.
 - Baked in project decisions sharpened with the author: English knowledge docs, Editor path as near-term focus (Wenzelsbibel-driven), knowledge before code, teiCrafter as an independent tool (not a module of EditionCrafter).
 - Pulled design and UI lessons from sibling projects into `design.md`: expert-in-the-loop philosophy and categorical confidence from coOCR, single-source design tokens from the zbz Hersch system, editor-grade UI patterns (facsimile synopsis with zone overlay, tip system, label-consistency rule, print mode) from the SuGW edition frontend. Identified TEI test material across repositories in `data.md` (Wenzelsbibel codex, mhdbdb, notker, zbz final TEI).
-
-## 2026-04-03: Pipeline mode (Phase P)
-
-- Trigger: SZD-HTR produces Page-JSON v0.2 with transcriptions and layout for the Stefan Zweig estate; needed conversion to minimal TEI (rich header, simple body, no entities).
-- Implemented six pipeline modules under `docs/js/pipeline/` and a Node.js CLI `pipeline.mjs`. Deterministic mapping only, LLM reserved for div-boundary detection in complex documents. Page-JSON fallback before METS (METS not yet implemented in SZD-HTR). Letters wrapped as a single div. Extended `dtabf.json` with the msDesc hierarchy and structural/header elements. Integration tests: 3 of 3 Page-JSON files pass, plaintext preservation 99 to 100 percent.
+- Retired the SZD-HTR and METS pipeline-mode content as legacy, out of scope for the current project. Added facsimile image import via IIIF manifest or METS image references as an Editor-path capability, and elaborated the Editor-path specification and user stories (local editing, indices with manual authority IDs, StandOff range-select, form-based authoring views, read-only image annotation).
 
 ## 2026-02-18: Demo data, reference, strategy (Sessions 10 to 16)
 

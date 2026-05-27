@@ -28,11 +28,6 @@ Function-separated per the Promptotyping convention. Read `INDEX.md` first; it c
 ## Design as Value Source
 Before generating or changing UI, read `knowledge/design.md`. Its principles are binding: the AI assists and the human decides (expert-in-the-loop); categorical confidence, not numeric; AI-generated content is always marked in the violet token family; design tokens (`--tc-*`) are the single source of truth, no raw hex in components; label consistency is a rule, not a freedom.
 
-## Pipeline Mode
-- Node.js CLI at `pipeline.mjs`, modules under `docs/js/pipeline/` (pure ES6, Node and browser).
-- Input: SZD-HTR Page-JSON v0.2 (`--page-json`) or METS (`--mets`, planned). Output: minimal TEI-XML (rich header, simple body, no entities). Deterministic only, no LLM.
-- Tests: `node tests/pipeline.test.mjs`. Plan: `Plan.md` (Phase P).
-
 ## Knowledge Maintenance
 At the end of a session with code changes, update the affected knowledge documents:
 1. `architecture.md` for component, data-flow, or implementation-status changes.

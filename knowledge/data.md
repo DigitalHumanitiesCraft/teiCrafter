@@ -22,6 +22,10 @@ knowledge-sources:
       uri: https://tei-c.org/guidelines/p5/
     - label: TEI All RelaxNG
       uri: https://tei-c.org/release/xml/tei/custom/schema/relaxng/tei_all.rng
+    - label: IIIF Presentation API
+      uri: https://iiif.io/api/presentation/3.0/
+    - label: METS
+      uri: https://www.loc.gov/standards/mets/
 related: [project, specification, design]
 ---
 
@@ -37,10 +41,12 @@ The tool produces one thing: valid, schema-conformant, semantically annotated TE
 |-------|------|-------|
 | Plaintext | Generator (primary) | The original FORGE 2023 case: unstructured text into annotated TEI |
 | PAGE-XML | Generator | Layout-annotated transcription from coOCR HTR or other HTR systems |
-| Page-JSON v0.2 | Pipeline mode | Interchange format from SZD-HTR; OCR text plus layout plus Dublin Core/MODS metadata per object |
 | Existing TEI edition | Editor | Schema-aware editing of an already structured edition; the Editor-path case |
+| Facsimile images (IIIF manifest or METS image references) | Editor | Page images loaded for the facsimile pane, paired with the edition's `facsimile`/`zone` structure |
 
-Pipeline mode (the Node CLI `pipeline.mjs`) takes Page-JSON v0.2 (or METS, planned) and emits minimal TEI-XML with a rich header and a simple body without entity annotation, as a qualified starting point for further editorial work.
+## Facsimile Images
+
+The Editor path displays page images in a deep-zoom facsimile pane. Images are imported, not stored in the repository: the tool resolves them from a **IIIF manifest** (Presentation API) or from the image references inside a **METS file**, and aligns them with the `facsimile` and `zone` markup of the edition for bidirectional text-image navigation. METS here is an image source for display only, not a TEI-conversion input.
 
 ## What This Document Does Not Cover
 
@@ -56,10 +62,9 @@ Good TEI is available across sibling repositories and is used as read-engine, va
 | `mhdbdb-tei-only` | ~690 TEI files | Middle High German, closest language domain; Editor read engine and autocompletion |
 | `notker-edition` | medieval German edition | Domain-near editor material |
 | `zbz-ocr-tei` final TEI | 285 validated files | Clean reference TEI; Generator output and schema validation |
-| `szd-htr` / `SZD` plus the three SZD mapping templates already in `data/demo/mappings/` | correspondence and manuscript | Generator path |
 | `diged-neolat` | small | Variety (neo-Latin) |
 
-Fixtures principle: a small curated set lives in `data/`, not the full corpora. One Wenzelsbibel folio with zones, a few `mhdbdb` and `notker` pieces, a few `zbz` final-TEI documents. The Editor path must handle a 78 MB edition, but the committed fixtures stay a representative slice.
+Fixtures principle: a small curated set lives in `data/`, not the full corpora. Because the real Wenzelsbibel codex is third-party material (Austrian National Library) with an unresolved licence for redistribution, the committed Wenzelsbibel fixture is a **synthetic minimal TEI** that mirrors the structure (`w`/`lb`/`l`, `facsimile`/`zone`, `standOff`) without real ONB data. The Editor path must handle a 78 MB edition, but the committed fixtures stay a representative slice.
 
 ## Wenzelsbibel Material Profile
 
@@ -73,10 +78,10 @@ These figures are structural facts of the source material, not processing state.
 
 ## Negative Definition
 
-teiCrafter does not host or persist data on a server (client-only, File System Access API for local files). It does not perform character recognition (that is the upstream coOCR HTR / SZD-HTR stage). It does not normalise or reconcile authority data against external APIs as a built-in pipeline; entity reconciliation is a downstream or optional concern.
+teiCrafter does not host or persist data on a server (client-only, File System Access API for local files). It does not perform character recognition (that is the upstream coOCR HTR stage). It does not reconcile authority data against external APIs automatically; identifiers are entered manually in the Editor path, reconciliation is a downstream or optional concern.
 
 ## Related
 
 - [project](project.md) for where the data flow sits in the pipeline
-- [specification](specification.md) for the validation levels applied to the produced TEI
+- [specification](specification.md) for the validation levels and capabilities applied to the produced TEI
 - [design](design.md) for how material is presented in the editor

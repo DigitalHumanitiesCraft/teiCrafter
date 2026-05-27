@@ -31,12 +31,12 @@ It fills the gap between automated text recognition and manual deep encoding: th
 
 ## What It Does Not Do
 
-It is not a replacement for oXygen or ediarum, but a pre-stage. Those environments assume modelling decisions are already made; teiCrafter supports that decision process and emits TEI-XML that imports into them. It does not perform character recognition (that is upstream, coOCR HTR / SZD-HTR). It does not host or persist data on a server. It is developed as an independent browser tool, not as a module of any harness.
+It is not a replacement for oXygen or ediarum, but a pre-stage. Those environments assume modelling decisions are already made; teiCrafter supports that decision process and emits TEI-XML that imports into them. It does not perform character recognition (that is upstream, coOCR HTR). It does not host or persist data on a server. It is developed as an independent browser tool, not as a module of any harness.
 
 ## Positioning
 
 ```
-Image -> coOCR HTR / SZD-HTR -> teiCrafter -> ediarum / GAMS / publication
+Image -> coOCR HTR -> teiCrafter -> ediarum / GAMS / publication
          (transcription)        (annotation &  (deep encoding &
                                  modelling)     publication)
 ```
@@ -59,7 +59,7 @@ Adapted from coOCR HTR.
 
 ## Synergy Projects
 
-teiCrafter is format-driven and open to arbitrary TEI. Concrete application contexts: the Wenzelsbibel (Editor path, Middle High German Bible codex), Schliemann ledgers (Generator, Bookkeeping Ontology), zbz-ocr-tei (Generator, historical prints), Stefan Zweig Digital (Generator, correspondence; three SZD mapping templates configured). Methodically connected to [[coOCR HTR]] (upstream, shared principles), [[DIA-XAI]] (expert-in-the-loop evaluation) and [[Promptotyping MOC|Promptotyping]] (development method).
+teiCrafter is format-driven and open to arbitrary TEI. Concrete application contexts: the Wenzelsbibel (Editor path, Middle High German Bible codex), Schliemann ledgers (Generator, Bookkeeping Ontology), zbz-ocr-tei (Generator, historical prints). Methodically connected to [[coOCR HTR]] (upstream, shared principles), [[DIA-XAI]] (expert-in-the-loop evaluation) and [[Promptotyping MOC|Promptotyping]] (development method).
 
 ## Related
 

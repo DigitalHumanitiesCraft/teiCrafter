@@ -74,7 +74,7 @@ Filter and status bars stay persistent while content scrolls. Breadcrumb navigat
 | Preview | Rendered annotated text, annotation types and confidence categories colour-coded | coOCR |
 | Validation panel | Aggregated schema errors, XPath-rule violations and plaintext deviations; each error clickable, jumps to the source location | coOCR |
 | Review panel | LLM-as-a-judge comments (violet-marked) with accept / reject / correct actions, filterable by confidence and annotation type; never stands alone, always beside rule-based checks | coOCR |
-| Facsimile pane | OpenSeadragon deep-zoom with zone overlay, pan, rotate, 1:1 reset, multi-page navigation, bidirectional text-facsimile navigation | SuGW facsimile synopsis |
+| Facsimile pane | OpenSeadragon deep-zoom with zone overlay, pan, rotate, multi-page navigation, bidirectional text-facsimile navigation; images loaded from a IIIF manifest or METS image references | SuGW facsimile synopsis |
 | Authoring-view form | Form-based surface per recurring annotation type (diplomatic transcription, image annotation, Bible-verse), configured by the project module | teiCrafter / Wenzelsbibel |
 | Index panel | Person / place / project-specific indices as a separate data layer with cross-document lookup | teiCrafter |
 

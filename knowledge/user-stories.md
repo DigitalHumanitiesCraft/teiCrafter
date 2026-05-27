@@ -21,7 +21,7 @@ related: [specification, architecture, design]
 
 # teiCrafter User Stories
 
-Acceptance scenarios for the Generator-path prototype (Phase 2) and selected Phase 3 stories, in "As a ... I want ... so that ..." form. Each is manually verifiable in the browser without an automated framework; LLM stories need a valid API key. The Editor-path stories (Wenzelsbibel) are specified separately in the editorial guidelines and grow with that build.
+Acceptance scenarios for the Generator-path prototype (Phase 2) and selected Phase 3 stories, in "As a ... I want ... so that ..." form. Each is manually verifiable in the browser without an automated framework; LLM stories need a valid API key. The Editor-path stories (ED.x below) are specified for the Wenzelsbibel use case; the Editor path is not yet built.
 
 Status: **Integrated** (module implemented and wired into app.js), **Module ready** (implemented, not yet wired), **Open**, **Phase 3**.
 
@@ -79,9 +79,21 @@ Status: **Integrated** (module implemented and wired into app.js), **Module read
 - **M.1** As an editor I want to ask a modelling question ("how do I annotate currency amounts?") and get a reasoned proposal with element, attributes and example. *Phase 3.*
 - **M.2** As an editor I want to adopt an accepted proposal as a mapping rule so that future transforms use it. *Phase 3.*
 
+## Editor Path (Wenzelsbibel)
+
+Specified for the current focus, not yet built. No LLM required.
+
+- **ED.1** As an editor I want to open an existing TEI edition from my local file system and read and write it in place so that I work without a server; large editions load folio-segmented. *Specified.*
+- **ED.2** As an editor I want to load page images from a IIIF manifest or a METS file so that I see the facsimile beside the text, with zoom, pan and bidirectional text-zone navigation. *Specified.*
+- **ED.3** As an editor I want to create and edit person, place and people index entries and link an annotation by picking from the index so that entities stay consistent across documents; authority identifiers (GND, GeoNames, ICONCLASS) are entered manually. *Specified.*
+- **ED.4** As an editor I want to select a word range in the reading text and attach an editorial-apparatus or comprehension-commentary note so that the tool writes the anchor and the StandOff entry for me. *Specified.*
+- **ED.5** As an editor I want form-based authoring views (diplomatic transcription, Bible-verse) that read and write the underlying TEI so that routine annotation is not raw XML. *Specified.*
+- **ED.6** As an editor I want existing image annotations (miniatures with artist and ICONCLASS, linked to a text range) rendered on the facsimile and navigable so that I can relate image and text; editing those attributions is out of scope for now. *Specified.*
+- **ED.7** As an editor I want live schema validation against `tei_all.rng` plus the project Schematron so that I catch structural errors while editing. *Specified.*
+
 ## Status Summary
 
-Of 21 prototype stories, 10 are fully integrated (Import 1.1 to 1.3, Mapping 2.1, Transform 3.1, Validation 5.1 to 5.2, Export 6.1, LLM config Q.1 to Q.2) and 11 are module-ready but not wired (Editor Foundation 0.1 to 0.4, Review 4.1 to 4.3, Transform 3.2 to 3.3, Export 6.2), because the view modules (editor.js, preview.js) are not yet imported into app.js. The one open prototype story is the end-to-end test. The critical gap is wiring, not missing implementation; see [architecture](architecture.md).
+Of 21 prototype stories, 10 are fully integrated (Import 1.1 to 1.3, Mapping 2.1, Transform 3.1, Validation 5.1 to 5.2, Export 6.1, LLM config Q.1 to Q.2) and 11 are module-ready but not wired (Editor Foundation 0.1 to 0.4, Review 4.1 to 4.3, Transform 3.2 to 3.3, Export 6.2), because the view modules (editor.js, preview.js) are not yet imported into app.js. The one open prototype story is the end-to-end test. The critical gap is wiring, not missing implementation; see [architecture](architecture.md). The Editor-path stories (ED.x) are specified, not yet built.
 
 ## Related
 
