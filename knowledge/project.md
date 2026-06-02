@@ -12,54 +12,63 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: active
 created: 2026-02-05
-updated: 2026-05-27
+updated: 2026-05-30
 language: en
-version: 0.3
+version: 0.4
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal]
 ---
 
 # teiCrafter Project Overview
 
-teiCrafter is a browser-based TEI working environment for digital scholarly editions, with two equal paths. The Generator path transforms plaintext or layout-annotated transcriptions into semantically annotated TEI-XML, LLM-assisted. The Editor path edits existing TEI editions schema-aware, with index management, StandOff apparatus and project-specific authoring views; LLM support is optional and switchable. The knowledge base is an Obsidian-style vault of distilled TEI knowledge, schema customisations and editorial conventions. The application runs entirely in the browser, client-only, no backend.
+teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML. You open an existing TEI edition from your local disk, read it folio by folio, correct it directly in the rendered text, and save it back, byte-for-byte unchanged except where you edited. An optional LLM on-ramp drafts an initial TEI from plaintext and drops it into the same editor for verification. One workbench, two ways in. The application runs entirely in the browser, client-only, no backend, no build step.
+
+## What It Is
+
+The core is a **generic, offset-true TEI reader**. The raw TEI string is canonical; every edit is an offset splice on that string, so untouched markup is preserved exactly. This is proven, not aspirational: every real TEI file tested round-trips byte-identically (285 Jeanne Hersch editions, 4 Stefan Zweig catalog files, the synthetic Wenzelsbibel tiers). The editor reads any TEI and lets the human correct it; it does not impose a project-specific schema or shape on the input.
+
+The granularity emerges from the document, it is not configured. If the TEI carries word tokens (`<w xml:id>`), editing is word by word (the Wenzelsbibel case). If it carries only line milestones (`<lb/>` inside `<p>`), editing is line by line (the Jeanne Hersch case). Same engine, same lossless splice.
 
 ## Why It Exists
 
-The epistemological ground is epistemic asymmetry, inherited from coOCR HTR: LLMs produce plausible annotations but cannot reliably judge whether they are correct. For TEI annotation the problem is sharper, because annotation decisions are often interpretive, schema conformance does not guarantee semantic correctness, and authority-data assignment needs context knowledge. teiCrafter therefore positions human expertise not as optional quality control but as a structurally necessary component. A market scan (Session 14) found no existing tool that combines TEI annotation, LLM assistance and human review; teiCrafter is first mover in that intersection.
+It fills the gap between automated text recognition and deep editorial encoding: a place to correct and refine pipeline-produced TEI comfortably in a browser, without an XML editor on every collaborator's machine and without a server. Editing is deterministic and human-driven; nothing the human did not type is changed.
 
-It fills the gap between automated text recognition and manual deep encoding: the tool produces valid, schema-conformant TEI-XML as a qualified starting point for further editorial work.
+The LLM on-ramp keeps the original FORGE 2023 idea (plaintext to TEI via a model) but subordinates it to the editor: a model can produce a plausible first draft, but it cannot judge its own correctness. This is the epistemic-asymmetry stance inherited from coOCR HTR. So LLM output is marked as machine-generated (violet) and unreviewed, and the human verifies it in the same deterministic editor. The model assists; the human decides.
 
 ## What It Does Not Do
 
-It is not a replacement for oXygen or ediarum, but a pre-stage. Those environments assume modelling decisions are already made; teiCrafter supports that decision process and emits TEI-XML that imports into them. It does not perform character recognition (that is upstream, coOCR HTR). It does not host or persist data on a server. It is developed as an independent browser tool, not as a module of any harness.
+It is not a replacement for oXygen or ediarum. Those assume modelling decisions are made; teiCrafter is a correction-and-refinement surface and a drafting on-ramp whose output imports into them. It does not perform character recognition (that is upstream, coOCR HTR and other HTR pipelines). It does not host or persist data on a server. It is an independent browser tool, not a module of any harness.
 
 ## Positioning
 
 ```
-Image -> coOCR HTR -> teiCrafter -> ediarum / GAMS / publication
-         (transcription)        (annotation &  (deep encoding &
-                                 modelling)     publication)
+Image -> HTR pipeline -> teiCrafter -> ediarum / GAMS / publication
+         (transcription)  (correct, refine,  (deep encoding &
+                           draft via LLM)      publication)
 ```
 
-teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream tool, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter and shares vocabulary and method ground with it, but the two are developed separately: teiCrafter is a tool for TEI creation and editing, EditionCrafter is an edition undertaking reaching from image or text to a finished edition. The Generator path originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023, conversion of unstructured text to TEI-XML via GPT).
+teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream tool, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed separately. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
 
-## Current Focus
+## Real Cases
 
-The Editor path is the near-term build focus, driven by its first real use case, the Wenzelsbibel (Codex 2759, project start autumn 2026, no LLM in the annotation process). See [data](data.md) for the material profile and the vault documents [[Project Overview Wenzelsbibel]] and [[TEI-Struktur Wenzelsbibel]]. The Generator path stays feature-complete and is consolidated incrementally.
+teiCrafter is format-driven and open to any TEI. Three concrete pipelines drive it and serve as the proving ground (see [data](data.md)):
+
+| Case | Pipeline | TEI shape | Editor granularity |
+|------|----------|-----------|--------------------|
+| Wenzelsbibel (Codex 2759) | manuscript edition | word-level `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word |
+| Jeanne Hersch | zbz-ocr-tei | line-level `<p>` + `<lb facs>`, real zone coordinates | line |
+| Stefan Zweig | szd-htr | catalog TEI + Page-JSON (needs page-json to TEI before editing) | (line, after conversion) |
+
+The Wenzelsbibel is the reference manuscript case. Because the real codex is third-party material (Austrian National Library) with an unresolved redistribution licence, all committed Wenzelsbibel material is synthetic; real third-party files stay out of version control.
 
 ## Success Criteria
 
-Adapted from coOCR HTR.
-
 | Criterion | Meaning | Operationalisation |
 |-----------|---------|--------------------|
-| Self-explanatory | Usable without external instruction | Workflow stepper, contextual hints, progressive disclosure |
-| Complete workflow | Import to annotation to validation to export | Plaintext or PAGE-XML in, valid TEI-XML out |
-| Connectivity | Output usable downstream | Export compatible with ediarum, oXygen, GAMS |
-
-## Synergy Projects
-
-teiCrafter is format-driven and open to arbitrary TEI. Concrete application contexts: the Wenzelsbibel (Editor path, Middle High German Bible codex), Schliemann ledgers (Generator, Bookkeeping Ontology), zbz-ocr-tei (Generator, historical prints). Methodically connected to [[coOCR HTR]] (upstream, shared principles), [[DIA-XAI]] (expert-in-the-loop evaluation) and [[Promptotyping MOC|Promptotyping]] (development method).
+| Lossless | Save changes nothing the human did not edit | Byte-identical round-trip on every real file (proven in the harness) |
+| Universal | Reads arbitrary TEI without per-project code | One engine handles word-level and line-level editions; granularity emerges |
+| Self-explanatory | Usable without external instruction | Open a file, click a word or line, correct it, save |
+| Connective | Output usable downstream | Edited TEI imports into ediarum, oXygen, GAMS unchanged in structure |
 
 ## Related
 

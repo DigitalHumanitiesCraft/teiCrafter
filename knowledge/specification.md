@@ -12,103 +12,83 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: active
 created: 2026-02-05
-updated: 2026-05-27
+updated: 2026-05-30
 language: en
-version: 0.3
+version: 0.4
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, user-stories, architecture]
 ---
 
 # teiCrafter Specification
 
-What the system does and why. Two paths, the function cores of each, five validation levels, the project-module mechanism, and the decisions and open questions that shape them. The near-term focus is the Editor path; its capabilities are specified in their own section. Concrete component behaviour is in [architecture](architecture.md); usage scenarios are in [user-stories](user-stories.md).
+What the system does and why. The core mechanism (a generic lossless reader), the editor capabilities, the LLM on-ramp, the validation levels, and the decisions and open questions. Component behaviour is in [architecture](architecture.md); scenarios are in [user-stories](user-stories.md).
 
-## Two Paths
+## Core Mechanism: a Generic Lossless Reader
 
-**Generator path (LLM-centred).** Modular transformation of plaintext, PAGE-XML or basic TEI into semantically annotated TEI-XML. Three-layer prompt assembly, plaintext comparison as fundamental validation, multi-provider. The original teiCrafter line from the FORGE 2023 work. Prototype feature-complete, consolidated incrementally.
+The central requirement, from which the rest follows: **read arbitrary TEI and make it editable without losing a byte that the human did not change.** The raw TEI string is canonical; edits are offset splices on it; serialization is the raw string. No project-specific profile is configured; the editable granularity (word vs line) emerges from whether the document carries `<w>` tokens. This is verified on every real file in the corpus (byte-identical round-trip), see [testing](testing.md).
 
-**Editor path (local-centred), current focus.** Browser editing of existing TEI editions. Schema awareness with a configurable TEI schema plus project-specific Schematron. Project-specific authoring views, index management, StandOff apparatus editing, and a facsimile pane. Local operation via the File System Access API, so even large editions (tens of MB; Wenzelsbibel 78 MB) stay workable without a server. LLM optional and switchable off. First use case: the Wenzelsbibel.
+This replaces the earlier "two equal paths" framing. teiCrafter is one editor; the LLM is an on-ramp that feeds it.
 
-## Generator Path: Function Cores
+## Editor Capabilities
 
-### Transformation (plaintext to TEI)
+### Open and navigate any TEI
+Open a TEI edition from the local file system (File System Access API, with a file-input fallback), or load the served synthetic demo. Split into folios by `<pb>` and navigate folio by folio. The reading text renders cell by cell (word or line).
 
-The prompt is assembled at runtime from three layers:
+### Edit losslessly in place
+Click a cell to correct its text inline. The edit is a single offset splice; only that text run changes, all markup and all other text are byte-preserved. The model re-parses so offsets stay correct.
 
-- **Base layer (generic):** well-formedness, strict text fidelity, uncertainty handling, output format.
-- **Context layer (source-specific):** dating, source type, languages, scribe, collection, project context.
-- **Mapping layer (project-specific):** a Markdown list of mapping rules the user edits in a text field; templates per source type are shipped. Few-shot examples (two to three annotated examples per source type) are the highest-leverage quality lever.
+### Facsimile with zone linking
+A facsimile pane shows the folio's `<zone>` rectangles. Hovering a line highlights its zone and vice versa: the link is the line's real `@facs` zone id when present (Hersch), or positional otherwise (synthetic). Currently a placeholder rendering of real coordinates; real images are future work.
 
-### teiModeller
+### Hybrid validation
+Live, in the browser: well-formedness plus structural integrity against the load-time baseline (no word ids lost, element counts unchanged), which is the lossless evidence. On demand, offline: TEI All RelaxNG plus project Schematron via the harness.
 
-Supports the modelling decision itself: "how is this textual phenomenon represented in TEI?" Output is mapping rules that feed the mapping layer. Knowledge base is not RAG but a collection of distilled, LLM-optimised TEI knowledge modules, activated on demand (for correspondence: `namesdates`, `header`, `core`, `correspDesc`). Produced by a three-stage distillation pipeline (scraping, distillation, validation) over the TEI P5 Guidelines; pilot module `namesdates`. Planned for the consolidation phase, not yet built.
+### Save
+Save in place when a File System handle exists (Chromium), else download. Nothing is written until the human saves or downloads.
 
-## Editor Path: Capabilities
+## LLM On-Ramp
 
-The Editor path edits an existing, structured TEI edition in the browser, with the source editor as the substrate and task-specific surfaces on top. No LLM is required (the Wenzelsbibel mandate excludes LLM from the annotation process). Five capability areas.
+"New from text (LLM)" accepts plaintext, a source type (which selects default mapping rules), a provider and model, and an API key (held in memory only). It builds a minimal annotate prompt, calls the provider, extracts the XML, and opens the draft in the same editor, flagged as machine-generated and unreviewed (violet banner). The human then verifies and corrects it deterministically. The model assists; the human decides.
 
-### Open and navigate a local edition
+Six providers (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama). Keys never persisted; `fetch` uses `credentials: 'omit'`.
 
-Open a TEI edition from the local file system (File System Access API), read and write in place. A folio-segmenting load strategy keeps editions beyond 10 MB workable. An in-memory index of `xml:id` and `corresp` values spans multiple files for cross-document lookup. The source view offers syntax highlighting and schema-driven autocompletion restricted to the project module's elements.
+## Validation Levels
 
-### Facsimile and image import
+Graduated levels rather than binary valid/invalid:
 
-A facsimile pane displays page images with deep zoom, pan and rotate (OpenSeadragon), navigable bidirectionally with the text. Images are loaded as an import from a **IIIF manifest** or from a **METS file's image references**; the tool resolves the image sources and pairs them with the edition's `facsimile`/`zone` structure. This is the image-display capability, distinct from any batch conversion.
+| Level | Type | Where | Purpose |
+|-------|------|-------|---------|
+| L1 | Text/word fidelity | harness; browser integrity check | No transcription content lost (must always pass) |
+| L2 | Schema validity | harness (RelaxNG + Schematron) | Structural correctness; reported as new-errors-vs-input diff, non-gating |
+| L3 | Structural invariants | harness; browser counts | Element counts, namespace, pointer integrity preserved |
 
-### Index management
-
-Persons, places, and project-specific indices (for the Wenzelsbibel: peoples) are a separate, editable data layer. The editor creates and edits index entries, links an annotation to an entry by picking from the index, and resolves entries across documents. Authority-data identifiers (GND, GeoNames, ICONCLASS) are entered manually per entry; there is no automatic reconciliation against external APIs and no LLM suggestion in this path.
-
-### StandOff apparatus and commentary
-
-The core editing operation. The editor selects a word range in the reading text, chooses a note type (editorial apparatus or comprehension commentary), and the tool creates the anchor or range and writes the corresponding `standOff` entry. This matches the word-level (`<w>`) granularity of editions like the Wenzelsbibel. Existing apparatus entries are editable in place.
-
-### Authoring views
-
-Recurring annotation types are edited through form-based surfaces that read and write the underlying TEI, so routine annotation does not happen in raw XML. Each project module defines its views; for the Wenzelsbibel: diplomatic transcription and Bible-verse. The image-annotation layer (miniatures, artist attribution, ICONCLASS, `corresp` ranges into the text) is rendered read-only and navigable for now; editing those attributions is out of scope.
-
-## Validation and Review
-
-Five graduated levels rather than binary valid/invalid, applied across both paths:
-
-| Level | Type | Automatable | Purpose |
-|-------|------|-------------|---------|
-| 1 | Plaintext comparison | Yes | Text fidelity (must always pass) |
-| 2 | Schema validation | Yes | Structural correctness (client-side, RelaxNG/ODD plus project Schematron) |
-| 3 | XPath rules | Yes | Project-specific constraints |
-| 4 | LLM-as-a-judge | Semi | Semantic plausibility, never standing alone |
-| 5 | Expert-in-the-loop | No | Scholarly correctness |
-
-In the Editor path, schema validation runs against `tei_all.rng` plus the project-specific Schematron and gives live feedback while editing. Levels 1, 2 and the review workflow are integrated in the Generator prototype; levels 3 and 4 are planned.
-
-### Categorical Confidence
-
-Four categories instead of numeric scores: confident, review-worthy, problematic, and manual (for human-created annotations without an LLM score). Triple-coded in the UI (colour plus icon plus position), see [design](design.md).
-
-## Project Modules
-
-teiCrafter is open to arbitrary TEI; adaptation to a concrete edition runs through a project module, a Markdown document carrying the project's editorial guidelines. The module configures: source-editor autocompletion (only module-defined elements), the available authoring views and their fields, the indices as a data layer, the toolbar buttons, and the project-specific Schematron. The Wenzelsbibel module (Bible edition, word-level granularity, image annotations, artist attributions, Bible-verse reference, person/place/people indices) is the reference case and template for further modules; see [[Editorial Guidelines Wenzelsbibel]].
-
-## Workflow
-
-The Generator path runs a six-stage stepper: Import, Mapping, Transform, Review, Validate, Export. Import accepts plaintext, existing TEI, and PAGE-XML; malformed XML is rejected with a comprehensible message. Export produces TEI-XML with confidence metadata stripped, and warns on unreviewed annotations. The Editor path is not a linear stepper but a continuous editing surface (open, annotate or apparatus, validate, save). Detailed acceptance criteria are in [user-stories](user-stories.md).
+The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is always reported but does not gate: on a round-trip it counts only new errors against the input, so a document's pre-existing TEI All deviations are not held against it. Levels 4 (LLM-as-a-judge) and 5 (expert-in-the-loop) remain conceptual; the human verifying LLM-on-ramp output in the editor is the operative form of L5.
 
 ## Key Decisions
 
-- Editor engine: overlay technique for the prototype, CodeMirror 6 for production (Monaco too large, ContentEditable too fragile). Overlay spike passed with no scroll drift at 500 lines.
-- Prompt architecture: three layers (base, context, mapping).
-- Six LLM providers (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama); keys held in memory only.
-- Development strategy: walking-skeleton-first, validate the end-to-end workflow with a real LLM transform before polishing architecture; the review workflow is the differentiator.
-- Image import for the facsimile pane comes from IIIF or METS image references; no LLM and no server.
-- No automatic authority-data reconciliation in the Editor path; identifiers are entered manually.
+- **Editor first.** teiCrafter is a generic lossless TEI editor; the LLM is an optional on-ramp into it. The prior five-step Generator stepper was removed (2026-05-30); its code is in git history.
+- **Offset-splice core, not the DOM.** `DOMParser`/`XMLSerializer` drift; a custom offset-true tokenizer keeps round-trip byte-identical.
+- **Granularity emerges.** Word-level if `<w>` present, else line-level; no per-project branching.
+- **Hybrid validation.** Browser-light live, harness-heavy offline (Node + Python/lxml).
+- **LLM output is marked.** Generated TEI is violet and unreviewed; keys in memory only.
+- **Licence boundary.** Real third-party TEI never committed; synthetic twins only.
+
+## Future (specified, not built)
+
+- Real facsimile images via IIIF manifest or METS image references, deep zoom (OpenSeadragon).
+- StandOff apparatus editor: select a word/line range, choose a note type, write the anchor and the `standOff` entry.
+- Index management: person/place/project indices as a data layer, manual authority ids (GND, GeoNames, ICONCLASS), no automatic reconciliation.
+- Project modules: a Markdown document configuring autocompletion, authoring views, indices and Schematron per edition.
+- Page-JSON to minimal-TEI conversion for pipelines (SZD) that lack a transcription TEI.
+- Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.
+- A CodeMirror source view for raw-XML editing alongside the rendered view.
 
 ## Open Questions
 
-- DocumentModel vs AppState: the Generator UI currently uses a simple AppState, not the reactive DocumentModel; refactor only if the skeleton proves undo/redo or observer sync are actually missing.
-- Diff presentation after transform (annotated text vs XML diff vs side-by-side); source panel permanent vs collapsible; cursor coupling bidirectional vs unidirectional. All decided by prototyping with real documents.
-- Editor path: anchor mechanism for StandOff ranges (own `<anchor>` elements vs `range()` pointers), to be verified against the concrete edition.
-- teiModeller knowledge-module granularity (pilot pending); nested-annotation accept/reject behaviour.
+- StandOff anchor mechanism (own `<anchor>` vs `range()` pointers), to verify against the concrete edition.
+- Whether to add `<w>` tokenisation to line-level editions (Hersch) to enable word-level editing, or stay line-level.
+- Facsimile image source resolution (IIIF vs METS) per pipeline.
 
 ## Related
 
-- [project](project.md) for positioning, [data](data.md) for formats and material, [user-stories](user-stories.md) for acceptance criteria, [architecture](architecture.md) for implementation
+- [project](project.md) for positioning, [data](data.md) for formats and corpus, [user-stories](user-stories.md) for acceptance criteria, [architecture](architecture.md) for implementation, [testing](testing.md) for the harness

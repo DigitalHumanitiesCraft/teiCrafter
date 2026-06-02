@@ -12,44 +12,48 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-05-27
+updated: 2026-05-30
 language: en
-version: 0.3
-related: [project, specification, architecture]
+version: 0.4
+related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
-Chronological log of development sessions, most recent first. A condensed narrative of how the tool and its decisions came about; individual commits live in the Git history.
+Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
-## 2026-05-27: Knowledge base refactor (this document set)
+## 2026-05-30: Editor-first consolidation and the generic reader
 
-- Reactivated the knowledge base from the dormant April state. Replaced the four consolidated documents (OVERVIEW, ARCHITECTURE, DEVELOPMENT, REFERENCE) with a function-separated set following the Promptotyping Documents convention: INDEX, project, data, specification, user-stories, architecture, design, journal, each with frontmatter.
-- Returned the structure toward the ancestor coOCR HTR (function separation plus INDEX plus glossary), which the four-bucket split had regressed from.
-- Baked in project decisions sharpened with the author: English knowledge docs, Editor path as near-term focus (Wenzelsbibel-driven), knowledge before code, teiCrafter as an independent tool (not a module of EditionCrafter).
-- Pulled design and UI lessons from sibling projects into `design.md`: expert-in-the-loop philosophy and categorical confidence from coOCR, single-source design tokens from the zbz Hersch system, editor-grade UI patterns (facsimile synopsis with zone overlay, tip system, label-consistency rule, print mode) from the SuGW edition frontend. Identified TEI test material across repositories in `data.md` (Wenzelsbibel codex, mhdbdb, notker, zbz final TEI).
-- Retired the SZD-HTR and METS pipeline-mode content as legacy, out of scope for the current project. Added facsimile image import via IIIF manifest or METS image references as an Editor-path capability, and elaborated the Editor-path specification and user stories (local editing, indices with manual authority IDs, StandOff range-select, form-based authoring views, read-only image annotation).
+The decisive session. Three things happened: the editor was built, generalised, and the legacy generator was retired.
+
+- **Built the deterministic editor** per the `Idee.md` vision (no LLM in the annotation process): a DOM-free edition core, a three-pane shell (reading text / facsimile / validation), inline cell editing via lossless offset splices, and a facsimile placeholder with zone linking. Proved it headlessly against the offline harness.
+- **Generalised it to a generic TEI reader.** Profiling the Nachlass pipelines showed the editor could not stay word-only: the Jeanne Hersch edition (zbz-ocr-tei) is line-level (`<p>` + `<lb facs>`, real zone coordinates, no `<w>`), and SZD (szd-htr) produces only catalog TEI plus Page-JSON. The chosen solution was not per-project profiles but **one generic, offset-true reader** (`tei-document.js`): a small XML tokenizer building a byte-offset tree, schema-free recognizers by local-name, and lossless splice edits. `edition.js` was refactored to project any TEI into folios/lines/cells; the granularity (word vs line) emerges from the document. Proven: 294/294 real files round-trip byte-identically (285 Hersch, 4 SZD, 5 synthetic).
+- **Unified the LLM path into the editor.** Per the author's decision ("direkt in den Editor, Stepper weg"), the generation step became an on-ramp: "New from text (LLM)" drafts an initial TEI and opens it in the same editor, marked violet and unreviewed. Added the `--color-ai` token family. The landing page became two cards (editor, LLM on-ramp); the five-step stepper was removed.
+- **Retired the legacy Generator.** Deleted the orphaned generator tree (`app.js` and `model/editor.js/tokenizer/preview/source`, `services/{transform,schema,validator,export}`, `utils/dom`, `pipeline/*`, `docs/tests/*`), the generator demo data and the `dtabf.json` profile (~3000 lines; recoverable from git). Retained `llm.js`, `storage.js` and a trimmed `constants.js`, used by the editor. `docs/js` is now six live files.
+- **Corrected an earlier mis-claim:** `transform.js` was not broken (it assembles its prompt inline; it did not import a missing `prompt.js`). It was deleted as legacy, not as faulty.
+- **Refactored the knowledge base** from the "two equal paths" framing to editor-first, generic-reader reality, condensing each document to verified facts (version 0.4).
+
+## 2026-05-27: Knowledge base refactor
+
+- Reactivated the knowledge base from the dormant April state; replaced the four consolidated documents (OVERVIEW, ARCHITECTURE, DEVELOPMENT, REFERENCE) with the function-separated Promptotyping set (INDEX, project, data, specification, user-stories, architecture, design, journal).
+- Pulled design and UI lessons from sibling projects: expert-in-the-loop and categorical confidence from coOCR, single-source design tokens from the zbz Hersch system, facsimile-synopsis patterns from the SuGW frontend. (Note: this set still described two equal paths and a CodeMirror/DocumentModel architecture; the 2026-05-30 session corrected both to the as-built editor-first reality.)
 
 ## 2026-02-18: Demo data, reference, strategy (Sessions 10 to 16)
 
-- Walking-skeleton-first strategy adopted after a market analysis found no tool combining TEI annotation, LLM assistance and human review; the review workflow is the differentiator.
-- Replaced placeholder demos with real sources (CoReMA medieval recipe, DEPCHA 1718 ledger); added a `bookkeeping` source type with `bk:` attribute mapping.
-- LLM providers extended from four to six (added DeepSeek and Qwen) with a model catalogue carrying prices, context windows and reasoning flags.
-- Code-quality refactoring: event delegation, `ANNOTATION_TAGS` centralised, CSS bugfixes, path-traversal fix.
-- Consolidated the technical reference and corrected status counts through self-review (integrated 10, module-ready 11, one open end-to-end story).
+- Walking-skeleton-first strategy adopted after a market analysis found no tool combining TEI annotation, LLM assistance and human review.
+- Real demo sources added (CoReMA recipe, DEPCHA ledger); LLM providers extended to six with a model catalogue. (The demo data and the stepper they fed were removed in the 2026-05-30 consolidation.)
 
 ## 2026-02-05: Foundation (Sessions 1 to 9)
 
 - Project start: `docs/` for the GitHub Pages prototype, `knowledge/` for the knowledge base.
-- Built the UI prototype through several redesigns: settled on a three-column layout and a five-step workflow (Import, Mapping, Transform, Validate, Export) plus a review workflow, with a TEI-derived design system and dual-channel confidence encoding.
-- Phase 2 implementation across ten stages: ES6 module system, visual test matrix, overlay editor spike (no scroll drift at 500 lines), XML tokenizer, reactive document model with snapshot undo, source panel, multi-provider LLM service, three-layer prompt assembly, multi-level validation, export. Unit tests for tokenizer, model and validator.
-- Decided: three-layer prompt architecture, five validation levels, four confidence categories, overlay for prototype and CodeMirror 6 for production. Consolidated two parallel knowledge directories into one; specified the teiModeller and the TEI Guidelines distillation pipeline as Phase 3 concepts.
+- Built the first UI prototype: a three-column layout and a five-step workflow (Import, Mapping, Transform, Validate, Export) plus a review concept, an XML tokenizer, a reactive document model with snapshot undo, a multi-provider LLM service, three-layer prompt assembly, multi-level validation, export. This prototype was the exploration that the 2026-05-30 editor-first build replaced.
 
 ## Origin: FORGE 2023
 
-The Generator path originates in the FORGE 2023 prototype, conversion of unstructured text to TEI-XML via GPT on the Schuchardt correspondence (Pollin, Steiner & Zach 2023, https://doi.org/10.5281/zenodo.8425163).
+The LLM-to-TEI idea originates in the FORGE 2023 prototype, conversion of unstructured text to TEI-XML via GPT on the Schuchardt correspondence (Pollin, Steiner & Zach 2023, https://doi.org/10.5281/zenodo.8425163).
 
 ## Related
 
 - [specification](specification.md) for the decisions referenced here
-- [architecture](architecture.md) for the current implementation status
+- [architecture](architecture.md) for the current implementation
+- [testing](testing.md) for the proofs

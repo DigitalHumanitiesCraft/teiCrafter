@@ -12,10 +12,10 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-05-27
+updated: 2026-05-30
 language: en
-version: 0.3
-topics: ["[[TEI XML]]", "[[Data Modelling]]", "[[PAGE-XML]]"]
+version: 0.4
+topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
     - label: TEI P5 Guidelines
@@ -26,62 +26,64 @@ knowledge-sources:
       uri: https://iiif.io/api/presentation/3.0/
     - label: METS
       uri: https://www.loc.gov/standards/mets/
-related: [project, specification, design]
+related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Data and Test Material
 
-What teiCrafter consumes and produces, and which TEI serves as test material. teiCrafter is format-driven, not corpus-bound: it edits arbitrary TEI. The concrete driver is the Wenzelsbibel; everything else is test and reference material.
+What teiCrafter consumes and produces, and which TEI proves the engine. teiCrafter is format-driven, not corpus-bound: it edits arbitrary TEI.
 
 ## What the Tool Consumes and Produces
 
-The tool produces one thing: valid, schema-conformant, semantically annotated TEI-XML, exportable into downstream environments (ediarum, oXygen, GAMS). What it consumes depends on the path.
+| Input | Entry | Notes |
+|-------|-------|-------|
+| Existing TEI edition | Editor | Any TEI; opened from local disk, edited losslessly, saved back |
+| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor |
 
-| Input | Path | Notes |
-|-------|------|-------|
-| Plaintext | Generator (primary) | The original FORGE 2023 case: unstructured text into annotated TEI |
-| PAGE-XML | Generator | Layout-annotated transcription from coOCR HTR or other HTR systems |
-| Existing TEI edition | Editor | Schema-aware editing of an already structured edition; the Editor-path case |
-| Facsimile images (IIIF manifest or METS image references) | Editor | Page images loaded for the facsimile pane, paired with the edition's `facsimile`/`zone` structure |
+Output is the same TEI, edited byte-losslessly (only edited text runs change), saved in place via the File System Access API or downloaded. The LLM on-ramp output is a fresh TEI draft, marked as machine-generated and unreviewed until the human verifies it.
+
+## How the Engine Reads TEI
+
+The editor does not require a particular TEI profile. It recognises, generically by local-name:
+
+- folio breaks `<pb>` (with `@facs` to a surface) split the document into folios;
+- line markers `<lb>`/`<l>` split a folio into lines;
+- reading-text nodes become editable cells; if `<w xml:id>` word tokens are present the cells are words, otherwise whole lines;
+- `<facsimile>`/`<surface>`/`<zone>` with `ulx/uly/lrx/lry` drive the facsimile pane; a line's `@facs` links it to its zone;
+- `<standOff>`/`<note target>` mark words or lines that carry apparatus.
+
+Anything it does not interpret is preserved verbatim on save.
 
 ## Facsimile Images
 
-The Editor path displays page images in a deep-zoom facsimile pane. Images are imported, not stored in the repository: the tool resolves them from a **IIIF manifest** (Presentation API) or from the image references inside a **METS file**, and aligns them with the `facsimile` and `zone` markup of the edition for bidirectional text-image navigation. METS here is an image source for display only, not a TEI-conversion input.
+The facsimile pane currently renders a synthetic placeholder with the edition's real `<zone>` rectangles, linked to the text by `@facs`. Loading real page images (from a IIIF manifest or a METS file's image references, with deep zoom via OpenSeadragon) is specified but not yet built; see [specification](specification.md).
 
-## What This Document Does Not Cover
+## Real Test Corpus
 
-It does not specify the TEI mapping rules or the project-module element lists (see specification and the project-specific editorial guidelines). It does not document the LLM provider formats (see architecture).
+Three real pipelines drive the tool and prove the engine. The harness round-trips all of them byte-identically (see [testing](testing.md)).
 
-## Test Corpus
+| Source | Files | Shape | Editor granularity | Status |
+|--------|-------|-------|--------------------|--------|
+| Jeanne Hersch (zbz-ocr-tei) | 285 `*_final.xml`, ~53 KB avg (up to ~915 KB) | `<p>` + `<lb facs="#zone" n>`, full `<facsimile>` with pixel coords, `<hi>`, `<figure>`; no `<w>` | line | reads and edits directly |
+| Stefan Zweig (szd-htr) | 4 catalog TEI (~6 MB) + ~2000 Page-JSON | catalog `<biblFull>`/`<msDesc>` (no text layer); transcription lives in Page-JSON | (line, after conversion) | needs Page-JSON to TEI first |
+| Wenzelsbibel (Codex 2759) | synthetic twin (20-folio) + tiers | word-level `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | reads and edits directly |
 
-Good TEI is available across sibling repositories and is used as read-engine, validation and generator test material. Staged by closeness to the Wenzelsbibel domain (Middle High German, manuscript, word-level):
-
-| Source | Scope | Use |
-|--------|-------|-----|
-| Wenzelsbibel `codex-2759.xml` | 78 MB | Editor path, the real target; a folio excerpt as fixture |
-| `mhdbdb-tei-only` | ~690 TEI files | Middle High German, closest language domain; Editor read engine and autocompletion |
-| `notker-edition` | medieval German edition | Domain-near editor material |
-| `zbz-ocr-tei` final TEI | 285 validated files | Clean reference TEI; Generator output and schema validation |
-| `diged-neolat` | small | Variety (neo-Latin) |
-
-Fixtures principle: a small curated set lives in `data/`, not the full corpora. Because the real Wenzelsbibel codex is third-party material (Austrian National Library) with an unresolved licence for redistribution, the committed Wenzelsbibel fixture is a **synthetic minimal TEI** that mirrors the structure (`w`/`lb`/`l`, `facsimile`/`zone`, `standOff`) without real ONB data. The Editor path must handle a 78 MB edition, but the committed fixtures stay a representative slice.
+Key finding from profiling the pipelines: SZD produces no transcription TEI yet (only catalog metadata plus Page-JSON), so it requires a Page-JSON to minimal-TEI step before it is editable. Hersch produces clean, facsimile-linked, line-level TEI that the editor handles directly. The Wenzelsbibel is the word-level reference.
 
 ## Wenzelsbibel Material Profile
 
-The first Editor-path use case. Two files, edited locally via the File System Access API. Full structural analysis and editor requirements are in the vault: [[TEI-Struktur Wenzelsbibel]].
+The reference manuscript case. The real codex `codex-2759.xml` (~78 MB) carries (structural facts of the source, not processing state): `standOff` with ~1,009 apparatus entries; `facsimile` with ~480 surfaces and ~34,363 zones; `text` with ~158,524 `<w>`, ~31,673 `<lb>`, ~6,505 `<l>`; word-level full text. A companion `Bildannotationen.xml` carries miniatures with artist attributions and ICONCLASS, linked by `corresp="#range(...)"`. `Bilderfassung.sch` is the project Schematron.
 
-- `codex-2759.xml` (78 MB): `teiHeader`, `standOff` with 1,009 apparatus entries, `facsimile` with 480 surfaces and 34,363 zones, `text` with 158,524 `<w>`, 31,673 `<lb>`, 6,505 `<l>`. Word-level full text from Transkribus.
-- `Bildannotationen.xml` (1.5 MB): miniatures with artist attributions, ICONCLASS references, and text linkage via `corresp="#range(...)"` into the codex.
-- `Bilderfassung.sch`: the project-specific Schematron schema referenced in the XML, validated alongside TEI All RelaxNG.
+## Licence Boundary
 
-These figures are structural facts of the source material, not processing state.
+The real Wenzelsbibel codex is third-party material (Austrian National Library) with an unresolved redistribution licence and is absent from disk. All committed Wenzelsbibel material is a **synthetic structural twin** under `test/fixtures-synthetic/` and `docs/data/editor/` (no ONB data). Real third-party files used for proofs (Hersch, SZD, any ONB slice) live only under the gitignored `test/fixtures/` and never enter version control.
 
 ## Negative Definition
 
-teiCrafter does not host or persist data on a server (client-only, File System Access API for local files). It does not perform character recognition (that is the upstream coOCR HTR stage). It does not reconcile authority data against external APIs automatically; identifiers are entered manually in the Editor path, reconciliation is a downstream or optional concern.
+teiCrafter does not host or persist data on a server (client-only; File System Access API for local files). It does not perform character recognition (upstream HTR). It does not reconcile authority data against external APIs.
 
 ## Related
 
-- [project](project.md) for where the data flow sits in the pipeline
-- [specification](specification.md) for the validation levels and capabilities applied to the produced TEI
-- [design](design.md) for how material is presented in the editor
+- [project](project.md) for where the data flow sits
+- [specification](specification.md) for the validation levels and capabilities
+- [testing](testing.md) for the round-trip proofs on this corpus

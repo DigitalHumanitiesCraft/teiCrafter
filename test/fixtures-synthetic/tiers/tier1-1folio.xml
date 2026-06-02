@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-model href="Bilderfassung.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Synthetic Wenzelsbibel structural twin (20 surfaces)</title>
+      </titleStmt>
+      <publicationStmt><p>Synthetic fixture, no ONB data, CC0.</p></publicationStmt>
+      <sourceDesc><p>Generated structural twin of codex-2759.xml.</p></sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <standOff><note xml:id="app_1" target="#w_1_1" type="apparatus">note for w_1_1</note>
+    </standOff><facsimile><surface xml:id="surface_1" n="1r">
+      <zone xml:id="zone_1_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_1_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_1_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    </facsimile><text><body><pb n="1r" facs="#surface_1"/>
+      <l n="1"><lb/><w xml:id="w_1_1">dem</w> <w xml:id="w_1_2">anegenge</w> <w xml:id="w_1_3">schuof</w> <w xml:id="w_1_4">got</w> <w xml:id="w_1_5">himel</w> <w xml:id="w_1_6">und</w></l>
+      <l n="2"><lb/><w xml:id="w_1_7">erde</w> <w xml:id="w_1_8">daz</w> <w xml:id="w_1_9">lieht</w> <w xml:id="w_1_10">wart</w> <w xml:id="w_1_11">wazzer</w> <w xml:id="w_1_12">name</w></l>
+      <l n="3"><lb/><w xml:id="w_1_13">tac</w> <w xml:id="w_1_14">naht</w> <w xml:id="w_1_15">guot</w> <w xml:id="w_1_16">vil</w> <w xml:id="w_1_17">michel</w> <w xml:id="w_1_18">wirt</w></l>
+      <l n="4"><lb/><w xml:id="w_1_19">herre</w> <w xml:id="w_1_20">kint</w> <w xml:id="w_1_21">vrouwe</w> <w xml:id="w_1_22">muoter</w> <w xml:id="w_1_23">vater</w> <w xml:id="w_1_24">wort</w></l>
+      </body></text></TEI>

@@ -12,91 +12,53 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/user-stories
 status: active
 created: 2026-02-05
-updated: 2026-05-27
+updated: 2026-05-30
 language: en
-version: 0.3
+version: 0.4
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
 related: [specification, architecture, design]
 ---
 
 # teiCrafter User Stories
 
-Acceptance scenarios for the Generator-path prototype (Phase 2) and selected Phase 3 stories, in "As a ... I want ... so that ..." form. Each is manually verifiable in the browser without an automated framework; LLM stories need a valid API key. The Editor-path stories (ED.x below) are specified for the Wenzelsbibel use case; the Editor path is not yet built.
+Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects the editor-first consolidation (2026-05-30): **Built** (implemented and verified, headlessly or by serving), **Browser-check** (built, needs a human click-through), **Future** (specified, not built). LLM stories need a valid API key.
 
-Status: **Integrated** (module implemented and wired into app.js), **Module ready** (implemented, not yet wired), **Open**, **Phase 3**.
+## Editing Any TEI
 
-## Step 0: Editor Foundation
+- **E.1** As an editor I want to open a TEI edition from my local disk so that I can work without a server. *Built* (File System Access API, file-input fallback, served synthetic demo).
+- **E.2** As an editor I want the edition split into folios I can page through so that I navigate a long document. *Built* (`<pb>` segmentation, prev/next).
+- **E.3** As an editor I want the reading text rendered cell by cell, word-level when the TEI has `<w>` and line-level otherwise, so that I edit at the document's natural granularity. *Built* (profile emerges; proven on Wenzelsbibel word-level and Hersch line-level).
+- **E.4** As an editor I want to click a word or line and correct it in place so that fixing OCR or transcription errors is direct; nothing else in the file changes. *Built* (lossless offset splice; surgical-edit proof).
+- **E.5** As an editor I want my save to change nothing I did not edit so that the edition stays byte-faithful. *Built* (byte-identical round-trip on 294/294 real files).
+- **E.6** As an editor I want to save in place or download so that I keep my work. *Browser-check* (File System write-in-place is Chromium-only; download is universal).
 
-- **0.1** As an editor I want TEI-XML shown with syntax highlighting so that I grasp document structure. *Module ready.*
-- **0.2** As an editor I want to scroll a 500-line document without highlight drift so that I can work in long documents. *Module ready (overlay spike, the foundational architecture test).*
-- **0.3** As an editor I want gutter line numbers so that I can locate validation errors and review comments. *Module ready.*
-- **0.4** As an editor I want document-level undo/redo so that I can revert erroneous edits or transforms (a transform reverts as one unit). *Module ready (snapshot-based).*
+## Facsimile
 
-## Step 1: Import
+- **F.1** As an editor I want to see the folio's zones and have text and zone highlight each other so that I relate text to image regions. *Built* (real `@facs` link in Hersch, positional fallback; placeholder rendering of real coordinates).
+- **F.2** As an editor I want real page images with deep zoom and pan so that I read the manuscript itself. *Future* (IIIF/METS + OpenSeadragon).
 
-- **1.1** As an editor I want to load plaintext via drag-and-drop or picker so that I can begin annotation; each paragraph becomes a `<p>`, text character-accurate. *Integrated.*
-- **1.2** As an editor I want to load existing TEI so that I can continue annotating it, unchanged (whitespace preserved). *Integrated.*
-- **1.3** As an editor I want a comprehensible error for malformed XML so that I can fix it; the file is not loaded. *Integrated.*
+## Validation
 
-## Step 2: Mapping
+- **V.1** As an editor I want a live well-formedness and structural-integrity check so that I see immediately if an edit broke something or lost content. *Built* (browser-light panel vs load-time baseline).
+- **V.2** As an editor I want full schema validation (TEI All RelaxNG + Schematron) on demand so that I catch structural errors. *Built, offline* (the Node + Python/lxml harness; not yet wired as an in-browser button).
 
-- **2.1** As an editor I want to choose which annotation types the LLM applies so that I control annotation precisely. *Integrated.*
-- **2.2** As an editor I want to inspect the assembled prompt (base, context, mapping layers) before sending so that the process stays transparent. *Module ready.*
+## LLM On-Ramp
 
-## Step 3: Transform
+- **L.1** As an editor I want to paste plaintext and have a model draft an initial TEI that opens in the editor so that I have a starting point to refine. *Built* (the "New from text (LLM)" modal).
+- **L.2** As an editor I want generated content clearly marked as machine-made and unreviewed so that I never mistake a draft for finished work. *Built* (violet marking, unreviewed banner).
+- **L.3** As an editor I want my API key kept in memory only and never persisted so that my credentials are safe. *Built* (module-scoped Map in llm.js, `credentials: 'omit'`).
+- **L.4** As an editor I want to choose among providers so that I am not vendor-locked. *Built* (six providers).
 
-- **3.1** As an editor I want to send the TEI body to an LLM and receive annotated TEI so that I can review the proposal; output must be well-formed. *Integrated.*
-- **3.2** As an editor I want a diff summary after transform (counts plus highlighted new annotations) so that I can judge plausibility before accepting. *Module ready.*
-- **3.3** As an editor I want confidence visually encoded so that I allocate review time effectively. *Module ready.*
+## Future (specified, not built)
 
-## Step 4: Review
-
-- **4.1** As an editor I want to click an annotation and accept, edit or reject it so that I evaluate each individually (reject keeps the text, removes the tag). *Module ready.*
-- **4.2** As an editor I want keyboard batch review (N/A/R/E) so that I review efficiently. *Module ready.*
-- **4.3** As an editor I want a progress indicator (reviewed vs open) so that I gauge progress. *Module ready.*
-
-## Step 5: Validation
-
-- **5.1** As an editor I want plaintext comparison so that no transcription content is lost during annotation. *Integrated.*
-- **5.2** As an editor I want schema validation with line numbers and clickable errors so that I detect structural errors. *Integrated.*
-
-## Step 6: Export
-
-- **6.1** As an editor I want to download finished TEI-XML so that I can process it downstream (ediarum, oXygen, GAMS). *Integrated.*
-- **6.2** As an editor I want a warning when exporting unreviewed annotations so that I do not treat proposals as finished. *Module ready.*
-
-## Cross-Cutting: LLM Configuration
-
-- **Q.1** As an editor I want to enter an API key (session only, never persisted) so that the app can generate annotations. *Integrated.*
-- **Q.2** As an editor I want to choose among providers so that I am not vendor-locked. *Integrated.*
-
-## End-to-End
-
-- **E2E.1** As an editor I want to run the complete workflow (import, transform with a real LLM, review with confidence, validate, export) on a real document so that the core value is proven. *Open. The central validation story for the walking-skeleton-first strategy; binds 1.1, 2.1, 3.1, 3.3, 4.1, 5.1, 5.2, 6.1.*
-
-## Phase 3: teiModeller
-
-- **M.1** As an editor I want to ask a modelling question ("how do I annotate currency amounts?") and get a reasoned proposal with element, attributes and example. *Phase 3.*
-- **M.2** As an editor I want to adopt an accepted proposal as a mapping rule so that future transforms use it. *Phase 3.*
-
-## Editor Path (Wenzelsbibel)
-
-Specified for the current focus, not yet built. No LLM required.
-
-- **ED.1** As an editor I want to open an existing TEI edition from my local file system and read and write it in place so that I work without a server; large editions load folio-segmented. *Specified.*
-- **ED.2** As an editor I want to load page images from a IIIF manifest or a METS file so that I see the facsimile beside the text, with zoom, pan and bidirectional text-zone navigation. *Specified.*
-- **ED.3** As an editor I want to create and edit person, place and people index entries and link an annotation by picking from the index so that entities stay consistent across documents; authority identifiers (GND, GeoNames, ICONCLASS) are entered manually. *Specified.*
-- **ED.4** As an editor I want to select a word range in the reading text and attach an editorial-apparatus or comprehension-commentary note so that the tool writes the anchor and the StandOff entry for me. *Specified.*
-- **ED.5** As an editor I want form-based authoring views (diplomatic transcription, Bible-verse) that read and write the underlying TEI so that routine annotation is not raw XML. *Specified.*
-- **ED.6** As an editor I want existing image annotations (miniatures with artist and ICONCLASS, linked to a text range) rendered on the facsimile and navigable so that I can relate image and text; editing those attributions is out of scope for now. *Specified.*
-- **ED.7** As an editor I want live schema validation against `tei_all.rng` plus the project Schematron so that I catch structural errors while editing. *Specified.*
-
-## Status Summary
-
-Of 21 prototype stories, 10 are fully integrated (Import 1.1 to 1.3, Mapping 2.1, Transform 3.1, Validation 5.1 to 5.2, Export 6.1, LLM config Q.1 to Q.2) and 11 are module-ready but not wired (Editor Foundation 0.1 to 0.4, Review 4.1 to 4.3, Transform 3.2 to 3.3, Export 6.2), because the view modules (editor.js, preview.js) are not yet imported into app.js. The one open prototype story is the end-to-end test. The critical gap is wiring, not missing implementation; see [architecture](architecture.md). The Editor-path stories (ED.x) are specified, not yet built.
+- **FU.1** Select a word/line range and attach an editorial-apparatus or commentary note; the tool writes the anchor and the `standOff` entry.
+- **FU.2** Create and edit person/place index entries and link annotations by picking from the index; authority ids entered manually.
+- **FU.3** Form-based authoring views per project module (e.g. diplomatic transcription, Bible-verse).
+- **FU.4** Convert pipeline Page-JSON (SZD) to minimal editable TEI before opening.
+- **FU.5** Open and edit very large editions (tens of MB) with a segmented load.
 
 ## Related
 
-- [specification](specification.md) for the requirements these stories realise
-- [architecture](architecture.md) for integration status
-- [design](design.md) for the components the stories exercise
+- [specification](specification.md) for the requirements these realise
+- [architecture](architecture.md) for how they are implemented
+- [design](design.md) for the components they exercise

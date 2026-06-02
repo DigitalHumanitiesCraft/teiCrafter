@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="Bilderfassung-synthetic.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Synthetic Wenzelsbibel structural twin (20 surfaces)</title>
+      </titleStmt>
+      <publicationStmt><p>Synthetic fixture, no ONB data, CC0.</p></publicationStmt>
+      <sourceDesc><p>Generated structural twin of codex-2759.xml.</p></sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <standOff>
+    <note xml:id="app_1" target="#w_1_1" type="apparatus">note for w_1_1</note>
+    <note xml:id="app_2" target="#w_2_1" type="commentary">note for w_2_1</note>
+    <note xml:id="app_3" target="#w_3_1" type="apparatus">note for w_3_1</note>
+    <note xml:id="app_4" target="#w_4_1" type="commentary">note for w_4_1</note>
+    <note xml:id="app_5" target="#w_5_1" type="apparatus">note for w_5_1</note>
+    <note xml:id="app_6" target="#w_6_1" type="commentary">note for w_6_1</note>
+    <note xml:id="app_7" target="#w_7_1" type="apparatus">note for w_7_1</note>
+    <note xml:id="app_8" target="#w_8_1" type="commentary">note for w_8_1</note>
+    <note xml:id="app_9" target="#w_9_1" type="apparatus">note for w_9_1</note>
+    <note xml:id="app_10" target="#w_10_1" type="commentary">note for w_10_1</note>
+    <note xml:id="app_11" target="#w_11_1" type="apparatus">note for w_11_1</note>
+    <note xml:id="app_12" target="#w_12_1" type="commentary">note for w_12_1</note>
+    <note xml:id="app_13" target="#w_13_1" type="apparatus">note for w_13_1</note>
+    <note xml:id="app_14" target="#w_14_1" type="commentary">note for w_14_1</note>
+    <note xml:id="app_15" target="#w_15_1" type="apparatus">note for w_15_1</note>
+    <note xml:id="app_16" target="#w_16_1" type="commentary">note for w_16_1</note>
+    <note xml:id="app_17" target="#w_17_1" type="apparatus">note for w_17_1</note>
+    <note xml:id="app_18" target="#w_18_1" type="commentary">note for w_18_1</note>
+    <note xml:id="app_19" target="#w_19_1" type="apparatus">note for w_19_1</note>
+    <note xml:id="app_20" target="#w_20_1" type="commentary">note for w_20_1</note>
+  </standOff>
+  <facsimile>
+    <surface xml:id="surface_1" n="1r">
+      <zone xml:id="zone_1_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_1_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_1_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_2" n="2r">
+      <zone xml:id="zone_2_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_2_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_2_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_3" n="3r">
+      <zone xml:id="zone_3_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_3_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_3_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_4" n="4r">
+      <zone xml:id="zone_4_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_4_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_4_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_5" n="5r">
+      <zone xml:id="zone_5_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_5_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_5_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_6" n="6r">
+      <zone xml:id="zone_6_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_6_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_6_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_7" n="7r">
+      <zone xml:id="zone_7_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_7_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_7_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_8" n="8r">
+      <zone xml:id="zone_8_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_8_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_8_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_9" n="9r">
+      <zone xml:id="zone_9_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_9_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_9_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_10" n="10r">
+      <zone xml:id="zone_10_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_10_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_10_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_11" n="11r">
+      <zone xml:id="zone_11_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_11_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_11_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_12" n="12r">
+      <zone xml:id="zone_12_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_12_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_12_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_13" n="13r">
+      <zone xml:id="zone_13_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_13_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_13_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_14" n="14r">
+      <zone xml:id="zone_14_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_14_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_14_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_15" n="15r">
+      <zone xml:id="zone_15_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_15_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_15_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_16" n="16r">
+      <zone xml:id="zone_16_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_16_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_16_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_17" n="17r">
+      <zone xml:id="zone_17_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_17_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_17_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_18" n="18r">
+      <zone xml:id="zone_18_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_18_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_18_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_19" n="19r">
+      <zone xml:id="zone_19_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_19_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_19_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+    <surface xml:id="surface_20" n="20r">
+      <zone xml:id="zone_20_1" ulx="10" uly="40" lrx="100" lry="70"/>
+      <zone xml:id="zone_20_2" ulx="10" uly="80" lrx="100" lry="110"/>
+      <zone xml:id="zone_20_3" ulx="10" uly="120" lrx="100" lry="150"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <pb n="1r" facs="#surface_1"/>
+      <l n="1"><lb/><w xml:id="w_1_1">dem</w> <w xml:id="w_1_2">anegenge</w> <w xml:id="w_1_3">schuof</w> <w xml:id="w_1_4">got</w> <w xml:id="w_1_5">himel</w> <w xml:id="w_1_6">und</w></l>
+      <l n="2"><lb/><w xml:id="w_1_7">erde</w> <w xml:id="w_1_8">daz</w> <w xml:id="w_1_9">lieht</w> <w xml:id="w_1_10">wart</w> <w xml:id="w_1_11">wazzer</w> <w xml:id="w_1_12">name</w></l>
+      <l n="3"><lb/><w xml:id="w_1_13">tac</w> <w xml:id="w_1_14">naht</w> <w xml:id="w_1_15">guot</w> <w xml:id="w_1_16">vil</w> <w xml:id="w_1_17">michel</w> <w xml:id="w_1_18">wirt</w></l>
+      <l n="4"><lb/><w xml:id="w_1_19">herre</w> <w xml:id="w_1_20">kint</w> <w xml:id="w_1_21">vrouwe</w> <w xml:id="w_1_22">muoter</w> <w xml:id="w_1_23">vater</w> <w xml:id="w_1_24">wort</w></l>
+      <pb n="2r" facs="#surface_2"/>
+      <l n="1"><lb/><w xml:id="w_2_1">leben</w> <w xml:id="w_2_2">in</w> <w xml:id="w_2_3">dem</w> <w xml:id="w_2_4">anegenge</w> <w xml:id="w_2_5">schuof</w> <w xml:id="w_2_6">got</w></l>
+      <l n="2"><lb/><w xml:id="w_2_7">himel</w> <w xml:id="w_2_8">und</w> <w xml:id="w_2_9">erde</w> <w xml:id="w_2_10">daz</w> <w xml:id="w_2_11">lieht</w> <w xml:id="w_2_12">wart</w></l>
+      <l n="3"><lb/><w xml:id="w_2_13">wazzer</w> <w xml:id="w_2_14">name</w> <w xml:id="w_2_15">tac</w> <w xml:id="w_2_16">naht</w> <w xml:id="w_2_17">guot</w> <w xml:id="w_2_18">vil</w></l>
+      <l n="4"><lb/><w xml:id="w_2_19">michel</w> <w xml:id="w_2_20">wirt</w> <w xml:id="w_2_21">herre</w> <w xml:id="w_2_22">kint</w> <w xml:id="w_2_23">vrouwe</w> <w xml:id="w_2_24">muoter</w></l>
+      <pb n="3r" facs="#surface_3"/>
+      <l n="1"><lb/><w xml:id="w_3_1">vater</w> <w xml:id="w_3_2">wort</w> <w xml:id="w_3_3">leben</w> <w xml:id="w_3_4">in</w> <w xml:id="w_3_5">dem</w> <w xml:id="w_3_6">anegenge</w></l>
+      <l n="2"><lb/><w xml:id="w_3_7">schuof</w> <w xml:id="w_3_8">got</w> <w xml:id="w_3_9">himel</w> <w xml:id="w_3_10">und</w> <w xml:id="w_3_11">erde</w> <w xml:id="w_3_12">daz</w></l>
+      <l n="3"><lb/><w xml:id="w_3_13">lieht</w> <w xml:id="w_3_14">wart</w> <w xml:id="w_3_15">wazzer</w> <w xml:id="w_3_16">name</w> <w xml:id="w_3_17">tac</w> <w xml:id="w_3_18">naht</w></l>
+      <l n="4"><lb/><w xml:id="w_3_19">guot</w> <w xml:id="w_3_20">vil</w> <w xml:id="w_3_21">michel</w> <w xml:id="w_3_22">wirt</w> <w xml:id="w_3_23">herre</w> <w xml:id="w_3_24">kint</w></l>
+      <pb n="4r" facs="#surface_4"/>
+      <l n="1"><lb/><w xml:id="w_4_1">vrouwe</w> <w xml:id="w_4_2">muoter</w> <w xml:id="w_4_3">vater</w> <w xml:id="w_4_4">wort</w> <w xml:id="w_4_5">leben</w> <w xml:id="w_4_6">in</w></l>
+      <l n="2"><lb/><w xml:id="w_4_7">dem</w> <w xml:id="w_4_8">anegenge</w> <w xml:id="w_4_9">schuof</w> <w xml:id="w_4_10">got</w> <w xml:id="w_4_11">himel</w> <w xml:id="w_4_12">und</w></l>
+      <l n="3"><lb/><w xml:id="w_4_13">erde</w> <w xml:id="w_4_14">daz</w> <w xml:id="w_4_15">lieht</w> <w xml:id="w_4_16">wart</w> <w xml:id="w_4_17">wazzer</w> <w xml:id="w_4_18">name</w></l>
+      <l n="4"><lb/><w xml:id="w_4_19">tac</w> <w xml:id="w_4_20">naht</w> <w xml:id="w_4_21">guot</w> <w xml:id="w_4_22">vil</w> <w xml:id="w_4_23">michel</w> <w xml:id="w_4_24">wirt</w></l>
+      <pb n="5r" facs="#surface_5"/>
+      <l n="1"><lb/><w xml:id="w_5_1">herre</w> <w xml:id="w_5_2">kint</w> <w xml:id="w_5_3">vrouwe</w> <w xml:id="w_5_4">muoter</w> <w xml:id="w_5_5">vater</w> <w xml:id="w_5_6">wort</w></l>
+      <l n="2"><lb/><w xml:id="w_5_7">leben</w> <w xml:id="w_5_8">in</w> <w xml:id="w_5_9">dem</w> <w xml:id="w_5_10">anegenge</w> <w xml:id="w_5_11">schuof</w> <w xml:id="w_5_12">got</w></l>
+      <l n="3"><lb/><w xml:id="w_5_13">himel</w> <w xml:id="w_5_14">und</w> <w xml:id="w_5_15">erde</w> <w xml:id="w_5_16">daz</w> <w xml:id="w_5_17">lieht</w> <w xml:id="w_5_18">wart</w></l>
+      <l n="4"><lb/><w xml:id="w_5_19">wazzer</w> <w xml:id="w_5_20">name</w> <w xml:id="w_5_21">tac</w> <w xml:id="w_5_22">naht</w> <w xml:id="w_5_23">guot</w> <w xml:id="w_5_24">vil</w></l>
+      <pb n="6r" facs="#surface_6"/>
+      <l n="1"><lb/><w xml:id="w_6_1">michel</w> <w xml:id="w_6_2">wirt</w> <w xml:id="w_6_3">herre</w> <w xml:id="w_6_4">kint</w> <w xml:id="w_6_5">vrouwe</w> <w xml:id="w_6_6">muoter</w></l>
+      <l n="2"><lb/><w xml:id="w_6_7">vater</w> <w xml:id="w_6_8">wort</w> <w xml:id="w_6_9">leben</w> <w xml:id="w_6_10">in</w> <w xml:id="w_6_11">dem</w> <w xml:id="w_6_12">anegenge</w></l>
+      <l n="3"><lb/><w xml:id="w_6_13">schuof</w> <w xml:id="w_6_14">got</w> <w xml:id="w_6_15">himel</w> <w xml:id="w_6_16">und</w> <w xml:id="w_6_17">erde</w> <w xml:id="w_6_18">daz</w></l>
+      <l n="4"><lb/><w xml:id="w_6_19">lieht</w> <w xml:id="w_6_20">wart</w> <w xml:id="w_6_21">wazzer</w> <w xml:id="w_6_22">name</w> <w xml:id="w_6_23">tac</w> <w xml:id="w_6_24">naht</w></l>
+      <pb n="7r" facs="#surface_7"/>
+      <l n="1"><lb/><w xml:id="w_7_1">guot</w> <w xml:id="w_7_2">vil</w> <w xml:id="w_7_3">michel</w> <w xml:id="w_7_4">wirt</w> <w xml:id="w_7_5">herre</w> <w xml:id="w_7_6">kint</w></l>
+      <l n="2"><lb/><w xml:id="w_7_7">vrouwe</w> <w xml:id="w_7_8">muoter</w> <w xml:id="w_7_9">vater</w> <w xml:id="w_7_10">wort</w> <w xml:id="w_7_11">leben</w> <w xml:id="w_7_12">in</w></l>
+      <l n="3"><lb/><w xml:id="w_7_13">dem</w> <w xml:id="w_7_14">anegenge</w> <w xml:id="w_7_15">schuof</w> <w xml:id="w_7_16">got</w> <w xml:id="w_7_17">himel</w> <w xml:id="w_7_18">und</w></l>
+      <l n="4"><lb/><w xml:id="w_7_19">erde</w> <w xml:id="w_7_20">daz</w> <w xml:id="w_7_21">lieht</w> <w xml:id="w_7_22">wart</w> <w xml:id="w_7_23">wazzer</w> <w xml:id="w_7_24">name</w></l>
+      <pb n="8r" facs="#surface_8"/>
+      <l n="1"><lb/><w xml:id="w_8_1">tac</w> <w xml:id="w_8_2">naht</w> <w xml:id="w_8_3">guot</w> <w xml:id="w_8_4">vil</w> <w xml:id="w_8_5">michel</w> <w xml:id="w_8_6">wirt</w></l>
+      <l n="2"><lb/><w xml:id="w_8_7">herre</w> <w xml:id="w_8_8">kint</w> <w xml:id="w_8_9">vrouwe</w> <w xml:id="w_8_10">muoter</w> <w xml:id="w_8_11">vater</w> <w xml:id="w_8_12">wort</w></l>
+      <l n="3"><lb/><w xml:id="w_8_13">leben</w> <w xml:id="w_8_14">in</w> <w xml:id="w_8_15">dem</w> <w xml:id="w_8_16">anegenge</w> <w xml:id="w_8_17">schuof</w> <w xml:id="w_8_18">got</w></l>
+      <l n="4"><lb/><w xml:id="w_8_19">himel</w> <w xml:id="w_8_20">und</w> <w xml:id="w_8_21">erde</w> <w xml:id="w_8_22">daz</w> <w xml:id="w_8_23">lieht</w> <w xml:id="w_8_24">wart</w></l>
+      <pb n="9r" facs="#surface_9"/>
+      <l n="1"><lb/><w xml:id="w_9_1">wazzer</w> <w xml:id="w_9_2">name</w> <w xml:id="w_9_3">tac</w> <w xml:id="w_9_4">naht</w> <w xml:id="w_9_5">guot</w> <w xml:id="w_9_6">vil</w></l>
+      <l n="2"><lb/><w xml:id="w_9_7">michel</w> <w xml:id="w_9_8">wirt</w> <w xml:id="w_9_9">herre</w> <w xml:id="w_9_10">kint</w> <w xml:id="w_9_11">vrouwe</w> <w xml:id="w_9_12">muoter</w></l>
+      <l n="3"><lb/><w xml:id="w_9_13">vater</w> <w xml:id="w_9_14">wort</w> <w xml:id="w_9_15">leben</w> <w xml:id="w_9_16">in</w> <w xml:id="w_9_17">dem</w> <w xml:id="w_9_18">anegenge</w></l>
+      <l n="4"><lb/><w xml:id="w_9_19">schuof</w> <w xml:id="w_9_20">got</w> <w xml:id="w_9_21">himel</w> <w xml:id="w_9_22">und</w> <w xml:id="w_9_23">erde</w> <w xml:id="w_9_24">daz</w></l>
+      <pb n="10r" facs="#surface_10"/>
+      <l n="1"><lb/><w xml:id="w_10_1">lieht</w> <w xml:id="w_10_2">wart</w> <w xml:id="w_10_3">wazzer</w> <w xml:id="w_10_4">name</w> <w xml:id="w_10_5">tac</w> <w xml:id="w_10_6">naht</w></l>
+      <l n="2"><lb/><w xml:id="w_10_7">guot</w> <w xml:id="w_10_8">vil</w> <w xml:id="w_10_9">michel</w> <w xml:id="w_10_10">wirt</w> <w xml:id="w_10_11">herre</w> <w xml:id="w_10_12">kint</w></l>
+      <l n="3"><lb/><w xml:id="w_10_13">vrouwe</w> <w xml:id="w_10_14">muoter</w> <w xml:id="w_10_15">vater</w> <w xml:id="w_10_16">wort</w> <w xml:id="w_10_17">leben</w> <w xml:id="w_10_18">in</w></l>
+      <l n="4"><lb/><w xml:id="w_10_19">dem</w> <w xml:id="w_10_20">anegenge</w> <w xml:id="w_10_21">schuof</w> <w xml:id="w_10_22">got</w> <w xml:id="w_10_23">himel</w> <w xml:id="w_10_24">und</w></l>
+      <pb n="11r" facs="#surface_11"/>
+      <l n="1"><lb/><w xml:id="w_11_1">erde</w> <w xml:id="w_11_2">daz</w> <w xml:id="w_11_3">lieht</w> <w xml:id="w_11_4">wart</w> <w xml:id="w_11_5">wazzer</w> <w xml:id="w_11_6">name</w></l>
+      <l n="2"><lb/><w xml:id="w_11_7">tac</w> <w xml:id="w_11_8">naht</w> <w xml:id="w_11_9">guot</w> <w xml:id="w_11_10">vil</w> <w xml:id="w_11_11">michel</w> <w xml:id="w_11_12">wirt</w></l>
+      <l n="3"><lb/><w xml:id="w_11_13">herre</w> <w xml:id="w_11_14">kint</w> <w xml:id="w_11_15">vrouwe</w> <w xml:id="w_11_16">muoter</w> <w xml:id="w_11_17">vater</w> <w xml:id="w_11_18">wort</w></l>
+      <l n="4"><lb/><w xml:id="w_11_19">leben</w> <w xml:id="w_11_20">in</w> <w xml:id="w_11_21">dem</w> <w xml:id="w_11_22">anegenge</w> <w xml:id="w_11_23">schuof</w> <w xml:id="w_11_24">got</w></l>
+      <pb n="12r" facs="#surface_12"/>
+      <l n="1"><lb/><w xml:id="w_12_1">himel</w> <w xml:id="w_12_2">und</w> <w xml:id="w_12_3">erde</w> <w xml:id="w_12_4">daz</w> <w xml:id="w_12_5">lieht</w> <w xml:id="w_12_6">wart</w></l>
+      <l n="2"><lb/><w xml:id="w_12_7">wazzer</w> <w xml:id="w_12_8">name</w> <w xml:id="w_12_9">tac</w> <w xml:id="w_12_10">naht</w> <w xml:id="w_12_11">guot</w> <w xml:id="w_12_12">vil</w></l>
+      <l n="3"><lb/><w xml:id="w_12_13">michel</w> <w xml:id="w_12_14">wirt</w> <w xml:id="w_12_15">herre</w> <w xml:id="w_12_16">kint</w> <w xml:id="w_12_17">vrouwe</w> <w xml:id="w_12_18">muoter</w></l>
+      <l n="4"><lb/><w xml:id="w_12_19">vater</w> <w xml:id="w_12_20">wort</w> <w xml:id="w_12_21">leben</w> <w xml:id="w_12_22">in</w> <w xml:id="w_12_23">dem</w> <w xml:id="w_12_24">anegenge</w></l>
+      <pb n="13r" facs="#surface_13"/>
+      <l n="1"><lb/><w xml:id="w_13_1">schuof</w> <w xml:id="w_13_2">got</w> <w xml:id="w_13_3">himel</w> <w xml:id="w_13_4">und</w> <w xml:id="w_13_5">erde</w> <w xml:id="w_13_6">daz</w></l>
+      <l n="2"><lb/><w xml:id="w_13_7">lieht</w> <w xml:id="w_13_8">wart</w> <w xml:id="w_13_9">wazzer</w> <w xml:id="w_13_10">name</w> <w xml:id="w_13_11">tac</w> <w xml:id="w_13_12">naht</w></l>
+      <l n="3"><lb/><w xml:id="w_13_13">guot</w> <w xml:id="w_13_14">vil</w> <w xml:id="w_13_15">michel</w> <w xml:id="w_13_16">wirt</w> <w xml:id="w_13_17">herre</w> <w xml:id="w_13_18">kint</w></l>
+      <l n="4"><lb/><w xml:id="w_13_19">vrouwe</w> <w xml:id="w_13_20">muoter</w> <w xml:id="w_13_21">vater</w> <w xml:id="w_13_22">wort</w> <w xml:id="w_13_23">leben</w> <w xml:id="w_13_24">in</w></l>
+      <pb n="14r" facs="#surface_14"/>
+      <l n="1"><lb/><w xml:id="w_14_1">dem</w> <w xml:id="w_14_2">anegenge</w> <w xml:id="w_14_3">schuof</w> <w xml:id="w_14_4">got</w> <w xml:id="w_14_5">himel</w> <w xml:id="w_14_6">und</w></l>
+      <l n="2"><lb/><w xml:id="w_14_7">erde</w> <w xml:id="w_14_8">daz</w> <w xml:id="w_14_9">lieht</w> <w xml:id="w_14_10">wart</w> <w xml:id="w_14_11">wazzer</w> <w xml:id="w_14_12">name</w></l>
+      <l n="3"><lb/><w xml:id="w_14_13">tac</w> <w xml:id="w_14_14">naht</w> <w xml:id="w_14_15">guot</w> <w xml:id="w_14_16">vil</w> <w xml:id="w_14_17">michel</w> <w xml:id="w_14_18">wirt</w></l>
+      <l n="4"><lb/><w xml:id="w_14_19">herre</w> <w xml:id="w_14_20">kint</w> <w xml:id="w_14_21">vrouwe</w> <w xml:id="w_14_22">muoter</w> <w xml:id="w_14_23">vater</w> <w xml:id="w_14_24">wort</w></l>
+      <pb n="15r" facs="#surface_15"/>
+      <l n="1"><lb/><w xml:id="w_15_1">leben</w> <w xml:id="w_15_2">in</w> <w xml:id="w_15_3">dem</w> <w xml:id="w_15_4">anegenge</w> <w xml:id="w_15_5">schuof</w> <w xml:id="w_15_6">got</w></l>
+      <l n="2"><lb/><w xml:id="w_15_7">himel</w> <w xml:id="w_15_8">und</w> <w xml:id="w_15_9">erde</w> <w xml:id="w_15_10">daz</w> <w xml:id="w_15_11">lieht</w> <w xml:id="w_15_12">wart</w></l>
+      <l n="3"><lb/><w xml:id="w_15_13">wazzer</w> <w xml:id="w_15_14">name</w> <w xml:id="w_15_15">tac</w> <w xml:id="w_15_16">naht</w> <w xml:id="w_15_17">guot</w> <w xml:id="w_15_18">vil</w></l>
+      <l n="4"><lb/><w xml:id="w_15_19">michel</w> <w xml:id="w_15_20">wirt</w> <w xml:id="w_15_21">herre</w> <w xml:id="w_15_22">kint</w> <w xml:id="w_15_23">vrouwe</w> <w xml:id="w_15_24">muoter</w></l>
+      <pb n="16r" facs="#surface_16"/>
+      <l n="1"><lb/><w xml:id="w_16_1">vater</w> <w xml:id="w_16_2">wort</w> <w xml:id="w_16_3">leben</w> <w xml:id="w_16_4">in</w> <w xml:id="w_16_5">dem</w> <w xml:id="w_16_6">anegenge</w></l>
+      <l n="2"><lb/><w xml:id="w_16_7">schuof</w> <w xml:id="w_16_8">got</w> <w xml:id="w_16_9">himel</w> <w xml:id="w_16_10">und</w> <w xml:id="w_16_11">erde</w> <w xml:id="w_16_12">daz</w></l>
+      <l n="3"><lb/><w xml:id="w_16_13">lieht</w> <w xml:id="w_16_14">wart</w> <w xml:id="w_16_15">wazzer</w> <w xml:id="w_16_16">name</w> <w xml:id="w_16_17">tac</w> <w xml:id="w_16_18">naht</w></l>
+      <l n="4"><lb/><w xml:id="w_16_19">guot</w> <w xml:id="w_16_20">vil</w> <w xml:id="w_16_21">michel</w> <w xml:id="w_16_22">wirt</w> <w xml:id="w_16_23">herre</w> <w xml:id="w_16_24">kint</w></l>
+      <pb n="17r" facs="#surface_17"/>
+      <l n="1"><lb/><w xml:id="w_17_1">vrouwe</w> <w xml:id="w_17_2">muoter</w> <w xml:id="w_17_3">vater</w> <w xml:id="w_17_4">wort</w> <w xml:id="w_17_5">leben</w> <w xml:id="w_17_6">in</w></l>
+      <l n="2"><lb/><w xml:id="w_17_7">dem</w> <w xml:id="w_17_8">anegenge</w> <w xml:id="w_17_9">schuof</w> <w xml:id="w_17_10">got</w> <w xml:id="w_17_11">himel</w> <w xml:id="w_17_12">und</w></l>
+      <l n="3"><lb/><w xml:id="w_17_13">erde</w> <w xml:id="w_17_14">daz</w> <w xml:id="w_17_15">lieht</w> <w xml:id="w_17_16">wart</w> <w xml:id="w_17_17">wazzer</w> <w xml:id="w_17_18">name</w></l>
+      <l n="4"><lb/><w xml:id="w_17_19">tac</w> <w xml:id="w_17_20">naht</w> <w xml:id="w_17_21">guot</w> <w xml:id="w_17_22">vil</w> <w xml:id="w_17_23">michel</w> <w xml:id="w_17_24">wirt</w></l>
+      <pb n="18r" facs="#surface_18"/>
+      <l n="1"><lb/><w xml:id="w_18_1">herre</w> <w xml:id="w_18_2">kint</w> <w xml:id="w_18_3">vrouwe</w> <w xml:id="w_18_4">muoter</w> <w xml:id="w_18_5">vater</w> <w xml:id="w_18_6">wort</w></l>
+      <l n="2"><lb/><w xml:id="w_18_7">leben</w> <w xml:id="w_18_8">in</w> <w xml:id="w_18_9">dem</w> <w xml:id="w_18_10">anegenge</w> <w xml:id="w_18_11">schuof</w> <w xml:id="w_18_12">got</w></l>
+      <l n="3"><lb/><w xml:id="w_18_13">himel</w> <w xml:id="w_18_14">und</w> <w xml:id="w_18_15">erde</w> <w xml:id="w_18_16">daz</w> <w xml:id="w_18_17">lieht</w> <w xml:id="w_18_18">wart</w></l>
+      <l n="4"><lb/><w xml:id="w_18_19">wazzer</w> <w xml:id="w_18_20">name</w> <w xml:id="w_18_21">tac</w> <w xml:id="w_18_22">naht</w> <w xml:id="w_18_23">guot</w> <w xml:id="w_18_24">vil</w></l>
+      <pb n="19r" facs="#surface_19"/>
+      <l n="1"><lb/><w xml:id="w_19_1">michel</w> <w xml:id="w_19_2">wirt</w> <w xml:id="w_19_3">herre</w> <w xml:id="w_19_4">kint</w> <w xml:id="w_19_5">vrouwe</w> <w xml:id="w_19_6">muoter</w></l>
+      <l n="2"><lb/><w xml:id="w_19_7">vater</w> <w xml:id="w_19_8">wort</w> <w xml:id="w_19_9">leben</w> <w xml:id="w_19_10">in</w> <w xml:id="w_19_11">dem</w> <w xml:id="w_19_12">anegenge</w></l>
+      <l n="3"><lb/><w xml:id="w_19_13">schuof</w> <w xml:id="w_19_14">got</w> <w xml:id="w_19_15">himel</w> <w xml:id="w_19_16">und</w> <w xml:id="w_19_17">erde</w> <w xml:id="w_19_18">daz</w></l>
+      <l n="4"><lb/><w xml:id="w_19_19">lieht</w> <w xml:id="w_19_20">wart</w> <w xml:id="w_19_21">wazzer</w> <w xml:id="w_19_22">name</w> <w xml:id="w_19_23">tac</w> <w xml:id="w_19_24">naht</w></l>
+      <pb n="20r" facs="#surface_20"/>
+      <l n="1"><lb/><w xml:id="w_20_1">guot</w> <w xml:id="w_20_2">vil</w> <w xml:id="w_20_3">michel</w> <w xml:id="w_20_4">wirt</w> <w xml:id="w_20_5">herre</w> <w xml:id="w_20_6">kint</w></l>
+      <l n="2"><lb/><w xml:id="w_20_7">vrouwe</w> <w xml:id="w_20_8">muoter</w> <w xml:id="w_20_9">vater</w> <w xml:id="w_20_10">wort</w> <w xml:id="w_20_11">leben</w> <w xml:id="w_20_12">in</w></l>
+      <l n="3"><lb/><w xml:id="w_20_13">dem</w> <w xml:id="w_20_14">anegenge</w> <w xml:id="w_20_15">schuof</w> <w xml:id="w_20_16">got</w> <w xml:id="w_20_17">himel</w> <w xml:id="w_20_18">und</w></l>
+      <l n="4"><lb/><w xml:id="w_20_19">erde</w> <w xml:id="w_20_20">daz</w> <w xml:id="w_20_21">lieht</w> <w xml:id="w_20_22">wart</w> <w xml:id="w_20_23">wazzer</w> <w xml:id="w_20_24">name</w></l>
+    </body>
+  </text>
+</TEI>

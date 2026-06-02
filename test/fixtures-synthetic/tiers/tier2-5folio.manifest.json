@@ -1,0 +1,31 @@
+{
+  "fixtureId": "tier2-5folio",
+  "file": "tier2-5folio.xml",
+  "synthetic": false,
+  "derivedFrom": "codex-2759.xml (ONB, LOCAL ONLY, do not commit)",
+  "surfaces": [
+    "surface_1",
+    "surface_2",
+    "surface_3",
+    "surface_4",
+    "surface_5"
+  ],
+  "schema": {
+    "sch": "Bilderfassung.sch",
+    "rng": "test/schemas/tei_all.rng"
+  },
+  "counts": {
+    "surface": 5,
+    "zone": 15,
+    "standOff": 1,
+    "note": 5,
+    "w": 120,
+    "lb": 20,
+    "l": 20,
+    "pb": 5
+  },
+  "namespaces": {
+    "default": "http://www.tei-c.org/ns/1.0",
+    "xml": "http://www.w3.org/XML/1998/namespace"
+  }
+}

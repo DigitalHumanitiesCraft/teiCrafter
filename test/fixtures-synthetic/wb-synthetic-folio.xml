@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="Bilderfassung-synthetic.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Synthetic Wenzelsbibel structural twin (folio S001)</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic fixture, no ONB data, released CC0. Mirrors the structure of codex-2759.xml only.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Structural twin: w / lb / l word-level text, facsimile / surface / zone, standOff apparatus.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <standOff>
+    <note xml:id="app_1" target="#w_1_3" type="apparatus">variant reading for the third word</note>
+    <note xml:id="app_2" target="#w_1_7" type="commentary">comprehension note for the seventh word</note>
+  </standOff>
+  <facsimile>
+    <surface xml:id="surface_1" n="1r">
+      <zone xml:id="zone_1" ulx="10" uly="10" lrx="100" lry="40"/>
+      <zone xml:id="zone_2" ulx="10" uly="50" lrx="100" lry="80"/>
+      <zone xml:id="zone_3" ulx="10" uly="90" lrx="100" lry="120"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <pb n="1r" facs="#surface_1"/>
+      <l n="1"><lb/><w xml:id="w_1_1">In</w> <w xml:id="w_1_2">dem</w> <w xml:id="w_1_3">anegenge</w> <w xml:id="w_1_4">schuof</w> <w xml:id="w_1_5">got</w> <w xml:id="w_1_6">himel</w></l>
+      <l n="2"><lb/><w xml:id="w_1_7">und</w> <w xml:id="w_1_8">erde</w> <w xml:id="w_1_9">und</w> <w xml:id="w_1_10">daz</w> <w xml:id="w_1_11">lieht</w> <w xml:id="w_1_12">wart</w><lb/></l>
+    </body>
+  </text>
+</TEI>

@@ -1,0 +1,46 @@
+{
+  "fixtureId": "tier3-20folio",
+  "file": "tier3-20folio.xml",
+  "synthetic": false,
+  "derivedFrom": "codex-2759.xml (ONB, LOCAL ONLY, do not commit)",
+  "surfaces": [
+    "surface_1",
+    "surface_10",
+    "surface_11",
+    "surface_12",
+    "surface_13",
+    "surface_14",
+    "surface_15",
+    "surface_16",
+    "surface_17",
+    "surface_18",
+    "surface_19",
+    "surface_2",
+    "surface_20",
+    "surface_3",
+    "surface_4",
+    "surface_5",
+    "surface_6",
+    "surface_7",
+    "surface_8",
+    "surface_9"
+  ],
+  "schema": {
+    "sch": "Bilderfassung.sch",
+    "rng": "test/schemas/tei_all.rng"
+  },
+  "counts": {
+    "surface": 20,
+    "zone": 60,
+    "standOff": 1,
+    "note": 20,
+    "w": 480,
+    "lb": 80,
+    "l": 80,
+    "pb": 20
+  },
+  "namespaces": {
+    "default": "http://www.tei-c.org/ns/1.0",
+    "xml": "http://www.w3.org/XML/1998/namespace"
+  }
+}

@@ -1,0 +1,8 @@
+# Real, ONB-derived Wenzelsbibel fixtures are NEVER committed (codex-2759.xml is
+# third-party material of the Austrian National Library; redistribution unresolved).
+# Only the synthetic structural twin under fixtures-synthetic/ is tracked.
+fixtures/
+reports/
+
+# Large schemas fetched on demand (TEI is freely licensed but the file is big)
+schemas/tei_all.rng

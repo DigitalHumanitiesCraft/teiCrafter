@@ -12,47 +12,51 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-05-27
+updated: 2026-05-30
 language: en
-version: 0.3
-related: [project, data, specification, user-stories, architecture, design, journal]
+version: 0.4
+related: [project, data, specification, user-stories, architecture, design, journal, testing]
 ---
 
 # teiCrafter Knowledge Base
 
-Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy between documents is avoided and expressed through cross-references. teiCrafter is a browser-based TEI working environment with two paths: a Generator path (LLM-assisted transformation of plaintext to annotated TEI) and an Editor path (schema-aware editing of existing TEI editions). The current build focus is the Editor path, driven by its first real use case, the Wenzelsbibel (Codex 2759, project start autumn 2026).
+Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. An optional LLM on-ramp drafts an initial TEI from plaintext into the same editor. Client-only, no backend, no build step.
 
-This knowledge base follows the [Promptotyping Documents convention](https://dhcraft.org/Promptotyping/). It deliberately mirrors the function-separated structure of the ancestor tool coOCR HTR rather than the generic OVERVIEW/ARCHITECTURE/REFERENCE/DEVELOPMENT split it replaces.
+This knowledge base follows the [Promptotyping Documents convention](https://dhcraft.org/Promptotyping/), function-separated as in the ancestor tool coOCR HTR.
 
 ## Document Map
 
 | Document | Answers | Read first when | Depends on |
 |----------|---------|-----------------|------------|
-| [project](project.md) | What is teiCrafter, why does it exist, how is it positioned? | Output is conceptually wrong, scope unclear | - |
-| [data](data.md) | What does the tool consume and produce, what TEI is the test material? | Formats confused, examples cited wrong | project |
-| [specification](specification.md) | What should the system do and why? (two paths, function cores, validation, project modules, decisions) | A requirement or decision was ignored or revised | project, data |
-| [user-stories](user-stories.md) | Who uses it, in which concrete scenarios? | A usage scenario was misunderstood | specification |
-| [architecture](architecture.md) | How is it built? (components, data flow, editor engine, status) | Wrong assumptions about components or data flow | specification |
-| [design](design.md) | How does it look and behave aesthetically? | UI inconsistency, design-system break | specification |
-| [journal](journal.md) | How did we get here? (decision log, development journal) | Decision logic unclear, repeated dead ends | - |
+| [project](project.md) | What is teiCrafter, why does it exist, how is it positioned? | Scope or identity unclear | - |
+| [data](data.md) | What does it consume and produce; what TEI proves the engine? | Formats or test corpus in question | project |
+| [specification](specification.md) | What should the system do and why? (generic reader, editor, LLM on-ramp, validation, decisions) | A requirement or decision is at stake | project, data |
+| [user-stories](user-stories.md) | Who uses it, in which scenarios, and what is built? | A usage scenario or status is unclear | specification |
+| [architecture](architecture.md) | How is it built? (three-layer engine, services, status) | Wrong assumptions about components or data flow | specification |
+| [design](design.md) | How does it look and behave? (tokens, three-pane layout, AI marking) | UI or design-system work | specification |
+| [testing](testing.md) | How is it proven and validated? (engine proofs, harness levels) | Coverage or eval method in question | architecture |
+| [journal](journal.md) | How did we get here? (decision log) | Decision logic unclear | - |
 
-Action layer lives in the repo root, not here: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source.
+Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary.
 
 ## Core Concepts
 
 | Concept | Definition | Document |
 |---------|------------|----------|
-| Epistemic asymmetry | LLMs produce plausible annotations but cannot reliably judge their correctness; human expertise is structurally necessary, not optional QA | project, specification |
-| Generator path | LLM-assisted modular transformation of plaintext / PAGE-XML / basic TEI into semantically annotated TEI-XML | specification |
-| Editor path | Schema-aware browser editing of existing TEI editions: index management, StandOff apparatus, project-specific authoring views; LLM optional | specification |
-| Project module | A Markdown document with a project's editorial guidelines that configures autocompletion, authoring views, indices, toolbar buttons and Schematron | specification |
-| teiModeller | Supports the modelling decision itself ("how is this textual phenomenon represented in TEI?") and emits mapping rules | specification |
-| Categorical confidence | Three states (confident / review / problematic) instead of numeric scores; inherited from coOCR HTR | design, specification |
-| Plaintext comparison | Fundamental validation: output text nodes must match the input plaintext, else the transformation is flagged | specification |
-| Facsimile image import | Page images for the Editor's facsimile pane, loaded from a IIIF manifest or METS image references | data |
-| File System Access API | Lets the Editor path read and write large editions locally without a server backend | architecture |
-| Folio-segmenting load | Loading strategy that keeps editions beyond 10 MB (Wenzelsbibel: 78 MB) workable in the browser | architecture |
+| Generic lossless reader | The core: the raw TEI string is canonical, edits are offset splices, `serialize()` is byte-identical; reads arbitrary TEI without a per-project profile | architecture, specification |
+| Emergent granularity | The editable unit (word vs line) emerges from the document: word-level if `<w>` present (Wenzelsbibel), else line-level (Hersch); no branching | architecture, project |
+| Cells / folios / lines | The model `edition.js` projects: folios split by `<pb>`, lines by `<lb>`/`<l>`, cells are editable reading-text nodes | architecture |
+| LLM on-ramp | The optional entry: a model drafts an initial TEI from plaintext that opens in the same editor, marked machine-generated and unreviewed | specification, design |
+| Epistemic asymmetry | Models produce plausible TEI but cannot judge their own correctness; the human verifies in the deterministic editor | project, design |
+| Hybrid validation | Browser-light live (well-formed + structural integrity) plus harness-heavy offline (RelaxNG + Schematron) | specification, testing |
+| MVP gate | Well-formed AND L1 word fidelity AND L3 counts preserved; L2 reported as new-errors-vs-input, non-gating | testing |
+| Byte-identical round-trip | The proven property: every real TEI file serializes back unchanged (294/294) | testing |
+| File System Access API | Lets the editor read and write editions locally without a backend | architecture |
 
 ## Lineage
 
-teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream tool, client-only ES6, expert-centered design). It is conceptual preparation for EditionCrafter but is developed as an independent browser tool, not as a module of any harness. The Generator path originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
+teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed as an independent browser tool. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
+
+## History Note
+
+Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor) and a CodeMirror/DocumentModel architecture. The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Version 0.4 documents the as-built reality; see [journal](journal.md).

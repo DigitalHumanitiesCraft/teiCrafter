@@ -7,10 +7,12 @@
 - Knowledge documents follow the Promptotyping Documents convention: standard Markdown with YAML frontmatter (title, project, method, template, status, created, updated; plus topics, language, version, related). This replaces the former "no frontmatter" rule.
 
 ## Project
-- Browser-based TEI working environment with two paths: a Generator path (LLM-assisted transformation of plaintext to annotated TEI) and an Editor path (schema-aware editing of existing TEI editions, index management, StandOff apparatus, project-specific authoring views; LLM optional).
-- Current focus: the Editor path, driven by its first use case, the Wenzelsbibel (Codex 2759).
+- A browser-based, lossless editor for arbitrary TEI-XML. Open an existing edition, correct it folio by folio at its natural granularity (word-level if `<w>` is present, else line-level), save it back byte-faithfully. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
+- An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides.
+- Real cases: Wenzelsbibel (word-level), Jeanne Hersch / zbz-ocr-tei (line-level), Stefan Zweig / szd-htr (catalog TEI + Page-JSON, needs conversion first).
 - Client-only, deployed via GitHub Pages from `/docs`. ES6 modules, no bundler, no build step.
 - An independent tool, not a module of EditionCrafter.
+- The earlier five-step LLM Generator app was removed in the 2026-05-30 consolidation (recoverable from git history). Do not reintroduce a stepper; both entries land in the one editor.
 
 ## Knowledge Base (`knowledge/`)
 Function-separated per the Promptotyping convention. Read `INDEX.md` first; it carries the document map and the glossary.
@@ -23,10 +25,11 @@ Function-separated per the Promptotyping convention. Read `INDEX.md` first; it c
 | user-stories.md | a usage scenario is unclear |
 | architecture.md | components, data flow, or implementation status |
 | design.md | UI, visual, or interaction work (the aesthetic value source) |
+| testing.md | the test approach, engine proofs, or harness is in question |
 | journal.md | how a decision came about |
 
 ## Design as Value Source
-Before generating or changing UI, read `knowledge/design.md`. Its principles are binding: the AI assists and the human decides (expert-in-the-loop); categorical confidence, not numeric; AI-generated content is always marked in the violet token family; design tokens (`--tc-*`) are the single source of truth, no raw hex in components; label consistency is a rule, not a freedom.
+Before generating or changing UI, read `knowledge/design.md`. Its principles are binding: the AI assists and the human decides (expert-in-the-loop); categorical confidence, not numeric; AI-generated content is always marked in the violet token family (`--color-ai`); design tokens are the single source of truth (live prefix is `--color-*`/`--space-*`/`--font-*`/`--radius-*`, no raw hex in components); label consistency is a rule, not a freedom.
 
 ## Knowledge Maintenance
 At the end of a session with code changes, update the affected knowledge documents:

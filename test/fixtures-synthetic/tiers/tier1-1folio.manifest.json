@@ -1,0 +1,27 @@
+{
+  "fixtureId": "tier1-1folio",
+  "file": "tier1-1folio.xml",
+  "synthetic": false,
+  "derivedFrom": "codex-2759.xml (ONB, LOCAL ONLY, do not commit)",
+  "surfaces": [
+    "surface_1"
+  ],
+  "schema": {
+    "sch": "Bilderfassung.sch",
+    "rng": "test/schemas/tei_all.rng"
+  },
+  "counts": {
+    "surface": 1,
+    "zone": 3,
+    "standOff": 1,
+    "note": 1,
+    "w": 24,
+    "lb": 4,
+    "l": 4,
+    "pb": 1
+  },
+  "namespaces": {
+    "default": "http://www.tei-c.org/ns/1.0",
+    "xml": "http://www.w3.org/XML/1998/namespace"
+  }
+}

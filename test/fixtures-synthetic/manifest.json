@@ -1,0 +1,30 @@
+{
+  "fixtureId": "wb-synthetic-folio",
+  "file": "wb-synthetic-folio.xml",
+  "synthetic": true,
+  "derivedFrom": "none (hand-authored structural twin of codex-2759.xml; no ONB data)",
+  "schema": {
+    "sch": "Bilderfassung-synthetic.sch",
+    "rng": "test/schemas/tei_all.rng"
+  },
+  "counts": {
+    "surface": 1,
+    "zone": 3,
+    "standOff": 1,
+    "note": 2,
+    "w": 12,
+    "lb": 3,
+    "l": 2,
+    "pb": 1
+  },
+  "namespaces": {
+    "default": "http://www.tei-c.org/ns/1.0",
+    "xml": "http://www.w3.org/XML/1998/namespace"
+  },
+  "ids": 18,
+  "pointers": {
+    "standOffTargets": 2,
+    "pbFacs": 1,
+    "danglingExpected": 0
+  }
+}
