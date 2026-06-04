@@ -125,6 +125,14 @@ export function readEntities(doc) {
 // ---- standOff scaffolding --------------------------------------------------
 
 /**
+ * The document's dominant newline, so scaffolding we insert matches the file's
+ * line endings instead of forcing LF into an otherwise CRLF document.
+ */
+function docNewline(doc) {
+  return doc && doc.raw && doc.raw.indexOf("\r\n") !== -1 ? "\r\n" : "\n";
+}
+
+/**
  * Ensure a <standOff> exists. If absent, insert "<standOff>\n  </standOff>" right
  * after the teiHeader end tag. Returns { doc, created }: a NEW doc when inserted,
  * the SAME doc when already present.
@@ -136,7 +144,8 @@ export function ensureStandOff(doc) {
   // Without a teiHeader we have no defined anchor; leave the doc untouched.
   if (!header || header.etagEnd == null) return { doc, created: false };
   const at = header.etagEnd;
-  const next = spliceDocument(doc, at, at, "\n  <standOff>\n  </standOff>");
+  const nl = docNewline(doc);
+  const next = spliceDocument(doc, at, at, nl + "  <standOff>" + nl + "  </standOff>");
   return { doc: next, created: true };
 }
 
@@ -158,7 +167,8 @@ function ensureList(doc, type) {
 
   // Insert an empty list just inside <standOff>, after its start tag.
   const at = standOff.contentStart != null ? standOff.contentStart : standOff.stagEnd;
-  const snippet = "\n    <" + desc.list + ">\n    </" + desc.list + ">";
+  const nl = docNewline(doc);
+  const snippet = nl + "    <" + desc.list + ">" + nl + "    </" + desc.list + ">";
   doc = spliceDocument(doc, at, at, snippet);
   list = firstByLocal(firstByLocal(doc.root, "standOff"), desc.list);
   return { doc, list };
@@ -191,8 +201,9 @@ export function addEntity(doc, type, { id, name } = {}) {
   const finalId = uniquify(base, taken);
 
   const safeName = escapeText(name == null ? "" : name);
+  const nl = docNewline(doc);
   const el =
-    "\n      <" + desc.entity + ' xml:id="' + escapeAttr(finalId) + '">' +
+    nl + "      <" + desc.entity + ' xml:id="' + escapeAttr(finalId) + '">' +
     "<" + desc.name + ">" + safeName + "</" + desc.name + ">" +
     "</" + desc.entity + ">";
 

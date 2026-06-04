@@ -54,6 +54,10 @@
   background: var(--color-ai-tint); border-bottom: 1px solid var(--color-ai);
   font-size: var(--font-size-xs); color: var(--color-ai);
 }
+/* The hidden attribute must win over the display:flex above (author rules beat the
+   user-agent [hidden] rule regardless of specificity), or the banner shows even when
+   no LLM-generated edition is loaded. */
+.ed-genbanner[hidden] { display: none; }
 .ed-genbanner b { color: var(--color-ai); }
 
 /* LLM-input modal */

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-05-30
+updated: 2026-06-04
 language: en
 version: 0.4
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
@@ -42,7 +42,15 @@ The engine is three pure-then-UI layers. The lower two are DOM-free, so the exac
 |-------|------|----------------|
 | 1. Generic document core | `js/editor/tei-document.js` | A small XML tokenizer builds an offset-true tree: every element, attribute value and text node carries byte offsets into the raw string. Schema-free recognizers by local-name (`pb`, `lb`, `l`, `w`, `surface`, `zone`, `note`, `@facs`, entities). Lossless edit ops (`editTextNode`, `editAttrValue`, `spliceDocument`). `serialize()` returns the raw string, so round-trip is byte-identical by construction. |
 | 2. Edition model | `js/editor/edition.js` | Projects any parsed TEI into the shape the UI consumes: folios (split by `<pb>`), lines (by `<lb>`/`<l>`), and editable cells (reading-text nodes). The profile (`word` if `<w>` present, else `line`) emerges from the document. `editWordText`/`editCell` apply a lossless splice and re-parse. Preserves a back-compatible API used by the headless proofs. |
-| 3. UI controller | `js/editor/editor-app.js` | Three-pane shell wiring: open (File System Access API with a file-input fallback, plus the served synthetic demo), folio navigation, inline cell editing, the facsimile placeholder with zone linking, the browser-light validation panel, save and download, and the LLM on-ramp modal. |
+| 3. UI controller | `js/editor/editor-app.js` | Three-pane shell wiring: open (File System Access API with a file-input fallback, plus the served synthetic demo), folio navigation, inline cell editing, the OpenSeadragon facsimile with zone linking, the browser-light validation panel, the tabbed index panel, save and download, and the LLM on-ramp modal. |
+
+### Supporting modules (around the engine)
+
+| File | Responsibility |
+|------|----------------|
+| `js/editor/facsimile.js` | Real OpenSeadragon deep-zoom viewer (5.0.1 from CDN) over the page image, with `<zone>` rectangles overlaid and bidirectionally linked to the reading text. Plain-image tileSource with an IIIF-ready hook. Project-dependency-free (uses the global `OpenSeadragon`). |
+| `js/editor/standoff.js` | DOM-free, lossless `<standOff>` model over `tei-document.js`: read/add/update/delete `person`/`org`/`event` entities, and link in-text mentions by wrapping them in `<name ref="#id">`. Every mutation is an offset splice; a no-op returns the same doc, so the round-trip stays byte-identical. Inserted scaffolding adopts the document's own newline (CRLF/LF). |
+| `js/editor/index-panel.js` | Index-management UI (persons/orgs/events) with entity <-> mention <-> zone highlighting. Imports nothing project-internal; drives `standoff.js` through `editor-app.js`. |
 
 ### Why an offset-splice core, not the DOM
 
@@ -63,7 +71,7 @@ The LLM on-ramp builds a minimal annotate prompt in `editor-app.js`, calls `llm.
 ```
 docs/
   index.html              Landing: two entry cards (editor, LLM on-ramp)
-  editor.html             The editor: three-pane shell + LLM modal
+  editor.html             The editor: three-pane shell + LLM modal; loads OpenSeadragon 5.0.1 from CDN
   css/
     style.css             Design tokens (--color-*, --space-*, --font-*, --radius-*) + base
     editor.css            Editor-specific styles (token-only)
@@ -71,13 +79,18 @@ docs/
     editor/
       tei-document.js     Layer 1: generic offset-true core (DOM-free)
       edition.js          Layer 2: folios/lines/cells model (DOM-free)
-      editor-app.js       Layer 3: UI controller
+      editor-app.js       Layer 3: UI controller + LLM on-ramp
+      facsimile.js        OpenSeadragon viewer: page image + zone overlays, IIIF-ready
+      standoff.js         Lossless <standOff> model (person/org/event) + mention linking
+      index-panel.js      Index-management UI; entity/mention/zone highlighting
     services/
       llm.js              Multi-provider LLM client (keys in memory only)
       storage.js          Settings persistence
     utils/
       constants.js        Providers, source labels, default mappings
-  data/editor/            Served synthetic Wenzelsbibel demo edition
+  data/editor/
+    wenzelsbibel-synthetic-codex.xml   Served synthetic word-level demo edition
+    zbz-100/              Real Jeanne Hersch example (TEI + page PNGs); gitignored, local-only (rights)
 ```
 
 ## State
@@ -91,9 +104,9 @@ The editor holds a single `app` state object: the current edition model, the cur
 
 ## Implementation Status
 
-Built and verified: the three-layer editor engine, open/navigate/edit/save, the facsimile placeholder with `@facs` zone linking, browser-light validation, the LLM on-ramp, and the offline harness. The byte-identical round-trip and surgical-edit behaviour are proven headlessly on real data.
+Built and verified: the three-layer editor engine, open/navigate/edit/save, the real OpenSeadragon facsimile with `@facs` zone linking, `<standOff>` index management (person/org/event) with in-text mention linking via `<name ref>`, browser-light validation, the LLM on-ramp, and the offline harness. The byte-identical round-trip and surgical-edit behaviour are proven headlessly on real data; the browser click-through (load demo, word edit, navigation, live validation, add/link/delete an index entity) was exercised and confirmed in-app on 2026-06-04.
 
-Not yet built (see [specification](specification.md) "Future"): real facsimile images (IIIF/OpenSeadragon), a StandOff apparatus editor, person/place index management, project modules, a CodeMirror source view, and a streaming/segmented load for very large (tens of MB) editions. The browser visual click-through of the editor is the one check the harness cannot perform.
+Not yet built (see [specification](specification.md) "Future"): a true IIIF tiles/manifest source (the viewer currently uses a plain-image tileSource), a StandOff critical-apparatus editor, project modules, a CodeMirror source view, and a streaming/segmented load for very large (tens of MB) editions. Live OpenSeadragon rendering over a real page image is verifiable only via the rights-encumbered local ZBZ example, so it remains the one path the committed demo cannot show.
 
 ## Related
 

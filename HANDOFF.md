@@ -1,6 +1,6 @@
 # teiCrafter Handoff and Working State
 
-Action-layer summary so work can resume without re-deriving anything. Snapshot: 2026-05-30 (post-consolidation). Conceptual detail lives in `knowledge/` (version 0.4).
+Action-layer summary so work can resume without re-deriving anything. Snapshot: 2026-06-04 (post in-browser click-through). Conceptual detail lives in `knowledge/` (version 0.4).
 
 ## What teiCrafter is
 
@@ -61,10 +61,12 @@ python -m http.server 8000 --directory docs
 
 ## The one open verification
 
-Browser click-through of the editor (the harness cannot do this):
-1. Open a real Hersch file via "Open local TEI": `...\DHCraft\zbz-ocr-tei\output\tei_final\100_final.xml` -> folio nav, click a line to correct, zone highlight, download.
-2. "Load synthetic Wenzelsbibel" -> word-level editing.
-3. "New from text (LLM)" with a key -> draft opens in the editor, violet/unreviewed.
+Browser click-through of the editor (the harness cannot do this). Done on 2026-06-04 against the synthetic Wenzelsbibel, confirmed against the serialized output: word-level editing (surgical splice), folio navigation, live validation, and the index lifecycle (add person -> link a mention as `<w><name ref="#id">...</name></w>` -> delete cleanly). Two defects found and fixed (see journal 2026-06-04): the always-on AI banner (CSS `[hidden]` override) and LF-into-CRLF standOff inserts.
+
+Still unverified in-app:
+1. Live OpenSeadragon rendering over a real page image. Reachable only via "Load ZBZ example" (the rights-encumbered, local-only Hersch edition): real OSD image, zone overlays aligned to text, select a person to highlight its mentions + zone.
+2. "Open local TEI" file-picker flow and "Save" in place (File System Access API).
+3. "New from text (LLM)" with a key -> draft opens violet/unreviewed (the banner now shows correctly only on this path).
 
 ## Real cases and their shape
 
