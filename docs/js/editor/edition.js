@@ -196,6 +196,23 @@ export function serialize(state) {
   return state.raw;
 }
 
+/**
+ * The set of real @xml:id values in the reading text (body/text, never the
+ * teiHeader/facsimile/standOff). This is the stable baseline for the live
+ * integrity check: synthetic positional cell ids (c0..cN) churn when a line is
+ * emptied even though the round-trip stays lossless, so they must not be used.
+ */
+export function xmlIdSet(state) {
+  const ids = new Set();
+  walk(readingRoot(state.doc), (n) => {
+    if (n.type === "element") {
+      const id = getAttr(n, "id");
+      if (id) ids.add(id);
+    }
+  });
+  return ids;
+}
+
 /** A lightweight structural summary for the in-browser validation panel. */
 export function structuralSummary(state) {
   const counts = countLocals(state.doc, [

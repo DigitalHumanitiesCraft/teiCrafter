@@ -1,6 +1,6 @@
 # teiCrafter Handoff and Working State
 
-Action-layer summary so work can resume without re-deriving anything. Snapshot: 2026-06-04 (post in-browser click-through). Conceptual detail lives in `knowledge/` (version 0.4).
+Action-layer summary so work can resume without re-deriving anything. Snapshot: 2026-06-04 (post multi-agent audit: entity-faithful edits, header-less standOff guard, and the AI-violet/radius tokens fixed; see journal). Conceptual detail lives in `knowledge/` (version 0.4).
 
 ## What teiCrafter is
 
@@ -45,6 +45,7 @@ The legacy five-step LLM Generator and its tree: `app.js`, `model.js`, `editor.j
 | `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 294/294 (285 Hersch, 4 SZD, 5 synthetic) |
 | `test/tools/generic_roundtrip.mjs` | one engine reads Hersch/WB/SZD; surgical cell edit; model shape | all pass |
 | `test/tools/editor_roundtrip.mjs` | editor core identity + surgical word edit, harness localizes it | 13/13 |
+| `test/tools/edit_fidelity.mjs` | entity-faithful edits; `addEntity` no crash on header-less TEI; relink retargets `@ref` (no nested `<name>`); integrity baseline tracks real `@xml:id` | 21/21 |
 | `test/harness/selftest.mjs` | negative gate (identity passes, corruption fails) | 14/14 |
 | `test/harness/run.mjs` | synthetic fixtures, MVP gate | all PASS, score 100 |
 

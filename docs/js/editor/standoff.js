@@ -28,6 +28,7 @@ import {
   textNodes,
   textOf,
   spliceDocument,
+  editAttrValue,
   escapeText,
   escapeAttr,
 } from "./tei-document.js";
@@ -133,20 +134,36 @@ function docNewline(doc) {
 }
 
 /**
- * Ensure a <standOff> exists. If absent, insert "<standOff>\n  </standOff>" right
- * after the teiHeader end tag. Returns { doc, created }: a NEW doc when inserted,
- * the SAME doc when already present.
+ * Ensure a <standOff> exists. If absent, insert "<standOff>\n  </standOff>" at the
+ * best available anchor, in order of preference: after the teiHeader end tag, else
+ * just before <text> (standOff precedes the body, as TEI expects), else as the
+ * first child of the document element. Only if the input has no element at all do
+ * we leave it untouched. Returns { doc, created }: a NEW doc when inserted, the
+ * SAME doc when already present (or unanchorable).
  */
 export function ensureStandOff(doc) {
   const existing = firstByLocal(doc.root, "standOff");
   if (existing) return { doc, created: false };
-  const header = firstByLocal(doc.root, "teiHeader");
-  // Without a teiHeader we have no defined anchor; leave the doc untouched.
-  if (!header || header.etagEnd == null) return { doc, created: false };
-  const at = header.etagEnd;
   const nl = docNewline(doc);
-  const next = spliceDocument(doc, at, at, nl + "  <standOff>" + nl + "  </standOff>");
-  return { doc: next, created: true };
+  const block = nl + "  <standOff>" + nl + "  </standOff>";
+
+  // Preferred anchor: right after the teiHeader end tag.
+  const header = firstByLocal(doc.root, "teiHeader");
+  if (header && header.etagEnd != null) {
+    return { doc: spliceDocument(doc, header.etagEnd, header.etagEnd, block), created: true };
+  }
+  // Fallback 1: immediately before <text>, so standOff precedes the body.
+  const text = firstByLocal(doc.root, "text");
+  if (text && text.outerStart != null) {
+    return { doc: spliceDocument(doc, text.outerStart, text.outerStart, block + nl), created: true };
+  }
+  // Fallback 2: as the first child of the document element (e.g. <TEI>).
+  const docEl = doc.root.children.find((c) => c.type === "element");
+  if (docEl && docEl.contentStart != null) {
+    return { doc: spliceDocument(doc, docEl.contentStart, docEl.contentStart, block), created: true };
+  }
+  // No element to anchor to (empty or element-free input): cannot scaffold.
+  return { doc, created: false };
 }
 
 /**
@@ -160,6 +177,8 @@ function ensureList(doc, type) {
   const ensured = ensureStandOff(doc);
   doc = ensured.doc;
   const standOff = firstByLocal(doc.root, "standOff");
+  // No anchor was available (element-free input): signal "no list" to the caller.
+  if (!standOff) return { doc, list: null };
 
   // Look for an existing list of this kind inside the standOff.
   let list = firstByLocal(standOff, desc.list);
@@ -187,6 +206,9 @@ export function addEntity(doc, type, { id, name } = {}) {
   const ensured = ensureList(doc, type);
   doc = ensured.doc;
   const list = ensured.list;
+  // The input had no element to anchor a standOff to; return it unchanged rather
+  // than throwing, so a caller wired to a UI button degrades gracefully.
+  if (!list) return doc;
 
   // Build an NCName-safe, unique id.
   const taken = collectIds(doc);
@@ -275,18 +297,20 @@ export function deleteEntity(doc, id) {
  */
 export function linkMention(doc, textNode, entityId) {
   if (!textNode || textNode.type !== "text") return doc;
+  const want = "#" + entityId;
   const parent = textNode.parent;
-  if (
-    parent &&
-    parent.type === "element" &&
-    parent.localName === "name" &&
-    getAttr(parent, "ref") === "#" + entityId
-  ) {
-    return doc; // already linked to this entity
+  // The mention text is already inside a <name>: retarget its @ref rather than
+  // wrapping a second <name> (which would nest invalidly). A no-op if it already
+  // points at this entity.
+  if (parent && parent.type === "element" && parent.localName === "name") {
+    const refAttr = getAttrObj(parent, "ref");
+    if (refAttr) return refAttr.value === want ? doc : editAttrValue(doc, refAttr, want);
+    // A <name> without @ref: insert one right after the element name.
+    const at = parent.stagStart + 1 + parent.qname.length;
+    return spliceDocument(doc, at, at, ' ref="' + escapeAttr(want) + '"');
   }
   const inner = doc.raw.slice(textNode.start, textNode.end);
-  const wrapped =
-    '<name ref="' + escapeAttr("#" + entityId) + '">' + inner + "</name>";
+  const wrapped = '<name ref="' + escapeAttr(want) + '">' + inner + "</name>";
   return spliceDocument(doc, textNode.start, textNode.end, wrapped);
 }
 

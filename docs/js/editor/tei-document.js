@@ -49,11 +49,16 @@ function readName(raw, from) {
 
 // ---- escaping / entities ---------------------------------------------------
 
+// An '&' that already begins a valid entity / character reference (named, decimal,
+// or hex). These must NOT be re-escaped, or a round-trip would corrupt existing
+// markup (e.g. &nbsp; -> &amp;nbsp;). Every other '&' is a literal and is escaped.
+const RE_BARE_AMP = /&(?!#[0-9]+;|#x[0-9a-fA-F]+;|[A-Za-z][A-Za-z0-9._-]*;)/g;
+
 export function escapeText(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(s).replace(RE_BARE_AMP, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 export function escapeAttr(s, quote = '"') {
-  let out = String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  let out = String(s).replace(RE_BARE_AMP, "&amp;").replace(/</g, "&lt;");
   out = quote === "'" ? out.replace(/'/g, "&apos;") : out.replace(/"/g, "&quot;");
   return out;
 }
@@ -330,13 +335,19 @@ function splice(raw, start, end, replacement) {
 /** Replace a text node's content. Returns a NEW document (re-parsed), so offsets
  *  stay correct. Only that text run is spliced; everything else is byte-identical. */
 export function editTextNode(doc, node, newText) {
+  const rawSlice = doc.raw.slice(node.start, node.end);
+  // Semantic no-op: the user's text decodes to exactly what is already there, so
+  // re-serializing would only churn entity spellings. Leave the bytes untouched.
+  if (decodeEntities(rawSlice) === String(newText)) return doc;
   const escaped = escapeText(newText);
-  if (escaped === doc.raw.slice(node.start, node.end)) return doc;
+  if (escaped === rawSlice) return doc;
   return parseDocument(splice(doc.raw, node.start, node.end, escaped));
 }
 
 /** Replace an attribute value (by its parsed attr object). Returns a NEW document. */
 export function editAttrValue(doc, attr, newValue) {
+  // Same semantic-no-op guard as editTextNode, on the attribute path.
+  if (decodeEntities(attr.rawValue) === String(newValue)) return doc;
   const escaped = escapeAttr(newValue, attr.quote);
   if (escaped === attr.rawValue) return doc;
   return parseDocument(splice(doc.raw, attr.valueStart, attr.valueEnd, escaped));

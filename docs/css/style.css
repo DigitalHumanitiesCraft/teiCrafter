@@ -24,6 +24,10 @@
     --color-blue: #2B5EA7;
     --color-blue-light: #E3EDF7;
 
+    /* AI on-ramp (violet): marks LLM-generated, unreviewed output and nothing else */
+    --color-ai: #6D4AB6;
+    --color-ai-tint: #F1ECFA;
+
     /* Text */
     --color-text: #1A1A1A;
     --color-text-secondary: #5A6270;
@@ -90,6 +94,9 @@
     --space-md: 16px;
     --space-lg: 24px;
     --space-xl: 32px;
+
+    /* Radii */
+    --radius-sm: 4px;
 
     /* Layout */
     --header-height: 48px;

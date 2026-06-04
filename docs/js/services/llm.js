@@ -28,7 +28,7 @@ const MODEL_CATALOG = Object.freeze({
     'o3':                 { name: 'o3',                  input: 2.00,  output: 8.00,  context: 200000,  reasoning: true  },
 
     // Anthropic
-    'claude-sonnet-4-5-20250514': { name: 'Claude Sonnet 4.5', input: 3.00, output: 15.00, context: 200000, reasoning: true  },
+    'claude-sonnet-4-5-20250929': { name: 'Claude Sonnet 4.5', input: 3.00, output: 15.00, context: 200000, reasoning: true  },
     'claude-haiku-3-5-20241022':  { name: 'Claude Haiku 3.5',  input: 0.80, output: 4.00,  context: 200000, reasoning: false },
 
     // DeepSeek
@@ -78,8 +78,8 @@ const PROVIDER_CONFIGS = Object.freeze({
     [LLM_PROVIDERS.ANTHROPIC]: {
         name: 'Anthropic',
         endpoint: 'https://api.anthropic.com/v1/messages',
-        defaultModel: 'claude-sonnet-4-5-20250514',
-        models: ['claude-sonnet-4-5-20250514', 'claude-haiku-3-5-20241022'],
+        defaultModel: 'claude-sonnet-4-5-20250929',
+        models: ['claude-sonnet-4-5-20250929', 'claude-haiku-3-5-20241022'],
         authType: 'x-api-key',
         buildRequest(prompt, model) {
             return {

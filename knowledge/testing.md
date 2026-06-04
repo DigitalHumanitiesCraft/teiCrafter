@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-05-30
+updated: 2026-06-04
 language: en
 version: 0.4
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
@@ -32,6 +32,7 @@ The promise is "read arbitrary TEI and save it byte-losslessly". These prove it 
 | `test/tools/roundtrip_sweep.mjs` | Every real TEI file tokenizes contiguously and `serialize()` is byte-identical to the input | 294/294 byte-identical (285 Hersch, 4 SZD, 5 synthetic) |
 | `test/tools/generic_roundtrip.mjs` | One engine reads Hersch (line-level), Wenzelsbibel (word-level) and SZD (catalog); recognizers find pb/lb/zones; a cell edit is a surgical splice; the editor model shape is correct | all checks pass |
 | `test/tools/editor_roundtrip.mjs` | The editor edition-core API: identity round-trip is byte-identical; a word edit is surgical; the harness localizes exactly that change | 13/13 |
+| `test/tools/edit_fidelity.mjs` | Edits stay byte-faithful over character/entity references (a no-op edit of a cell or attribute holding `&nbsp;`/`&#233;`/`&quot;`/`&apos;` is byte-identical, a real edit preserves a neighbouring entity); `addEntity` degrades gracefully on header-less or element-free TEI; relinking a mention retargets `@ref` without nesting `<name>`; the integrity baseline tracks real `@xml:id`, stable across a lossless line-emptying edit | 21/21 |
 
 The sweep reads directly from the source repos (nothing copied or committed) plus the committed synthetic fixtures; override the source dirs with `HERSCH_DIR` / `SZD_DIR`.
 
@@ -67,7 +68,7 @@ The harness gates on text and structure fidelity and surfaces, without failing, 
 - `test/harness/validate.py`: the validator (L1, L2 via lxml, L3), JSON report.
 - `test/harness/run.mjs`: orchestrator over every fixture.
 - `test/harness/selftest.mjs`: negative test (identity passes, corruption fails), 14/14.
-- `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`: the engine proofs above.
+- `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`: the engine proofs above.
 - `test/tools/gen_synthetic_codex.py`, `extract_folio.py`: synthetic generation and folio slicing.
 - `test/schemas/tei_all.rng`: TEI All RelaxNG (~11.6 MB, gitignored).
 - `test/reports/<id>/report.json`: per-fixture report (wellFormed, L1, L2 with newErrorsVsInput, L3 with deltas, verdict, score).
@@ -82,6 +83,7 @@ Real third-party files (Hersch, SZD, any ONB codex slice) live only under the gi
 node test/tools/roundtrip_sweep.mjs      # 294/294 byte-identical (reads source repos)
 node test/tools/generic_roundtrip.mjs    # one engine over Hersch / WB / SZD
 node test/tools/editor_roundtrip.mjs     # editor core vs harness, 13/13
+node test/tools/edit_fidelity.mjs        # entity-faithful edits + standOff guard, 13/13
 node test/harness/selftest.mjs           # negative gate, must be 14/14
 node test/harness/run.mjs                # all synthetic fixtures, must PASS
 ```

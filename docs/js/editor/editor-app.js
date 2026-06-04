@@ -27,6 +27,7 @@ import {
   editWordText,
   serialize,
   structuralSummary,
+  xmlIdSet,
   countTags,
   unescapeXmlText,
 } from "./edition.js";
@@ -48,7 +49,7 @@ const app = {
   fileHandle: null,   // FileSystemFileHandle for save-in-place, or null
   docName: null,      // displayed document name
   dirty: false,       // unsaved changes since last load/save
-  baseline: null,     // { wordCount, wordIds:Set, counts } captured at load, for integrity checks
+  baseline: null,     // { wordCount, xmlIds:Set, counts } captured at load, for integrity checks
   noteByWord: new Map(), // wordId -> note text (for has-note marker + tooltip)
   currentLines: [],   // lines of the folio currently rendered (for zone <-> line linking)
   generated: false,   // true when the current edition came from the LLM (unreviewed)
@@ -136,9 +137,9 @@ function load(raw, name, handle) {
   // image base afterwards; every other entry (open, demo, generate) stays null.
   app.imageBase = null;
   app.linkTarget = null;
-  const ids = new Set();
-  for (const w of app.state.words) if (w.id) ids.add(w.id);
-  app.baseline = { wordCount: app.state.words.length, wordIds: ids, counts: countTags(raw) };
+  // Track real @xml:id values (not synthetic positional cell ids, which churn on
+  // a lossless line-emptying edit and would raise a false "id lost" alarm).
+  app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
   $("ed-doc-name").textContent = name;
   enableControls(true);
   setDirty(false);
@@ -404,19 +405,31 @@ function ensureIndexPanel() {
   if (!host) return null;
   indexPanel = createIndexPanel(host, {
     onAdd: (type, { name }) => {
-      app.state = parseEdition(standoff.addEntity(app.state.doc, type, { name }).raw);
-      setDirty(true);
-      refreshAfterStandoffEdit();
+      try {
+        app.state = parseEdition(standoff.addEntity(app.state.doc, type, { name }).raw);
+        setDirty(true);
+        refreshAfterStandoffEdit();
+      } catch (err) {
+        setStatus(`Could not add entity: ${err.message}`);
+      }
     },
     onUpdate: (id, { name }) => {
-      app.state = parseEdition(standoff.updateEntity(app.state.doc, id, { name }).raw);
-      setDirty(true);
-      refreshAfterStandoffEdit();
+      try {
+        app.state = parseEdition(standoff.updateEntity(app.state.doc, id, { name }).raw);
+        setDirty(true);
+        refreshAfterStandoffEdit();
+      } catch (err) {
+        setStatus(`Could not rename entity: ${err.message}`);
+      }
     },
     onDelete: (id) => {
-      app.state = parseEdition(standoff.deleteEntity(app.state.doc, id).raw);
-      setDirty(true);
-      refreshAfterStandoffEdit();
+      try {
+        app.state = parseEdition(standoff.deleteEntity(app.state.doc, id).raw);
+        setDirty(true);
+        refreshAfterStandoffEdit();
+      } catch (err) {
+        setStatus(`Could not delete entity: ${err.message}`);
+      }
     },
     onSelect: (entity) => highlightMentions(entity),
     onStartLink: (entity) => {
@@ -504,15 +517,20 @@ function renderValidation() {
   const sec1 = el("div", { class: "ed-section" }, [el("h4", { text: "Live checks" })]);
   sec1.appendChild(valRow(wf.ok ? "ok" : "err", wf.ok ? "Well-formed XML" : `Not well-formed: ${wf.message}`));
 
-  // Structural integrity vs the loaded baseline (lossless round-trip evidence)
+  // Structural integrity vs the loaded baseline (lossless round-trip evidence).
+  // Compares real @xml:id values, so a lossless edit that drops a synthetic cell
+  // id (e.g. emptying a line in an id-less edition) does not raise a false alarm.
   const base = app.baseline;
-  const missing = [...base.wordIds].filter((id) => !app.state.wordById.has(id));
-  const added = app.state.words.filter((w) => w.id && !base.wordIds.has(w.id)).length;
+  const curIds = xmlIdSet(app.state);
+  const missing = [...base.xmlIds].filter((id) => !curIds.has(id));
+  const added = [...curIds].filter((id) => !base.xmlIds.has(id)).length;
   if (!missing.length && added === 0) {
-    sec1.appendChild(valRow("ok", `All ${base.wordCount} words preserved (no structural loss)`));
+    sec1.appendChild(valRow("ok", base.xmlIds.size
+      ? `All ${base.xmlIds.size} xml:id(s) preserved (no structural loss)`
+      : `All ${base.wordCount} reading unit(s) preserved (no xml:id to lose)`));
   } else {
-    if (missing.length) sec1.appendChild(valRow("err", `${missing.length} word id(s) lost: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""}`));
-    if (added) sec1.appendChild(valRow("warn", `${added} new word(s) added`));
+    if (missing.length) sec1.appendChild(valRow("err", `${missing.length} xml:id(s) lost: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""}`));
+    if (added) sec1.appendChild(valRow("warn", `${added} new xml:id(s) added`));
   }
 
   // Tag-count drift vs baseline
