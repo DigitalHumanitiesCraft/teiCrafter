@@ -1,10 +1,10 @@
 # teiCrafter
 
-**LLM-assisted TEI-XML annotation for Digital Humanities**
+**A browser-based, lossless editor for arbitrary TEI-XML**
 
 **[Try the live demo](https://digitalhumanitiescraft.github.io/teiCrafter/)** -- no installation required, runs entirely in the browser.
 
-> **Research Preview** -- This is an active research prototype developed using [Promptotyping](https://github.com/DigitalHumanitiesCraft) methodology. It demonstrates the feasibility of LLM-assisted scholarly annotation and is under active development. Not intended for production use.
+> **Research Preview** -- This is an active research prototype developed using [Promptotyping](https://github.com/DigitalHumanitiesCraft) methodology. It demonstrates lossless, expert-in-the-loop TEI editing with an optional LLM on-ramp, and is under active development. Not intended for production use.
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![GitHub Pages](https://img.shields.io/badge/demo-GitHub_Pages-blue)](https://digitalhumanitiescraft.github.io/teiCrafter/)
@@ -13,23 +13,38 @@
 
 ## Overview
 
-teiCrafter is a browser-based annotation environment that transforms plaintext into semantically annotated [TEI-XML](https://tei-c.org/) using Large Language Models. It addresses a persistent gap in the Digital Humanities tool landscape: **no existing system combines TEI annotation, LLM-assisted markup generation, and human expert review in a single, infrastructure-free interface.**
+teiCrafter is a client-only, browser-based editor for arbitrary [TEI-XML](https://tei-c.org/). You open an existing edition, correct it folio by folio at its natural granularity, and save it back byte-faithfully. The editing core is a generic, offset-true reader: the raw TEI string is canonical, every edit is an absolute-offset splice, and `serialize()` is byte-identical for untouched content by construction. Granularity emerges from the document itself: word-level when `<w>` is present (for example the Wenzelsbibel), line-level otherwise (for example a Jeanne Hersch edition). There is no per-project profile and no build step.
+
+The landing page offers two ways into the same editor:
+
+- **Open and edit existing TEI** -- the deterministic path. Open a local edition, correct word or line text, manage an index, link facsimile zones, and save losslessly. No LLM is involved.
+- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides.
 
 The tool occupies a specific position in the digital scholarly editing pipeline:
 
 ```
 Image --> coOCR HTR --> teiCrafter --> ediarum / GAMS / Publication
-          (Transcription)  (Annotation &      (Deep encoding &
-                            Modeling)           Publication)
+          (Transcription)  (Editing &        (Deep encoding &
+                            Annotation)        Publication)
 ```
 
-teiCrafter bridges the gap between automated text recognition and manual deep encoding. It produces valid, schema-conformant TEI-XML that serves as a qualified starting point for further editorial work in environments such as ediarum or oXygen.
-
-teiCrafter has two paths. The **Generator path**, described in this README, transforms text into annotated TEI with LLM assistance. The **Editor path**, the current development focus, edits existing TEI editions schema-aware, with index management, StandOff apparatus, and project-specific authoring views; its first use case is the Wenzelsbibel (Codex 2759). See [knowledge/INDEX.md](knowledge/INDEX.md) for the full specification of both.
+teiCrafter is an independent tool, not a module of another system. For the full specification, start at [knowledge/INDEX.md](knowledge/INDEX.md).
 
 ### Epistemic Foundation
 
-The design rests on the principle of **epistemic asymmetry** (adapted from coOCR HTR): LLMs generate plausible annotations but cannot reliably assess their own correctness. For TEI annotation, this problem is compounded because annotation decisions are often interpretive, schema conformance does not guarantee semantic accuracy, and authority file assignments require contextual knowledge. Human expertise is therefore integrated as a structurally necessary component, not an optional quality check.
+The design rests on the principle of **epistemic asymmetry**: LLMs generate plausible annotations but cannot reliably assess their own correctness. The deterministic editing core makes no probabilistic claims at all; it preserves bytes. Where the LLM on-ramp is used, its output is always marked as machine-generated and unreviewed, so human expertise is a structurally necessary component rather than an optional quality check.
+
+---
+
+## The Editor
+
+The editor is a three-pane workbench:
+
+1. **Reading text** -- the diplomatic transcription, folio by folio. Editable units are words (when `<w>` is present) or lines/cells (otherwise). Edits are offset splices into the canonical string.
+2. **Facsimile** -- a real [OpenSeadragon](https://openseadragon.github.io/) 5.0.1 deep-zoom viewer (loaded from CDN) over the page image, with `<zone>` overlays bidirectionally linked to the reading text. The tileSource hook is IIIF-ready.
+3. **Right pane** -- tabbed between **Validation and structure** (live integrity checks and the structural outline) and **Index**.
+
+The **Index** tab manages an editable `<standOff>` of persons, organisations, and events: add, rename, and delete entities in-browser, and link in-text mentions via `<name ref="#id">`. All index operations stay inside the lossless offset-splice model.
 
 ---
 
@@ -37,64 +52,59 @@ The design rests on the principle of **epistemic asymmetry** (adapted from coOCR
 
 | Feature | Description |
 |---------|-------------|
-| **Five-step guided workflow** | Import, Mapping, Transform, Validate, Export -- with stepper navigation |
-| **Six LLM providers** | Google Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama (local) |
-| **Three-layer prompt architecture** | Base rules + source context + user-defined mapping rules |
-| **Schema-guided output** | DTABf JSON schema profile constrains LLM-generated markup |
-| **Four-level validation** | Well-formedness, plaintext preservation, schema conformance, review completeness |
-| **Confidence visualization** | Three-tier system (high / check-worthy / problematic) with dual-channel encoding |
-| **Multi-format import** | Plaintext, Markdown, XML, DOCX (via JSZip) |
-| **Export with cleanup** | Removes machine-generated attributes, preserves editorial decisions |
-| **Zero infrastructure** | No server, no account, no installation -- runs entirely in the browser |
-| **Bring Your Own API Key** | No vendor lock-in; 17 models across 6 providers |
+| **Lossless editing core** | Raw TEI string is canonical; edits are absolute-offset splices; `serialize()` is byte-identical for untouched content. DOM-free. |
+| **Emergent granularity** | Word-level when `<w>` is present, line/cell-level otherwise. No per-project profile. |
+| **Real OpenSeadragon facsimile** | Deep-zoom page image with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook. |
+| **In-browser index management** | Editable `<standOff>` of persons, organisations, and events with mention linking via `<name ref>`. |
+| **Live validation and structure** | Integrity checks and a structural outline alongside the reading text. |
+| **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. |
+| **Zero infrastructure** | No server, no account, no installation; runs entirely in the browser, deployed from `/docs`. |
+| **Bring Your Own API Key** | For the LLM on-ramp only; keys are held in memory for the session and never persisted. |
 
 ---
 
 ## Quick Start
 
-1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/)
-2. **Import** a plaintext file or select a demo dataset (medieval recipe or 1718 bookkeeping account)
-3. **Configure mapping** -- select a source type and adjust annotation rules
-4. **Set up LLM** -- click the settings icon, choose a provider, enter your API key, and test the connection
-5. **Transform** -- the LLM annotates your text according to the mapping rules
-6. **Validate** -- review well-formedness, plaintext preservation, and schema conformance
-7. **Export** -- download the annotated TEI-XML or copy to clipboard
+1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/).
+2. Choose **Open and edit existing TEI**, then open a local edition or load the bundled synthetic Wenzelsbibel demo.
+3. Navigate folio by folio. Click a word (word-level editions) or a line (line-level editions) to correct its text.
+4. Use the facsimile pane to inspect the page image; zone overlays highlight in sync with the reading text.
+5. Switch the right pane to **Index** to add or link persons, organisations, and events.
+6. Save the edition back losslessly.
 
-For demo datasets, no API key is required -- expected output is loaded directly.
+To try the LLM on-ramp instead, choose **New from text (LLM)**, paste plaintext, and supply an API key for your chosen provider. The drafted TEI opens in the same editor, marked violet and unreviewed for you to verify.
 
 ---
 
 ## Architecture
 
-teiCrafter is built as a client-only single-page application using vanilla ES6 modules with no build step, no framework, and zero NPM dependencies.
+teiCrafter is a client-only single-page application built from native ES6 modules, with no build step, no framework, and no NPM runtime dependencies. The live application is nine JavaScript files plus four static assets.
 
 ```
 teiCrafter/
-├── pipeline.mjs                Node.js CLI for batch Page-JSON to TEI
 ├── docs/
-│   ├── index.html              Entry point (GitHub Pages)
-│   ├── css/style.css           Visual design system (~2,645 lines)
-│   ├── js/
-│   │   ├── app.js              Application shell, 5-step stepper
-│   │   ├── model.js            Reactive document model (4 state layers)
-│   │   ├── tokenizer.js        XML state-machine tokenizer
-│   │   ├── editor.js           Overlay XML editor
-│   │   ├── preview.js          Interactive preview with review workflow
-│   │   ├── source.js           Source panel (plaintext / facsimile)
-│   │   ├── services/           LLM, transform, validator, schema, export
-│   │   ├── pipeline/           Pipeline mode modules (ES6, Node+Browser)
-│   │   │   ├── utils.js        XML escaping, element builder
-│   │   │   ├── mods-to-header.js   Page-JSON metadata to teiHeader
-│   │   │   ├── page-to-body.js     Pages + regions to TEI elements
-│   │   │   ├── div-structurer.js   Heading heuristic for div sections
-│   │   │   ├── tei-assembler.js    Full TEI assembly orchestrator
-│   │   │   └── pipeline-validator.js  Tag matching, plaintext check
-│   │   └── utils/              Constants, DOM utilities
-│   ├── schemas/dtabf.json      DTABf schema profile (50+ elements)
-│   ├── data/demo/              Demo datasets with expected outputs
-│   └── tests/                  Browser unit tests (60 tests)
-└── tests/pipeline.test.mjs    Pipeline unit + integration tests (50 tests)
+│   ├── index.html              Landing: two cards (editor, LLM on-ramp)
+│   ├── editor.html             Editor: three-pane shell; loads OpenSeadragon 5.0.1 from CDN
+│   ├── css/
+│   │   ├── style.css           Design tokens (--color-*/--space-*/--font-*/--radius-*) + base
+│   │   └── editor.css          Editor styles (token-only)
+│   └── js/
+│       ├── editor/
+│       │   ├── tei-document.js     Layer 1: generic offset-true core (DOM-free)
+│       │   ├── edition.js          Layer 2: folios/lines/cells model (DOM-free)
+│       │   ├── editor-app.js       Layer 3: UI controller + LLM on-ramp
+│       │   ├── facsimile.js        OpenSeadragon viewer: page image + zone overlays
+│       │   ├── standoff.js         Lossless <standOff> model + mention linking
+│       │   └── index-panel.js      Index-management UI (persons/orgs/events)
+│       ├── services/
+│       │   ├── llm.js              Multi-provider LLM client (keys in memory only)
+│       │   └── storage.js          Settings (LocalStorage)
+│       └── utils/
+│           └── constants.js        Providers, source labels, default mappings
+└── test/                       Headless harness and engine proofs
 ```
+
+Import closure: `editor-app` -> `edition`, `facsimile`, `standoff`, `index-panel`, `llm`, `constants`; `edition` -> `tei-document`; `standoff` -> `tei-document`; `facsimile` and `index-panel` are project-dependency-free (`facsimile` uses the global OpenSeadragon); `llm` -> `constants`, `storage`.
 
 ### Technology Decisions
 
@@ -102,9 +112,9 @@ teiCrafter/
 |----------|-----------|
 | No framework | Reduces complexity, maximizes longevity, avoids dependency churn |
 | ES6 modules (native) | No bundler needed, direct browser execution |
-| EventTarget for state | Native API, DevTools integration, no library required |
-| Event delegation | Single click listener, zero memory leaks |
-| CSS custom properties | 98 design tokens, theming without preprocessor |
+| Raw string as canonical | Lossless by construction; edits are offset splices, serialize is byte-identical |
+| DOM-free editing core | Round-trip fidelity does not depend on a serializer's whitespace choices |
+| CSS custom properties | Design tokens are the single source of truth; no raw hex in components |
 | Fetch API only | No HTTP library dependencies |
 | Module-scoped API keys | Never on window, DOM, localStorage, or cookies |
 
@@ -112,89 +122,52 @@ For the complete technical specification, see the [knowledge base](knowledge/).
 
 ---
 
-## LLM Integration
+## LLM Integration (on-ramp only)
 
-teiCrafter supports six LLM providers with a unified interface:
+The optional "New from text" path supports multiple providers through a unified client. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key.
 
-| Provider | Default Model | Local |
-|----------|--------------|:-----:|
-| Google Gemini | gemini-2.5-flash | |
-| OpenAI | gpt-4.1-mini | |
-| Anthropic | claude-sonnet-4-5 | |
-| DeepSeek | deepseek-chat | |
-| Qwen (Alibaba) | qwen-plus | |
-| Ollama | llama3.3 | yes |
-
-API keys are stored exclusively in module-scoped memory during the session. They are never persisted to disk, DOM, or browser storage.
-
-### Three-Layer Prompt Architecture
-
-1. **Base layer** -- Generic TEI-XML annotation rules: text preservation, precision over recall, confidence attributes, output format constraints
-2. **Context layer** -- Source type (correspondence, bookkeeping, recipe, etc.), language, epoch, project name
-3. **Mapping layer** -- User-defined annotation rules specifying which TEI elements to apply and when
+AI-generated drafts open in the editor marked in the violet token family (`--color-ai`) and are counted as unreviewed until a human confirms them.
 
 ---
 
-## Validation
+## Round-trip Fidelity
 
-teiCrafter implements four of five planned validation levels:
+The editing core is proven headlessly by exit code:
 
-| Level | Check | Status |
-|-------|-------|--------|
-| 1 | XML well-formedness (DOMParser) | Implemented |
-| 2 | Plaintext preservation (word similarity, 95% threshold) | Implemented |
-| 3 | Schema conformance (element/attribute/parent-child against DTABf profile) | Implemented |
-| 4 | Review completeness (unreviewed annotation count) | Implemented |
-| 5 | XPath-based custom rules | Planned (Phase 3) |
+| Proof | Asserts | Result |
+|-------|---------|--------|
+| `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 294/294 |
+| `test/tools/generic_roundtrip.mjs` | one engine reads Hersch/WB/SZD; surgical cell edit; model shape | all pass |
+| `test/tools/editor_roundtrip.mjs` | editor core identity + surgical word edit | 13/13 |
+| `test/harness/selftest.mjs` | negative gate (identity passes, corruption fails) | 14/14 |
+| `test/harness/run.mjs` | synthetic fixtures, MVP gate | all PASS |
+
+The sweep reads source repositories directly; no third-party TEI is committed. Run a proof with, for example, `node test/tools/roundtrip_sweep.mjs`.
 
 ---
 
-## Development Status
+## Real Cases
 
-**Phase 2 (Prototype): Core workflow complete, view integration pending.**
+| Case | Source | Shape | Granularity | Editable now? |
+|------|--------|-------|-------------|---------------|
+| Wenzelsbibel | synthetic twin (Codex 2759) | `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | yes, directly |
+| Jeanne Hersch | zbz-ocr-tei | `<p>` + `<lb facs>`, real zones, no `<w>` | line | yes, directly |
+| Stefan Zweig | szd-htr | catalog TEI + Page-JSON (no transcription TEI) | (line) | needs Page-JSON to TEI conversion first |
 
-- All 14 JavaScript modules implemented
-- 7 service/utility modules integrated into the application shell
-- 3 view modules (editor, preview, source) implemented but not yet wired
-- 60 unit tests across tokenizer, document model, and validator
-- 2 demo datasets with real historical sources (CoReMA medieval recipe, DEPCHA 1718 account)
-
-### Roadmap
-
-**Phase A -- Validate the walking skeleton (next)**
-- Test end-to-end LLM transform with real API keys
-- Add few-shot examples to prompt assembly (highest single lever for quality)
-- Document and fix breakpoints
-
-**Phase B -- Make the review workflow tangible**
-- Integrate preview.js for inline review with confidence visualization
-- Activate batch review (keyboard navigation)
-
-**Phase C -- Targeted architecture improvements**
-- Wire DocumentModel if undo/redo proves necessary
-- Integrate editor.js if regex-based rendering proves insufficient
-- Write targeted tests for identified breakpoints
-
-**Phase 3 -- Consolidation (future)**
-- teiModeller: LLM-assisted TEI modeling advisor
-- TEI Guidelines distillation pipeline
-- LLM-as-a-Judge for automated review
-- Client-side ODD parsing (Stage 2)
-- XPath-based validation
+Real third-party TEI is never committed; only synthetic twins ship with the repository.
 
 ---
 
 ## Research Context
 
-The intersection of LLMs and TEI-XML encoding emerged as a distinct research area in 2025. A comprehensive survey by Pollin, Fischer, Sahle, Scholger, and Vogeler (2025) in *Zeitschrift fur digitale Geisteswissenschaften* identifies eight key application areas for LLMs in digital scholarly editing and references teiCrafter explicitly.
+The intersection of LLMs and TEI-XML encoding emerged as a distinct research area in 2025. A survey by Pollin, Fischer, Sahle, Scholger, and Vogeler (2025) in *Zeitschrift fur digitale Geisteswissenschaften* identifies key application areas for LLMs in digital scholarly editing and references teiCrafter explicitly.
 
-Key findings from the 2025-2026 research landscape:
+Key themes from the 2025-2026 research landscape:
 
-- **No integrated system exists** that combines LLM-assisted TEI generation, ODD-guided schema validation, and human-in-the-loop review in a browser-based environment
-- **No benchmark** for LLM-generated TEI-XML quality has been published
-- **Confidence calibration** for structured annotation (vs. classification) remains underdeveloped
-- **Post-generation validation** outperforms constrained decoding alone (Schall and de Melo, RANLP 2025)
-- **Expert-LLM agreement** on domain-specific tasks reaches only 64-68% (IUI 2025), confirming the necessity of human review
+- No integrated, browser-based system combines lossless TEI editing with an LLM on-ramp and human-in-the-loop review.
+- No benchmark for LLM-generated TEI-XML quality has been published.
+- Confidence calibration for structured annotation (as opposed to classification) remains underdeveloped.
+- Expert-LLM agreement on domain-specific tasks is limited, confirming the necessity of human review.
 
 For positioning and the market scan, see [knowledge/project.md](knowledge/project.md).
 
@@ -204,27 +177,28 @@ For positioning and the market scan, see [knowledge/project.md](knowledge/projec
 
 | Project | Connection |
 |---------|-----------|
-| [coOCR HTR](http://dhcraft.org/co-ocr-htr) | Upstream tool -- transcription feeds into teiCrafter annotation |
+| [coOCR HTR](http://dhcraft.org/co-ocr-htr) | Upstream tool: transcription feeds into teiCrafter editing |
 | Schliemann Account Books | Bookkeeping ontology, transaction annotation |
-| zbz-ocr-tei | DTA base format, historical print annotation |
-| DoCTA (CoReMA) | Medieval recipe annotation (SiCPAS, BeNASch schemas) |
+| zbz-ocr-tei | DTA base format, historical print, Jeanne Hersch line-level case |
+| DoCTA (CoReMA) | Medieval recipe annotation |
 | DIA-XAI | EQUALIS framework, expert-in-the-loop evaluation |
 
 ---
 
 ## Knowledge Base
 
-The project maintains a knowledge base in [`knowledge/`](knowledge/) following the Promptotyping Documents convention (function-separated, with frontmatter). Start at [INDEX.md](knowledge/INDEX.md).
+The project maintains a knowledge base in [`knowledge/`](knowledge/) following the Promptotyping Documents convention (function-separated, with YAML frontmatter). Start at [INDEX.md](knowledge/INDEX.md).
 
 | Document | Function |
 |----------|----------|
 | [INDEX.md](knowledge/INDEX.md) | Navigation, document map, glossary |
 | [project.md](knowledge/project.md) | Identity, positioning, success criteria |
-| [data.md](knowledge/data.md) | Formats, TEI test corpus, Wenzelsbibel material |
-| [specification.md](knowledge/specification.md) | Two paths, function cores, validation, project modules, decisions |
+| [data.md](knowledge/data.md) | Formats, TEI test corpus, real-case material |
+| [specification.md](knowledge/specification.md) | Requirements, function cores, decisions |
 | [user-stories.md](knowledge/user-stories.md) | Acceptance scenarios |
 | [architecture.md](knowledge/architecture.md) | Components, data flow, editor engine, status |
-| [design.md](knowledge/design.md) | Design system, UI components |
+| [design.md](knowledge/design.md) | Design system, tokens, UI components |
+| [testing.md](knowledge/testing.md) | Test approach, engine proofs, harness |
 | [journal.md](knowledge/journal.md) | Development log |
 
 ---
@@ -235,7 +209,7 @@ No build step is required. Serve the `docs/` directory with any static file serv
 
 ```bash
 # Python
-python -m http.server 8000 -d docs
+python -m http.server 8000 --directory docs
 
 # Node.js (npx)
 npx serve docs
@@ -244,12 +218,25 @@ npx serve docs
 php -S localhost:8000 -t docs
 ```
 
-Open `http://localhost:8000` in a modern browser (ES6 module support required).
+Then open:
 
-### Running Tests
+- Landing: `http://localhost:8000/`
+- Editor: `http://localhost:8000/editor.html`
+- LLM on-ramp deep link: `http://localhost:8000/editor.html#generate`
 
-**Browser tests** (interactive mode):
-Open `docs/tests/test-runner.html` in a browser. Covers XML tokenizer (19), document model (23), validator (18).
+A modern browser with ES6 module support is required.
+
+### Running the Proofs
+
+The headless engine proofs run under Node:
+
+```bash
+node test/tools/roundtrip_sweep.mjs
+node test/tools/generic_roundtrip.mjs
+node test/tools/editor_roundtrip.mjs
+node test/harness/selftest.mjs
+node test/harness/run.mjs
+```
 
 ---
 
@@ -277,6 +264,6 @@ You are free to share and adapt this material for any purpose, provided you give
 
 ## Disclaimer
 
-**Research Preview** -- teiCrafter was developed using Promptotyping methodology as part of the [Digital Humanities Craft](https://github.com/DigitalHumanitiesCraft) initiative. It is a research prototype intended to demonstrate the feasibility of LLM-assisted TEI-XML annotation. The tool has not been evaluated in production settings. LLM-generated annotations require expert review before use in scholarly publications. The authors make no warranty regarding the correctness, completeness, or fitness for purpose of the generated output.
+**Research Preview** -- teiCrafter was developed using Promptotyping methodology as part of the [Digital Humanities Craft](https://github.com/DigitalHumanitiesCraft) initiative. The deterministic editor preserves source bytes by construction; the optional LLM on-ramp produces drafts that require expert review before use in scholarly publications. The authors make no warranty regarding the correctness, completeness, or fitness for purpose of any generated output.
 
-API keys entered into the application are stored only in browser memory for the duration of the session and are never transmitted to any server other than the selected LLM provider.
+API keys entered for the LLM on-ramp are held only in browser memory for the duration of the session and are never transmitted to any server other than the selected LLM provider.

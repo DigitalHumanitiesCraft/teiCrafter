@@ -58,12 +58,12 @@ Status is triple-coded (colour plus icon plus position), never colour alone, so 
 A three-pane editor workspace:
 
 ```
-Reading text (cells)  |  Facsimile (zones)  |  Validation + structure
+Reading text (cells)  |  Facsimile (OpenSeadragon)  |  Validation and structure / Index
 ```
 
 - Click a cell to edit it inline; the input matches the reading typography.
-- Hovering a line highlights its facsimile zone and vice versa (real `@facs` link, or positional).
-- The validation pane shows live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness.
+- The facsimile pane is a real OpenSeadragon deep-zoom viewer; hovering a line highlights its `<zone>` overlay and vice versa (real `@facs` link, or positional).
+- The right pane carries two tabs: "Validation and structure" (live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness) and "Index" (the editable `<standOff>` index of persons, organisations and events).
 
 The landing page (`index.html`) is two cards: open and edit existing TEI (gold), and New from text (LLM) (violet). The editor header carries a mode badge and a link back.
 
@@ -82,12 +82,11 @@ The editor itself uses no violet: deterministic, human-driven work is shown in t
 | Component | Status |
 |-----------|--------|
 | Reading-text pane with inline cell edit | Built |
-| Facsimile pane (placeholder + real zones, bidirectional link) | Built |
+| Facsimile pane: real images, deep zoom (OpenSeadragon 5.0.1), `<zone>` overlays bidirectionally linked to the reading text | Built |
 | Validation/structure pane (browser-light) | Built |
 | LLM on-ramp modal (violet) | Built |
-| Facsimile with real images, deep zoom (OpenSeadragon) | Future |
-| StandOff apparatus surface; index panel; authoring-view forms | Future |
-| CodeMirror source view | Future |
+| Index panel: editable `<standOff>` index of persons/orgs/events (add, rename, delete) with in-text `<name ref>` linking | Built |
+| Authoring-view forms for teiHeader and apparatus `<note>` bodies | Future |
 
 ## Related
 

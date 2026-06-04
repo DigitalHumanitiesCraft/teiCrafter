@@ -49,14 +49,14 @@ The editor does not require a particular TEI profile. It recognises, generically
 - folio breaks `<pb>` (with `@facs` to a surface) split the document into folios;
 - line markers `<lb>`/`<l>` split a folio into lines;
 - reading-text nodes become editable cells; if `<w xml:id>` word tokens are present the cells are words, otherwise whole lines;
-- `<facsimile>`/`<surface>`/`<zone>` with `ulx/uly/lrx/lry` drive the facsimile pane; a line's `@facs` links it to its zone;
+- `<facsimile>`/`<surface>`/`<zone>` with `ulx/uly/lrx/lry` drive the OpenSeadragon facsimile viewer as `<zone>` overlays; a line's `@facs` links it bidirectionally to its zone;
 - `<standOff>`/`<note target>` mark words or lines that carry apparatus.
 
 Anything it does not interpret is preserved verbatim on save.
 
 ## Facsimile Images
 
-The facsimile pane currently renders a synthetic placeholder with the edition's real `<zone>` rectangles, linked to the text by `@facs`. Loading real page images (from a IIIF manifest or a METS file's image references, with deep zoom via OpenSeadragon) is specified but not yet built; see [specification](specification.md).
+The facsimile pane is a real OpenSeadragon 5.0.1 deep-zoom viewer (loaded from CDN), showing the folio's page image with the edition's real `<zone>` rectangles as overlays bidirectionally linked to the reading text by `@facs`. Image sources can be imported from a IIIF manifest or a METS file's image references; see [specification](specification.md). If OpenSeadragon is unavailable the viewer degrades to an empty state rather than failing.
 
 ## Real Test Corpus
 

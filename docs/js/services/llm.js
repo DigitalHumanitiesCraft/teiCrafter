@@ -1,5 +1,5 @@
 /**
- * teiCrafter – Multi-Provider LLM Service
+ * teiCrafter, Multi-Provider LLM Service
  *
  * SECURITY: API keys are stored ONLY in a module-scoped Map.
  * Never on window, DOM, localStorage, cookies, or IndexedDB.
@@ -127,7 +127,7 @@ const PROVIDER_CONFIGS = Object.freeze({
         }
     },
     [LLM_PROVIDERS.OLLAMA]: {
-        name: 'Ollama (lokal)',
+        name: 'Ollama (local)',
         endpoint: 'http://localhost:11434/api/chat',
         defaultModel: 'llama3.3',
         models: ['llama3.3', 'qwen2.5', 'mistral', 'gemma2', 'phi4'],
@@ -268,14 +268,14 @@ export function getModelsForProvider(provider) {
 export async function complete(prompt, options = {}) {
     const { signal } = options;
     const config = PROVIDER_CONFIGS[currentProvider];
-    if (!config) throw new Error('Unbekannter Provider: ' + currentProvider);
+    if (!config) throw new Error('Unknown provider: ' + currentProvider);
 
     const model = currentModel || config.defaultModel;
     const key = apiKeys.get(currentProvider) || '';
 
     // Auth check (except for Ollama)
     if (config.authType !== 'none' && !key) {
-        throw new Error('Kein API-Key f\u00fcr ' + config.name + ' konfiguriert.');
+        throw new Error('No API key configured for ' + config.name + '.');
     }
 
     // Build URL
@@ -330,7 +330,7 @@ export async function testConnection() {
         const response = await complete('Respond with exactly: OK');
         return {
             success: true,
-            message: 'Verbindung erfolgreich',
+            message: 'Connection successful',
             model: getModel()
         };
     } catch (e) {

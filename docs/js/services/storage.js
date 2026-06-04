@@ -1,5 +1,5 @@
 /**
- * teiCrafter – Storage Service
+ * teiCrafter, Storage Service
  * Persists user settings (provider, model name) to localStorage.
  * API keys are NEVER stored (only in-memory in llm.js).
  */

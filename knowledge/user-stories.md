@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/user-stories
 status: active
 created: 2026-02-05
-updated: 2026-05-30
+updated: 2026-06-04
 language: en
 version: 0.4
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
@@ -34,8 +34,8 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 
 ## Facsimile
 
-- **F.1** As an editor I want to see the folio's zones and have text and zone highlight each other so that I relate text to image regions. *Built* (real `@facs` link in Hersch, positional fallback; placeholder rendering of real coordinates).
-- **F.2** As an editor I want real page images with deep zoom and pan so that I read the manuscript itself. *Future* (IIIF/METS + OpenSeadragon).
+- **F.1** As an editor I want to see the folio's zones and have text and zone highlight each other so that I relate text to image regions. *Built* (real `@facs` link in Hersch, positional fallback; `<zone>` overlays drawn on the viewer, bidirectionally linked to the reading text).
+- **F.2** As an editor I want real page images with deep zoom and pan so that I read the manuscript itself. *Built* (a real OpenSeadragon 5.0.1 deep-zoom viewer, plain-image tileSource with an IIIF-ready hook; verified live in the browser).
 
 ## Validation
 
@@ -49,10 +49,15 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 - **L.3** As an editor I want my API key kept in memory only and never persisted so that my credentials are safe. *Built* (module-scoped Map in llm.js, `credentials: 'omit'`).
 - **L.4** As an editor I want to choose among providers so that I am not vendor-locked. *Built* (six providers).
 
+## Index and StandOff
+
+- **I.1** As an editor I want to create, rename and delete person/org/event entries in an in-browser index so that the edition's `<standOff>` stays authoritative and editable. *Built* (lossless `<standOff>` model in `standoff.js`, index UI in `index-panel.js`, all inside the offset-splice engine).
+- **I.2** As an editor I want to link an in-text mention to an index entry so that the word carries `<name ref="#id">`. *Built* (verified live: linking produces `<w><name ref="#id">...</name></w>`).
+
 ## Future (specified, not built)
 
-- **FU.1** Select a word/line range and attach an editorial-apparatus or commentary note; the tool writes the anchor and the `standOff` entry.
-- **FU.2** Create and edit person/place index entries and link annotations by picking from the index; authority ids entered manually.
+- **FU.1** Select a word/line range and attach an editorial-apparatus or commentary note; the tool writes the anchor and the note body. *Future* (the existing `standOff` `<note>` bodies are currently read-only).
+- **FU.2** Enter or edit external authority ids on an index entry from the UI. *Future*.
 - **FU.3** Form-based authoring views per project module (e.g. diplomatic transcription, Bible-verse).
 - **FU.4** Convert pipeline Page-JSON (SZD) to minimal editable TEI before opening.
 - **FU.5** Open and edit very large editions (tens of MB) with a segmented load.

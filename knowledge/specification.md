@@ -38,7 +38,7 @@ Open a TEI edition from the local file system (File System Access API, with a fi
 Click a cell to correct its text inline. The edit is a single offset splice; only that text run changes, all markup and all other text are byte-preserved. The model re-parses so offsets stay correct.
 
 ### Facsimile with zone linking
-A facsimile pane shows the folio's `<zone>` rectangles. Hovering a line highlights its zone and vice versa: the link is the line's real `@facs` zone id when present (Hersch), or positional otherwise (synthetic). Currently a placeholder rendering of real coordinates; real images are future work.
+A real OpenSeadragon deep-zoom viewer (5.0.1, loaded from CDN) shows the folio's page image with `<zone>` rectangles overlaid. Hovering a line highlights its zone and vice versa: the link is the line's real `@facs` zone id when present (Hersch), or positional otherwise (synthetic). The viewer uses a plain-image tileSource today with an IIIF-ready hook; a true IIIF tiles/manifest source is future work.
 
 ### Hybrid validation
 Live, in the browser: well-formedness plus structural integrity against the load-time baseline (no word ids lost, element counts unchanged), which is the lossless evidence. On demand, offline: TEI All RelaxNG plus project Schematron via the harness.
@@ -75,9 +75,9 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 
 ## Future (specified, not built)
 
-- Real facsimile images via IIIF manifest or METS image references, deep zoom (OpenSeadragon).
-- StandOff apparatus editor: select a word/line range, choose a note type, write the anchor and the `standOff` entry.
-- Index management: person/place/project indices as a data layer, manual authority ids (GND, GeoNames, ICONCLASS), no automatic reconciliation.
+- A true IIIF tiles/manifest (or METS image) source for the facsimile viewer; the OpenSeadragon deep-zoom viewer itself and `<zone>` overlay linking are already built, currently over a plain-image tileSource.
+- StandOff critical-apparatus editor: select a word/line range, choose a note type, write the anchor and the `standOff` entry. In-browser `<standOff>` index management for person/org/event entities (add, rename, delete) with in-text mention linking via `<name ref="#id">` is already built; the apparatus/note authoring layer is the future part.
+- Manual authority ids (GND, GeoNames, ICONCLASS) on index entities, with no automatic reconciliation; place and project index types beyond the built person/org/event set.
 - Project modules: a Markdown document configuring autocompletion, authoring views, indices and Schematron per edition.
 - Page-JSON to minimal-TEI conversion for pipelines (SZD) that lack a transcription TEI.
 - Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.
