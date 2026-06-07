@@ -49,6 +49,7 @@ function clearNode(node) {
 // value handed back to onAdd; key is the property read off the entities object.
 const SECTIONS = [
   { type: "person", key: "persons", label: "Persons", addLabel: "add person" },
+  { type: "place", key: "places", label: "Places", addLabel: "add place" },
   { type: "org", key: "orgs", label: "Organisations", addLabel: "add organisation" },
   { type: "event", key: "events", label: "Events", addLabel: "add event" },
 ];

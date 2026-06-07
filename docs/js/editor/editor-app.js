@@ -384,8 +384,11 @@ function renderFacsimile() {
   if (!ctrl) return;
   const folio = app.state.folios[app.folio];
   const surface = folio && folio.surface;
+  // Prefer the hardcoded demo image base; otherwise fall back to a <graphic url>
+  // carried by the surface itself, so any opened TEI with facsimile images shows.
+  const imageUrl = imageUrlForFolio(app.folio) || (surface && surface.graphic) || null;
   ctrl.showPage({
-    imageUrl: imageUrlForFolio(app.folio),
+    imageUrl,
     surface,
     onZoneEnter: (zoneId, zoneIndex) => highlightZone(zoneId, zoneIndex),
     onZoneLeave: () => clearLinks(),

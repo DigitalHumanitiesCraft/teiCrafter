@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-06-04
+updated: 2026-06-07
 language: en
 version: 0.4
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
@@ -62,6 +62,22 @@ Committed under `test/fixtures-synthetic/`. The 3 baseline RelaxNG errors on the
 ## Generality on Real TEI
 
 The harness gates on text and structure fidelity and surfaces, without failing, each file's own pre-existing TEI All deviations. Real Hersch and SZD files round-trip with 0 new errors; line-level files (no `<w>`) meet L1 trivially; dangling `@facs` to external facsimile files are reported as non-gating diagnostics.
+
+## Verifying the Project Goals (Acceptance)
+
+The verification methods are complementary, not alternatives: each answers a different question and catches a different failure. Together they are the Promptotyping verification cascade (automatic, contextual, visual, professional). Real data is the rule at every level; synthetic material exists only for the Wenzelsbibel licence boundary.
+
+| Question | Method | Level | Proof |
+|----------|--------|-------|-------|
+| Was everything processed? | Coverage sweep: counts over the whole corpus | automatic | 285/285 Hersch load, 294/294 round-trip, every SZD demo file converts |
+| Is the output valid TEI? | Well-formedness + schema (TEI All RNG + Schematron; ZBZ also `zbz_hersch.rng`) | automatic | L2, green/red |
+| Is nothing lost, and is the only change the intended one? | Round-trip byte-identity + L1 text + L3 counts + diff-is-exactly-intent | contextual | byte-identical (`roundtrip_sweep.mjs`, `edit_fidelity.mjs`) |
+| Does the intended use actually work for a human? | Walk each demo-critical user story as a concrete path in the browser on a real object | visual | observed; the part headless tests cannot cover (the user-stories.md "Browser-check" status) |
+| Is it correct as an edition? | Domain-expert review of the content | professional | expert sign-off (both corpora are currently unreviewed) |
+
+The visual level is the centerpiece for "did we reach the goal in our sense". The success criterion (open, correct line by line, annotate person/place/work with authority ids, save byte-faithfully) is the chain of user stories E.1, E.2, E.3, E.4, E.5, F.1, F.2, I.1, I.2 plus the ones being built (FU.1 note, FU.2 authority ids from the UI, FU.4 SZD Page-JSON to TEI, and the AI-proposal step M3.7). Each demo-critical feature is verified twice: a headless proof added to the engine harness above, and a browser path walked on the real demo object (o_szd.1079 for SZD; one of docs 1000 / 1330 / 1540 / 2310 for ZBZ).
+
+Documentation is itself part of acceptance: the per-fixture JSON reports and the knowledge vaults let a reviewer trace every claim, which is the paper's reproducibility requirement. The acceptance table (goal to proof to green/red) is kept in [project-plan.md](project-plan.md) section 17.
 
 ## Components
 

@@ -2,7 +2,7 @@
  * teiCrafter Editor -- StandOff / entity index model (DOM-free, lossless).
  *
  * A schema-light layer over the generic core: it reads and edits TEI standOff
- * entities (person, org, event) and the in-text mentions that link to them.
+ * entities (person, place, org, event) and the in-text mentions that link to them.
  * It imports only from ./tei-document.js so it runs in the browser (editor-app.js)
  * and in Node (headless proofs) with identical logic.
  *
@@ -36,6 +36,7 @@ import {
 // Map an entity type to its list element, entity element, and name element.
 const TYPE_MAP = Object.freeze({
   person: { list: "listPerson", entity: "person", name: "persName" },
+  place: { list: "listPlace", entity: "place", name: "placeName" },
   org: { list: "listOrg", entity: "org", name: "orgName" },
   event: { list: "listEvent", entity: "event", name: "label" },
 });
@@ -43,11 +44,12 @@ const TYPE_MAP = Object.freeze({
 // Reverse lookup: entity local-name -> type descriptor (plus the type key).
 const ENTITY_TO_TYPE = Object.freeze({
   person: "person",
+  place: "place",
   org: "org",
   event: "event",
 });
 
-const ID_PREFIX = Object.freeze({ person: "pers", org: "org", event: "evt" });
+const ID_PREFIX = Object.freeze({ person: "pers", place: "plc", org: "org", event: "evt" });
 
 // ---- id helpers ------------------------------------------------------------
 
@@ -118,9 +120,10 @@ function readOne(doc, el, type) {
  */
 export function readEntities(doc) {
   const persons = elementsByLocal(doc.root, "person").map((el) => readOne(doc, el, "person"));
+  const places = elementsByLocal(doc.root, "place").map((el) => readOne(doc, el, "place"));
   const orgs = elementsByLocal(doc.root, "org").map((el) => readOne(doc, el, "org"));
   const events = elementsByLocal(doc.root, "event").map((el) => readOne(doc, el, "event"));
-  return { persons, orgs, events };
+  return { persons, places, orgs, events };
 }
 
 // ---- standOff scaffolding --------------------------------------------------

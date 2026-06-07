@@ -382,11 +382,15 @@ export function readSurfaces(doc) {
   const byId = new Map();
   for (const s of elementsByLocal(doc.root, "surface")) {
     const id = getAttr(s, "id");
+    // A surface may carry a <graphic url="..."> page image; expose its url so the
+    // facsimile viewer can show an opened file's image without a hardcoded base.
+    const graphicEl = elementsByLocal(s, "graphic")[0] || null;
     const surf = {
       id,
       n: getAttr(s, "n"),
       ulx: num(getAttr(s, "ulx")), uly: num(getAttr(s, "uly")),
       lrx: num(getAttr(s, "lrx")), lry: num(getAttr(s, "lry")),
+      graphic: graphicEl ? getAttr(graphicEl, "url") : null,
       zones: [],
     };
     for (const z of elementsByLocal(s, "zone")) {
