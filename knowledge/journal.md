@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-04
+updated: 2026-06-07
 language: en
 version: 0.4
 related: [project, specification, architecture, testing]
@@ -21,6 +21,20 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
+
+## 2026-06-07: Editopia coordination, plan synthesis, three built milestones
+
+An orchestration and planning session. teiCrafter is framed as the third Promptotyping case in the Editopia talk (the tool case), alongside the SZD and ZBZ/Hersch input pipelines; CC1 (this repo) orchestrates CC2 (szd-htr) and CC3 (zbz-ocr-tei) through the project lead as the channel. The full, self-contained plan and resume point is `knowledge/project-plan.md` (section 15 next steps, section 16 assignments, section 17 acceptance); the milestone register is `goals.md`.
+
+Decisions (with the project lead): the end product is the whole project (all three implementations plus the slide text plus the full paper text plus all knowledge documents). Normdata reaches an entity by three layered paths on one `@ref`/`<idno>` mechanism: hand entry (the foundation, buildable now), an offline Gemini 3.1 Flash Lite batch proposal (M3.7), and an in-browser live lookup. Gemini is used only for annotation proposals, never for the Page-JSON to TEI conversion, which stays deterministic. Demo objects: o_szd.1079 (SZD) and one of docs 1000/1330/1540/2310 (ZBZ, the only ones with committed images). EditionCrafter v0, not teiCrafter, is the Editopia Hersch demonstrator.
+
+Built this session (additive, lossless; new proof `node test/tools/szd_demo_check.mjs`, the three fixed proofs stay green): M2.2 image engine side (`readSurfaces` reads `<graphic url>`, `renderFacsimile` falls back to `surface.graphic`), M3.1 place entity (`standoff.js`/`index-panel.js`), M3.4 mention linking (type-independent). Open: the browser-visual test that the GAMS image renders in OpenSeadragon (CORS), and M3.3 normdata `@ref` (now unblocked).
+
+On-disk audit corrected the plan: `pipeline.mjs` is not deleted but a non-runnable torso (it imports the deleted `docs/js/pipeline/`); the SZD converter prototype lived in `c:\tmp` (fragile, unversioned) and was versioned into `test/tools/szd-pagejson-to-tei.mjs`; the zone bbox unit is open (the prototype assumes percent, an on-disk reading suggests absolute, and the byte round-trip proof does not adjudicate geometry), so CC2 confirms it in its reality report.
+
+Verification approach for the goals: the Promptotyping cascade (automatic, contextual, visual, professional), with user-story walkthroughs on real data in the browser as the centerpiece; written up in `testing.md` ("Verifying the Project Goals"). Knowledge docs updated this session: `project-plan.md` (rewritten plus sections 16/17 and the audit corrections), `goals.md` (H1 to H7, framing, M3.x statuses), `testing.md` (acceptance cascade), `integration.md` (H5 to H7), `cc1-session-report.md` (reconciled).
+
+Next: CC1 drafts `converter-reference.md` (M1.2) and builds the M3.3 hand-entry core; CC2 returns the SZD reality report including the bbox unit, then builds `pipeline/export_tei.py`; CC3 delivers the ZBZ image-URL scheme, a demo-object recommendation, the render check, and the oekosystem-synthese correction.
 
 ## 2026-06-04: Multi-agent audit and four confirmed-defect fixes
 
