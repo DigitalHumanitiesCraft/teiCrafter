@@ -37,6 +37,7 @@ import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { createIndexPanel } from "./index-panel.js";
 import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
+import { lookup as authorityLookup } from "../services/authority-lookup.js";
 import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
 
@@ -530,8 +531,46 @@ function ensureIndexPanel() {
         setStatus(`Could not confirm entity: ${err.message}`);
       }
     },
+    onLookup: (id, { authority, query, anchor, onPick }) => runLookup(authority, query, anchor, onPick),
   });
   return indexPanel;
+}
+
+/**
+ * M3.3 live lookup: query an authority register and show the hits in a small
+ * popover anchored to the entity's id form. Picking one fills the id field via
+ * onPick (which commits through onSetAuthority). The human chooses the match.
+ */
+async function runLookup(authority, query, anchor, onPick) {
+  if (!anchor) return;
+  let pop = anchor.querySelector(".ed-idx-lookupresults");
+  if (pop) pop.remove();
+  if (!query) { setStatus("Type a name (or name the entity) before looking up"); return; }
+  pop = el("div", { class: "ed-idx-lookupresults" });
+  pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: `Searching ${authority}...` }));
+  anchor.appendChild(pop);
+  try {
+    const hits = await authorityLookup(authority, query, { limit: 7 });
+    clear(pop);
+    if (!hits.length) {
+      pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: `No ${authority} match for "${query}"` }));
+      return;
+    }
+    for (const h of hits) {
+      pop.appendChild(el("button", {
+        class: "ed-idx-lookuphit", type: "button",
+        title: h.description || h.id,
+        onclick: () => { pop.remove(); onPick(h.id); },
+      }, [
+        el("span", { class: "ed-idx-lookuplabel", text: h.label || h.id }),
+        el("span", { class: "ed-idx-lookupid", text: h.id }),
+        h.description ? el("span", { class: "ed-idx-lookupdesc", text: h.description }) : null,
+      ]));
+    }
+  } catch (err) {
+    clear(pop);
+    pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: err.message }));
+  }
 }
 
 /** Render the entity index from the current document. */

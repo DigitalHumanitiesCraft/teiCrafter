@@ -72,6 +72,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
   const onStartLink = typeof hooks.onStartLink === "function" ? hooks.onStartLink : () => {};
   const onSetAuthority = typeof hooks.onSetAuthority === "function" ? hooks.onSetAuthority : () => {};
   const onConfirm = typeof hooks.onConfirm === "function" ? hooks.onConfirm : () => {};
+  const onLookup = typeof hooks.onLookup === "function" ? hooks.onLookup : () => {};
 
   // Active id is owned here so re-rendering re-applies the highlight. Row nodes
   // are indexed by id for setActive() to toggle without a full re-render.
@@ -203,6 +204,17 @@ export function createIndexPanel(hostEl, hooks = {}) {
         class: "ed-idx-btn ed-idx-authaddbtn", type: "button",
         title: "Add authority id", "aria-label": "Add id", text: "+id",
         onclick: submit,
+      }),
+      el("button", {
+        class: "ed-idx-btn ed-idx-lookup", type: "button",
+        title: "Search this register for an id (uses the typed text, else the name)",
+        "aria-label": "Look up id", text: "find",
+        onclick: () => onLookup(entity.id, {
+          authority: typeSel.value,
+          query: valInput.value.trim() || entity.name,
+          anchor: addForm,
+          onPick: (id) => { valInput.value = id; submit(); },
+        }),
       }),
     ]);
 

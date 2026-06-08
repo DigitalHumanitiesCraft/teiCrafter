@@ -247,6 +247,26 @@
 }
 .ed-idx-authinput:focus { outline: none; border-color: var(--color-gold); }
 
+/* Live authority lookup (M3.3): results popover under the id form */
+.ed-idx-authadd { position: relative; flex-wrap: wrap; }
+.ed-idx-lookupresults {
+  width: 100%; margin-top: 2px; display: flex; flex-direction: column; gap: 1px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-panel); max-height: 180px; overflow: auto;
+}
+.ed-idx-lookupmsg {
+  font-size: var(--font-size-xs); color: var(--color-text-muted); padding: 2px var(--space-xs);
+}
+.ed-idx-lookuphit {
+  display: flex; align-items: baseline; gap: var(--space-xs); flex-wrap: wrap;
+  text-align: left; cursor: pointer; border: none; background: none;
+  font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text);
+  padding: 2px var(--space-xs);
+}
+.ed-idx-lookuphit:hover { background: var(--color-blue-light); }
+.ed-idx-lookupid { font-family: var(--font-mono); color: var(--color-text-muted); }
+.ed-idx-lookupdesc { color: var(--color-text-muted); width: 100%; }
+
 /* Reading-text mention highlight (entity links) */
 .ed-w.mention { background: var(--color-blue-light); box-shadow: inset 0 -2px 0 var(--color-blue); }
 
