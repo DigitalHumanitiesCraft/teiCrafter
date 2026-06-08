@@ -13,7 +13,7 @@ status: active
 created: 2026-06-07
 updated: 2026-06-08
 language: en
-version: 0.5
+version: 0.6
 topics: ["[[Project Goals]]", "[[Milestones]]"]
 related: [integration, project, specification, testing]
 ---
@@ -59,25 +59,25 @@ cites a re-runnable proof.
 ## H2 - See, navigate, correct
 
 - (*) **M2.1** Editor model per file (folios / lines / cells). **done** -- `node test/tools/hersch_loadability.mjs`.
-- (*) **M2.2** Image display for opened files (`<graphic>` support). **done (engine side); browser-visual test open** -- `readSurfaces` reads `<graphic url>` (`tei-document.js`), `renderFacsimile` falls back to `surface.graphic` (`editor-app.js`); proof `node test/tools/szd_demo_check.mjs`. Open: confirm the GAMS image actually renders in OpenSeadragon (CORS) in a browser.
+- (*) **M2.2** Image display for opened files (`<graphic>` support). **done** -- engine: `readSurfaces` reads `<graphic url>` (`tei-document.js`), `renderFacsimile` falls back to `surface.graphic` (`editor-app.js`), proof `node test/tools/szd_demo_check.mjs`; browser-visual (2026-06-08): o_szd.1079 GAMS facsimile renders in OpenSeadragon (IMG.1/IMG.2 HTTP 200) under headless Chrome, observable proof `c:\tmp\m2_2_1079_folio1.png` (frontend check, not a repo test).
 - (*) **M2.3** Live browser pass over ZBZ (large docs, empty folios, zone linking, rendering of hi/foreign/note/choice/unclear/figure). **deferred**; the demo-relevant part (one ZBZ object) is folded into M7.2.
 - (*) **M2.4** ZBZ image-URL scheme for `<graphic>` injection (images committed only for docs 1000 / 1330 / 1540 / 2310). **open**
 
 ## H3 - Semantic annotation
 
 - (*) **M3.1** Place entity type (`place` / `placeName`) in `standoff.js` + `index-panel.js`. **done** -- place added to `TYPE_MAP`/`ENTITY_TO_TYPE`/`ID_PREFIX` + `readEntities` (`standoff.js`) and a Places section (`index-panel.js`); proof `node test/tools/szd_demo_check.mjs` (add/read/link place, byte-clean).
-- (*) **M3.3** Authority identifier (GND / GeoNames / Wikidata) on all entity types + editor UI. **done (hand-entry core); live lookup + Gemini open** -- stored as `<idno type="GND|GeoNames|Wikidata">value</idno>` children (decision 2026-06-08: `<idno>`, not `@ref`, so multiple authorities per entity and `@ref` stays the mention pointer); `setAuthority` add/replace/remove in `standoff.js`, authority field per row in `index-panel.js`, hook in `editor-app.js`; proof `node test/tools/szd_demo_check.mjs` (32/32: add/replace/remove, coexisting authorities, seeded-GND read). Decision 2026-06-07: all three population paths on one mechanism (hand-entry foundation now, then Gemini batch M3.7, then live lookup).
+- (*) **M3.3** Authority identifier (GND / GeoNames / Wikidata) on all entity types + editor UI. **done** -- (a) hand-entry: stored as `<idno type="GND|GeoNames|Wikidata">value</idno>` children (decision 2026-06-08: `<idno>`, not `@ref`, so multiple authorities per entity and `@ref` stays the mention pointer); `setAuthority` add/replace/remove in `standoff.js`, authority field per row in `index-panel.js`, hook in `editor-app.js`; proof `node test/tools/szd_demo_check.mjs` (32/32). (b) live lookup (2026-06-08): URL-builder + parser for Wikidata/GND/GeoNames in `services/authority-lookup.js`, index-panel "find" button + result popover (Wikidata/GND keyless and CORS-capable, GeoNames needs a username); proof `node test/tools/authority_lookup_check.mjs` (15/15), the fetch is browser-verified, commit 8ce938a. Decision 2026-06-07: all three population paths on one mechanism (hand-entry, live lookup, Gemini batch M3.7) -- all three now built.
 - (*) **M3.4** Mention linking extended to the new entity types. **done** -- `linkMention` is type-independent (wraps `<name ref="#id">` for any entity id); verified for place in `node test/tools/szd_demo_check.mjs`.
-- (*) **M3.7** AI annotation proposal: an offline Gemini 3.1 Flash Lite step writes unreviewed entity and authority-id (GND / GeoNames / Wikidata) suggestions into `<standOff>`; teiCrafter shows them violet for human review. **open** (the minimal gate also works by manual annotation). Note: ZBZ TEI has no entities (NER removed E71 on 2026-05-27), so ZBZ annotation is created fresh in teiCrafter.
+- (*) **M3.7** AI annotation proposal: an LLM proposes entities, inserted unreviewed as `resp="#ai"` (TEI-valid, lossless) and rendered violet; the human confirms (`confirmEntity` removes the marker) or rejects (`deleteEntity`). **done (engine/parser; browser-verified LLM call)** -- proof `node test/tools/ai_proposal_check.mjs` (17/17: mark, gate, confirm/reject byte-identical) plus a robust parser `ai_suggest_parse_check.mjs` (8/8); `docs/js/editor/ai-suggest.js`, hook in `editor-app.js`; commit f647e7e. The minimal gate also works by manual annotation. Note: ZBZ TEI has no entities (NER removed E71 on 2026-05-27), so ZBZ annotation is created fresh in teiCrafter.
 - (+) **M3.2** Work entity (`title` / `bibl`). **done** -- `work` type (`listBibl`/`bibl`/`title`, `wrk_` ids) in `TYPE_MAP`/`ENTITY_TO_TYPE`/`ID_PREFIX`/`readEntities` (`standoff.js`, scoped to standOff/listBibl so header bibls are not misread) and a Works section (`index-panel.js`); proof `node test/tools/szd_demo_check.mjs` (add/read work, authority idno, header-bibl exclusion). Pulled forward from full-ambition because M3.3 needs it (demo triad is person/place/work).
-- (+) **M3.5** Note / footnote / comment creation UI (today read-only). **open**
+- (+) **M3.5** Note / footnote / comment creation UI (was read-only). **done (2026-06-08)** -- lossless `<note target="#id">` in `<standOff>`, anchor via ancestor `xml:id`, else line `@facs`, else injected `xml:id` (`addNote`/`addNoteForNode`/`ensureXmlId` in `standoff.js`); "Add note" UI mode; proof `node test/tools/note_create_check.mjs` (15/15, stable resolvable `@target`), commit d3fc922.
 - (+) **M3.6** Editorial markup (`unclear` / `gap` / `del` / `add` from pipeline markers). **open**
 
 ## H4 - Losslessness as a standing invariant
 
 - (*) **M4.1** Engine round-trip sweep byte-identical. **done** -- `node test/tools/roundtrip_sweep.mjs`.
 - (*) **M4.2** Editor loadability sweep. **done** -- `node test/tools/hersch_loadability.mjs`.
-- (*) **M4.3** Every new feature stays byte-clean (per-feature regression test). **ongoing**
+- (*) **M4.3** Every new feature stays byte-clean (per-feature regression test). **ongoing** -- each annotation/editing feature ships a byte-clean regression test: `szd_demo_check.mjs` (32/32), `note_create_check.mjs` (15/15), `ai_proposal_check.mjs` (17/17), `whitespace_edit_check.mjs` (14/14, line edit preserves indentation; the whitespace caveat is closed, commit 8fd281c).
 - (*) **M4.4** SZD-converted TEI byte-clean through `tei-document.js` / `standoff.js`. **done** -- `node test/tools/szd_loadability_sweep.mjs` round-trips all 2103 converted TEI byte-identically through the engine; `standoff.js` byte-cleanness on annotation is `szd_demo_check.mjs` (32/32).
 
 ## H5 - Verification and documentation
@@ -102,15 +102,19 @@ cites a re-runnable proof.
 
 ## Critical path to the demo
 
-The SZD dependency chain **M1.2 -> M1.3 -> M1.4 -> M1.5** is now cleared end to end:
+The SZD dependency chain **M1.2 -> M1.3 -> M1.4 -> M1.5** is cleared end to end:
 M1.2 frozen, M1.3 (`export_tei.py`) byte-faithful, M1.4 verified on the handful, M1.5 done
 over the full corpus (`node test/tools/szd_loadability_sweep.mjs`: 2103/2103 converted and
-byte-identical round-trip, 40 empty/all-blank objects valid). The remaining demo-facing work
-is **M7.2** (the SZD worked example is proven; the ZBZ half waits on the separate ZBZ spur)
-and optionally **M3.7** (offline Gemini annotation). The annotation cluster M3.1 / M3.2 /
-M3.3 / M3.4 is done; M2.2's browser-visual test is done (2026-06-08); M4.4 is covered by the
-sweep. The zbz frontend rendering work (M2.3 / M2.4) stays deferred; its image-URL scheme is
-read into M7.2 when the ZBZ example is built.
+byte-identical round-trip, 40 empty/all-blank objects valid; M4.4 covered). The annotation
+cluster is now complete except M3.6: M3.1 / M3.2 / M3.3 (hand-entry + live lookup) / M3.4 /
+M3.5 (notes) / M3.7 (AI proposal with verify gate) are done, each with a byte-clean regression
+test; M2.2's browser-visual test passed (2026-06-08); the whitespace caveat is closed (8fd281c).
+The only remaining demo-facing work is **M7.2** (the SZD worked example is proven; the ZBZ half
+waits on the separate ZBZ spur) plus **M7.1 / M7.3** (case provenance, slide and text
+contribution). Engine and parser of the three new annotation features are headless-proven; their
+browser paths (note click, LLM call, live fetch) await operator visual sign-off. The zbz frontend
+rendering work (M2.3 / M2.4) stays deferred; its image-URL scheme is read into M7.2 when the ZBZ
+example is built.
 
 ## Verification
 
