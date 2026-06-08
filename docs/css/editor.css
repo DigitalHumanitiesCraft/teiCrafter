@@ -264,6 +264,7 @@
   padding: 2px var(--space-xs);
 }
 .ed-idx-lookuphit:hover { background: var(--color-blue-light); }
+.ed-idx-lookuplabel { color: var(--color-text); font-weight: 600; }
 .ed-idx-lookupid { font-family: var(--font-mono); color: var(--color-text-muted); }
 .ed-idx-lookupdesc { color: var(--color-text-muted); width: 100%; }
 

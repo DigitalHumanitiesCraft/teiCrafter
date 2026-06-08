@@ -11,7 +11,7 @@
  *     example (local XML plus page images).
  *   - Navigate folios (one <pb> to the next).
  *   - Render the diplomatic reading text word-by-word; click a word to correct it
- *     in place via editWordText (surgical, lossless).
+ *     in place via editCellCore (surgical, lossless, edge-whitespace preserving).
  *   - Show the folio's page image in an OpenSeadragon viewer (facsimile.js) with the
  *     <zone> rectangles overlaid and bidirectionally linked to the reading text
  *     (real @facs link when present, positional fallback otherwise).
@@ -24,7 +24,6 @@
 
 import {
   parseEdition,
-  editWordText,
   editCellCore,
   splitEdge,
   serialize,
@@ -551,6 +550,11 @@ async function runLookup(authority, query, anchor, onPick) {
   anchor.appendChild(pop);
   try {
     const hits = await authorityLookup(authority, query, { limit: 7 });
+    // If a newer lookup replaced this popover, or the index re-rendered while we
+    // awaited, this node is detached: drop the stale result instead of writing to
+    // an orphaned element. isConnected (not parentElement) is required, since a
+    // re-render detaches the whole subtree while the local parent link survives.
+    if (!pop.isConnected) return;
     clear(pop);
     if (!hits.length) {
       pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: `No ${authority} match for "${query}"` }));
@@ -568,6 +572,7 @@ async function runLookup(authority, query, anchor, onPick) {
       ]));
     }
   } catch (err) {
+    if (!pop.isConnected) return;
     clear(pop);
     pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: err.message }));
   }
