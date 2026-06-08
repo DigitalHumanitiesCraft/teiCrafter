@@ -29,7 +29,7 @@ model to generate here.
 This contract is **frozen** (status `active`, M1.2 done). The mappings, the id scheme,
 and the geometry are fixed from the v0.2 schema, the reference prototype, and the demo
 handful. The open points named in section 9 were resolved against real data on
-2026-06-08 (the handful plus a 151-object deterministic spread across the ~2103-object
+2026-06-08 (the handful plus a 151-object deterministic spread across the ~2069-object
 corpus; `test/tools/port_parity.mjs` and `pipeline/export_tei.py`).
 
 ## 0. Sources of truth for this document
@@ -283,7 +283,7 @@ be guesswork; v1 stays literal on purpose.
 ## 9. Resolved against real data (2026-06-08, M1.2 freeze)
 
 Checked over the handful (o_szd.100, 72, 161, 2215, 1079) and a 151-object deterministic
-spread across the full ~2103-object corpus. The five open points are settled:
+spread across the full ~2069-object corpus. The five open points are settled:
 
 1. **bbox: confirmed percent.** No bbox value exceeds 100 anywhere in the sample (handful
    max 82.5, o_szd.2215). The percent-to-pixel formula (section 6) stands; no object uses

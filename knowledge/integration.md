@@ -210,8 +210,9 @@ Gemini 3 Flash (merge+verify), output `{id}_layout.json` with regions (bbox in p
 (4) exports: `export_page_json.py` (Page-JSON v0.2), `export_pagexml.py` (PAGE XML 2019,
 deterministic), `export_mets.py` (METS/MODS, ~2074 objects).
 
-**On-disk inventory (results/, verified):** `_page.json` 2103 (127/169/621/1186),
-`_mets.xml` 2103, `_<model>.json` 2103, but only **25** `_layout.json` total. Most objects
+**On-disk inventory (results/, verified, post-dedup 2026-06-08):** `_page.json` 2069
+(127/169/621/1152), `_mets.xml` 2069, a `_<model>.json` model run per object, but only
+**25** `_layout.json` total. Most objects
 are Page-JSON state 1 (text only, no regions); layout is a stratified pilot (~1%).
 
 **Page-JSON v0.2** (`schemas/page-json-v0.2.json`, spec

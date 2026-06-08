@@ -52,9 +52,9 @@ cites a re-runnable proof.
 
 - (*) **M1.1** ZBZ `{id}_final.xml` loads directly. **done** -- `node test/tools/hersch_loadability.mjs` (285/285 usable editor view).
 - (*) **M1.2** SZD converter reference (`knowledge/converter-reference.md`, full Page-JSON v0.2 to TEI mapping). **done (frozen, status active, v0.5, 2026-06-08)** -- the five section-9 points resolved against the handful plus a 151-object spread: bbox confirmed percent (no value > 100), only `~~x~~` and `[?]` markers occur, dropped fields confirmed (with `pages[].notes` dropped in v1 by reversible decision), no further standOff seeding, images 1:1 with pages. Also recorded: o_szd.161 was a duplicate id across two folders, since deduped upstream (szd-htr commit fb48ca0), so `export_tei.py` keeps a general path-driven / ambiguous-id guard; empty objects (o_szd.70 / 2256 / 2314, `pages: []`) round-trip with `cells === 0`.
-- (*) **M1.3** SZD batch converter `pipeline/export_tei.py`. **done** -- faithful Python port of the reference prototype (path-driven, plus an `--id` mode that hard-errors on ambiguous ids); byte-identical to `szd-pagejson-to-tei.mjs` on the handful (`node test/tools/port_parity.mjs`, 6/6) and across a 151-object deterministic spread of the ~2103-object corpus (151/151). The prototype round-trips its output through the engine, so byte-equality means the Python output round-trips too.
+- (*) **M1.3** SZD batch converter `pipeline/export_tei.py`. **done** -- faithful Python port of the reference prototype (path-driven, plus an `--id` mode that hard-errors on ambiguous ids); byte-identical to `szd-pagejson-to-tei.mjs` on the handful (`node test/tools/port_parity.mjs`, 6/6) and across a 151-object deterministic spread of the ~2069-object corpus (151/151). The prototype round-trips its output through the engine, so byte-equality means the Python output round-trips too.
 - (*) **M1.4** SZD: produce and engine-verify the demo example TEI. **done for the handful** -- o_szd.1079 plus 100 / 72 / 2215 / 161 convert and round-trip byte-identically (port_parity + the prototype's engine check); full-corpus M1.5 still open.
-- (+) **M1.5** SZD: convert all ~2103 objects + loadability sweep. **done** -- `node test/tools/szd_loadability_sweep.mjs` (runs `export_tei.py --all`, then an engine sweep): 2103/2103 converted, 2103/2103 byte-identical round-trip, 0 parse errors, 40 empty/all-blank objects (cells === 0, valid).
+- (+) **M1.5** SZD: convert all ~2069 objects + loadability sweep. **done** -- `node test/tools/szd_loadability_sweep.mjs` (runs `export_tei.py --all`, then an engine sweep): 2069/2069 converted, 2069/2069 byte-identical round-trip, 0 parse errors, 39 empty/all-blank objects (cells === 0, valid).
 
 ## H2 - See, navigate, correct
 
@@ -78,7 +78,7 @@ cites a re-runnable proof.
 - (*) **M4.1** Engine round-trip sweep byte-identical. **done** -- `node test/tools/roundtrip_sweep.mjs`.
 - (*) **M4.2** Editor loadability sweep. **done** -- `node test/tools/hersch_loadability.mjs`.
 - (*) **M4.3** Every new feature stays byte-clean (per-feature regression test). **ongoing** -- each annotation/editing feature ships a byte-clean regression test: `szd_demo_check.mjs` (32/32), `note_create_check.mjs` (15/15), `ai_proposal_check.mjs` (17/17), `whitespace_edit_check.mjs` (14/14, line edit preserves indentation; the whitespace caveat is closed, commit 8fd281c).
-- (*) **M4.4** SZD-converted TEI byte-clean through `tei-document.js` / `standoff.js`. **done** -- `node test/tools/szd_loadability_sweep.mjs` round-trips all 2103 converted TEI byte-identically through the engine; `standoff.js` byte-cleanness on annotation is `szd_demo_check.mjs` (32/32).
+- (*) **M4.4** SZD-converted TEI byte-clean through `tei-document.js` / `standoff.js`. **done** -- `node test/tools/szd_loadability_sweep.mjs` round-trips all 2069 converted TEI byte-identically through the engine; `standoff.js` byte-cleanness on annotation is `szd_demo_check.mjs` (32/32).
 
 ## H5 - Verification and documentation
 
@@ -104,8 +104,8 @@ cites a re-runnable proof.
 
 The SZD dependency chain **M1.2 -> M1.3 -> M1.4 -> M1.5** is cleared end to end:
 M1.2 frozen, M1.3 (`export_tei.py`) byte-faithful, M1.4 verified on the handful, M1.5 done
-over the full corpus (`node test/tools/szd_loadability_sweep.mjs`: 2103/2103 converted and
-byte-identical round-trip, 40 empty/all-blank objects valid; M4.4 covered). The annotation
+over the full corpus (`node test/tools/szd_loadability_sweep.mjs`: 2069/2069 converted and
+byte-identical round-trip, 39 empty/all-blank objects valid; M4.4 covered). The annotation
 cluster is now complete: M3.1 / M3.2 / M3.3 (hand-entry + live lookup) / M3.4 /
 M3.5 (notes) / M3.6 (textual criticism) / M3.7 (AI proposal with verify gate) are done, each
 with a byte-clean regression test; M2.2's browser-visual test passed (2026-06-08); the whitespace caveat is closed (8fd281c).

@@ -11,10 +11,14 @@
  * Run: node test/tools/szd_loadability_sweep.mjs   (exit 0 = all clean)
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, rmSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const DIR = "output/szd-tei";
+// Clean stale outputs first. The upstream corpus shrinks (e.g. the szd-htr dedup of
+// duplicate objects), and export_tei.py --all does not prune, so old <folder>__<id>.xml
+// from removed objects would otherwise linger and inflate the sweep count.
+rmSync(DIR, { recursive: true, force: true });
 console.log("converting corpus via pipeline/export_tei.py --all ...");
 execFileSync("python", ["pipeline/export_tei.py", "--all", "--out", DIR], { stdio: "inherit" });
 
