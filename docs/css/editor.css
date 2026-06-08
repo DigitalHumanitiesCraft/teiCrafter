@@ -166,7 +166,7 @@
 .ed-tab:hover { color: var(--color-text); }
 .ed-tab.active { color: var(--color-text); border-bottom-color: var(--color-gold); }
 
-/* Entity index panel (persons / organisations / events) */
+/* Entity index panel (persons / places / organisations / works / events) */
 .ed-idx { display: flex; flex-direction: column; gap: var(--space-md); }
 .ed-idx-section { display: flex; flex-direction: column; gap: var(--space-xs); }
 .ed-idx-heading {
@@ -177,9 +177,10 @@
 .ed-idx-list { display: flex; flex-direction: column; gap: 2px; }
 .ed-idx-empty { font-size: var(--font-size-xs); color: var(--color-text-muted); padding: 2px 0; }
 .ed-idx-row {
-  display: flex; align-items: center; gap: var(--space-xs);
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
   padding: 2px var(--space-xs); border-radius: var(--radius-sm);
 }
+.ed-idx-rowmain { display: flex; align-items: center; gap: var(--space-xs); }
 .ed-idx-row:hover { background: var(--color-blue-light); }
 .ed-idx-row-active { background: var(--color-gold-light); }
 .ed-idx-rowbody {
@@ -210,6 +211,34 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs);
 }
 .ed-idx-add-input:focus { outline: none; border-color: var(--color-gold); }
+
+/* Authority identifiers (idno) under each entity row */
+.ed-idx-auth { display: flex; flex-direction: column; gap: 2px; padding: 0 0 2px var(--space-md); }
+.ed-idx-authlist { display: flex; flex-wrap: wrap; gap: 2px; }
+.ed-idx-authid {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  font-family: var(--font-mono); font-size: var(--font-size-xs);
+  color: var(--color-text-secondary); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 0 var(--space-xs);
+}
+.ed-idx-authtype { color: var(--color-text-muted); }
+.ed-idx-authdel {
+  border: none; background: none; cursor: pointer;
+  color: var(--color-text-muted); padding: 0 2px; font-size: var(--font-size-xs);
+}
+.ed-idx-authdel:hover { color: var(--color-problem); }
+.ed-idx-authadd { display: flex; gap: 2px; align-items: center; }
+.ed-idx-authtypesel {
+  font-family: var(--font-ui); font-size: var(--font-size-xs);
+  color: var(--color-text); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 1px 2px;
+}
+.ed-idx-authinput {
+  flex: 1; min-width: 0; font-family: var(--font-ui); font-size: var(--font-size-xs);
+  color: var(--color-text); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 1px var(--space-xs);
+}
+.ed-idx-authinput:focus { outline: none; border-color: var(--color-gold); }
 
 /* Reading-text mention highlight (entity links) */
 .ed-w.mention { background: var(--color-blue-light); box-shadow: inset 0 -2px 0 var(--color-blue); }

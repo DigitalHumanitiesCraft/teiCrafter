@@ -2,9 +2,9 @@
  * teiCrafter Editor -- StandOff / entity index model (DOM-free, lossless).
  *
  * A schema-light layer over the generic core: it reads and edits TEI standOff
- * entities (person, place, org, event) and the in-text mentions that link to them.
- * It imports only from ./tei-document.js so it runs in the browser (editor-app.js)
- * and in Node (headless proofs) with identical logic.
+ * entities (person, place, org, event, work) and the in-text mentions that link to
+ * them. It imports only from ./tei-document.js so it runs in the browser
+ * (editor-app.js) and in Node (headless proofs) with identical logic.
  *
  * The raw string stays canonical. Every mutation is an offset splice via
  * spliceDocument, which returns a NEW re-parsed doc; a no-op returns the SAME doc,
@@ -13,10 +13,14 @@
  * Shared entity shape (the seeded example and this module agree on it exactly):
  *   <standOff>
  *     <listPerson><person xml:id="..."><persName>Name</persName></person></listPerson>
+ *     <listPlace><place xml:id="..."><placeName>Name</placeName></place></listPlace>
  *     <listOrg><org xml:id="..."><orgName>Name</orgName></org></listOrg>
  *     <listEvent><event xml:id="..."><label>Label</label></event></listEvent>
+ *     <listBibl><bibl xml:id="..."><title>Title</title></bibl></listBibl>
  *   </standOff>
- * An in-text mention links by wrapping the mention in <name ref="#id">...</name>.
+ * Authority identifiers (GND / GeoNames / Wikidata) attach to any entity as
+ * <idno type="GND">value</idno> children; @ref stays reserved for the mention
+ * pointer. An in-text mention links by wrapping it in <name ref="#id">...</name>.
  */
 
 import {
@@ -39,17 +43,22 @@ const TYPE_MAP = Object.freeze({
   place: { list: "listPlace", entity: "place", name: "placeName" },
   org: { list: "listOrg", entity: "org", name: "orgName" },
   event: { list: "listEvent", entity: "event", name: "label" },
+  work: { list: "listBibl", entity: "bibl", name: "title" },
 });
 
-// Reverse lookup: entity local-name -> type descriptor (plus the type key).
+// Reverse lookup: entity local-name -> type key.
 const ENTITY_TO_TYPE = Object.freeze({
   person: "person",
   place: "place",
   org: "org",
   event: "event",
+  bibl: "work",
 });
 
-const ID_PREFIX = Object.freeze({ person: "pers", place: "plc", org: "org", event: "evt" });
+const ID_PREFIX = Object.freeze({ person: "pers", place: "plc", org: "org", event: "evt", work: "wrk" });
+
+// The authority registers an entity's <idno type="..."> may name, in UI order.
+export const AUTHORITIES = Object.freeze(["GND", "GeoNames", "Wikidata"]);
 
 // ---- id helpers ------------------------------------------------------------
 
@@ -106,24 +115,53 @@ function allText(doc, el) {
   return textNodes(el).map((t) => textOf(doc, t)).join("").trim();
 }
 
+/**
+ * The authority identifiers carried by an entity as <idno type="...">value</idno>
+ * children. Returns [{ type, value }] in document order; type "" when @type absent.
+ */
+function readAuthorities(doc, el) {
+  return elementsByLocal(el, "idno").map((idno) => ({
+    type: getAttr(idno, "type") || "",
+    value: allText(doc, idno),
+  }));
+}
+
 function readOne(doc, el, type) {
   const desc = TYPE_MAP[type];
   const id = getAttr(el, "id");
   const name = firstChildText(doc, el, desc.name) || allText(doc, el) || "";
-  return { id, type, name, node: el };
+  return { id, type, name, node: el, authorities: readAuthorities(doc, el) };
+}
+
+/**
+ * Works live as <bibl> inside <listBibl> inside <standOff>. <bibl> is also a common
+ * bibliographic element in the teiHeader (sourceDesc), so works are read scoped to
+ * standOff/listBibl rather than document-wide, to avoid pulling in header citations.
+ */
+function readWorks(doc) {
+  const standOff = firstByLocal(doc.root, "standOff");
+  if (!standOff) return [];
+  const out = [];
+  for (const list of elementsByLocal(standOff, "listBibl")) {
+    for (const el of elementsByLocal(list, "bibl")) out.push(readOne(doc, el, "work"));
+  }
+  return out;
 }
 
 /**
  * Read every standOff entity in the document.
- * Scans <person>/<org>/<event> anywhere (standOff preferred but not required).
- * E = { id, type, name, node }; name from persName/orgName/label else first text.
+ * Scans <person>/<place>/<org>/<event> anywhere (standOff preferred but not required);
+ * <bibl> works are scoped to standOff/listBibl (see readWorks). Each entity is
+ * E = { id, type, name, node, authorities }; name from persName/placeName/orgName/
+ * label/title else first text; authorities from <idno type="..."> children.
  */
 export function readEntities(doc) {
   const persons = elementsByLocal(doc.root, "person").map((el) => readOne(doc, el, "person"));
   const places = elementsByLocal(doc.root, "place").map((el) => readOne(doc, el, "place"));
   const orgs = elementsByLocal(doc.root, "org").map((el) => readOne(doc, el, "org"));
   const events = elementsByLocal(doc.root, "event").map((el) => readOne(doc, el, "event"));
-  return { persons, places, orgs, events };
+  const works = readWorks(doc);
+  return { persons, places, orgs, events, works };
 }
 
 // ---- standOff scaffolding --------------------------------------------------
@@ -288,6 +326,58 @@ export function deleteEntity(doc, id) {
   const el = findEntityElement(doc, id);
   if (!el || el.outerEnd == null) return doc;
   return spliceDocument(doc, el.outerStart, el.outerEnd, "");
+}
+
+// ---- authority identifiers (idno) ------------------------------------------
+
+/**
+ * Upsert an authority identifier on the entity with xml:id === id, stored as an
+ * <idno type="authority">value</idno> child (authority being e.g. GND / GeoNames /
+ * Wikidata). The semantics are idempotent:
+ *   - an empty/whitespace value removes the matching <idno> (no-op if none exists);
+ *   - an existing <idno type="authority"> has its text replaced (no-op if unchanged);
+ *   - otherwise a new <idno> is appended after the last idno, else after the name
+ *     element, else at the entity's content end.
+ * Every path is a single offset splice, so the round-trip stays byte-identical.
+ * Returns a NEW doc, or the SAME doc on a no-op / when the entity is not found.
+ */
+export function setAuthority(doc, id, authority, value) {
+  const el = findEntityElement(doc, id);
+  if (!el) return doc;
+  const authType = String(authority == null ? "" : authority).trim();
+  if (!authType) return doc;
+  const val = value == null ? "" : String(value).trim();
+
+  const idnos = elementsByLocal(el, "idno");
+  const existing = idnos.find((n) => (getAttr(n, "type") || "") === authType);
+
+  if (existing) {
+    if (!val) {
+      if (existing.outerEnd == null) return doc;
+      return spliceDocument(doc, existing.outerStart, existing.outerEnd, "");
+    }
+    const start = existing.contentStart != null ? existing.contentStart : existing.stagEnd;
+    const end = existing.contentEnd != null ? existing.contentEnd : start;
+    const safe = escapeText(val);
+    if (doc.raw.slice(start, end) === safe) return doc; // no-op
+    return spliceDocument(doc, start, end, safe);
+  }
+
+  if (!val) return doc; // nothing to remove, nothing to add
+
+  const snippet = '<idno type="' + escapeAttr(authType) + '">' + escapeText(val) + "</idno>";
+  const nameEl = firstByLocal(el, TYPE_MAP[ENTITY_TO_TYPE[el.localName]].name);
+  let at;
+  if (idnos.length && idnos[idnos.length - 1].outerEnd != null) {
+    at = idnos[idnos.length - 1].outerEnd;
+  } else if (nameEl && nameEl.outerEnd != null) {
+    at = nameEl.outerEnd;
+  } else if (el.contentEnd != null) {
+    at = el.contentEnd;
+  } else {
+    return doc; // self-closing entity: no place to add a child losslessly
+  }
+  return spliceDocument(doc, at, at, snippet);
 }
 
 // ---- mentions --------------------------------------------------------------

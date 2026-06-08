@@ -1,27 +1,33 @@
 /**
- * teiCrafter Editor -- Index-management panel (Persons / Organisations / Events).
+ * teiCrafter Editor -- Index-management panel
+ * (Persons / Places / Organisations / Works / Events).
  *
  * Pure DOM module. It imports nothing from the project: it receives entity data
  * via render() and reports every user intent through the hooks passed at
  * construction. The data model (slugifying ids, mutating the TEI standOff, the
  * lossless splice) lives entirely on the integrator's side; this module only
- * draws the three index sections and routes clicks.
+ * draws the index sections and routes clicks.
  *
  * Contract:
  *   createIndexPanel(hostEl, hooks = {}) -> { render(entities), setActive(id), clear() }
  *   hooks: {
- *     onAdd(type, { name }),       // type is 'person' | 'org' | 'event'; id is the model's job
- *     onUpdate(id, { name }),      // inline rename committed
- *     onDelete(id),                // delete button
- *     onSelect(entity),            // row body clicked (also marks it active)
- *     onStartLink(entity),         // small "link" button clicked
+ *     onAdd(type, { name }),                 // type in person|place|org|work|event; id is the model's job
+ *     onUpdate(id, { name }),                // inline rename committed
+ *     onDelete(id),                          // delete button
+ *     onSelect(entity),                      // row body clicked (also marks it active)
+ *     onStartLink(entity),                   // small "link" button clicked
+ *     onSetAuthority(id, { authority, value }), // add/replace (value set) or remove (value "") an idno
  *   }
- *   render(entities) with entities = { persons:[E], orgs:[E], events:[E] }
- *   E = { id, type, name }
+ *   render(entities) with entities = { persons:[E], places:[E], orgs:[E], works:[E], events:[E] }
+ *   E = { id, type, name, authorities:[{ type, value }] }
  *
  * Styling: token-only classes prefixed ed-idx- (defined in editor.css by the
  * integrator). No inline colors.
  */
+
+// Authority registers offered in the add-id selector, in display order. Kept in
+// sync with standoff.js AUTHORITIES (this module imports nothing, so it is a copy).
+const AUTHORITIES = ["GND", "GeoNames", "Wikidata"];
 
 // ---- tiny DOM helpers (self-contained; mirrors el() in editor-app.js) ------
 
@@ -51,6 +57,7 @@ const SECTIONS = [
   { type: "person", key: "persons", label: "Persons", addLabel: "add person" },
   { type: "place", key: "places", label: "Places", addLabel: "add place" },
   { type: "org", key: "orgs", label: "Organisations", addLabel: "add organisation" },
+  { type: "work", key: "works", label: "Works", addLabel: "add work" },
   { type: "event", key: "events", label: "Events", addLabel: "add event" },
 ];
 
@@ -60,6 +67,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
   const onDelete = typeof hooks.onDelete === "function" ? hooks.onDelete : () => {};
   const onSelect = typeof hooks.onSelect === "function" ? hooks.onSelect : () => {};
   const onStartLink = typeof hooks.onStartLink === "function" ? hooks.onStartLink : () => {};
+  const onSetAuthority = typeof hooks.onSetAuthority === "function" ? hooks.onSetAuthority : () => {};
 
   // Active id is owned here so re-rendering re-applies the highlight. Row nodes
   // are indexed by id for setActive() to toggle without a full re-render.
@@ -137,9 +145,56 @@ export function createIndexPanel(hostEl, hooks = {}) {
       }),
     ]);
 
-    row.appendChild(body);
-    row.appendChild(actions);
+    const main = el("div", { class: "ed-idx-rowmain" });
+    main.appendChild(body);
+    main.appendChild(actions);
+    row.appendChild(main);
+    row.appendChild(buildAuthorities(entity));
     return row;
+  }
+
+  // ---- authority ids (idno) for one entity ---------------------------------
+
+  function buildAuthorities(entity) {
+    const list = el("div", { class: "ed-idx-authlist" });
+    const auths = Array.isArray(entity.authorities) ? entity.authorities : [];
+    for (const a of auths) {
+      list.appendChild(el("span", { class: "ed-idx-authid", title: `${a.type || "id"}: ${a.value}` }, [
+        el("span", { class: "ed-idx-authtype", text: a.type || "id" }),
+        el("span", { class: "ed-idx-authval", text: a.value }),
+        el("button", {
+          class: "ed-idx-btn ed-idx-authdel", type: "button",
+          title: "Remove this id", "aria-label": "Remove id", text: "x",
+          onclick: () => onSetAuthority(entity.id, { authority: a.type, value: "" }),
+        }),
+      ]));
+    }
+
+    const typeSel = el("select", { class: "ed-idx-authtypesel", title: "Authority register" },
+      AUTHORITIES.map((name) => el("option", { value: name, text: name })));
+    const valInput = el("input", {
+      class: "ed-idx-authinput", type: "text", placeholder: "authority id or URI",
+    });
+    const submit = () => {
+      const value = valInput.value.trim();
+      if (!value) return;
+      onSetAuthority(entity.id, { authority: typeSel.value, value });
+      valInput.value = "";
+    };
+    valInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); submit(); }
+    });
+    const addForm = el("div", { class: "ed-idx-authadd" }, [
+      typeSel,
+      valInput,
+      el("button", {
+        class: "ed-idx-btn ed-idx-authaddbtn", type: "button",
+        title: "Add authority id", "aria-label": "Add id", text: "+id",
+        onclick: submit,
+      }),
+    ]);
+
+    return el("div", { class: "ed-idx-auth" }, [list, addForm]);
   }
 
   // ---- the "+ add" row -----------------------------------------------------

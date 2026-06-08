@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: active
 created: 2026-02-05
-updated: 2026-05-30
+updated: 2026-06-08
 language: en
 version: 0.4
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
@@ -72,12 +72,13 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - **Hybrid validation.** Browser-light live, harness-heavy offline (Node + Python/lxml).
 - **LLM output is marked.** Generated TEI is violet and unreviewed; keys in memory only.
 - **Licence boundary.** Real third-party TEI never committed; synthetic twins only.
+- **Authority ids as `<idno>`, not `@ref`** (2026-06-08). Authority identifiers (GND / GeoNames / Wikidata) attach to an entity as `<idno type="...">value</idno>` children: this allows several registers per entity, matches what the SZD converter already emits for creators, and keeps `@ref` reserved for the in-text mention pointer (`<name ref="#id">`). Hand-entry is the foundation; a live lookup and an offline Gemini proposal layer build on the same mechanism.
 
 ## Future (specified, not built)
 
 - A true IIIF tiles/manifest (or METS image) source for the facsimile viewer; the OpenSeadragon deep-zoom viewer itself and `<zone>` overlay linking are already built, currently over a plain-image tileSource.
-- StandOff critical-apparatus editor: select a word/line range, choose a note type, write the anchor and the `standOff` entry. In-browser `<standOff>` index management for person/org/event entities (add, rename, delete) with in-text mention linking via `<name ref="#id">` is already built; the apparatus/note authoring layer is the future part.
-- Manual authority ids (GND, GeoNames, ICONCLASS) on index entities, with no automatic reconciliation; place and project index types beyond the built person/org/event set.
+- StandOff critical-apparatus editor: select a word/line range, choose a note type, write the anchor and the `standOff` entry. In-browser `<standOff>` index management for person/place/org/work/event entities (add, rename, delete, attach authority `<idno>`) with in-text mention linking via `<name ref="#id">` is already built; the apparatus/note authoring layer is the future part.
+- Authority-id reconciliation: a live lookup (type a name, pick a GND/GeoNames/Wikidata match) and an offline Gemini proposal layer that writes unreviewed `<idno>` suggestions shown violet. The manual authority-id entry they build on (GND / GeoNames / Wikidata `<idno>` on any entity type) is already built; automatic reconciliation is the future part.
 - Project modules: a Markdown document configuring autocompletion, authoring views, indices and Schematron per edition.
 - Page-JSON to minimal-TEI conversion for pipelines (SZD) that lack a transcription TEI.
 - Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.

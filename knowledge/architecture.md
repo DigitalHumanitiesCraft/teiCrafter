@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-06-04
+updated: 2026-06-08
 language: en
 version: 0.4
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
@@ -49,8 +49,8 @@ The engine is three pure-then-UI layers. The lower two are DOM-free, so the exac
 | File | Responsibility |
 |------|----------------|
 | `js/editor/facsimile.js` | Real OpenSeadragon deep-zoom viewer (5.0.1 from CDN) over the page image, with `<zone>` rectangles overlaid and bidirectionally linked to the reading text. Plain-image tileSource with an IIIF-ready hook. Project-dependency-free (uses the global `OpenSeadragon`). |
-| `js/editor/standoff.js` | DOM-free, lossless `<standOff>` model over `tei-document.js`: read/add/update/delete `person`/`org`/`event` entities, and link in-text mentions by wrapping them in `<name ref="#id">`. Every mutation is an offset splice; a no-op returns the same doc, so the round-trip stays byte-identical. Inserted scaffolding adopts the document's own newline (CRLF/LF) and anchors after the `teiHeader`, else before `<text>`, else inside the document element, so a header-less TEI still gets a valid `<standOff>` instead of crashing. |
-| `js/editor/index-panel.js` | Index-management UI (persons/orgs/events) with entity <-> mention <-> zone highlighting. Imports nothing project-internal; drives `standoff.js` through `editor-app.js`. |
+| `js/editor/standoff.js` | DOM-free, lossless `<standOff>` model over `tei-document.js`: read/add/update/delete `person`/`place`/`org`/`work`/`event` entities, attach authority ids as `<idno type="GND\|GeoNames\|Wikidata">value</idno>` children (add/replace/remove via `setAuthority`), and link in-text mentions by wrapping them in `<name ref="#id">`. Works are read scoped to `standOff`/`listBibl` so a `<bibl>` in the `teiHeader` is not misread as a work. Every mutation is an offset splice; a no-op returns the same doc, so the round-trip stays byte-identical. Inserted scaffolding adopts the document's own newline (CRLF/LF) and anchors after the `teiHeader`, else before `<text>`, else inside the document element, so a header-less TEI still gets a valid `<standOff>` instead of crashing. |
+| `js/editor/index-panel.js` | Index-management UI (persons/places/orgs/works/events) with a per-entity authority-id field (register select + value + removable chips) and entity <-> mention <-> zone highlighting. Imports nothing project-internal; drives `standoff.js` through `editor-app.js`. |
 
 ### Why an offset-splice core, not the DOM
 
@@ -81,7 +81,7 @@ docs/
       edition.js          Layer 2: folios/lines/cells model (DOM-free)
       editor-app.js       Layer 3: UI controller + LLM on-ramp
       facsimile.js        OpenSeadragon viewer: page image + zone overlays, IIIF-ready
-      standoff.js         Lossless <standOff> model (person/org/event) + mention linking
+      standoff.js         Lossless <standOff> model (person/place/org/work/event) + authority idno + mention linking
       index-panel.js      Index-management UI; entity/mention/zone highlighting
     services/
       llm.js              Multi-provider LLM client (keys in memory only)

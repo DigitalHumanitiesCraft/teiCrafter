@@ -397,9 +397,10 @@ function renderFacsimile() {
 }
 
 // ---- entity index / standOff ----------------------------------------------
-// The right pane's "Index" tab manages standOff entities (person/org/event) and
-// the in-text mentions that link to them. Every mutation goes through standoff.js
-// (lossless offset splice) and re-parses the edition so all offsets stay correct.
+// The right pane's "Index" tab manages standOff entities (person/place/org/work/
+// event), their authority ids (<idno>), and the in-text mentions that link to them.
+// Every mutation goes through standoff.js (lossless offset splice) and re-parses the
+// edition so all offsets stay correct.
 
 /** Lazily create the single index panel bound to #ed-index, with its hooks. */
 function ensureIndexPanel() {
@@ -439,6 +440,15 @@ function ensureIndexPanel() {
       app.linkTarget = entity;
       setStatus(`Click a line or word to link it to <name> -> ${entity.name}`);
       render(); // refresh titles/affordances for link mode
+    },
+    onSetAuthority: (id, { authority, value }) => {
+      try {
+        app.state = parseEdition(standoff.setAuthority(app.state.doc, id, authority, value).raw);
+        setDirty(true);
+        refreshAfterStandoffEdit();
+      } catch (err) {
+        setStatus(`Could not set authority id: ${err.message}`);
+      }
     },
   });
   return indexPanel;
