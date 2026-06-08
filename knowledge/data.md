@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-08
 language: en
-version: 0.6
+version: 0.7
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
@@ -76,7 +76,9 @@ The reference manuscript case. The real codex `codex-2759.xml` (~78 MB) carries 
 
 ## Licence Boundary
 
-The real Wenzelsbibel codex is third-party material (Austrian National Library) with an unresolved redistribution licence and is absent from disk. All committed Wenzelsbibel material is a **synthetic structural twin** under `test/fixtures-synthetic/` and `docs/data/editor/` (no ONB data). Real third-party files used for proofs (Hersch, SZD, any ONB slice) live only under the gitignored `test/fixtures/` and never enter version control.
+The real Wenzelsbibel codex is third-party material (Austrian National Library) with an unresolved redistribution licence and is absent from disk. All committed Wenzelsbibel material is a **synthetic structural twin** under `test/fixtures-synthetic/` and `docs/data/editor/` (no ONB data). Real third-party files used for proofs (Hersch, SZD catalog, any ONB slice) live only under the gitignored `test/fixtures/` and never enter version control.
+
+The one deliberate exception is `test/fixtures/real/o_szd.1079.tei.xml`, the SZD worked-example object: it is licensed **CC-BY** (its own `publicationStmt` carries the rights and attribution), so it is committed on purpose to make the M7.2 worked example and its proof (`test/tools/szd_worked_example.mjs`) fully reproducible. The rights-encumbered fixtures in the same folder (the Hersch files, the SZD catalog TEI `szd_werke_tei.xml`) stay gitignored.
 
 ## Negative Definition
 

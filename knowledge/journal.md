@@ -14,13 +14,21 @@ status: active
 created: 2026-02-05
 updated: 2026-06-08
 language: en
-version: 0.6
+version: 0.7
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
+
+## 2026-06-08: SZD worked example (M7.2) and the Promptotyping case (M7.1 / M5.4 / M7.3)
+
+The teiCrafter half of the success criterion turned from "feature checks pass" into a presentable, reproducible artifact. `knowledge/worked-example-szd.md` walks the real CC-BY object `o_szd.1079` (an 1901 Stefan Zweig letter to Max Fleischer) end to end: open and verify the GAMS facsimile, navigate the five folios, correct an HTR slip by editorial judgement ("Gerichte" to "Gedichte"), add the person / place / work triad with the authority identifiers that are genuinely known (Zweig GND 118637495, Wien GeoNames 2761369 / Wikidata Q1741) and leave the rest to the live lookup, link a mention, mark `<unclear>` and `<gap>`, and save byte-faithfully. A new proof `test/tools/szd_worked_example.mjs` drives that whole arc through the real engine on the actual fixture and asserts every step is a surgical byte-faithful splice; the "Gerichte" fix is proven to change exactly one byte and nothing else by full reconstruction, not a tautological prefix check. 38/38, exit 0. The fixture is committed because it carries its own CC-BY licence and attribution in its `publicationStmt`, which makes the worked example fully reproducible; the rights-encumbered fixtures in the same folder stay gitignored (recorded in data.md).
+
+`knowledge/promptotyping-case.md` presents teiCrafter as the third Promptotyping case (the tool plus its three on-disk provenance traces: the knowledge base, this journal, the Git history), folds in the repo-side project-status spine (M5.4) and a drafted talking-points section for the slides (M7.3). This closes the repo side of M7.1, M5.4, and M7.3; the vault-side provenance and the live deck stay outside the repo, and the ZBZ half of M7.2 stays with the parallel ZBZ spur.
+
+Built and adversarially reviewed by a dynamic workflow (three build agents, three skeptic verifiers, ten findings, zero blockers). The fixes that mattered: two tautological prefix/suffix checks in the proof were replaced with a full-reconstruction assertion that actually catches a stray change; the evidence split in both docs was made precise against ground truth (the M2.2 render and the m72 Playwright run for open / save / line-correction / place-annotation are browser-verified 2026-06-08; Mark-text, in-browser mention linking, and the live fetch are headless-proven and await a sight-check). The dead `data/demo` corpus (leftover of the removed five-step generator) was deleted. The knowledge versions were unified at 0.7 across the set, except converter-reference.md (0.6.1), left to the actively-editing SZD lane to reconcile. Full feature-proof regression stayed green (szd_worked_example 38/38, criticism 47/47, szd_demo, note 15/15, ai_proposal 17/17, ai_suggest 8/8, whitespace 14/14, authority 15/15, generic_roundtrip 34/34, editor_roundtrip 13/13, edit_fidelity 21/21).
 
 ## 2026-06-08: Textual-critical markup (M3.6) with an adversarial review pass
 

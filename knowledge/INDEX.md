@@ -14,8 +14,8 @@ status: active
 created: 2026-05-27
 updated: 2026-06-08
 language: en
-version: 0.6
-related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference]
+version: 0.7
+related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference, worked-example-szd, promptotyping-case]
 ---
 
 # teiCrafter Knowledge Base
@@ -39,6 +39,8 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
 | [goals](goals.md) | What are the main goals and milestones, with status? (the on-disk gate plan) | Checking objectives, milestones, or the demo critical path | integration |
 | [converter-reference](converter-reference.md) | The deterministic Page-JSON v0.2 to TEI mapping (body, header, facsimile, bbox formula, standOff seeding, markers) | Building or verifying the SZD converter | data, architecture, specification, goals |
+| [worked-example-szd](worked-example-szd.md) | The real SZD object taken end-to-end in the editor (M7.2): the object, the seven-step walkthrough, the proof, the entity table | The SZD worked example or the live demo path is in question | goals, testing, specification |
+| [promptotyping-case](promptotyping-case.md) | teiCrafter as a Promptotyping case (M7.1), the repo-side project-status spine (M5.4), and the talking-points draft (M7.3) | Presenting the tool, its provenance, or its status | goals, journal, integration |
 
 Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary; `PLAN.md` is the full plan and implementation backlog (German): purpose, tool boundaries, goals H1-H7 with status, SZD data model, proofs, open items.
 
@@ -63,4 +65,4 @@ teiCrafter shares architecture principles, UI patterns and the design system wit
 
 ## History Note
 
-Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor) and a CodeMirror/DocumentModel architecture. The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. The 0.4-to-0.6 set documents the as-built reality, the 0.6 set adding the full editorial annotation layer (notes, AI proposal, live authority lookup, inline textual criticism); see [journal](journal.md).
+Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor) and a CodeMirror/DocumentModel architecture. The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. The 0.4-to-0.6 set documents the as-built reality, the 0.6 set adding the full editorial annotation layer (notes, AI proposal, live authority lookup, inline textual criticism); the 0.7 set adds the SZD worked example and the Promptotyping case ([worked-example-szd](worked-example-szd.md), [promptotyping-case](promptotyping-case.md)) and unifies the repo-wide version at 0.7; see [journal](journal.md).

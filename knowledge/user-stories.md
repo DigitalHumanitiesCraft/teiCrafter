@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-08
 language: en
-version: 0.6
+version: 0.7
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
 related: [specification, architecture, design]
 ---

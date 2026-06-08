@@ -49,6 +49,7 @@ Each demo-critical feature added since the core engine proofs carries its own he
 | `test/tools/ai_suggest_parse_check.mjs` | The LLM reply parser (`docs/js/editor/ai-suggest.js`) tolerates a code fence and prose, normalises free-form type labels to the teiCrafter types, drops malformed/unknown items, de-duplicates, and never throws (M3.7) | PASS |
 | `test/tools/whitespace_edit_check.mjs` | A line-level cell edit preserves the text node's edge whitespace (indentation, newlines), so correcting one line never collapses the surrounding formatting; the old raw-node path is kept as a failing control | PASS |
 | `test/tools/criticism_check.mjs` | Textual-critical markup (M3.6, done, commit 119a1a2): `<unclear>`/`<del>`/`<add>` wrap a node's core with edge whitespace kept outside, `<gap/>` replaces the core, `unwrapCritical` refuses to strip a shared wrapper, every mutation covers every byte and reverses byte-exact | 47/47 |
+| `test/tools/szd_worked_example.mjs` | M7.2 worked example: the real CC-BY `o_szd.1079` taken open -> correct (an HTR "Gerichte" -> "Gedichte" fix, proven a single-byte surgical splice by full reconstruction) -> annotate (person/place/work + GND/GeoNames/Wikidata authorities + a Wien mention, scaffolding a `<standOff>` where none existed) -> textual criticism (`<unclear>` wrap, `<gap/>` replace on folio 3) -> save, every step a byte-faithful splice and the final raw idempotent; gates to SKIP if the CC-BY fixture is absent | 38/38 |
 | `test/tools/hersch_loadability.mjs` | Editor-projection sweep (Layer 2, `parseEdition`) over the full Hersch corpus: every real file yields a usable editor view (folios, editable cells, real reading text), not merely a byte round-trip; writes a JSON anomaly report | sweep, anomalies reported |
 | `test/tools/szd_loadability_sweep.mjs` | M1.5: converts the whole szd-htr corpus via `pipeline/export_tei.py --all`, then verifies every converted TEI loads line-level and round-trips byte-identically; empty (`pages: []`) and all-blank objects legitimately yield `cells === 0` and still round-trip | sweep, all clean |
 | `test/tools/port_parity.mjs` | M1.3: `pipeline/export_tei.py` produces byte-identical output to the reference prototype `szd-pagejson-to-tei.mjs` over the SZD demo handful; a missing input (e.g. the upstream-deduped o_szd.161/korrespondenzen) is skipped, not failed | 5/5 byte-identical, 1 skipped |
@@ -103,7 +104,7 @@ Documentation is itself part of acceptance: the per-fixture JSON reports and the
 - `test/harness/run.mjs`: orchestrator over every fixture.
 - `test/harness/selftest.mjs`: negative test (identity passes, corruption fails), 14/14.
 - `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`: the engine proofs above.
-- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`: the per-milestone feature proofs above.
+- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`, `szd_worked_example.mjs`: the per-milestone feature proofs above.
 - `test/tools/hersch_loadability.mjs`, `szd_loadability_sweep.mjs`, `port_parity.mjs`, `szd-pagejson-to-tei.mjs`: corpus loadability sweeps and the SZD converter parity/prototype.
 - `test/tools/gen_synthetic_codex.py`, `extract_folio.py`: synthetic generation and folio slicing.
 - `test/schemas/tei_all.rng`: TEI All RelaxNG (~1.0 MB, gitignored).
@@ -127,6 +128,7 @@ node test/tools/ai_proposal_check.mjs      # M3.7 AI proposals: resp="#ai" marke
 node test/tools/ai_suggest_parse_check.mjs # M3.7 LLM reply parser, robust + deterministic
 node test/tools/whitespace_edit_check.mjs  # line edit preserves edge whitespace (indentation)
 node test/tools/criticism_check.mjs        # M3.6 textual-critical markup, 47/47
+node test/tools/szd_worked_example.mjs     # M7.2 worked example: real o_szd.1079 open->correct->annotate->criticism->save, 38/38 (SKIP if fixture absent)
 node test/tools/hersch_loadability.mjs     # editor-projection sweep over full Hersch (HERSCH_DIR)
 node test/tools/szd_loadability_sweep.mjs  # M1.5 convert whole szd-htr corpus, load + round-trip (SZD_DIR)
 node test/tools/port_parity.mjs            # M1.3 export_tei.py == reference prototype, 5/5 + 1 skipped (SZD_DIR)
