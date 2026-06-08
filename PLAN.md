@@ -152,10 +152,17 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   in `services/authority-lookup.js`), Index-Panel "find"-Button + Ergebnis-Popover. Wikidata und GND
   schlüssellos und CORS-fähig; GeoNames braucht Username. `node test/tools/authority_lookup_check.mjs` ->
   **15/15**. Der fetch ist browser-verifiziert. [proof] commit 8ce938a.
+- **M3.6 Textkritik gebaut (2026-06-08).** Inline, verlustfrei in `docs/js/editor/criticism.js`:
+  `markCritical` wraps `<unclear>`/`<del>`/`<add>` (Rand-Whitespace bleibt ausserhalb der Tags) bzw.
+  ersetzt den Kern durch `<gap/>`; `unwrapCritical` macht ein Wrap rückgängig, verweigert aber das
+  Entfernen eines geteilten Wrappers; `removeGap` löscht eine Lücke. Geteiltes `splitEdge`/
+  `CRITICAL_LOCALS`/`nearestAncestor` im Core; Gap-Zelle + `crit`/`critSole` in edition.js; "Mark text"-
+  Modus + Inline-Chooser. `node test/tools/criticism_check.mjs` -> **47/47**, gehärtet gegen ein
+  22-Befund-Adversarial-Review. [proof] commit 119a1a2. Auto-Mapping der Pipeline-Marker
+  (`[?]`/`~~x~~` -> Tags) bleibt separate spätere Aufgabe.
 
 ### Offen (Umsetzungs-Scope teiCrafter + SZD)
 
-- **M3.6 Textkritik** (`unclear`/`gap`/`del`/`add`, später).
 - **M7.1/M7.3** Demo-Material (M7.2-SZD erledigt: o_szd.1079 end-to-end im Browser 2026-06-08).
 - **Browser-Verifikation (Operator)** der drei neuen UI-Pfade auf einem echten Objekt: Notiz-Klick,
   KI-Vorschlag (Provider-Key nötig), Live-Lookup (Netz). Engine/Parser sind headless belegt.
@@ -213,8 +220,9 @@ reproduzierbare, kostenlose Stufe und trägt das Fidelity-Argument. Kern:
   (nur Doppel-Tilde `~~x~~` = `<del>`, einzelne `~` ist Gedankenstrich), letter (correspDesc,
   opener/closer/signed, `[Stempel:]`->note/stamp), form (Pipe-Tabellen -> table/row/cell),
   newspaper_clipping (Spalten linearisiert).
-- **Editoriale Marker** (v1 wörtlich erhalten; Mapping nach `<unclear>/<gap>/<del>/<add>/<note>` ist
-  M3.6): `[?]`, `[...]`/`[...N...]`, `~~x~~`, `{x}`, `[Stempel:]`.
+- **Editoriale Marker** (v1 wörtlich erhalten): `[?]`, `[...]`/`[...N...]`, `~~x~~`, `{x}`, `[Stempel:]`.
+  Die Ziel-Tags `<unclear>/<gap>/<del>/<add>/<note>` sind als Editor-Funktion gebaut (M3.6, criticism.js);
+  das automatische Mapping dieser Pipeline-Kürzel auf die Tags bleibt eine separate spätere Aufgabe.
 - **Leerseiten**: `<pb type="blank"/>` für blank/color_chart, Text dort verwerfen.
 - **Erste Konvertier-Handvoll** (deckt die Body-Typen ab UND enthält das Schaustück): o_szd.100
   (Typoskript), o_szd.72 (Tagebuch, Tilde-Fall), **o_szd.1079 (Brief, Schaustück, bereits konvertiert)**,
@@ -230,8 +238,9 @@ klassifizieren, mit Normdaten verknüpfen). Zwei Familien:
 - **Familie 2 editorische Annotation:** Notizen/Fußnoten/Kommentare; textkritische Marker.
 
 teiCrafter heute (erledigt): Person/Org/Event/**Ort**/**Werk** mit Name UND
-**Normdaten-`<idno>`** (Handeingabe, add/replace/remove), typ-unabhängiges Mention-Linking. Offen:
-Notiz-Erstell-UI (M3.5), Textkritik (M3.6), Live-Lookup und Gemini-Vorschlag.
+**Normdaten-`<idno>`** (Handeingabe, add/replace/remove), typ-unabhängiges Mention-Linking,
+Notiz-Erstell-UI (M3.5), Textkritik (M3.6, `unclear`/`del`/`add`/`gap`), Live-Lookup (M3.3) und
+KI-Vorschlag (M3.7). Die gesamte editorische Annotationsschicht steht verlustfrei und headless belegt.
 
 **KI-assistierte Annotation (M3.7, demonstriert die Editopia-These).** Ein **Offline-Pipeline-Schritt
 mit Gemini 3.1 Flash Lite** liest die fertige TEI, schlägt Entitäten samt Normdaten-Kandidaten vor und
@@ -285,7 +294,8 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
   ai_proposal_check.mjs 17/17; nutzt In-Browser-llm.js, LLM-Aufruf browser-verifiziert), commit f647e7e.
 - + M3.5 Notizen/Fußnoten-Erstell-UI. **erledigt** (addNote/addNoteForNode, note_create_check.mjs 15/15),
   commit d3fc922.
-- + M3.6 Textkritik (`unclear`/`gap`/`del`/`add`). später.
+- + M3.6 Textkritik (`unclear`/`gap`/`del`/`add`). **erledigt** (criticism.js, inline + verlustfrei,
+  criticism_check.mjs 47/47), commit 119a1a2.
 
 **H4 - Verlustfreiheit als Invariante**
 - ★ M4.1 Engine-Round-Trip-Sweep. **erledigt** (roundtrip_sweep.mjs, 294/294).

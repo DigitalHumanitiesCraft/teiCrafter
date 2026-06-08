@@ -14,9 +14,9 @@ status: active
 created: 2026-02-05
 updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.6
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
-related: [project, data, user-stories, architecture]
+related: [project, data, user-stories, architecture, testing]
 ---
 
 # teiCrafter Specification
@@ -36,6 +36,18 @@ Open a TEI edition from the local file system (File System Access API, with a fi
 
 ### Edit losslessly in place
 Click a cell to correct its text inline. The edit is a single offset splice; only that text run changes, all markup and all other text are byte-preserved. The model re-parses so offsets stay correct.
+
+### Manage standOff entities
+Maintain an in-browser `<standOff>` index for the five entity types (person, place, org, work, event): add, rename, and delete entries, and link in-text mentions to them via `<name ref="#id">`. Each entry can carry authority identifiers (GND, GeoNames, Wikidata) as `<idno type="...">value</idno>` children, so one entity can hold several registers at once.
+
+### Resolve authority ids by live lookup
+Type a name and pick a GND, GeoNames, or Wikidata match from a live lookup service ([authority-lookup.js](../docs/js/services/authority-lookup.js)). The selected identifier is written as an `<idno>` on the entity, the same mechanism as hand-entered ids. Automatic, unreviewed `<idno>` writing from a proposal layer is future work (see below).
+
+### Create editorial notes
+Create editorial notes on the text. Notes use the editorial colour family, never the violet AI family (see [design](design.md)).
+
+### Convert pipeline Page-JSON to TEI
+A standalone converter ([export_tei.py](../pipeline/export_tei.py)) turns pipeline Page-JSON (SZD, where no transcription TEI exists) into minimal TEI that the editor can open. Its input and output contract is frozen in [converter-reference](converter-reference.md), and it is what emits authority `<idno>` children for creators that the in-editor authority handling matches.
 
 ### Facsimile with zone linking
 A real OpenSeadragon deep-zoom viewer (5.0.1, loaded from CDN) shows the folio's page image with `<zone>` rectangles overlaid. Hovering a line highlights its zone and vice versa: the link is the line's real `@facs` zone id when present (Hersch), or positional otherwise (synthetic). The viewer uses a plain-image tileSource today with an IIIF-ready hook; a true IIIF tiles/manifest source is future work.
@@ -73,14 +85,14 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - **LLM output is marked.** Generated TEI is violet and unreviewed; keys in memory only.
 - **Licence boundary.** Real third-party TEI never committed; synthetic twins only.
 - **Authority ids as `<idno>`, not `@ref`** (2026-06-08). Authority identifiers (GND / GeoNames / Wikidata) attach to an entity as `<idno type="...">value</idno>` children: this allows several registers per entity, matches what the SZD converter already emits for creators, and keeps `@ref` reserved for the in-text mention pointer (`<name ref="#id">`). Hand-entry is the foundation; a live lookup and an offline Gemini proposal layer build on the same mechanism.
+- **Inline textual criticism wraps, gap replaces** (2026-06-08, M3.6). `<unclear>`/`<del>`/`<add>` wrap a reading-text node's core; `<gap/>` is content-less per TEI, so it replaces the core rather than wrapping it. The wrapped core is the raw, already-escaped slice spliced as-is (no decode/re-encode, so entity spellings never churn), edge whitespace stays outside the tags, and a no-op returns the same document. The cell model tags a cell from its immediate wrapper only (so the visible state matches what the ops can act on), and "clear" is offered only when the cell is that wrapper's sole content, so removing markup can never silently strip a wrapper shared with sibling content. This is editorial, human markup: it uses the editorial colour family and never the violet AI family (see [design](design.md)).
 
 ## Future (specified, not built)
 
 - A true IIIF tiles/manifest (or METS image) source for the facsimile viewer; the OpenSeadragon deep-zoom viewer itself and `<zone>` overlay linking are already built, currently over a plain-image tileSource.
-- StandOff critical-apparatus editor: select a word/line range, choose a note type, write the anchor and the `standOff` entry. In-browser `<standOff>` index management for person/place/org/work/event entities (add, rename, delete, attach authority `<idno>`) with in-text mention linking via `<name ref="#id">` is already built; the apparatus/note authoring layer is the future part.
-- Authority-id reconciliation: a live lookup (type a name, pick a GND/GeoNames/Wikidata match) and an offline Gemini proposal layer that writes unreviewed `<idno>` suggestions shown violet. The manual authority-id entry they build on (GND / GeoNames / Wikidata `<idno>` on any entity type) is already built; automatic reconciliation is the future part.
+- StandOff critical-apparatus authoring layer: select a sub-cell word/line range, choose a note type, and write a free-form `standOff` apparatus entry with its anchor. The `<standOff>` entity index, editorial note creation, and inline textual-critical markup (`<unclear>`/`<del>`/`<add>`/`<gap>`, M3.6) are already built (see Editor Capabilities); only the apparatus/note-body authoring layer (sub-cell selection, free-form apparatus entries) is the future part.
+- Automatic authority-id reconciliation: an offline Gemini proposal layer that writes unreviewed `<idno>` suggestions shown violet, building on the live lookup and hand-entry that are already built (see Editor Capabilities). Only the automatic, unreviewed `<idno>` writing is the future part.
 - Project modules: a Markdown document configuring autocompletion, authoring views, indices and Schematron per edition.
-- Page-JSON to minimal-TEI conversion for pipelines (SZD) that lack a transcription TEI.
 - Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.
 - A CodeMirror source view for raw-XML editing alongside the rendered view.
 

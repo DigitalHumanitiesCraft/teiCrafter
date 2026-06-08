@@ -14,8 +14,8 @@ status: active
 created: 2026-05-27
 updated: 2026-06-08
 language: en
-version: 0.4
-related: [project, data, specification, user-stories, architecture, design, journal, testing]
+version: 0.6
+related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference]
 ---
 
 # teiCrafter Knowledge Base
@@ -54,6 +54,7 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Hybrid validation | Browser-light live (well-formed + structural integrity) plus harness-heavy offline (RelaxNG + Schematron) | specification, testing |
 | MVP gate | Well-formed AND L1 word fidelity AND L3 counts preserved; L2 reported as new-errors-vs-input, non-gating | testing |
 | Byte-identical round-trip | The proven property: every real TEI file serializes back unchanged (294/294) | testing |
+| Editorial annotation layer | standOff entities + authority `<idno>` + mention linking + notes + AI proposal (`resp="#ai"`) + live lookup + inline textual criticism (`unclear`/`del`/`add`/`gap`), all lossless | architecture, specification |
 | File System Access API | Lets the editor read and write editions locally without a backend | architecture |
 
 ## Lineage
@@ -62,4 +63,4 @@ teiCrafter shares architecture principles, UI patterns and the design system wit
 
 ## History Note
 
-Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor) and a CodeMirror/DocumentModel architecture. The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Version 0.4 documents the as-built reality; see [journal](journal.md).
+Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor) and a CodeMirror/DocumentModel architecture. The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. The 0.4-to-0.6 set documents the as-built reality, the 0.6 set adding the full editorial annotation layer (notes, AI proposal, live authority lookup, inline textual criticism); see [journal](journal.md).

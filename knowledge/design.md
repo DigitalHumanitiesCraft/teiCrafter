@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-05-30
+updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.6
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, user-stories, architecture]
 ---
@@ -39,7 +39,7 @@ Cream and warm-off-white surfaces evoke manuscript material and ease long sessio
 
 ## Token System
 
-Colour, typography and spacing are defined once as CSS custom properties in `docs/css/style.css`, never as raw hex in components. The live prefix is **`--color-*`, `--space-*`, `--font-*`, `--radius-*`** (an earlier draft of this document said `--tc-*`; the code is authoritative and uses `--color-*`). Token families:
+Colour, typography and spacing are defined once as CSS custom properties in `docs/css/style.css`, never as raw hex in components. The editor-specific stylesheet `docs/css/editor.css` consumes these tokens and adds no raw hex of its own. The live prefix is **`--color-*`, `--space-*`, `--font-*`, `--radius-*`** (an earlier draft of this document said `--tc-*`; the code is authoritative and uses `--color-*`). Token families:
 
 | Family | Tokens (examples) | Purpose |
 |--------|-------------------|---------|
@@ -63,7 +63,7 @@ Reading text (cells)  |  Facsimile (OpenSeadragon)  |  Validation and structure 
 
 - Click a cell to edit it inline; the input matches the reading typography.
 - The facsimile pane is a real OpenSeadragon deep-zoom viewer; hovering a line highlights its `<zone>` overlay and vice versa (real `@facs` link, or positional).
-- The right pane carries two tabs: "Validation and structure" (live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness) and "Index" (the editable `<standOff>` index of persons, organisations and events).
+- The right pane carries two tabs: "Validation and structure" (live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness) and "Index" (the editable `<standOff>` index of persons, places, organisations, works and events).
 
 The landing page (`index.html`) is two cards: open and edit existing TEI (gold), and New from text (LLM) (violet). The editor header carries a mode badge and a link back.
 
@@ -85,8 +85,12 @@ The editor itself uses no violet: deterministic, human-driven work is shown in t
 | Facsimile pane: real images, deep zoom (OpenSeadragon 5.0.1), `<zone>` overlays bidirectionally linked to the reading text | Built |
 | Validation/structure pane (browser-light) | Built |
 | LLM on-ramp modal (violet) | Built |
-| Index panel: editable `<standOff>` index of persons/orgs/events (add, rename, delete) with in-text `<name ref>` linking | Built |
+| Index panel: editable `<standOff>` index of persons, places, organisations, works and events (add, rename, delete) with in-text `<name ref>` linking | Built |
+| Authority lookup (M3.3): hand-entry plus live external lookup of authority records for index entries | Built |
+| Note creation (M3.5): adding `<note>` annotations to the document | Built |
+| Textual-critical markup (M3.6): a Mark-text mode wraps a line in `<unclear>`/`<del>`/`<add>` or marks a `<gap>`, in the editorial colour families (dotted gold / struck red / underlined blue / muted gap), never violet | Built |
 | Authoring-view forms for teiHeader and apparatus `<note>` bodies | Future |
+| standOff critical-apparatus / note-body authoring layer | Future |
 
 ## Related
 

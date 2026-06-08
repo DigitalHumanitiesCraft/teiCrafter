@@ -14,13 +14,23 @@ status: active
 created: 2026-02-05
 updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.6
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
+
+## 2026-06-08: Textual-critical markup (M3.6) with an adversarial review pass
+
+The last open editor-direct annotation milestone. Inline textual criticism now lives in a DOM-free `criticism.js`: `markCritical` wraps a reading-text node's core in `<unclear>`/`<del>`/`<add>` or, for a gap, replaces it with a self-closing `<gap/>`; `unwrapCritical` reverses a wrap; `removeGap` deletes a gap. The wrap splices the raw, already-escaped slice as-is (no decode/re-encode), keeps edge whitespace outside the tags, and a no-op returns the same document. The UI is a "Mark text" mode with an inline chooser; the three click-capture modes (mark, note, link) are now mutually exclusive and reset on load.
+
+Two design decisions worth recording. First, gap REPLACES rather than wraps, because a TEI `<gap>` is content-less by definition (the text is omitted/illegible); the cell model surfaces the gap as its own read-only cell so the line stays visible and the marker stays removable. Second, the shared `splitEdge` moved from edition.js into the core tei-document.js so the textual-critical wrappers and the cell editor preserve edge whitespace by the exact same code, not two copies; `CRITICAL_LOCALS` and a `nearestAncestor` helper (folding three near-identical ancestor walks into one) landed there too.
+
+The feature was hardened by a dynamic adversarial workflow: seven dimensions (engine, cell-model, UI, design, tests, refactor, docs), every finding independently verified by a skeptic, 22 confirmed of 26. The load-bearing fix: `unwrapCritical` now refuses to strip a wrapper shared with sibling content (clearing one cell of `<del>Hallo <hi>X</hi> Welt</del>` must not drop the deletion over the others), and the cell tag is keyed on the immediate parent so the visible state matches what the ops can act on (`crit`/`critSole`). Also fixed: a gap in a non-reading subtree no longer leaks into the reading view; the chooser dismisses on Escape and never orphans a second open chooser; the gap marker contrast was raised to WCAG AA (token-only, non-violet). The proof grew from 29 to 47 checks (`criticism_check.mjs`), adding the cases the review exposed (CRLF, mixed-content refusal, the nesting contract, word-level gap, the no-op guard paths) and replacing a tautological round-trip assertion with a real token-coverage check. Full regression stayed green (roundtrip 294/294, generic 34/34, hersch 285/285). Commit 119a1a2.
+
+This completes the editorial annotation layer end to end (entities + authority ids + mentions + notes + AI proposal + live lookup + textual criticism), all lossless and headless-proven; the browser-only paths await an operator sight-check.
 
 ## 2026-06-08: Annotation layer completed (notes, AI proposal, live lookup), whitespace caveat closed
 
