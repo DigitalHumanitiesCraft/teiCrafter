@@ -120,11 +120,16 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   `test/tools/szd-pagejson-to-tei.mjs`: 5 Folios, line-level, **byte-identischer Round-Trip**,
   GAMS-`<graphic>`-URLs, Zonen Prozent->Pixel, kein standOff (1079 hat keinen creator, wie der
   Kontrakt vorhersagt). [proof] (M1.4 für 1079)
+- **M2.2 Browser-Visualtest bestanden (2026-06-08).** o_szd.1079 im Editor geladen (headless Chrome
+  via Playwright): GAMS-Faksimile rendert in OpenSeadragon (IMG.1/IMG.2 HTTP 200), 2 Zonen-Overlays
+  auf Folio 1, line-level-Zellen, Folio-Navigation. Beleg: `c:\tmp\m2_2_1079_folio1.png`.
+- **M7.2 SZD-Worked-Example im Browser bewiesen (2026-06-08).** o_szd.1079 end-to-end: Öffnen plus
+  Speichern byte-identisch zur Quelle; Zeilenkorrektur (Wohlgeboren -> Hochwohlgeboren) ändert genau
+  diese Stelle; Annotation (Ort Komotau + `<idno type="GeoNames">`) fügt genau den standOff-Block ein;
+  erneutes Öffnen stabil. Reproduzierbar via `c:\tmp\pwtest\m72.js`; Beleg `c:\tmp\m72_annotate.png`.
 
 ### Offen (Umsetzungs-Scope teiCrafter + SZD)
 
-- **M2.2 Browser-Visualtest:** GAMS-Bild lädt im Browser, Zonen liegen richtig, Zeilen editierbar,
-  Speichern byte-clean. (Vorabgeprüft: GAMS-Bild liefert 200 / image/jpeg; `<img>` braucht kein CORS.)
 - **M1.3 SZD-Batch-Konverter** `pipeline/export_tei.py` (Python-Port des Prototyps). Verifiziert: die
   Datei existiert noch nicht.
 - **M1.4 restliche Demo-Handvoll** konvertieren + engine-verifizieren; **M1.5** alle ~2.103 +
@@ -238,8 +243,8 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
 
 **H2 - Sehen, navigieren, korrigieren**
 - ★ M2.1 Editor-Modell pro Datei. **erledigt**.
-- ★ M2.2 Bildanzeige bei geöffneten Dateien (`<graphic>`-Support). **Engine-Seite erledigt**
-  (szd_demo_check.mjs); Browser-Visualtest (GAMS/CORS) offen.
+- ★ M2.2 Bildanzeige bei geöffneten Dateien (`<graphic>`-Support). **erledigt** (Engine plus
+  Browser-Visualtest 2026-06-08: GAMS-Bild rendert in OpenSeadragon, Zonen, byte-clean; szd_demo_check.mjs).
 - ★ M2.3 Live-Browser-Durchlauf ZBZ. **separat** (Autor); der demo-relevante Teil (ein ZBZ-Objekt)
   geht in M7.2 mit.
 - ★ M2.4 ZBZ-Bild-URL-Schema für `<graphic>` (Bilder nur für 1000/1330/1540/2310). **separat**
@@ -277,7 +282,8 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
 **H7 - Editopia-Beitrag und Demo-Material** (teiCrafter als Promptotyping-Fall)
 - ★ M7.1 teiCrafter als vorzeigbarer Promptotyping-Fall (Werkzeug + Provenienz im Vault/Repo). offen.
 - ★ M7.2 Zwei annotierte Worked Examples (je ein ZBZ- und ein SZD-Objekt, end-to-end im Editor).
-  offen; die SZD-Hälfte (o_szd.1079) ist im Scope, die ZBZ-Hälfte hängt an der separaten ZBZ-Spur.
+  **SZD-Hälfte erledigt** (o_szd.1079 im Browser bewiesen, Byte-Diff, 2026-06-08); die ZBZ-Hälfte
+  hängt an der separaten ZBZ-Spur.
 - + M7.3 Beitrag zu Foliensatz/Volltext, soweit teiCrafter betroffen. offen.
 
 ## 9. Erfolgskriterium, Demo-Objekte, kritischer Pfad
@@ -302,7 +308,10 @@ ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
 - **converter-reference.md §9 (vor dem Einfrieren):** bbox-Konformität über die Handvoll (kein Wert
   > 100); real vorkommende Marker; verworfene Felder (`reading_order`/`lines`/`label`/`source`/`notes`);
   weiteres standOff-Seeding (repository -> listOrg, sender/recipient -> listPerson); images 1:1 zu pages.
-- **M2.2-Browser:** GAMS-Bild im Browser, Zonen-Overlay, Zeilen-Edit, byte-clean speichern.
+- **Whitespace bei Zeilen-Edit (offen, Entscheidung):** ein Zeilen-Edit kollabiert die Einrück-
+  Whitespace der bearbeiteten Zeile (der Textknoten wird neu geschrieben). Kein Datenverlust, die Datei
+  round-trippt, aber die Formatierung dieser Zeile ändert sich. Optionen: Editor erhält Trailing-
+  Whitespace beim Edit, oder der SZD-Konverter schreibt die Body-Zeilen enger.
 - **Korrektheits-Audit (teils separat):** oekosystem-synthese.md behauptet falsch, teiCrafter sei die
   Hersch-Demo (richtig: EditionCrafter v0); zbz-Statuszahlen (3 vs 4); szd schwankende Objektzahlen
   (maßgeblich 2.107). teiCrafter-seitig erledigt: Token-Präfix-Drift (`--color-*`), AI-Violett-Ausfall.
@@ -312,13 +321,12 @@ ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
 teiCrafter + SZD:
 1. **SZD-Realitätsabgleich:** die Handvoll am realen Page-JSON prüfen (bbox-Einheit, Marker, §9-Punkte),
    converter-reference.md einfrieren (status active). Kritischer Pfad für M1.3.
-2. **M2.2-Browser-Visualtest:** o_szd.1079 in teiCrafter laden, GAMS-Bild + Zonen + Zeilen-Edit +
-   byte-clean speichern sehen (sechs Frontend-Checks, §12).
+2. **Whitespace-Vorbehalt entscheiden** (Zeilen-Edit kollabiert Einrückung, §10) und ggf. abstellen.
 3. **M1.3 Batch-Konverter** `pipeline/export_tei.py`: den Prototyp `test/tools/szd-pagejson-to-tei.mjs`
    faithful nach Python portieren (gleiche Ausgabe), Objekt-ID rein, TEI raus.
 4. **M1.4 Handvoll** konvertieren + engine-verifizieren (o_szd.100/72/2215/161), dann **M1.5** alle
    ~2.103 + Ladbarkeits-Sweep.
-5. **M7.2 SZD-Worked-Example** (o_szd.1079, end-to-end im Editor, sechs Checks).
+5. **M7.2** SZD-Hälfte erledigt (o_szd.1079, 2026-06-08); ZBZ-Hälfte liegt in der ZBZ-Spur.
 6. **M3.5 Notiz-UI**, dann **M3.7 Gemini-Vorschlag** (offline), dann **M3.3 Live-Lookup**.
 7. **M4.4 / M5.2 / M5.6 / M6.x:** byte-clean-Regression der SZD-TEI, integration.md anreichern,
    data.md/architecture.md nachziehen.

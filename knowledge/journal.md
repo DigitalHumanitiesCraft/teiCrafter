@@ -22,6 +22,20 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-08: Coordination dissolved, plan moved to PLAN.md, SZD demo proven in browser
+
+A second 2026-06-08 session, focused on cleanup and on proving the SZD demo on real data.
+
+Removed all multi-Claude-Code coordination (CC1/CC2/CC3, orchestration, reporting protocol, owner tags, the Lane and Forschungsleitstelle framing) from the knowledge docs across teiCrafter, szd-htr and zbz-ocr-tei, plus the Obsidian vault and memory; deleted the two pure-coordination files (`cc1-session-report.md` and the coordination memory). A full repo sweep confirms zero residual coordination tokens. The three projects stay as real, independent repositories with a real data-flow relationship; the product LLM features (on-ramp, Gemini proposals, the agent_verified review tier) were kept.
+
+The plan moved from `knowledge/project-plan.md` to the repo root as `PLAN.md` (single-developer plan: status corrected to as-built, scope split teiCrafter plus SZD here and ZBZ separate, an implementation backlog); all references updated. The sibling-repo and Obsidian coordination edits are left in their working trees for the author (teiCrafter only is edited directly from here on).
+
+M2.2 (image display) and the SZD half of M7.2 (worked example) are proven in a real browser (headless Chrome via Playwright, system Chrome channel) on the showcase letter o_szd.1079: the GAMS facsimile renders in OpenSeadragon (IMG.1/IMG.2 HTTP 200) with zone overlays; open-then-save is byte-identical to source; a line correction (Wohlgeboren to Hochwohlgeboren) changes exactly that region; an annotation (place Komotau plus `<idno type="GeoNames">`) inserts exactly the standOff block; re-opening the saved file is stable. Byte-diffs are reproducible via `c:\tmp\pwtest\m72.js`; screenshots in `c:\tmp`.
+
+One caveat found: a line edit collapses the edited line's trailing indentation whitespace (the text node is rewritten). No data loss, the file round-trips, but that line's formatting changes; it is an open decision in PLAN.md section 10 (fix the editor to keep trailing whitespace, or have the SZD converter write tighter body lines).
+
+Working model set with the project lead: work autonomously per milestone; edit only teiCrafter directly (szd-htr and zbz get written orders); drive the browser for visual checks; local commits per milestone, no push without an explicit word. teiCrafter was committed in milestone commits; nothing was pushed.
+
 ## 2026-06-08: Authority-id core, work entity, converter contract drafted
 
 A focused build session on two deliverables. The annotation cluster is now closed and the SZD converter contract exists on disk.
