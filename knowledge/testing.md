@@ -51,7 +51,7 @@ Each demo-critical feature added since the core engine proofs carries its own he
 | `test/tools/criticism_check.mjs` | Textual-critical markup (M3.6, done, commit 119a1a2): `<unclear>`/`<del>`/`<add>` wrap a node's core with edge whitespace kept outside, `<gap/>` replaces the core, `unwrapCritical` refuses to strip a shared wrapper, every mutation covers every byte and reverses byte-exact | 47/47 |
 | `test/tools/hersch_loadability.mjs` | Editor-projection sweep (Layer 2, `parseEdition`) over the full Hersch corpus: every real file yields a usable editor view (folios, editable cells, real reading text), not merely a byte round-trip; writes a JSON anomaly report | sweep, anomalies reported |
 | `test/tools/szd_loadability_sweep.mjs` | M1.5: converts the whole szd-htr corpus via `pipeline/export_tei.py --all`, then verifies every converted TEI loads line-level and round-trips byte-identically; empty (`pages: []`) and all-blank objects legitimately yield `cells === 0` and still round-trip | sweep, all clean |
-| `test/tools/port_parity.mjs` | M1.3: `pipeline/export_tei.py` produces byte-identical output to the reference prototype `szd-pagejson-to-tei.mjs` over the SZD demo handful | 6/6 byte-identical |
+| `test/tools/port_parity.mjs` | M1.3: `pipeline/export_tei.py` produces byte-identical output to the reference prototype `szd-pagejson-to-tei.mjs` over the SZD demo handful; a missing input (e.g. the upstream-deduped o_szd.161/korrespondenzen) is skipped, not failed | 5/5 byte-identical, 1 skipped |
 | `test/tools/szd-pagejson-to-tei.mjs` | Reference prototype (spec-by-example): one real SZD Page-JSON to teiCrafter-target TEI, verified against the engine before exit; the executable porting target for `pipeline/export_tei.py` | self-verifying prototype |
 
 ## Validation Harness: the Three Levels
@@ -129,7 +129,7 @@ node test/tools/whitespace_edit_check.mjs  # line edit preserves edge whitespace
 node test/tools/criticism_check.mjs        # M3.6 textual-critical markup, 47/47
 node test/tools/hersch_loadability.mjs     # editor-projection sweep over full Hersch (HERSCH_DIR)
 node test/tools/szd_loadability_sweep.mjs  # M1.5 convert whole szd-htr corpus, load + round-trip (SZD_DIR)
-node test/tools/port_parity.mjs            # M1.3 export_tei.py == reference prototype, 6/6 (SZD_DIR)
+node test/tools/port_parity.mjs            # M1.3 export_tei.py == reference prototype, 5/5 + 1 skipped (SZD_DIR)
 node test/tools/szd-pagejson-to-tei.mjs <in_page.json> <out.xml>   # reference prototype, one file
 node test/harness/selftest.mjs             # negative gate, must be 14/14
 node test/harness/run.mjs                  # all synthetic fixtures, must PASS

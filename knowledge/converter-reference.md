@@ -289,7 +289,8 @@ spread across the full ~2103-object corpus. The five open points are settled:
    max 82.5, o_szd.2215). The percent-to-pixel formula (section 6) stands; no object uses
    absolute units.
 2. **Markers present: only two of the five.** `~~x~~` (deletion, e.g. o_szd.72
-   `~~kleine~~`) and `[?]` (uncertain, o_szd.161/korrespondenzen) occur; `[...]`/`[...N...]`,
+   `~~kleine~~`) and `[?]` (uncertain, observed in korrespondenzen/o_szd.161, since deduped
+   upstream, see below) occur; `[...]`/`[...N...]`,
    `{x}`, and `[Stempel:]` were not observed in the handful. v1 keeps all markers verbatim
    (section 8); the later M3.6 mapping should encode only the observed `~~x~~` and `[?]`
    until more syntaxes appear.
@@ -313,14 +314,16 @@ spread across the full ~2103-object corpus. The five open points are settled:
 
 Two further findings recorded at freeze:
 
-- **Duplicate object id across folders.** `o_szd.161` exists in both `lebensdokumente`
-  (creator Friderike Zweig, no markers) and `korrespondenzen` (no creator, `[?]` marker)
-  with different content. An id alone is not a unique key, so `export_tei.py` is
-  path-driven like the prototype; its `--id` convenience mode hard-errors on an ambiguous
-  id and lists the candidates rather than silently picking one. The contract's earlier
-  label of o_szd.161 as "Formular, Pipe-Tabellen" is wrong: both files are printed cards
-  (Eintrittskarte / Theaterkarte) with no pipe tables. v1's uniform line-level body handles
-  them regardless.
+- **Duplicate object id across folders (since deduped upstream).** `o_szd.161` used to
+  exist in both `lebensdokumente` (creator Friderike Zweig, no markers) and `korrespondenzen`
+  (no creator, `[?]` marker) with different content; szd-htr has since deduped it (commit
+  fb48ca0), so only the `lebensdokumente` copy remains on disk. An id alone is still not a
+  guaranteed unique key, so `export_tei.py` stays path-driven like the prototype, and its
+  `--id` convenience mode hard-errors on any ambiguous id rather than silently picking one (a
+  general guard, no longer triggered by o_szd.161 specifically). The contract's earlier label
+  of o_szd.161 as "Formular, Pipe-Tabellen" is wrong: both files were printed cards
+  (Eintrittskarte / Theaterkarte) with no pipe tables. `test/tools/port_parity.mjs` now skips
+  the absent korrespondenzen copy and proves parity over every present member.
 - **Empty objects.** o_szd.70 / 2256 / 2314 have `pages: []`. They convert to
   byte-identical-round-trip TEI with `folios === pages` and `cells === 0`; they are
   valid output, not failures (see the acceptance note in section 1). (o_szd.176, earlier

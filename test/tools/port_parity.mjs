@@ -15,9 +15,11 @@ import { join } from "node:path";
 
 const SZD = process.env.SZD_DIR || "../../szd-htr/results";
 
-// The demo handful (contract section 6). o_szd.161 exists in two folders with
-// different content and the same id; both are checked, which also documents the
-// duplicate-id case the id-driven CLI rejects.
+// The demo handful (contract section 6). o_szd.161 historically existed in two
+// folders with the same id (the duplicate-id case the id-driven CLI rejects);
+// szd-htr later deduped it (commit fb48ca0), so the korrespondenzen copy may be
+// absent. A missing input is skipped, not a failure: parity is a claim about the
+// converter, not about which inputs happen to exist in the sibling checkout.
 const HANDFUL = [
   ["korrespondenzen", "o_szd.1079"],
   ["lebensdokumente", "o_szd.100"],
@@ -29,13 +31,16 @@ const HANDFUL = [
 
 mkdirSync("output", { recursive: true });
 let pass = 0;
+let skipped = 0;
 const fails = [];
+const skips = [];
 
 for (const [folder, id] of HANDFUL) {
   const inPath = join(SZD, folder, `${id}_page.json`);
   const tag = `${id}@${folder}`;
   if (!existsSync(inPath)) {
-    fails.push(`${tag}: input not found (${inPath}); set SZD_DIR`);
+    skips.push(`${tag}: input absent (deduped upstream, or SZD_DIR unset): ${inPath}`);
+    skipped++;
     continue;
   }
   const jsOut = `output/_parity_${id}_${folder}.js.xml`;
@@ -55,9 +60,12 @@ for (const [folder, id] of HANDFUL) {
   }
 }
 
-console.log(`\nport parity: ${pass}/${HANDFUL.length} byte-identical`);
-if (fails.length) {
+const present = HANDFUL.length - skipped;
+console.log(`\nport parity: ${pass}/${present} byte-identical` + (skipped ? ` (${skipped} skipped)` : ""));
+if (skips.length) console.log("skipped:\n  " + skips.join("\n  "));
+if (fails.length || pass === 0) {
+  if (pass === 0) fails.push("no inputs converted (check SZD_DIR / the szd-htr sibling checkout)");
   console.error("FAIL:\n  " + fails.join("\n  "));
   process.exit(1);
 }
-console.log("PASS: pipeline/export_tei.py matches the reference prototype on the handful.");
+console.log("PASS: pipeline/export_tei.py matches the reference prototype on every present handful member.");
