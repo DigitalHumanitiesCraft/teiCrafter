@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-05-30
+updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.6
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
@@ -65,10 +65,10 @@ Three real pipelines drive the tool and prove the engine. The harness round-trip
 | Source | Files | Shape | Editor granularity | Status |
 |--------|-------|-------|--------------------|--------|
 | Jeanne Hersch (zbz-ocr-tei) | 285 `*_final.xml`, ~53 KB avg (up to ~915 KB) | `<p>` + `<lb facs="#zone" n>`, full `<facsimile>` with pixel coords, `<hi>`, `<figure>`; no `<w>` | line | reads and edits directly |
-| Stefan Zweig (szd-htr) | 4 catalog TEI (~6 MB) + ~2000 Page-JSON | catalog `<biblFull>`/`<msDesc>` (no text layer); transcription lives in Page-JSON | (line, after conversion) | needs Page-JSON to TEI first |
+| Stefan Zweig (szd-htr) | 4 catalog TEI (~6 MB) + ~2000 Page-JSON | catalog `<biblFull>`/`<msDesc>` (no text layer); transcription lives in Page-JSON | (line, after conversion) | converted by `pipeline/export_tei.py`, then reads and edits directly |
 | Wenzelsbibel (Codex 2759) | synthetic twin (20-folio) + tiers | word-level `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | reads and edits directly |
 
-Key finding from profiling the pipelines: SZD produces no transcription TEI yet (only catalog metadata plus Page-JSON), so it requires a Page-JSON to minimal-TEI step before it is editable. Hersch produces clean, facsimile-linked, line-level TEI that the editor handles directly. The Wenzelsbibel is the word-level reference.
+Key finding from profiling the pipelines: SZD ships no transcription TEI of its own (only catalog metadata plus Page-JSON), so it goes through a Page-JSON to minimal-TEI step first. That step is the deterministic converter `pipeline/export_tei.py` (a rule, never an LLM, since the transcription already sits in `pages[].text`); its frozen contract is [converter-reference.md](converter-reference.md). After conversion the result is line-level TEI the editor reads and edits directly. Hersch produces clean, facsimile-linked, line-level TEI that the editor handles directly. The Wenzelsbibel is the word-level reference.
 
 ## Wenzelsbibel Material Profile
 
@@ -80,7 +80,7 @@ The real Wenzelsbibel codex is third-party material (Austrian National Library) 
 
 ## Negative Definition
 
-teiCrafter does not host or persist data on a server (client-only; File System Access API for local files). It does not perform character recognition (upstream HTR). It does not reconcile authority data against external APIs.
+teiCrafter does not host or persist data on a server (client-only; File System Access API for local files). It does not perform character recognition (upstream HTR). Authority reconciliation is bounded, not absent: the editor offers an optional client-side lookup against Wikidata, GND, and GeoNames (`docs/js/services/authority-lookup.js`) so a human can search and pick a single id, which is then stored as the bare value in `<idno type="...">`, exactly as manual entry would be. There is no server proxy and no bulk or automatic reconciliation of the corpus; one entity, one human-chosen id at a time.
 
 ## Related
 

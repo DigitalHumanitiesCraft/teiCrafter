@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-06-07
+updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.7
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
 ---
@@ -36,13 +36,31 @@ The promise is "read arbitrary TEI and save it byte-losslessly". These prove it 
 
 The sweep reads directly from the source repos (nothing copied or committed) plus the committed synthetic fixtures; override the source dirs with `HERSCH_DIR` / `SZD_DIR`.
 
+## Feature Proofs (per milestone)
+
+Each demo-critical feature added since the core engine proofs carries its own headless proof, named by milestone. Where the live part is a network call (authority lookup, AI suggestion), the proof covers the deterministic part (URL building, response parsing, the marking/gating engine) and the fetch itself is browser-verified.
+
+| Proof | What it asserts | Result |
+|-------|-----------------|--------|
+| `test/tools/szd_demo_check.mjs` | The SZD demo path on a built line-level TEI: round-trip byte-identical, line-level editor model, `surface.graphic` read from `<graphic url>` (M2.2), `readEntities` surfaces a place and a person's GND idno, `addEntity`/`linkMention`/`setAuthority` for place and work round-trip and read back losslessly | PASS |
+| `test/tools/authority_lookup_check.mjs` | The authority lookup service (`docs/js/services/authority-lookup.js`) builds correct query URLs for Wikidata, GND, GeoNames and parses each register's real response shape into uniform `[{ id, label, description }]` (M3.3) | PASS |
+| `test/tools/note_create_check.mjs` | Editorial notes (M3.5) are created losslessly and target a stable `@target`, resolved in order: nearest ancestor `xml:id`, line `@facs` zone id, or a freshly injected `xml:id`; the editor's note reader finds them | PASS |
+| `test/tools/ai_proposal_check.mjs` | AI-proposed entities (M3.7) carry a lossless `resp="#ai"` marker, read as unverified, and the human gate works: confirm drops the marker, reject removes the entity, every step round-trips byte-identically | PASS |
+| `test/tools/ai_suggest_parse_check.mjs` | The LLM reply parser (`docs/js/editor/ai-suggest.js`) tolerates a code fence and prose, normalises free-form type labels to the teiCrafter types, drops malformed/unknown items, de-duplicates, and never throws (M3.7) | PASS |
+| `test/tools/whitespace_edit_check.mjs` | A line-level cell edit preserves the text node's edge whitespace (indentation, newlines), so correcting one line never collapses the surrounding formatting; the old raw-node path is kept as a failing control | PASS |
+| `test/tools/criticism_check.mjs` | Textual-critical markup (M3.6, done, commit 119a1a2): `<unclear>`/`<del>`/`<add>` wrap a node's core with edge whitespace kept outside, `<gap/>` replaces the core, `unwrapCritical` refuses to strip a shared wrapper, every mutation covers every byte and reverses byte-exact | 47/47 |
+| `test/tools/hersch_loadability.mjs` | Editor-projection sweep (Layer 2, `parseEdition`) over the full Hersch corpus: every real file yields a usable editor view (folios, editable cells, real reading text), not merely a byte round-trip; writes a JSON anomaly report | sweep, anomalies reported |
+| `test/tools/szd_loadability_sweep.mjs` | M1.5: converts the whole szd-htr corpus via `pipeline/export_tei.py --all`, then verifies every converted TEI loads line-level and round-trips byte-identically; empty (`pages: []`) and all-blank objects legitimately yield `cells === 0` and still round-trip | sweep, all clean |
+| `test/tools/port_parity.mjs` | M1.3: `pipeline/export_tei.py` produces byte-identical output to the reference prototype `szd-pagejson-to-tei.mjs` over the SZD demo handful | 6/6 byte-identical |
+| `test/tools/szd-pagejson-to-tei.mjs` | Reference prototype (spec-by-example): one real SZD Page-JSON to teiCrafter-target TEI, verified against the engine before exit; the executable porting target for `pipeline/export_tei.py` | self-verifying prototype |
+
 ## Validation Harness: the Three Levels
 
 | Level | What it checks | Engine |
 |-------|----------------|--------|
 | L1 text/word fidelity | Every `<w>` text node preserved in order; first divergence, lost and added words reported | Python tokenizer over the parsed tree (difflib) |
 | L2 schema validity | TEI All RelaxNG plus the project Schematron | lxml `RelaxNG` (`tei_all.rng`) and `lxml.isoschematron` |
-| L3 structural invariants | Counts of surface/zone/standOff/note/w/lb/l/pb, namespace integrity, pointer (`@facs`, `@corresp`) integrity | Python over the parsed tree |
+| L3 structural invariants | Counts of surface/zone/standOff/note/w/lb/l/pb, namespace integrity, pointer (`@facs`, `@corresp`, `@target`) integrity | Python over the parsed tree |
 
 ## MVP Gate
 
@@ -50,7 +68,7 @@ Well-formed AND L1 pass AND L3 counts preserved. L2 is always reported but does 
 
 ## Synthetic Fixtures
 
-Committed under `test/fixtures-synthetic/`. The 3 baseline RelaxNG errors on the smallest twin are the intentional divergence of a minimal synthetic `<TEI>` from full TEI All; larger tiers validate clean. In every case the identity round-trip introduces 0 new errors.
+Committed under `test/fixtures-synthetic/`. Every tier validates clean against TEI All (0 RNG errors), and in every case the identity round-trip introduces 0 new errors.
 
 | Fixture | Words | Verdict | Score | L1 | L3 counts | Schematron | RNG errors |
 |---------|-------|---------|-------|----|-----------|------------|------------|
@@ -85,8 +103,10 @@ Documentation is itself part of acceptance: the per-fixture JSON reports and the
 - `test/harness/run.mjs`: orchestrator over every fixture.
 - `test/harness/selftest.mjs`: negative test (identity passes, corruption fails), 14/14.
 - `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`: the engine proofs above.
+- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`: the per-milestone feature proofs above.
+- `test/tools/hersch_loadability.mjs`, `szd_loadability_sweep.mjs`, `port_parity.mjs`, `szd-pagejson-to-tei.mjs`: corpus loadability sweeps and the SZD converter parity/prototype.
 - `test/tools/gen_synthetic_codex.py`, `extract_folio.py`: synthetic generation and folio slicing.
-- `test/schemas/tei_all.rng`: TEI All RelaxNG (~11.6 MB, gitignored).
+- `test/schemas/tei_all.rng`: TEI All RelaxNG (~1.0 MB, gitignored).
 - `test/reports/<id>/report.json`: per-fixture report (wellFormed, L1, L2 with newErrorsVsInput, L3 with deltas, verdict, score).
 
 ## Licence Boundary
@@ -96,12 +116,23 @@ Real third-party files (Hersch, SZD, any ONB codex slice) live only under the gi
 ## How to Run
 
 ```
-node test/tools/roundtrip_sweep.mjs      # 294/294 byte-identical (reads source repos)
-node test/tools/generic_roundtrip.mjs    # one engine over Hersch / WB / SZD
-node test/tools/editor_roundtrip.mjs     # editor core vs harness, 13/13
-node test/tools/edit_fidelity.mjs        # entity-faithful edits + standOff guard, 13/13
-node test/harness/selftest.mjs           # negative gate, must be 14/14
-node test/harness/run.mjs                # all synthetic fixtures, must PASS
+node test/tools/roundtrip_sweep.mjs        # 294/294 byte-identical (reads source repos)
+node test/tools/generic_roundtrip.mjs      # one engine over Hersch / WB / SZD
+node test/tools/editor_roundtrip.mjs       # editor core vs harness, 13/13
+node test/tools/edit_fidelity.mjs          # entity-faithful edits + standOff guard, 21/21
+node test/tools/szd_demo_check.mjs         # SZD demo path: graphic url, place/work, authority idno
+node test/tools/authority_lookup_check.mjs # M3.3 lookup URLs + response parsing (Wikidata/GND/GeoNames)
+node test/tools/note_create_check.mjs      # M3.5 editorial notes, stable @target
+node test/tools/ai_proposal_check.mjs      # M3.7 AI proposals: resp="#ai" marker, confirm/reject gate
+node test/tools/ai_suggest_parse_check.mjs # M3.7 LLM reply parser, robust + deterministic
+node test/tools/whitespace_edit_check.mjs  # line edit preserves edge whitespace (indentation)
+node test/tools/criticism_check.mjs        # M3.6 textual-critical markup, 47/47
+node test/tools/hersch_loadability.mjs     # editor-projection sweep over full Hersch (HERSCH_DIR)
+node test/tools/szd_loadability_sweep.mjs  # M1.5 convert whole szd-htr corpus, load + round-trip (SZD_DIR)
+node test/tools/port_parity.mjs            # M1.3 export_tei.py == reference prototype, 6/6 (SZD_DIR)
+node test/tools/szd-pagejson-to-tei.mjs <in_page.json> <out.xml>   # reference prototype, one file
+node test/harness/selftest.mjs             # negative gate, must be 14/14
+node test/harness/run.mjs                  # all synthetic fixtures, must PASS
 ```
 
 ## Related

@@ -12,16 +12,16 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/user-stories
 status: active
 created: 2026-02-05
-updated: 2026-06-04
+updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.6
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
 related: [specification, architecture, design]
 ---
 
 # teiCrafter User Stories
 
-Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects the editor-first consolidation (2026-05-30): **Built** (implemented and verified, headlessly or by serving), **Browser-check** (built, needs a human click-through), **Future** (specified, not built). LLM stories need a valid API key.
+Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects the editor-first consolidation (2026-05-30): **Built** (implemented and verified, headlessly or by serving), **Browser-check** (built, needs a human click-through), **Partially built** (one part shipped, one part still specified), **Future** (specified, not built). LLM stories need a valid API key.
 
 ## Editing Any TEI
 
@@ -51,15 +51,16 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 
 ## Index and StandOff
 
-- **I.1** As an editor I want to create, rename and delete person/org/event entries in an in-browser index so that the edition's `<standOff>` stays authoritative and editable. *Built* (lossless `<standOff>` model in `standoff.js`, index UI in `index-panel.js`, all inside the offset-splice engine).
+- **I.1** As an editor I want to create, rename and delete entries for all five entity types (person, place, org, event, work) in an in-browser index so that the edition's `<standOff>` stays authoritative and editable. *Built* (lossless `<standOff>` model in `standoff.js`, index UI in `index-panel.js`, all inside the offset-splice engine).
 - **I.2** As an editor I want to link an in-text mention to an index entry so that the word carries `<name ref="#id">`. *Built* (verified live: linking produces `<w><name ref="#id">...</name></w>`).
+- **I.3** As an editor I want to select a word or line range and attach an editorial-apparatus or commentary note so that the tool writes the anchor and the note body. *Built* (M3.5; lossless `<note target="#id">` in `<standOff>`, anchor via ancestor `xml:id`, else line `@facs`, else injected `xml:id`, in `standoff.js`; "Add note" UI mode; proof `node test/tools/note_create_check.mjs` (15/15)).
+- **I.4** As an editor I want to enter or edit external authority ids on an index entry from the UI, with a live lookup against Wikidata, GND and GeoNames, so that I do not have to copy ids by hand. *Built* (M3.3; hand-entry stored as `<idno type="GND|GeoNames|Wikidata">` children via `setAuthority` in `standoff.js`, authority field per row in `index-panel.js`; live lookup URL-builder and parser in `services/authority-lookup.js` with an index-panel "find" button and result popover; proof `node test/tools/authority_lookup_check.mjs` (15/15), fetch browser-verified).
+- **I.5** As an editor I want a model to propose entities that arrive unreviewed and gated so that I can confirm or reject each one before it counts. *Built* (M3.7; an LLM proposes entities inserted unreviewed as `resp="#ai"` (TEI-valid, lossless) and rendered violet, the human confirms via `confirmEntity` which removes the marker or rejects via `deleteEntity`, in `docs/js/editor/ai-suggest.js`; proofs `node test/tools/ai_proposal_check.mjs` (17/17, mark, gate, confirm/reject byte-identical) and `node test/tools/ai_suggest_parse_check.mjs` (8/8)).
 
 ## Future (specified, not built)
 
-- **FU.1** Select a word/line range and attach an editorial-apparatus or commentary note; the tool writes the anchor and the note body. *Future* (the existing `standOff` `<note>` bodies are currently read-only).
-- **FU.2** Enter or edit external authority ids on an index entry from the UI. *Future*.
 - **FU.3** Form-based authoring views per project module (e.g. diplomatic transcription, Bible-verse).
-- **FU.4** Convert pipeline Page-JSON (SZD) to minimal editable TEI before opening.
+- **FU.4** Convert pipeline Page-JSON (SZD) to minimal editable TEI before opening. *Partially built* (the SZD converter exists and round-trips byte-identically, `pipeline/export_tei.py`, frozen contract in `converter-reference.md`; only the in-editor pre-open integration, converting on the fly when opening a Page-JSON object, remains).
 - **FU.5** Open and edit very large editions (tens of MB) with a segmented load.
 
 ## Related

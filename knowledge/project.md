@@ -12,16 +12,16 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: active
 created: 2026-02-05
-updated: 2026-05-30
+updated: 2026-06-02
 language: en
-version: 0.4
+version: 0.6
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
-related: [data, specification, architecture, design, journal]
+related: [data, specification, architecture, design, journal, goals, integration]
 ---
 
 # teiCrafter Project Overview
 
-teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML. You open an existing TEI edition from your local disk, read it folio by folio, correct it directly in the rendered text, and save it back, byte-for-byte unchanged except where you edited. An optional LLM on-ramp drafts an initial TEI from plaintext and drops it into the same editor for verification. One workbench, two ways in. The application runs entirely in the browser, client-only, no backend, no build step.
+teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML. You open an existing TEI edition from your local disk, read it folio by folio, correct it directly in the rendered text, and save it back, byte-for-byte unchanged except where you edited. An optional LLM on-ramp drafts an initial TEI from plaintext and drops it into the same editor for verification. One workbench, two ways in. The application runs entirely in the browser, client-only, no backend, no build step. The only outbound calls are the optional LLM on-ramp and the live authority lookup, both user-initiated; nothing leaves the browser unless the user triggers it.
 
 ## What It Is
 
@@ -72,5 +72,5 @@ The Wenzelsbibel is the reference manuscript case. Because the real codex is thi
 
 ## Related
 
-- [data](data.md), [specification](specification.md), [architecture](architecture.md), [design](design.md), [journal](journal.md)
+- [data](data.md), [specification](specification.md), [architecture](architecture.md), [design](design.md), [journal](journal.md), [goals](goals.md), [integration](integration.md)
 - Vault: [[teiCrafter]], [[Project Overview Wenzelsbibel]], [[coOCR HTR]], [[Project Overview EditionCrafter]]

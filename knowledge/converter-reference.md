@@ -13,7 +13,7 @@ status: active
 created: 2026-06-08
 updated: 2026-06-08
 language: en
-version: 0.5
+version: 0.6.1
 topics: ["[[Converter]]", "[[SZD]]", "[[Page-JSON]]", "[[TEI]]"]
 related: [data, architecture, specification, goals, integration]
 ---
@@ -55,11 +55,10 @@ real engine (not by claim):
 2. **Loads line-level.** `parseEdition(tei)` yields `profile === "line"` and
    `folios.length === pages.length`. `cells.length > 0` holds for every object with
    transcribed text, but an object with no pages (`pages: []`, e.g. o_szd.70 / 2256 /
-   2314) or with only blank pages (e.g. o_szd.176) legitimately yields
-   `cells.length === 0` and still round-trips byte-identically. The prototype asserts
-   `cells > 0` because every handful member has text; a full-corpus run must treat
-   empty and all-blank objects as valid output, not as failures (about 3 percent of a
-   151-object sample).
+   2314) legitimately yields `cells.length === 0` and still round-trips
+   byte-identically. The prototype asserts `cells > 0` because every handful member has
+   text; a full-corpus run must treat empty objects (`pages: []`) as valid output, not
+   as failures (about 3 percent of a 151-object sample).
 
 The prototype asserts exactly these before it exits
 ([szd-pagejson-to-tei.mjs:198-207](../test/tools/szd-pagejson-to-tei.mjs#L198)); the
@@ -124,9 +123,9 @@ Worked shape (o_szd.100 page 1, abridged):
 </p>
 ```
 
-The editor splits folios on `<pb>` and lines on `<lb>` ([edition.js]); this is why
-the unit must be `<lb>`, not `<l>` (both are recognized, but the prototype and engine
-proofs standardize on `<lb>`).
+The editor splits folios on `<pb>` and lines on `<lb>`
+([edition.js](../docs/js/editor/edition.js)); this is why the unit must be `<lb>`, not
+`<l>` (both are recognized, but the prototype and engine proofs standardize on `<lb>`).
 
 ## 4. teiHeader
 
@@ -198,7 +197,8 @@ data: o_szd.1079 r1 = `[17.5, 37.9, 34.9, 5.2]`, o_szd.100 r1 = `[3.9, 2.9, 4.8,
 must not be conflated.
 
 The conversion to the image-pixel `<zone>` teiCrafter expects
-([facsimile.js] uses `ulx/uly/lrx/lry` directly as image pixels):
+([facsimile.js](../docs/js/editor/facsimile.js) uses `ulx/uly/lrx/lry` directly as
+image pixels):
 
 ```
 ulx = round((x / 100)            * image_width)
@@ -206,6 +206,11 @@ uly = round((y / 100)            * image_height)
 lrx = round(((x + width)  / 100) * image_width)
 lry = round(((y + height) / 100) * image_height)
 ```
+
+This bbox-to-pixel coordinate contract is consumed by
+[facsimile.js](../docs/js/editor/facsimile.js), which reads `ulx/uly/lrx/lry` straight
+off the `<zone>` as image pixels with no further scaling, so the converter must already
+emit pixels (not percent).
 
 Prototype: [zonesFor szd-pagejson-to-tei.mjs:68-82](../test/tools/szd-pagejson-to-tei.mjs#L68).
 Zones are skipped entirely when `image_width`/`image_height` are absent (the schema
@@ -316,10 +321,12 @@ Two further findings recorded at freeze:
   label of o_szd.161 as "Formular, Pipe-Tabellen" is wrong: both files are printed cards
   (Eintrittskarte / Theaterkarte) with no pipe tables. v1's uniform line-level body handles
   them regardless.
-- **Empty and all-blank objects.** o_szd.70 / 2256 / 2314 have `pages: []`; o_szd.176 has
-  four pages all without text. All four convert to byte-identical-round-trip TEI with
-  `folios === pages` and `cells === 0`; they are valid output, not failures (see the
-  acceptance note in section 1).
+- **Empty objects.** o_szd.70 / 2256 / 2314 have `pages: []`. They convert to
+  byte-identical-round-trip TEI with `folios === pages` and `cells === 0`; they are
+  valid output, not failures (see the acceptance note in section 1). (o_szd.176, earlier
+  listed here as all-blank, is not: its converted body holds two text lines, so it
+  yields `cells === 2`. The corpus-wide count of 40 `cells === 0` objects never included
+  it and stands.)
 
 ## 10. Reference implementation and how to run it
 
