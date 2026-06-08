@@ -1,6 +1,6 @@
 # teiCrafter Handoff and Working State
 
-Action-layer summary so work can resume without re-deriving anything. Snapshot: 2026-06-04 (post multi-agent audit: entity-faithful edits, header-less standOff guard, and the AI-violet/radius tokens fixed; see journal). Conceptual detail lives in `knowledge/` (version 0.4).
+Action-layer summary so work can resume without re-deriving anything. Snapshot: 2026-06-04 (post audit: entity-faithful edits, header-less standOff guard, and the AI-violet/radius tokens fixed; see journal). Conceptual detail lives in `knowledge/` (version 0.4).
 
 ## What teiCrafter is
 

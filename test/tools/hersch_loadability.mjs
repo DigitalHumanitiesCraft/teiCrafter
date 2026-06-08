@@ -8,7 +8,7 @@
  * "can we see and edit ALL TEI in the editor?" and lists the anomalies to inspect.
  *
  * Override the corpus dir with HERSCH_DIR (default: ../DHCraft/zbz-ocr-tei/output/tei_final).
- * Writes a machine-readable report next to the repo for the frontend pass (CC3).
+ * Writes a machine-readable JSON report for downstream inspection.
  *
  * Run: node test/tools/hersch_loadability.mjs
  */

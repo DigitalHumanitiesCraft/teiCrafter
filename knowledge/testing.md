@@ -77,7 +77,7 @@ The verification methods are complementary, not alternatives: each answers a dif
 
 The visual level is the centerpiece for "did we reach the goal in our sense". The success criterion (open, correct line by line, annotate person/place/work with authority ids, save byte-faithfully) is the chain of user stories E.1, E.2, E.3, E.4, E.5, F.1, F.2, I.1, I.2 plus the ones being built (FU.1 note, FU.2 authority ids from the UI, FU.4 SZD Page-JSON to TEI, and the AI-proposal step M3.7). Each demo-critical feature is verified twice: a headless proof added to the engine harness above, and a browser path walked on the real demo object (o_szd.1079 for SZD; one of docs 1000 / 1330 / 1540 / 2310 for ZBZ).
 
-Documentation is itself part of acceptance: the per-fixture JSON reports and the knowledge vaults let a reviewer trace every claim, which is the paper's reproducibility requirement. The acceptance table (goal to proof to green/red) is kept in [project-plan.md](project-plan.md) section 17.
+Documentation is itself part of acceptance: the per-fixture JSON reports and the knowledge vaults let a reviewer trace every claim, which is the paper's reproducibility requirement. The acceptance table (goal to proof to green/red) is kept in [PLAN.md](../PLAN.md) (acceptance section).
 
 ## Components
 

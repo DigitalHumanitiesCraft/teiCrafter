@@ -14,19 +14,17 @@ created: 2026-06-07
 updated: 2026-06-07
 language: en
 version: 0.4
-topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]", "[[Coordination]]"]
+topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, user-stories, architecture, design, testing, goals]
 ---
 
 # Three-Project Master Reference
 
-Single, verified reference for the three coordinating Claudes (CC1/CC2/CC3). It holds
+Single, verified reference across the three projects. It holds
 the complete picture: the editor internals, both HTR pipelines, the data formats and
 metadata mappings, the TEI models, verification, the converter contract, and the open
-work. Compiled by CC2 on 2026-06-07 from a full read of all three repos and three
-parallel deep-read passes. Claims are tagged where verified against code; corrections to
-earlier drafts are in section 12. The live gate plan with status and owner is
-[goals.md](goals.md); the per-Claude task prompts are in section 11.
+work. Claims are tagged where verified against code; corrections are in section 11. The
+live gate plan with status is [goals.md](goals.md).
 
 ## 1. Frame and Demo Gate
 
@@ -36,19 +34,16 @@ earlier drafts are in section 12. The live gate plan with status and owner is
   authority IDs (GND / GeoNames / Wikidata), save byte-faithfully.
 - **Demo-critical:** entity enrichment, notes, image display. Everything else runs in
   parallel and does not gate the demo.
-- **Way of working:** three parallel workstreams ordered only by dependencies.
 
 ## 2. The Three Projects and Roles
 
-| Project | Path | Role | Owner |
-|---------|------|------|-------|
-| **teiCrafter** | `GitHub/ResearchTools/teiCrafter` | Browser-based lossless TEI editor; convergence point | CC1 |
-| **zbz-ocr-tei** | `GitHub/DHCraft/zbz-ocr-tei` | Jeanne Hersch: PDF to line-level TEI | CC3 |
-| **szd-htr** | `GitHub/szd-htr` | Stefan Zweig: images to Page-JSON to METS/PAGE-XML | CC2 |
+| Project | Path | Role |
+|---------|------|------|
+| **teiCrafter** | `GitHub/ResearchTools/teiCrafter` | Browser-based lossless TEI editor; convergence point |
+| **zbz-ocr-tei** | `GitHub/DHCraft/zbz-ocr-tei` | Jeanne Hersch: PDF to line-level TEI |
+| **szd-htr** | `GitHub/szd-htr` | Stefan Zweig: images to Page-JSON to METS/PAGE-XML |
 
-Gate split: CC1 = teiCrafter engine/editor/annotation + tests + converter reference;
-CC2 = SZD converter; CC3 = zbz frontend gap (Hersch first). Live status in
-[goals.md](goals.md) (goals H1 to H7).
+Live status in [goals.md](goals.md) (goals H1 to H7).
 
 ## 3. teiCrafter: Editor Internals (verified)
 
@@ -233,14 +228,14 @@ consensus draft (Flash Lite + Flash + Pro, Claude judge), 30-object full GT plan
 known only for ~58 pilot objects; full calibration pending GT.
 
 **No transcription TEI exists.** No pipeline step emits `<pb>`/`<lb>` TEI. Producing it is
-M1.3 (CC2). PAGE-XML and METS are archival, not editor input.
+M1.3. PAGE-XML and METS are archival, not editor input.
 
 ## 6. Data Flow
 
 ```
 ZBZ:  PDF -> Mistral OCR -> Docling layout -> Unified TEI -> {id}_final.xml ──┐
                                                                                ├─> teiCrafter (Open)
-SZD:  images -> Gemini VLM -> [layout] -> Page-JSON v0.2 -> (CC2 export_tei) ─┘
+SZD:  images -> Gemini VLM -> [layout] -> Page-JSON v0.2 -> export_tei ───────┘
                                           \-> PAGE-XML / METS (archival, not editor)
 ```
 
@@ -259,12 +254,12 @@ Both pipelines must hit the section 3 reading contract. Concretely:
   it (M2.2). The ZBZ schema already permits `<graphic url>`; the SZD converter should emit
   it from `source.images[]` / GAMS URLs from the start.
 
-## 8. SZD Converter Contract (M1.3, CC2)
+## 8. SZD Converter Contract (M1.3)
 
 Build `szd-htr/pipeline/export_tei.py`: Page-JSON v0.2 to teiCrafter-native TEI, following
 the existing `export_*.py` conventions (argparse `<obj> -c <collection>` / `--all` /
 `--force`; `config.py` COLLECTIONS/RESULTS_BASE/MODEL; skip-if-exists; output to
-`results/<collection>/`). Depends on CC1's converter reference M1.2 for exact element
+`results/<collection>/`). Depends on the converter reference M1.2 for exact element
 choices (in progress; prototype byte-verified for o_szd.100).
 
 | Page-JSON | TEI |
@@ -284,75 +279,42 @@ provenance and the unverified status.
 ## 9. Gate Status Summary (live version in goals.md)
 
 - **H1 pipelines into teiCrafter:** M1.1 ZBZ loads (done). M1.2 SZD converter reference
-  (in progress, blocks CC2). M1.3 export_tei.py (open, CC2). M1.4 SZD demo example (open).
+  (in progress). M1.3 export_tei.py (open). M1.4 SZD demo example (open).
   M1.5 convert all (open).
 - **H2 see/navigate/correct:** M2.1 editor model (done). M2.2 `<graphic>` image support
-  (open, CC1). M2.3 live ZBZ browser pass (open, CC3). M2.4 ZBZ image-URL scheme (open, CC3).
+  (open). M2.3 live ZBZ browser pass (open). M2.4 ZBZ image-URL scheme (open).
 - **H3 annotation:** M3.1 place entity, M3.3 authority @ref (GND/GeoNames/Wikidata), M3.4
-  mention linking (all open demo-critical, CC1); M3.2 work entity, M3.5 note UI, M3.6
+  mention linking (all open, demo-critical); M3.2 work entity, M3.5 note UI, M3.6
   editorial markup (open, full ambition).
 - **H4 losslessness:** M4.1 roundtrip sweep, M4.2 loadability sweep (done). M4.3 per-feature
   regression (ongoing). M4.4 SZD-TEI byte-clean (open).
-- **H5 coordination:** M5.1 integration.md + HANDOFF (done). Others open.
-- **Critical path to demo:** M1.2 (CC1) -> M1.3 (CC2) -> M1.4 (CC1). M1.2 top priority.
+- **Critical path to demo:** M1.2 -> M1.3 -> M1.4. M1.2 top priority.
 
 ## 10. Open Items and Dependencies
 
-1. **M1.2 converter reference** in progress (CC1) -> unblocks M1.3 (CC2). Prototype byte-
+1. **M1.2 converter reference** in progress -> unblocks M1.3. Prototype byte-
    verified for o_szd.100.
 2. **M2.2 `<graphic>` support** -> images for opened ZBZ and SZD files. Schema-compatible.
-3. **M2.3/M2.4** ZBZ live gap pass + image-URL scheme (CC3) -> feed M2.2.
-4. **M3.1/M3.3/M3.4** entity types + authority @ref + linking (CC1) -> demo annotation.
-5. **Correspondence metadata** (sender/recipient) not yet populated in Page-JSON (CC2 input gap).
+3. **M2.3/M2.4** ZBZ live gap pass + image-URL scheme -> feed M2.2.
+4. **M3.1/M3.3/M3.4** entity types + authority @ref + linking -> demo annotation.
+5. **Correspondence metadata** (sender/recipient) not yet populated in Page-JSON (input gap).
 6. **SZD layout batch** ~1% done; most objects have no zones yet.
 
-## 11. Per-Claude Task Prompts
+## 11. Corrections (verified)
 
-### CC1 (teiCrafter)
-```
-Lies knowledge/integration.md + goals.md. Prioritaet M1.2: converter-reference.md fertig
-schreiben (Page-JSON v0.2 -> TEI Mapping; teiHeader, <lb/> vs <l>, <pb facs n>,
-facsimile xml:id-Schema + %->px, marking, blank/color_chart, regions->div/p). Parallel:
-M2.2 <graphic>-Support (edition.js parst <graphic url> pro surface; facsimile.js nutzt es
-als imageUrl), M3.1/M3.3/M3.4 (place-Entity, authority @ref GND/GeoNames/Wikidata,
-mention-linking). Melde CC2, sobald M1.2 steht.
-```
-### CC2 (szd-htr)
-```
-Lies knowledge/integration.md (Abschnitt 8) + goals.md. Aufgabe M1.3: pipeline/export_tei.py,
-Page-JSON v0.2 -> teiCrafter-native TEI, nach export_*.py-Konventionen. Warte auf CC1s M1.2;
-baue derweil das mapping-unabhaengige Scaffolding (CLI, Page-JSON laden+validieren,
-Enumeration, Output, idempotenz) mit Mapping-Stub. Emittiere <graphic url> aus source.images;
-Zonen nur wo regions existieren. M5.5: 4 (nicht 3) Status-Stufen korrekt berichten.
-```
-### CC3 (zbz-ocr-tei)
-```
-Lies knowledge/integration.md + goals.md. Aufgabe M2.3: Live-Gap-Pass ZBZ -> teiCrafter.
-Oeffne mehrere docs/data/pages/<id>/<id>_final.xml im Editor. Pruefe: Folio-Navigation
-(grosse Docs, leere Folios), Zone<->Zeile-Linking ueber @facs, Rendering von
-hi/foreign/note/choice/unclear/figure. Dokumentiere jeden Bruch. M2.4: liefere CC1 das
-ZBZ-Bild-URL-Schema (docs/images/<id>/<id>_p00N.png; gehostetes/IIIF-Pendant?) fuer die
-<graphic>-Injektion.
-```
-
-**CC3 status (2026-06-07):** M2.4 delivered, M2.3 prepared, oekosystem-synthese corrected.
-Full handoff -> `zbz-ocr-tei/HANDOFF-cc3.md` (image-URL rule + 2310 edge case + demo object + ZBZ test plan).
-
-## 12. Corrections to Earlier Drafts (verified)
-
-- **`<graphic>` in ZBZ TEI:** earlier "no `<graphic url>` anywhere" was imprecise. Precise:
+- **`<graphic>` in ZBZ TEI:** the claim "no `<graphic url>` anywhere" was imprecise. Precise:
   no `<graphic>` inside `<facsimile>`/`<surface>`; but 26 docs carry `<graphic url>` inside
   `<figure>` blocks in the body (~101 total). The `zbz_hersch.rng` schema permits
   `<graphic url>`, so the M2.2 fix (graphic in surface) is schema-compatible.
 - **`@facs` cross-linking:** in pipeline `_final.xml`, body `<p>`/`<hi>` do not carry
   `@facs` to zones; only `<pb>` and `<lb>` do. The teiCrafter bundled demo additionally
   adds inline `<name ref="#id">` links that the raw pipeline output does not have.
-- **Gate plan now on disk:** the gate plan exists as [goals.md](goals.md) (was previously
-  "not on disk"). M1.2 converter reference is in progress, not absent.
+- **Gate plan on disk:** the gate plan exists as [goals.md](goals.md). M1.2 converter
+  reference is in progress, not absent.
 - **Status values:** SZD uses a 4-tier verification model (gt_verified, approved,
   agent_verified, needs_review) plus unreviewed, not 3.
 
-## 13. Source Evidence
+## 12. Source Evidence
 
 - teiCrafter: knowledge/{project,data,specification,user-stories,architecture,design,
   testing,journal,goals}.md; docs/js/editor/{tei-document,edition,editor-app,facsimile,

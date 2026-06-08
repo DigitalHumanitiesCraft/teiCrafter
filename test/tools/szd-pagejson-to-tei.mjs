@@ -1,9 +1,9 @@
 /**
  * REFERENCE PROTOTYPE (spec-by-example) -- Page-JSON v0.2 -> teiCrafter-target TEI.
  *
- * Purpose: produce ONE real SZD TEI that teiCrafter can load line-level, so the
- * frontend gap analysis (CC3) has a concrete file and CC2 has an executable target
- * to port into szd-htr (e.g. pipeline/export_tei.py). NOT part of the teiCrafter app.
+ * Purpose: produce ONE real SZD TEI that teiCrafter can load line-level, so there
+ * is a concrete loadable file and an executable porting target for szd-htr's
+ * pipeline/export_tei.py. NOT part of the teiCrafter app.
  *
  * teiCrafter engine contract honoured (see docs/js/editor/edition.js):
  *   - <pb> per page                    -> folio split

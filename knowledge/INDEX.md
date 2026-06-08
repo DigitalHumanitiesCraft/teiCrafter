@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-05-30
+updated: 2026-06-08
 language: en
 version: 0.4
 related: [project, data, specification, user-stories, architecture, design, journal, testing]
@@ -36,12 +36,11 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | [design](design.md) | How does it look and behave? (tokens, three-pane layout, AI marking) | UI or design-system work | specification |
 | [testing](testing.md) | How is it proven and validated? (engine proofs, harness levels) | Coverage or eval method in question | architecture |
 | [journal](journal.md) | How did we get here? (decision log) | Decision logic unclear | - |
-| [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor? (cross-project data flow, roles, open items) | Coordinating across the three projects (CC1/CC2/CC3) | data, architecture |
-| [goals](goals.md) | What are the main goals and milestones, with status and owner? (the on-disk gate plan) | Checking objectives, milestones, or the demo critical path | integration |
-| [project-plan](project-plan.md) | Full synthesis (German): purpose, tool boundaries (teiCrafter vs EditionCrafter), goals H1-H7, SZD data model, proofs, open items | Resuming after a context compaction or needing the whole picture in one place | integration, goals |
-| [cc1-session-report](cc1-session-report.md) | What did CC1 verify on disk and build, with proofs? (M2.2/M3.1/M3.4 build, plan corrections, open decision) | Picking up CC1's work or checking what is proven vs open | goals, project-plan |
+| [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
+| [goals](goals.md) | What are the main goals and milestones, with status? (the on-disk gate plan) | Checking objectives, milestones, or the demo critical path | integration |
+| [converter-reference](converter-reference.md) | The deterministic Page-JSON v0.2 to TEI mapping (body, header, facsimile, bbox formula, standOff seeding, markers) | Building or verifying the SZD converter | data, architecture, specification, goals |
 
-Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary.
+Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary; `PLAN.md` is the full plan and implementation backlog (German): purpose, tool boundaries, goals H1-H7 with status, SZD data model, proofs, open items.
 
 ## Core Concepts
 

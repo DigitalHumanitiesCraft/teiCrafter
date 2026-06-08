@@ -1,0 +1,392 @@
+---
+title: Gesamtplan und Umsetzung des Editopia-Vorhabens (teiCrafter, SZD, ZBZ)
+project:
+  name: teiCrafter
+  repository: https://github.com/DigitalHumanitiesCraft/teiCrafter
+method:
+  name: Promptotyping
+  url: https://lisa.gerda-henkel-stiftung.de/digitale_geschichte_pollin
+template:
+  name: Vorlage Projektplan
+  version: 0.1
+status: active
+created: 2026-06-07
+updated: 2026-06-08
+language: de
+version: 0.5
+topics: ["[[Projektplan]]", "[[TEI XML]]", "[[Digitale Editionen]]", "[[Promptotyping]]"]
+related: [goals, integration, converter-reference, project, data, architecture, specification, testing]
+---
+
+# Gesamtplan und Umsetzung des Editopia-Vorhabens (teiCrafter, SZD/Stefan Zweig, ZBZ/Hersch)
+
+Dies ist NICHT nur der teiCrafter-Plan: er umfasst die drei Projekte teiCrafter, SZD und ZBZ und das
+Vortrags-/Paper-Ziel. teiCrafter ist eines der drei Projekte, nicht das Ganze. Dieses Dokument ist
+zugleich der **Umsetzungsplan**: es hält den belegten Stand fest und ordnet die offene Arbeit.
+
+Vollständige, selbsttragende Synthese des Vorhabens (Stand 2026-06-08), bewusst auf Deutsch verfasst
+(bewusste Entscheidung; weicht von der CLAUDE.md-Regel "documentation in English" und den englischen
+Schwesterdokumenten ab). Es verweist auf die Detail-Dokumente, statt sie zu duplizieren:
+[goals.md](knowledge/goals.md) (englisches Milestone-Register), [converter-reference.md](knowledge/converter-reference.md)
+(SZD-Konverter-Kontrakt) und die Ökosystem-Synthese im zbz-Repo (`zbz-ocr-tei/knowledge/oekosystem-synthese.md`).
+
+Belegregel: Aussagen mit `[proof]`/`datei:zeile` sind maschinell nachprüfbar; Absichts-Aussagen sind
+als Entscheidung festgehalten (Datum genannt); Zahlen Dritter sind zeitpunktbezogen und vor Nutzung
+gegen den Code zu prüfen.
+
+## 0. Umsetzungs-Scope (wer macht was)
+
+- **In diesem Plan umgesetzt:** teiCrafter (Engine, Editor, Annotation, Bildanzeige, Worked Examples)
+  und die **SZD-Pipeline** (Konverter-Kontrakt finalisieren, Batch-Konverter, Konvertierung der
+  Objekte, Demo-Beispiel).
+- **Separat bearbeitet (Autor):** die **ZBZ-Pipeline**. teiCrafter lädt und rendert ZBZ-TEI bereits;
+  die ZBZ-pipeline-seitigen Aufgaben (Bild-URL-Schema-Lieferung, ZBZ-Projektbericht,
+  oekosystem-synthese-Korrektur, Live-ZBZ-Durchlauf) liegen außerhalb dieses Umsetzungs-Scopes und
+  sind unten mit **separat** markiert. Das ZBZ-Worked-Example (M7.2) hängt an dieser Spur.
+
+## 1. Zweck und Positionierung
+
+teiCrafter ist ein **nachnutzbares, browserbasiertes Static-Site-Research-Tool**: ein generischer,
+verlustfreier Editor für beliebiges TEI-XML, zügig mit Promptotyping gebaut und über mehrere Projekte
+hinweg im Einsatz (SZD, ZBZ/Hersch, Wenzelsbibel). Er nimmt TEI aus Eingabe-Pipelines auf, lässt einen
+Menschen es Folio für Folio korrigieren und semantisch annotieren, und speichert es byte-treu zurück.
+("Im Einsatz" heißt: deployt und als TEI-Editor genutzt; die Entitäten-Annotationsschicht für die
+Editopia-Demo ist der aktuelle Ausbau, siehe §4 für den belegten Stand.)
+
+Übergeordneter Anlass ist der **Editopia-Vortrag** (Christopher Pollin; Editopia 02.-04.09.2026,
+Wuppertal; Vortrag 2026-09-02). Die belegte These des eingereichten Abstracts: agentenbasierte
+Editions-Workflows setzen eine **epistemische Infrastruktur** voraus, also Mechanismen, Arbeitsschritte
+und Werkzeuge, um die Ergebnisse LLM-gestützter Verarbeitungsschritte zu verifizieren, zu kuratieren
+und zu dokumentieren. Der eingereichte Abstract ist ZBZ/Hersch-fokussiert; die Abstract-Datei selbst
+liegt nicht im Vault (dort ausdrücklich vermerkt), nur ihre These ist dokumentiert.
+
+teiCrafters Rolle in dieser These: teiCrafter **ist** ein konkretes Stück dieser epistemischen
+Infrastruktur, nämlich das deterministische, verlustfreie Werkzeug, in dem ein Mensch maschinell
+erzeugte TEI prüft, korrigiert und kuratiert, mit klarer Markierung des Maschinellen. teiCrafter
+erweitert das Paper damit um einen eigenen Promptotyping-Fall (ein agentisch gebautes
+Editionswerkzeug), neben den zwei Pipeline-Fällen SZD und Hersch/ZBZ.
+
+Primärer eigener Anwendungsfall über Editopia hinaus ist die **Wenzelsbibel-Edition** (PLUS Salzburg,
+FWF, Wort-Ebene, ab Herbst 2026).
+
+## 2. Werkzeug-Abgrenzung (verbindlich)
+
+- **teiCrafter = TEI bearbeiten.** Generischer, verlustfreier TEI-Editor. Bearbeitet und annotiert
+  beliebiges TEI, projektunabhängig. ZBZ und SZD sind zwei Eingabe-Pipelines, die TEI hineinliefern.
+- **EditionCrafter = ganze digitale Editionen.** Eigene, unabhängige Schwesterlinie. Generalisierung
+  der statischen Pipeline-Viewer von ZBZ und SZD zu vollständigen Editionen. **Der Editopia-Hersch-
+  Demonstrator ist EditionCrafter v0, nicht teiCrafter** (Vault ACTIVE-WORK.md / EditionCrafter.md,
+  bestätigt). Achtung: `zbz-ocr-tei/knowledge/oekosystem-synthese.md` behauptet das Gegenteil
+  (teiCrafter sei die Hersch-Demo); das ist falsch und zu korrigieren (separat, siehe §10).
+- **Statische Viewer (ZBZ/SZD).** Die projekteigenen statischen Weboberflächen der Pipelines
+  (öffentlich read-only Proto-Edition plus lokal Editorial-Workspace; "Three Functions" im JOHD-Paper).
+  Gehören zu den jeweiligen Pipelines, nicht zu teiCrafter.
+
+Trennlinie in einem Satz: teiCrafter erzeugt und bearbeitet TEI; EditionCrafter erzeugt die Edition
+(Anzeige, Apparat, Publikation).
+
+## 3. Die drei Projekte
+
+| Projekt | Pfad | Rolle | Im Scope |
+|---|---|---|---|
+| teiCrafter | `GitHub/ResearchTools/teiCrafter` | verlustfreier TEI-Editor, Konvergenz für TEI-Bearbeitung | ja |
+| szd-htr | `GitHub/szd-htr` | Stefan-Zweig-Pipeline (Bilder zu Page-JSON; TEI-Konverter ausstehend) | ja |
+| zbz-ocr-tei | `GitHub/DHCraft/zbz-ocr-tei` | Jeanne-Hersch-Pipeline (PDF zu line-level TEI) | separat (Autor) |
+
+Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ein Mensch sie prüft
+(teiCrafter markiert sie violett über `--color-ai`; zbz/szd über Workflow-/Review-Status).
+
+## 4. Stand: erledigt und offen
+
+### Erledigt (mit Proof)
+
+- **Verlustfreie Engine.** Round-Trip-Sweep byte-identisch: `node test/tools/roundtrip_sweep.mjs` ->
+  **294/294** (285 Hersch + 4 SZD + 5 synthetisch). [proof] (M1.1, M2.1, M4.1)
+- **ZBZ direkt ladbar.** Editor-Ladbarkeit: `node test/tools/hersch_loadability.mjs` ->
+  **285/285** nutzbare Editor-Ansicht, 0 Parse-Fehler; gesamt 4.115 Folios, 49.324 Zellen,
+  23.421 Zonen, 266 Notes. [proof] (M1.1, M4.2)
+- **Bildanzeige Engine-Seite.** Der Editor liest `<graphic url>` aus `<surface>` und nutzt
+  `surface.graphic` als imageUrl-Fallback (tei-document.js, editor-app.js). (M2.2 Engine; Browser-Sicht
+  offen, siehe unten.)
+- **Annotationsschicht gebaut.** Ort (M3.1), Werk (M3.2), Normdaten-Handeingabe als
+  `<idno type="GND|GeoNames|Wikidata">` mit add/replace/remove (M3.3-Kern), typ-unabhängiges
+  Mention-Linking (M3.4). Ein gemeinsamer Proof deckt alles ab: `node test/tools/szd_demo_check.mjs`
+  -> **32/32**. [proof] Die drei festen Sweeps bleiben grün.
+- **SZD-Konverter-Kontrakt geschrieben.** [converter-reference.md](knowledge/converter-reference.md)
+  (Entwurf, v0.4): vollständiges deterministisches Page-JSON-v0.2-zu-TEI-Mapping (Skelett, Body
+  Text-zu-`<pb>`+`<lb>`, teiHeader, facsimile `<graphic>`-URL und Pixel-Zonen, bbox-Formel,
+  standOff-Seeding, Marker, ID-Schema). (M1.2-Entwurf)
+- **SZD-Demo-Objekt real konvertiert.** o_szd.1079 aus dem echten `o_szd.1079_page.json` via
+  `test/tools/szd-pagejson-to-tei.mjs`: 5 Folios, line-level, **byte-identischer Round-Trip**,
+  GAMS-`<graphic>`-URLs, Zonen Prozent->Pixel, kein standOff (1079 hat keinen creator, wie der
+  Kontrakt vorhersagt). [proof] (M1.4 für 1079)
+
+### Offen (Umsetzungs-Scope teiCrafter + SZD)
+
+- **M2.2 Browser-Visualtest:** GAMS-Bild lädt im Browser, Zonen liegen richtig, Zeilen editierbar,
+  Speichern byte-clean. (Vorabgeprüft: GAMS-Bild liefert 200 / image/jpeg; `<img>` braucht kein CORS.)
+- **M1.3 SZD-Batch-Konverter** `pipeline/export_tei.py` (Python-Port des Prototyps). Verifiziert: die
+  Datei existiert noch nicht.
+- **M1.4 restliche Demo-Handvoll** konvertieren + engine-verifizieren; **M1.5** alle ~2.103 +
+  Ladbarkeits-Sweep.
+- **M3.3 Live-Lookup** und **M3.7 Offline-Gemini-Vorschlag** (das Produkt-KI-Feature).
+- **M3.5 Notiz-/Fußnoten-Erstell-UI**; **M3.6 Textkritik** (`unclear`/`gap`/`del`/`add`, später).
+- **M4.4** SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`.
+- **M7.1/M7.2(SZD)/M7.3** Demo-Material.
+
+### Separat (Autor, ZBZ-Pipeline)
+
+- **M2.3** Live-ZBZ-Browser-Durchlauf, **M2.4** ZBZ-Bild-URL-Schema (geliefert, zu verifizieren),
+  oekosystem-synthese-Korrektur, ZBZ-Projektbericht. Das **ZBZ-Worked-Example** (M7.2-Hälfte) hängt an
+  dieser Spur; die teiCrafter-Seite (Rendering, `<graphic>`-Support) ist erledigt.
+
+Noch NICHT bewiesen (ehrlicher Rest): der SZD-Batch-Konverter existiert nur als Einzel-Prototyp; der
+Browser-Visualtest steht aus; der Gemini-Annotations-Vorschlagsschritt ist konzipiert, nicht gebaut.
+
+Hinweis: `pipeline.mjs` (Vor-Pivot) existiert noch in der teiCrafter-Wurzel, ist aber ein nicht
+lauffähiger Torso: er importiert das im Pivot gelöschte `docs/js/pipeline/` und bricht mit
+ERR_MODULE_NOT_FOUND ab. Seine ~2033 gitignored `output/*.tei.xml` stammen aus der gelöschten Engine
+(LLM-`<div>/<head>/<p>`-Blöcke, NICHT line-level) und sind mit heutigem Code nicht reproduzierbar.
+"2030 TEIs fertig" ist kein gültiger Stand.
+
+## 5. teiCrafter Ziel-Contract (was der Editor liest und bewahrt)
+
+Generisch nach local-name, kein Projekt-Profil ([data.md](knowledge/data.md),
+[architecture.md](knowledge/architecture.md), `docs/js/editor/`):
+- `<pb>` (opt. `@facs`, `@n`) trennt Folios; `<lb>`/`<l>` trennt Zeilen.
+- Lesetext-Knoten werden editierbare Zellen: Wort-Ebene nur bei `<w xml:id>`, sonst Zeilen-Ebene.
+- `<facsimile>`/`<surface>`/`<zone ulx/uly/lrx/lry>` treiben den OpenSeadragon-Viewer; `@facs` verknüpft
+  Zeile und Zone bidirektional.
+- `<standOff>`/`<note target>` tragen Entitäten/Apparat.
+- Roher String ist kanonisch, Bearbeitung ist Offset-Splice, `serialize()` byte-identisch; nicht
+  Interpretiertes bleibt verbatim.
+- Laden: **Open** (File System Access API / Datei-Input) für jedes lokale XML; plus zwei fest
+  verdrahtete Demo-Fetches. Eine geöffnete Datei bekommt `app.imageBase = null`.
+- **Bildanzeige (M2.2, Engine erledigt):** Der Viewer zeigt ein Bild mit imageUrl UND surface; der
+  Editor liest `surface.graphic` aus `<graphic url>` und nutzt es als Fallback. Pipeline-seitig wird
+  `<graphic url>` in jede `<surface>` geschrieben (SZD = GAMS-URL, ZBZ = `docs/images/<id>/<id>_p00N.png`).
+
+## 6. SZD-TEI-Datenmodell (Konverter-Kontrakt, Zusammenfassung)
+
+Vollständige Spezifikation in [converter-reference.md](knowledge/converter-reference.md). Der Konverter
+ist **deterministisch** (Page-JSON -> TEI nach Regel, kein LLM): das ist die verlustfreie,
+reproduzierbare, kostenlose Stufe und trägt das Fidelity-Argument. Kern:
+- **teiHeader** aus `source` + `descriptive_metadata`: Titel, author/editor (persName + GND-`<idno>`),
+  respStmt, publicationStmt (Lizenz + Maschinen-Hinweis), msDesc/msIdentifier, physDesc, history/origin,
+  profileDesc (langUsage, correspDesc nur für Korrespondenzen), revisionDesc.
+- **standOff**: listPerson/listOrg/listPlace, aus Metadaten geseedet (Name +
+  `<idno type="GND">` verbatim). Kein creator -> kein standOff (gilt für o_szd.1079).
+- **facsimile**: eine `<surface>` je Seite (`<graphic>` GAMS-URL + Maße), `<zone>` je Region
+  (bbox -> Pixel). **bbox-Einheit:** der Kontrakt legt Prozent (0-100) fest, am realen Page-JSON
+  bestätigt (o_szd.100 r1 `[3.9,2.9,4.8,0.3]`, o_szd.1079 r1 `[17.5,37.9,34.9,5.2]`); am realen Datensatz
+  über die Handvoll zu verifizieren (kein Wert > 100), dann ist der Kontrakt eingefroren. Zonen nur
+  region-, nicht zeilengenau.
+- **body** line-level (`<pb>` + `<lb>`), je Dokumenttyp: typescript (Default), manuscript/diary
+  (nur Doppel-Tilde `~~x~~` = `<del>`, einzelne `~` ist Gedankenstrich), letter (correspDesc,
+  opener/closer/signed, `[Stempel:]`->note/stamp), form (Pipe-Tabellen -> table/row/cell),
+  newspaper_clipping (Spalten linearisiert).
+- **Editoriale Marker** (v1 wörtlich erhalten; Mapping nach `<unclear>/<gap>/<del>/<add>/<note>` ist
+  M3.6): `[?]`, `[...]`/`[...N...]`, `~~x~~`, `{x}`, `[Stempel:]`.
+- **Leerseiten**: `<pb type="blank"/>` für blank/color_chart, Text dort verwerfen.
+- **Erste Konvertier-Handvoll** (deckt die Body-Typen ab UND enthält das Schaustück): o_szd.100
+  (Typoskript), o_szd.72 (Tagebuch, Tilde-Fall), **o_szd.1079 (Brief, Schaustück, bereits konvertiert)**,
+  o_szd.2215 (Zeitungsausschnitt), o_szd.161 (Formular, Pipe-Tabellen).
+
+## 7. Semantische Annotation (der Mehrwert von teiCrafter)
+
+Definition: dem Text maschinenlesbare Bedeutung hinzufügen, in drei Schritten (abgrenzen,
+klassifizieren, mit Normdaten verknüpfen). Zwei Familien:
+- **Familie 1 Entitäten-Anreicherung:** Personen, Orte, Organisationen, Werke (+ GND/GeoNames/Wikidata),
+  Datum. Das ist die Lücke, die beide Pipelines auslassen: ZBZ hat NER entfernt (E71), SZD seedet nur
+  Metadaten-Entitäten in den Header, nicht die Erwähnungen im Text.
+- **Familie 2 editorische Annotation:** Notizen/Fußnoten/Kommentare; textkritische Marker.
+
+teiCrafter heute (erledigt): Person/Org/Event/**Ort**/**Werk** mit Name UND
+**Normdaten-`<idno>`** (Handeingabe, add/replace/remove), typ-unabhängiges Mention-Linking. Offen:
+Notiz-Erstell-UI (M3.5), Textkritik (M3.6), Live-Lookup und Gemini-Vorschlag.
+
+**KI-assistierte Annotation (M3.7, demonstriert die Editopia-These).** Ein **Offline-Pipeline-Schritt
+mit Gemini 3.1 Flash Lite** liest die fertige TEI, schlägt Entitäten samt Normdaten-Kandidaten vor und
+schreibt sie als **unverifizierte** Einträge in den `<standOff>`. teiCrafter zeigt sie violett
+(`--color-ai`); der Mensch bestätigt, korrigiert oder verwirft. Begründung: deterministische Konvertierung
+(verlustfrei) bleibt getrennt vom probabilistischen Vorschlag (assistiv); ein LLM für die Konvertierung
+selbst wäre falsch (Kosten, Nichtreproduzierbarkeit, Halluzination, bricht das Fidelity-Argument);
+teiCrafter bleibt rein im Browser (kein API-Schlüssel im Static-Site-Code, Gemini läuft davor in der
+Pipeline). Das ist genau die These des Abstracts und das Designprinzip "KI assistiert, Mensch entscheidet".
+
+**Normdaten-Modus (Entscheidung 2026-06-07): alle drei Wege, gestaffelt auf einem Mechanismus.** Jede
+Entität trägt `<idno>` mit der Autoritäts-ID; drei Wege füllen dasselbe Feld: (1) **Handeingabe**
+(M3.3-Kern, erledigt). (2) **Live-Lookup** (Name eintippen, client-seitig GND/GeoNames/Wikidata
+abfragen, Treffer wählen). (3) **Offline Gemini** (M3.7, Vorschläge violett vor dem Öffnen). Konstante:
+der Mensch prüft und entscheidet immer. Bau-Reihenfolge: (1) erledigt, dann (3) (stärkster Beleg der
+These), dann (2) (meiste Frontend-Arbeit wegen CORS und Rate-Limits).
+
+## 8. Ziele und Milestones
+
+Legende: **★** demo-/vortragskritisch, **+** vollständige Ambition (parallel, nicht blockierend).
+Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
+
+**H1 - Beide Pipelines in teiCrafter bringen**
+- ★ M1.1 ZBZ direkt ladbar. **erledigt** (hersch_loadability.mjs, 285/285).
+- ★ M1.2 SZD `converter-reference.md` (volles Page-JSON->TEI-Mapping, deterministisch). **erledigt
+  (Entwurf v0.4)**; friert ein, sobald die offenen Punkte in §9 von converter-reference.md am realen
+  Page-JSON bestätigt sind.
+- ★ M1.3 SZD Batch-Konverter `pipeline/export_tei.py`. offen (existiert noch nicht).
+- ★ M1.4 SZD Demo-Handvoll konvertieren + engine-verifiziert. **teilweise erledigt** (o_szd.1079 ✓),
+  Rest der Handvoll offen.
+- + M1.5 SZD alle ~2.103 konvertieren + Ladbarkeits-Sweep. offen.
+
+**H2 - Sehen, navigieren, korrigieren**
+- ★ M2.1 Editor-Modell pro Datei. **erledigt**.
+- ★ M2.2 Bildanzeige bei geöffneten Dateien (`<graphic>`-Support). **Engine-Seite erledigt**
+  (szd_demo_check.mjs); Browser-Visualtest (GAMS/CORS) offen.
+- ★ M2.3 Live-Browser-Durchlauf ZBZ. **separat** (Autor); der demo-relevante Teil (ein ZBZ-Objekt)
+  geht in M7.2 mit.
+- ★ M2.4 ZBZ-Bild-URL-Schema für `<graphic>` (Bilder nur für 1000/1330/1540/2310). **separat**
+  (geliefert, zu verifizieren).
+
+**H3 - Semantisch annotieren**
+- ★ M3.1 Ort-Entität (`place`/`placeName`). **erledigt** (szd_demo_check.mjs).
+- ★ M3.2 Werk-Entität (`title`/`bibl`, `listBibl`, `wrk_`-IDs, auf standOff/listBibl beschränkt).
+  **erledigt** (szd_demo_check.mjs).
+- ★ M3.3 Normdaten-`<idno>` (GND/GeoNames/Wikidata) auf allen Typen + UI. **Kern (Handeingabe)
+  erledigt** (setAuthority add/replace/remove, szd_demo_check.mjs); Live-Lookup offen (Reihenfolge §7).
+- ★ M3.4 Mention-Linking auf neue Typen. **erledigt** (linkMention typ-unabhängig).
+- ★ M3.7 KI-Annotations-Vorschlag (Offline-Gemini, violett zur Prüfung). offen (Gate geht auch manuell).
+- + M3.5 Notizen/Fußnoten-Erstell-UI. offen.
+- + M3.6 Textkritik (`unclear`/`gap`/`del`/`add`). später.
+
+**H4 - Verlustfreiheit als Invariante**
+- ★ M4.1 Engine-Round-Trip-Sweep. **erledigt** (roundtrip_sweep.mjs, 294/294).
+- ★ M4.2 Editor-Ladbarkeits-Sweep. **erledigt** (hersch_loadability.mjs, 285/285).
+- ★ M4.3 Jedes Feature byte-clean (Regressionstest). laufend (szd_demo_check.mjs, 32/32).
+- ★ M4.4 SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`. offen.
+
+**H5 - Verifikation, Dokumentation**
+- ★ M5.1 Kanonisches integration.md + dieser Plan. **erledigt**.
+- + M5.2 integration.md mit Proof-Evidenz anreichern + "Blocker not on disk" korrigieren. offen.
+- + M5.5 oekosystem-synthese korrigieren (EditionCrafter, nicht teiCrafter, ist die Hersch-Demo).
+  **separat** (Autor, ZBZ-Spur).
+- + M5.6 Doku-Sync (data.md/architecture.md auf SZD-Konverter + neuen Test). offen.
+
+**H6 - Wissensvaults pflegen** (Promptotyping-Methode, Reproduzierbarkeit fürs Paper)
+- + M6.1 teiCrafter-`knowledge/` aktuell halten. laufend.
+- + M6.2 szd-htr-`knowledge/` aktuell halten. laufend.
+- + M6.3 zbz-ocr-tei-`knowledge/` aktuell halten. separat (Autor).
+
+**H7 - Editopia-Beitrag und Demo-Material** (teiCrafter als Promptotyping-Fall)
+- ★ M7.1 teiCrafter als vorzeigbarer Promptotyping-Fall (Werkzeug + Provenienz im Vault/Repo). offen.
+- ★ M7.2 Zwei annotierte Worked Examples (je ein ZBZ- und ein SZD-Objekt, end-to-end im Editor).
+  offen; die SZD-Hälfte (o_szd.1079) ist im Scope, die ZBZ-Hälfte hängt an der separaten ZBZ-Spur.
+- + M7.3 Beitrag zu Foliensatz/Volltext, soweit teiCrafter betroffen. offen.
+
+## 9. Erfolgskriterium, Demo-Objekte, kritischer Pfad
+
+Erfolgskriterium (festgelegt 2026-06-07): **je ein reales ZBZ- und SZD-Objekt end-to-end im Browser**
+(öffnen, zeilenweise korrigieren, Person/Ort/Werk mit Normdaten annotieren, byte-treu speichern). Das
+ist M7.2 und zugleich der vorzeigbare Kern fürs Editopia-Material.
+
+Demo-Objekte:
+- **SZD-Schaustück:** o_szd.1079 (Brief an Max Fleischer 1901: echte Personen, Ort, Datum, Umschlag,
+  correspDesc, GAMS-Bild). Begleitende Handvoll zur Typabdeckung: o_szd.100/72/2215/161 (§6).
+- **ZBZ-Objekt:** aus {1000, 1330, 1540, 2310} (nur diese haben committete Bilder), das textlich
+  gehaltvollste; Auswahl in der separaten ZBZ-Spur.
+
+Kritischer Pfad (SZD-Kette): **M1.2 -> M1.3 -> M1.4**. M1.2 ist erledigt (Entwurf); damit steht als
+Nächstes der Realitätsabgleich am Page-JSON (Kontrakt einfrieren) und der Batch-Konverter M1.3.
+Unabhängig parallel: M2.2-Browser-Visualtest, M3.5/M3.7, und das SZD-Worked-Example (M7.2). Zeit ist
+ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
+
+## 10. Offene Punkte, am realen Page-JSON zu bestätigen
+
+- **converter-reference.md §9 (vor dem Einfrieren):** bbox-Konformität über die Handvoll (kein Wert
+  > 100); real vorkommende Marker; verworfene Felder (`reading_order`/`lines`/`label`/`source`/`notes`);
+  weiteres standOff-Seeding (repository -> listOrg, sender/recipient -> listPerson); images 1:1 zu pages.
+- **M2.2-Browser:** GAMS-Bild im Browser, Zonen-Overlay, Zeilen-Edit, byte-clean speichern.
+- **Korrektheits-Audit (teils separat):** oekosystem-synthese.md behauptet falsch, teiCrafter sei die
+  Hersch-Demo (richtig: EditionCrafter v0); zbz-Statuszahlen (3 vs 4); szd schwankende Objektzahlen
+  (maßgeblich 2.107). teiCrafter-seitig erledigt: Token-Präfix-Drift (`--color-*`), AI-Violett-Ausfall.
+
+## 11. Umsetzungs-Backlog (nächste Schritte, geordnet)
+
+teiCrafter + SZD:
+1. **SZD-Realitätsabgleich:** die Handvoll am realen Page-JSON prüfen (bbox-Einheit, Marker, §9-Punkte),
+   converter-reference.md einfrieren (status active). Kritischer Pfad für M1.3.
+2. **M2.2-Browser-Visualtest:** o_szd.1079 in teiCrafter laden, GAMS-Bild + Zonen + Zeilen-Edit +
+   byte-clean speichern sehen (sechs Frontend-Checks, §12).
+3. **M1.3 Batch-Konverter** `pipeline/export_tei.py`: den Prototyp `test/tools/szd-pagejson-to-tei.mjs`
+   faithful nach Python portieren (gleiche Ausgabe), Objekt-ID rein, TEI raus.
+4. **M1.4 Handvoll** konvertieren + engine-verifizieren (o_szd.100/72/2215/161), dann **M1.5** alle
+   ~2.103 + Ladbarkeits-Sweep.
+5. **M7.2 SZD-Worked-Example** (o_szd.1079, end-to-end im Editor, sechs Checks).
+6. **M3.5 Notiz-UI**, dann **M3.7 Gemini-Vorschlag** (offline), dann **M3.3 Live-Lookup**.
+7. **M4.4 / M5.2 / M5.6 / M6.x:** byte-clean-Regression der SZD-TEI, integration.md anreichern,
+   data.md/architecture.md nachziehen.
+
+Separat (Autor, ZBZ): ZBZ-Bild-URL-Schema verifizieren, Live-ZBZ-Durchlauf, ZBZ-Worked-Example,
+oekosystem-synthese-Korrektur, ZBZ-Projektbericht.
+
+(Commit, Deploy und Veröffentlichung sind bewusst nicht Teil dieses Plans.)
+
+## 12. Abnahme und Evaluation (einfach, je Ziel genau ein Beweis)
+
+Die Methoden sind komplementär: jede beantwortet eine andere Frage und fängt einen anderen Fehler ab.
+Zusammen sind sie die Promptotyping-Verifikationskaskade (automatisch, kontextuell, visuell, fachlich).
+Echte Daten sind auf jeder Ebene die Regel (synthetisch nur Wenzelsbibel, Lizenz). Ausführliche Fassung:
+[testing.md](knowledge/testing.md), Abschnitt "Verifying the Project Goals".
+
+**Ebene 1, maschinell (wiederholbar):**
+- Verlustfreiheit: `node test/tools/roundtrip_sweep.mjs` (alle Demo-Dateien byte-identisch).
+- Ladbarkeit: `node test/tools/hersch_loadability.mjs` (öffnet als Editor-Modell).
+- Feature-Proof: `node test/tools/szd_demo_check.mjs` (Bild-URL, Zonen, place/work, Normdaten-`<idno>`,
+  Mention-Linking, line-level, byte-identisch).
+- "Diff ist genau die Absicht": Datei öffnen, eine Entität (place + GND-`<idno>`) setzen, speichern, neu
+  einlesen; einzige Byte-Differenz ist genau dieser standOff/Markup-Eintrag.
+- SZD-Konvertier-Test: jede Handvoll-Datei konvertiert + round-trippt + lädt (Folios/Zellen > 0).
+- Schema: well-formed + TEI All RNG + Schematron (ZBZ zusätzlich `zbz_hersch.rng`).
+
+**Ebene 2, Frontend-Analyse (Checkliste je Demo-Objekt, das Erfolgskriterium als sechs Ja/Nein-Checks):**
+1. Öffnen (Folios/Zeilen sichtbar). 2. Bild (Faksimile sichtbar, Zone highlightet richtige Zeile).
+3. Korrigieren (Zeile editieren, bleibt). 4. Annotieren (Person/Ort/Werk + Normdaten-ID).
+5. KI-Vorschlag (M3.7: violett, nach Bestätigung normal). 6. Speichern (öffnet identisch wieder, nur
+bewusste Änderungen).
+
+**Ebene 3, fachlich:** ein Domänenexperte bestätigt den Inhalt (Transkription/Annotation korrekt als
+Edition). Beide Korpora sind aktuell unreviewed; das ist fachliche Kuration, nicht Werkzeug-Abnahme.
+
+Zwölf visuelle Checks (zwei Objekte) plus die maschinellen Test-Befehle sind die Werkzeug-Abnahme. Jedes
+demo-kritische Feature wird zweimal belegt: headless-Proof im Harness UND Browser-Pfad auf dem echten
+Objekt.
+
+## 13. Verifikationsprotokoll
+
+Das Dokument ist fertig, wenn jede Aussage entweder maschinell belegt (Befehl/`datei:zeile`) oder als
+Entscheidung festgehalten ist. Mechanismen: Quellen-Tag je Aussage; wiederholbare Proofs für den
+faktischen Kern (siehe §4); adversariale Audit-Passage (Dokument gegen Quellen auf
+Auslassungen/Widersprüche/unbelegte Behauptungen); Widerspruchs-Scan gegen die jeweilige Single Source
+of Truth. Bei Konflikt gilt der Domänen-SSoT.
+
+## 14. Quellen und SSoT
+
+| Domäne | Single Source of Truth |
+|---|---|
+| Kontrakte, Gates | `teiCrafter/knowledge/integration.md` |
+| teiCrafter Ziele/Milestones (Register) | `teiCrafter/knowledge/goals.md`, von diesem Plan erweitert |
+| SZD-Konverter-Kontrakt | `teiCrafter/knowledge/converter-reference.md` |
+| teiCrafter Spec/Architektur/Tests/Design | `teiCrafter/knowledge/{specification,architecture,testing,design,data}.md` |
+| zbz Pipeline/Workflow/Qualität/Entscheidungen | `zbz-ocr-tei/knowledge/{pipeline,workflow,quality,decisions,methodik,projekt}.md` |
+| szd Pipeline/Daten/Verifikation, Konverter-Kontrakt | `szd-htr/knowledge/{data-overview,verification-concept,htr-interchange-format,teicrafter-integration}.md` |
+| Operativer Gesamtstand, Paper-Architektur | Obsidian-Vault `ACTIVE-WORK.md`; JOHD-Paper "The Static Proto-Edition as Editorial Workspace" |
+
+## 15. Vault-Kontext (zur Einordnung)
+
+- Editopia 02.-04.09.2026 Wuppertal; Vortrag 2026-09-02. Eingereichter Abstract ZBZ/Hersch-fokussiert,
+  These epistemische Infrastruktur; Demo-Form laut Vault: Live-Vorführung (Hersch-Korpus durch
+  EditionCrafter v0) plus auszuarbeitender Volltext. teiCrafter ist die Erweiterung um den Werkzeug-Fall.
+- Es existiert ein eigenes JOHD-Paper (Pollin/Zangerl/Hintersteiner), SZD-fokussiert, These "Three
+  Functions" eines statischen Codebase. Vom Editopia-Beitrag abgegrenzt.
+- teiCrafters primärer eigener Anwendungsfall ist die Wenzelsbibel-Edition (Wort-Ebene, FWF, Herbst
+  2026); der Bau-Backlog dafür wird im Wenzelsbibel-Projektdokument geführt.
+- Methodischer Rahmen Promptotyping: Repo als Agent-Interface, Verifikationskaskade
+  (automatisch -> kontextuell -> visuell -> fachlich), Critical Expert in the Loop (wer erzeugt != wer
+  prüft), epistemische Asymmetrie (LLMs erzeugen Plausibles, können es nicht selbst beurteilen).
