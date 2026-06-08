@@ -57,6 +57,7 @@ const app = {
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
   linkTarget: null,   // entity selected for the next "link a mention" click, or null
+  noteMode: false,    // true while waiting for a cell click to attach an editorial note
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios) and the
@@ -104,8 +105,9 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-validate", "btn-download"]) $(id).disabled = !on;
+  for (const id of ["btn-validate", "btn-download", "btn-note"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
+  if (!on) setNoteMode(false);
   updateFolioButtons();
 }
 
@@ -299,7 +301,8 @@ function renderReading() {
           ? `click to link to ${app.linkTarget.name}`
           : (note ? `note: ${note}` : "click to correct"),
       });
-      span.addEventListener("click", () => beginEdit(span, cell, lineIndex));
+      span.addEventListener("click", () =>
+        app.noteMode ? beginNote(span, cell) : beginEdit(span, cell, lineIndex));
       span.addEventListener("mouseenter", () => highlightLine(lineIndex));
       span.addEventListener("mouseleave", () => clearLinks());
       row.appendChild(span);
@@ -363,6 +366,65 @@ function beginEdit(span, cell, lineIndex) {
     else if (e.key === "Escape") { e.preventDefault(); cancel(); }
   });
   inp.addEventListener("blur", commit);
+}
+
+// ---- editorial notes (M3.5) ------------------------------------------------
+
+/** Toggle "add note" mode: the next cell click attaches a note instead of editing. */
+function setNoteMode(on) {
+  app.noteMode = on;
+  const btn = $("btn-note");
+  if (btn) btn.classList.toggle("active", on);
+  const hint = $("ed-edit-hint");
+  if (hint && app.state) {
+    hint.textContent = on
+      ? "click a line to attach a note"
+      : (app.state.profile === "word" ? "click a word to correct it" : "click a line to correct it");
+  }
+}
+
+/** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
+function beginNote(span, cell) {
+  const existing = app.noteByWord.get(cell.id) || "";
+  const inp = el("input", {
+    class: "ed-w-input",
+    type: "text",
+    value: existing,
+    placeholder: "note text",
+  });
+  inp.style.width = `${Math.min(60, Math.max(8, (existing.length || 8) + 1))}ch`;
+  inp.style.maxWidth = "100%";
+  span.replaceWith(inp);
+  inp.focus();
+  inp.select();
+
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    const text = inp.value.trim();
+    if (save && text) {
+      try {
+        const next = standoff.addNoteForNode(app.state.doc, cell.node, cell.facs, text);
+        if (next !== app.state.doc) {
+          app.state = parseEdition(next.raw);
+          app.noteByWord = indexNotes(app.state.raw);
+          setDirty(true);
+          setStatus(`Note attached to "${cell.text.trim()}"`);
+        }
+      } catch (err) {
+        setStatus(`Note failed: ${err.message}`);
+      }
+    }
+    setNoteMode(false);
+    render();
+    renderIndex();
+  };
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); finish(true); }
+    else if (e.key === "Escape") { e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener("blur", () => finish(true));
 }
 
 // ---- facsimile (OpenSeadragon viewer with zone overlays) ------------------
@@ -753,6 +815,7 @@ $("gen-modal").addEventListener("click", (e) => { if (e.target.id === "gen-modal
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("gen-modal").hidden) closeGenModal(); });
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
+$("btn-note").addEventListener("click", () => setNoteMode(!app.noteMode));
 $("btn-validate").addEventListener("click", () => { renderValidation(); setStatus("Live checks refreshed"); });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);

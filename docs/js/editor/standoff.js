@@ -35,6 +35,7 @@ import {
   editAttrValue,
   escapeText,
   escapeAttr,
+  ancestorWithXmlId,
 } from "./tei-document.js";
 
 // Map an entity type to its list element, entity element, and name element.
@@ -420,4 +421,63 @@ export function findMentions(doc, entityId) {
     }
   });
   return out;
+}
+
+// ---- editorial notes (M3.5) ------------------------------------------------
+
+/**
+ * Ensure an element carries an xml:id, injecting a unique one (slugged from base)
+ * just after the element name in its start tag when absent. Returns { doc, id }:
+ * a NEW doc when injected, the SAME doc when the id already existed.
+ */
+export function ensureXmlId(doc, el, base) {
+  const cur = getAttr(el, "id");
+  if (cur) return { doc, id: cur };
+  const id = uniquify(slugify(base) || "ln_1", collectIds(doc));
+  const at = el.stagStart + 1 + el.qname.length;
+  const next = spliceDocument(doc, at, at, ' xml:id="' + escapeAttr(id) + '"');
+  return { doc: next, id };
+}
+
+/**
+ * Append an editorial <note target="#id">text</note> inside <standOff> (scaffolded
+ * if absent). The target must be an existing xml:id (resolve it with addNoteForNode
+ * when you only have a reading-text node). Empty text is a no-op (SAME doc).
+ * Returns a NEW doc otherwise.
+ */
+export function addNote(doc, targetId, text) {
+  const body = String(text == null ? "" : text).trim();
+  if (!body) return doc;
+  const ensured = ensureStandOff(doc);
+  doc = ensured.doc;
+  const standOff = firstByLocal(doc.root, "standOff");
+  if (!standOff) return doc; // element-free input: nothing to anchor to
+  const nl = docNewline(doc);
+  const ref = targetId ? ' target="#' + escapeAttr(targetId) + '"' : "";
+  const snippet = nl + "    <note" + ref + ">" + escapeText(body) + "</note>";
+  const at = standOff.contentEnd != null ? standOff.contentEnd : standOff.stagEnd;
+  return spliceDocument(doc, at, at, snippet);
+}
+
+/**
+ * Attach a note to a reading-text node, resolving a stable @target in order of
+ * preference: the nearest ancestor xml:id, else the line's @facs zone id, else a
+ * freshly injected xml:id on the node's enclosing element. Returns a NEW doc (or
+ * the SAME doc when text is empty / there is nothing to anchor to).
+ */
+export function addNoteForNode(doc, textNode, fallbackFacs, text) {
+  const body = String(text == null ? "" : text).trim();
+  if (!body || !textNode || textNode.type !== "text") return doc;
+  let targetId = null;
+  const anc = ancestorWithXmlId(textNode);
+  if (anc) {
+    targetId = getAttr(anc, "id");
+  } else if (fallbackFacs) {
+    targetId = fallbackFacs;
+  } else if (textNode.parent && textNode.parent.type === "element") {
+    const r = ensureXmlId(doc, textNode.parent, "ln");
+    doc = r.doc;
+    targetId = r.id;
+  }
+  return addNote(doc, targetId, body);
 }

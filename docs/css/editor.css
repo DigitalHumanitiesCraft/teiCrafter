@@ -43,6 +43,8 @@
 .ed-btn-primary { background: var(--color-gold); border-color: var(--color-gold); color: var(--color-text-inverse); }
 .ed-btn-primary:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
 .ed-btn:disabled { opacity: .5; cursor: not-allowed; }
+/* Active toggle (e.g. note mode), in the editorial review family */
+.ed-btn.active { border-color: var(--color-review); color: var(--color-review); background: var(--color-review-tint); }
 /* AI-assisted action (violet family, per design.md) */
 .ed-btn-ai { border-color: var(--color-ai); color: var(--color-ai); }
 .ed-btn-ai:hover { background: var(--color-ai-tint); border-color: var(--color-ai); }
