@@ -1,6 +1,8 @@
 .claude/settings.local.json
 .vscode/settings.json
 output/
+__pycache__/
+*.pyc
 
 # Real ZBZ Hersch example (rights: not redistributable) -- local-only demo data
 docs/data/editor/zbz-100/
