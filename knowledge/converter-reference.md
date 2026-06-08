@@ -349,4 +349,4 @@ round-trip) is `node test/tools/szd_demo_check.mjs` (32/32).
 
 Port parity (this port produces byte-identical output to the reference prototype over the
 handful, so the Python output round-trips through the engine exactly as the prototype's
-does) is `node test/tools/port_parity.mjs` (6/6 byte-identical).
+does) is `node test/tools/port_parity.mjs` (5/5 byte-identical, the upstream-deduped o_szd.161/korrespondenzen skipped).

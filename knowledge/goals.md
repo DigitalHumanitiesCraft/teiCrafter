@@ -52,7 +52,7 @@ cites a re-runnable proof.
 
 - (*) **M1.1** ZBZ `{id}_final.xml` loads directly. **done** -- `node test/tools/hersch_loadability.mjs` (285/285 usable editor view).
 - (*) **M1.2** SZD converter reference (`knowledge/converter-reference.md`, full Page-JSON v0.2 to TEI mapping). **done (frozen, status active, v0.5, 2026-06-08)** -- the five section-9 points resolved against the handful plus a 151-object spread: bbox confirmed percent (no value > 100), only `~~x~~` and `[?]` markers occur, dropped fields confirmed (with `pages[].notes` dropped in v1 by reversible decision), no further standOff seeding, images 1:1 with pages. Also recorded: o_szd.161 was a duplicate id across two folders, since deduped upstream (szd-htr commit fb48ca0), so `export_tei.py` keeps a general path-driven / ambiguous-id guard; empty objects (o_szd.70 / 2256 / 2314, `pages: []`) round-trip with `cells === 0`.
-- (*) **M1.3** SZD batch converter `pipeline/export_tei.py`. **done** -- faithful Python port of the reference prototype (path-driven, plus an `--id` mode that hard-errors on ambiguous ids); byte-identical to `szd-pagejson-to-tei.mjs` on the handful (`node test/tools/port_parity.mjs`, 6/6) and across a 151-object deterministic spread of the ~2069-object corpus (151/151). The prototype round-trips its output through the engine, so byte-equality means the Python output round-trips too.
+- (*) **M1.3** SZD batch converter `pipeline/export_tei.py`. **done** -- faithful Python port of the reference prototype (path-driven, plus an `--id` mode that hard-errors on ambiguous ids); byte-identical to `szd-pagejson-to-tei.mjs` on the handful (`node test/tools/port_parity.mjs`, 5/5, the upstream-deduped o_szd.161/korrespondenzen skipped) and across a 151-object deterministic spread of the ~2069-object corpus (151/151). The prototype round-trips its output through the engine, so byte-equality means the Python output round-trips too.
 - (*) **M1.4** SZD: produce and engine-verify the demo example TEI. **done for the handful** -- o_szd.1079 plus 100 / 72 / 2215 / 161 convert and round-trip byte-identically (port_parity + the prototype's engine check); full-corpus M1.5 still open.
 - (+) **M1.5** SZD: convert all ~2069 objects + loadability sweep. **done** -- `node test/tools/szd_loadability_sweep.mjs` (runs `export_tei.py --all`, then an engine sweep): 2069/2069 converted, 2069/2069 byte-identical round-trip, 0 parse errors, 39 empty/all-blank objects (cells === 0, valid).
 
@@ -83,7 +83,7 @@ cites a re-runnable proof.
 ## H5 - Verification and documentation
 
 - (*) **M5.1** Canonical `integration.md` on disk. **done**
-- (*) **M5.4** Project-status presentation (part of the paper demo). **open**
+- (*) **M5.4** Project-status presentation (part of the paper demo). **done (repo-side substance, 2026-06-08)** -- the on-disk status spine lives in [promptotyping-case.md](promptotyping-case.md) section 3 (built and proven, the two success-criterion halves, an honest "not done" list); assembling it into the actual slides is talk work outside the repo (M7.3).
 - (+) **M5.2** Enrich `integration.md` with proof evidence + correct the "blocker not on disk" status. **open**
 - (+) **M5.5** Correct `oekosystem-synthese.md` (in the zbz-ocr-tei repo) (EditionCrafter v0, not teiCrafter, is the Editopia Hersch demo). **open**
 - (+) **M5.6** Doc sync (`data.md` / `architecture.md` for the SZD converter and the new editor test). **open**
@@ -96,9 +96,9 @@ cites a re-runnable proof.
 
 ## H7 - Editopia contribution and demo material (teiCrafter as a Promptotyping case)
 
-- (*) **M7.1** teiCrafter as a presentable Promptotyping case (the tool plus its provenance in vault and repo). **open**
-- (*) **M7.2** Two annotated worked examples (one ZBZ and one SZD object, end-to-end in the editor). This is the success criterion. **SZD half done (o_szd.1079 browser-verified 2026-06-08), ZBZ half open**
-- (+) **M7.3** Contribution to the slide set and the full text where teiCrafter is concerned. **open**
+- (*) **M7.1** teiCrafter as a presentable Promptotyping case (the tool plus its provenance in vault and repo). **done (repo side, 2026-06-08); vault side open** -- [promptotyping-case.md](promptotyping-case.md): the tool plus its three on-disk provenance traces (the knowledge base, the journal as decision record, Git history as build trace). The vault-side (Obsidian) provenance is the operator's to write.
+- (*) **M7.2** Two annotated worked examples (one ZBZ and one SZD object, end-to-end in the editor). This is the success criterion. **SZD half done, ZBZ half open** -- SZD: the worked example is written and reproducible, [worked-example-szd.md](worked-example-szd.md) (the object, the seven-step path, the entity table), and proven on the real CC-BY object by `node test/tools/szd_worked_example.mjs` (the full open -> correct -> annotate -> textual criticism -> save arc, every step a surgical byte-faithful splice, 38/38, exit 0); browser-verified 2026-06-08 (Playwright `c:\tmp\pwtest\m72.js`: open, byte-identical save, line correction, place annotation, re-open; plus the M2.2 GAMS render). The remaining browser paths (Mark-text, in-browser mention linking, live fetch) await an operator sight-check. The ZBZ half waits on the parallel ZBZ spur.
+- (+) **M7.3** Contribution to the slide set and the full text where teiCrafter is concerned. **repo-side draft done (2026-06-08); deck/full-text outside repo** -- the talking-points spine (thesis, the seven demo beats, the honest claim/not-built list, the method pitch) is drafted in [promptotyping-case.md](promptotyping-case.md) section 5; assembling it into the actual slides and prose is talk work partly outside this repository.
 
 ## Critical path to the demo
 
@@ -109,9 +109,12 @@ byte-identical round-trip, 39 empty/all-blank objects valid; M4.4 covered). The 
 cluster is now complete: M3.1 / M3.2 / M3.3 (hand-entry + live lookup) / M3.4 /
 M3.5 (notes) / M3.6 (textual criticism) / M3.7 (AI proposal with verify gate) are done, each
 with a byte-clean regression test; M2.2's browser-visual test passed (2026-06-08); the whitespace caveat is closed (8fd281c).
-The only remaining demo-facing work is **M7.2** (the SZD worked example is proven; the ZBZ half
-waits on the separate ZBZ spur) plus **M7.1 / M7.3** (case provenance, slide and text
-contribution). Engine and parser of the three new annotation features are headless-proven; their
+The only remaining demo-facing work is the **ZBZ half of M7.2** (it waits on the separate ZBZ
+spur); the SZD half is done (worked example written and proven, `node test/tools/szd_worked_example.mjs`,
+browser-verified 2026-06-08), and the repo side of **M7.1** (the Promptotyping case), **M5.4**
+(status spine), and **M7.3** (talking-points draft) is on disk in [promptotyping-case.md](promptotyping-case.md),
+leaving only the vault-side provenance and the live slide/text assembly outside the repo.
+Engine and parser of the three new annotation features are headless-proven; their
 browser paths (note click, LLM call, live fetch) await operator visual sign-off. The zbz frontend
 rendering work (M2.3 / M2.4) stays deferred; its image-URL scheme is read into M7.2 when the ZBZ
 example is built.
