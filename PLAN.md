@@ -136,11 +136,29 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   diese Stelle; Annotation (Ort Komotau + `<idno type="GeoNames">`) fügt genau den standOff-Block ein;
   erneutes Öffnen stabil. Reproduzierbar via `c:\tmp\pwtest\m72.js`; Beleg `c:\tmp\m72_annotate.png`.
 
+- **Whitespace-Vorbehalt geschlossen (2026-06-08).** Zeilen-Edit erhält die Rand-Whitespace
+  (Einrückung/Newlines) verbatim: nur der getrimmte Kern wird bearbeitet, lead/trail werden beim Commit
+  wieder angelegt (`editCellCore`/`splitEdge` in edition.js). `node test/tools/whitespace_edit_check.mjs`
+  -> **14/14** (mit dem alten kollabierenden Pfad als Kontrolle). [proof] commit 8fd281c.
+- **M3.5 Notiz-Erstellung gebaut (2026-06-08).** Verlustfreies `<note target="#id">` in `<standOff>`,
+  Anker via Ancestor-xml:id, sonst Zeilen-`@facs`, sonst injizierte xml:id (`addNote`/`addNoteForNode`/
+  `ensureXmlId` in standoff.js); UI: "Add note"-Modus. `node test/tools/note_create_check.mjs` ->
+  **15/15**. [proof] commit d3fc922.
+- **M3.7 KI-Annotations-Vorschlag gebaut (2026-06-08).** LLM schlägt Entitäten vor, als unverifiziert
+  `resp="#ai"` (TEI-valide, verlustfrei) eingefügt, violett gerendert; Mensch bestätigt (`confirmEntity`
+  entfernt den Marker) oder verwirft (`deleteEntity`). `node test/tools/ai_proposal_check.mjs` -> **17/17**,
+  Parser robust (`ai_suggest_parse_check.mjs`). Der LLM-Aufruf ist browser-verifiziert. [proof] commit f647e7e.
+- **M3.3 Live-Lookup gebaut (2026-06-08).** Normdaten-Suche Wikidata/GND/GeoNames (URL-Builder + Parser
+  in `services/authority-lookup.js`), Index-Panel "find"-Button + Ergebnis-Popover. Wikidata und GND
+  schlüssellos und CORS-fähig; GeoNames braucht Username. `node test/tools/authority_lookup_check.mjs` ->
+  **15/15**. Der fetch ist browser-verifiziert. [proof] commit 8ce938a.
+
 ### Offen (Umsetzungs-Scope teiCrafter + SZD)
 
-- **M3.3 Live-Lookup** und **M3.7 Offline-Gemini-Vorschlag** (das Produkt-KI-Feature).
-- **M3.5 Notiz-/Fußnoten-Erstell-UI**; **M3.6 Textkritik** (`unclear`/`gap`/`del`/`add`, später).
+- **M3.6 Textkritik** (`unclear`/`gap`/`del`/`add`, später).
 - **M7.1/M7.3** Demo-Material (M7.2-SZD erledigt: o_szd.1079 end-to-end im Browser 2026-06-08).
+- **Browser-Verifikation (Operator)** der drei neuen UI-Pfade auf einem echten Objekt: Notiz-Klick,
+  KI-Vorschlag (Provider-Key nötig), Live-Lookup (Netz). Engine/Parser sind headless belegt.
 
 ### Separat (Autor, ZBZ-Pipeline)
 
@@ -148,9 +166,10 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   oekosystem-synthese-Korrektur, ZBZ-Projektbericht. Das **ZBZ-Worked-Example** (M7.2-Hälfte) hängt an
   dieser Spur; die teiCrafter-Seite (Rendering, `<graphic>`-Support) ist erledigt.
 
-Noch NICHT bewiesen (ehrlicher Rest): der Gemini-Annotations-Vorschlagsschritt (M3.7) ist konzipiert,
-nicht gebaut; Live-Lookup (M3.3) und Notiz-UI (M3.5) offen. Die deterministische SZD-Strecke
-(M1.2 bis M1.5) ist vollständig belegt.
+Ehrlicher Rest: die drei neuen Annotations-Features (M3.5/M3.7/M3.3) sind engine- und parser-seitig
+headless belegt; ihre eigentlichen Browser-Pfade (Klick-UI, LLM-Aufruf, Live-fetch) stehen zur
+Operator-Sichtprüfung aus. Die deterministische SZD-Strecke (M1.2 bis M1.5, M4.4) ist vollständig belegt
+(Paritätstest `port_parity.mjs` 6/6 byte-identisch).
 
 Hinweis: `pipeline.mjs` (Vor-Pivot) existiert noch in der teiCrafter-Wurzel, ist aber ein nicht
 lauffähiger Torso: er importiert das im Pivot gelöschte `docs/js/pipeline/` und bricht mit
@@ -258,11 +277,14 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
 - ★ M3.1 Ort-Entität (`place`/`placeName`). **erledigt** (szd_demo_check.mjs).
 - ★ M3.2 Werk-Entität (`title`/`bibl`, `listBibl`, `wrk_`-IDs, auf standOff/listBibl beschränkt).
   **erledigt** (szd_demo_check.mjs).
-- ★ M3.3 Normdaten-`<idno>` (GND/GeoNames/Wikidata) auf allen Typen + UI. **Kern (Handeingabe)
-  erledigt** (setAuthority add/replace/remove, szd_demo_check.mjs); Live-Lookup offen (Reihenfolge §7).
+- ★ M3.3 Normdaten-`<idno>` (GND/GeoNames/Wikidata) auf allen Typen + UI. **erledigt**: Handeingabe
+  (setAuthority, szd_demo_check.mjs) plus Live-Lookup (authority-lookup.js, authority_lookup_check.mjs
+  15/15; fetch browser-verifiziert), commit 8ce938a.
 - ★ M3.4 Mention-Linking auf neue Typen. **erledigt** (linkMention typ-unabhängig).
-- ★ M3.7 KI-Annotations-Vorschlag (Offline-Gemini, violett zur Prüfung). offen (Gate geht auch manuell).
-- + M3.5 Notizen/Fußnoten-Erstell-UI. offen.
+- ★ M3.7 KI-Annotations-Vorschlag (violett zur Prüfung). **erledigt** (resp="#ai" + confirm/reject,
+  ai_proposal_check.mjs 17/17; nutzt In-Browser-llm.js, LLM-Aufruf browser-verifiziert), commit f647e7e.
+- + M3.5 Notizen/Fußnoten-Erstell-UI. **erledigt** (addNote/addNoteForNode, note_create_check.mjs 15/15),
+  commit d3fc922.
 - + M3.6 Textkritik (`unclear`/`gap`/`del`/`add`). später.
 
 **H4 - Verlustfreiheit als Invariante**
@@ -312,10 +334,10 @@ demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur) u
 - **converter-reference.md §9 (vor dem Einfrieren):** bbox-Konformität über die Handvoll (kein Wert
   > 100); real vorkommende Marker; verworfene Felder (`reading_order`/`lines`/`label`/`source`/`notes`);
   weiteres standOff-Seeding (repository -> listOrg, sender/recipient -> listPerson); images 1:1 zu pages.
-- **Whitespace bei Zeilen-Edit (offen, Entscheidung):** ein Zeilen-Edit kollabiert die Einrück-
-  Whitespace der bearbeiteten Zeile (der Textknoten wird neu geschrieben). Kein Datenverlust, die Datei
-  round-trippt, aber die Formatierung dieser Zeile ändert sich. Optionen: Editor erhält Trailing-
-  Whitespace beim Edit, oder der SZD-Konverter schreibt die Body-Zeilen enger.
+- **Whitespace bei Zeilen-Edit (geschlossen 2026-06-08, editor-seitig):** der Editor erhält die Rand-
+  Whitespace der bearbeiteten Zeile jetzt verbatim (nur der getrimmte Kern wird editiert,
+  `editCellCore`/`splitEdge`). Entscheidung: editor-seitig statt konverter-seitig, weil es die Byte-Treue
+  für alle Korpora hält (ZBZ, Wenzelsbibel, SZD). Beleg whitespace_edit_check.mjs 14/14, commit 8fd281c.
 - **Korrektheits-Audit (teils separat):** oekosystem-synthese.md behauptet falsch, teiCrafter sei die
   Hersch-Demo (richtig: EditionCrafter v0); zbz-Statuszahlen (3 vs 4); szd schwankende Objektzahlen
   (maßgeblich 2.107). teiCrafter-seitig erledigt: Token-Präfix-Drift (`--color-*`), AI-Violett-Ausfall.
@@ -325,15 +347,16 @@ demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur) u
 teiCrafter + SZD:
 1. **SZD-Realitätsabgleich + Kontrakt einfrieren: erledigt 2026-06-08** (§9 am echten Page-JSON
    aufgelöst, converter-reference.md status active v0.5).
-2. **Whitespace-Vorbehalt entscheiden** (Zeilen-Edit kollabiert Einrückung, §10) und ggf. abstellen. offen.
+2. **Whitespace-Vorbehalt: geschlossen 2026-06-08** (editor-seitig, editCellCore; whitespace_edit_check.mjs 14/14).
 3. **M1.3 Batch-Konverter: erledigt 2026-06-08** (`pipeline/export_tei.py`, byte-treuer Port;
    port_parity.mjs 6/6, 151/151 Korpus-Stichprobe).
 4. **M1.4 + M1.5: erledigt 2026-06-08** (`export_tei.py --all` 2.103/2.103; `szd_loadability_sweep.mjs`
    2.103/2.103 byte-identisch, 40 leer/blank valide; deckt auch M4.4).
 5. **M7.2** SZD-Hälfte erledigt (o_szd.1079, 2026-06-08); ZBZ-Hälfte liegt in der ZBZ-Spur.
-6. **M3.5 Notiz-UI**, dann **M3.7 Gemini-Vorschlag** (offline), dann **M3.3 Live-Lookup**.
-7. **M4.4 / M5.2 / M5.6 / M6.x:** byte-clean-Regression der SZD-TEI, integration.md anreichern,
-   data.md/architecture.md nachziehen.
+6. **M3.5 Notiz-UI, M3.7 KI-Vorschlag, M3.3 Live-Lookup: erledigt 2026-06-08** (commits d3fc922,
+   f647e7e, 8ce938a; je headless belegt; Browser-Pfade zur Operator-Sichtprüfung offen).
+7. **M5.2 / M5.6 / M6.x:** integration.md mit Proof anreichern, data.md/architecture.md auf SZD-Konverter
+   und die neuen Annotations-Features nachziehen. offen.
 
 Separat (Autor, ZBZ): ZBZ-Bild-URL-Schema verifizieren, Live-ZBZ-Durchlauf, ZBZ-Worked-Example,
 oekosystem-synthese-Korrektur, ZBZ-Projektbericht.

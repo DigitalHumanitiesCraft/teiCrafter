@@ -22,6 +22,20 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-08: Annotation layer completed (notes, AI proposal, live lookup), whitespace caveat closed
+
+A build session that closed the open editor-direct milestones, each proven headless and committed per milestone, plus an adversarial multi-dimension review of the whole batch.
+
+The whitespace caveat (PLAN.md section 10) is closed editor-side. A line edit used to overwrite the whole text node and collapse its trailing indentation; now only the trimmed core is edited and the original edge whitespace (lead/trail) is re-attached on commit (`splitEdge`/`editCellCore` in edition.js). The decision was editor-side over converter-side because it keeps byte fidelity for every corpus (ZBZ, Wenzelsbibel, SZD), not just SZD. Proof: `whitespace_edit_check.mjs` 14/14, with the old collapsing path kept as a control (commit 8fd281c).
+
+Three annotation features landed. M3.5 editorial notes: notes were already read and rendered (the has-note marker) but could not be created; `addNote`/`addNoteForNode`/`ensureXmlId` (standoff.js) create a lossless `<note target="#id">` inside `<standOff>`, resolving the target via the nearest ancestor xml:id, else the line `@facs`, else a freshly injected xml:id; UI is an "Add note" mode (note_create_check.mjs 15/15, commit d3fc922). M3.7 AI proposal: the in-browser LLM proposes entities, inserted as unverified `resp="#ai"` (a schema-valid, lossless responsibility marker), rendered violet; the human confirms (`confirmEntity` drops the marker) or rejects (`deleteEntity`). The reply parser lives in a DOM-free `ai-suggest.js` so it is provable headless (ai_proposal_check.mjs 17/17, ai_suggest_parse_check.mjs; commit f647e7e). M3.3 live lookup: `services/authority-lookup.js` builds query URLs and parses Wikidata, GND (lobid) and GeoNames responses into uniform hits; Wikidata and GND are keyless and CORS-friendly, GeoNames needs a username and refuses fast otherwise; the index panel gets a "find" button and a results popover (authority_lookup_check.mjs 15/15, commit 8ce938a). The actual LLM call and network fetches are browser-verified; everything deterministic is proven headless.
+
+The decision to mark AI content as `resp="#ai"` rather than a custom attribute keeps the markup TEI-valid and records provenance (who produced it is not who verifies it), matching the Editopia thesis and the design principle that the AI assists and the human decides.
+
+A background adversarial review (five dimensions, each finding independently verified) of the diff confirmed four real UI-layer defects the headless tests could not reach, all fixed in commit 3f608e6: a stale-lookup-result race (a result writing into a detached popover after a newer lookup or an index re-render; guarded with `pop.isConnected`, not `parentElement`, since a re-render detaches the whole subtree while the local parent link survives), a missing `.ed-idx-lookuplabel` CSS class, and a dead `editWordText` import with a stale comment.
+
+Meanwhile the SZD lane committed the deterministic converter chain onto the same branch (M1.2 contract freeze, M1.3 `pipeline/export_tei.py`, M1.5 full-corpus run, M4.4). Verified read-only from here: `port_parity.mjs` is 6/6 byte-identical between the Python converter and the reference prototype over the handful, so that work is real and correct. This made the SZD order obsolete before it was written.
+
 ## 2026-06-08: Coordination dissolved, plan moved to PLAN.md, SZD demo proven in browser
 
 A second 2026-06-08 session, focused on cleanup and on proving the SZD demo on real data.
