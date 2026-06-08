@@ -185,6 +185,11 @@
 .ed-idx-rowmain { display: flex; align-items: center; gap: var(--space-xs); }
 .ed-idx-row:hover { background: var(--color-blue-light); }
 .ed-idx-row-active { background: var(--color-gold-light); }
+/* AI-proposed, unverified entity (violet family, per design.md) */
+.ed-idx-row-ai { background: var(--color-ai-tint); box-shadow: inset 2px 0 0 var(--color-ai); }
+.ed-idx-row-ai .ed-idx-id { color: var(--color-ai); }
+.ed-idx-confirm { border-color: var(--color-ai); color: var(--color-ai); }
+.ed-idx-confirm:hover { background: var(--color-ai); color: var(--color-panel); border-color: var(--color-ai); }
 .ed-idx-rowbody {
   flex: 1; min-width: 0; display: flex; align-items: baseline; gap: var(--space-sm);
   text-align: left; cursor: pointer; border: none; background: none;

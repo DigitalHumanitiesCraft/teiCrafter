@@ -33,10 +33,17 @@ import {
   textOf,
   spliceDocument,
   editAttrValue,
+  removeAttr,
   escapeText,
   escapeAttr,
   ancestorWithXmlId,
 } from "./tei-document.js";
+
+// Responsibility pointer marking an AI-proposed, human-unverified entity. The
+// editor renders these violet (per design.md) until a human confirms (drops the
+// marker) or rejects (deletes the entity). It is a TEI @resp value, so it stays
+// schema-valid and round-trips losslessly.
+export const AI_RESP = "#ai";
 
 // Map an entity type to its list element, entity element, and name element.
 const TYPE_MAP = Object.freeze({
@@ -131,7 +138,8 @@ function readOne(doc, el, type) {
   const desc = TYPE_MAP[type];
   const id = getAttr(el, "id");
   const name = firstChildText(doc, el, desc.name) || allText(doc, el) || "";
-  return { id, type, name, node: el, authorities: readAuthorities(doc, el) };
+  const ai = getAttr(el, "resp") === AI_RESP;
+  return { id, type, name, node: el, ai, authorities: readAuthorities(doc, el) };
 }
 
 /**
@@ -239,9 +247,10 @@ function ensureList(doc, type) {
 
 /**
  * Add an entity of the given type using the shared shape. The id is slugified and
- * uniquified (NCName-safe); the name is escaped. Returns a NEW doc.
+ * uniquified (NCName-safe); the name is escaped. When ai is true the entity is
+ * marked resp="#ai" (AI-proposed, unverified). Returns a NEW doc.
  */
-export function addEntity(doc, type, { id, name } = {}) {
+export function addEntity(doc, type, { id, name, ai = false } = {}) {
   const desc = TYPE_MAP[type];
   if (!desc) throw new Error("Unknown entity type: " + type);
 
@@ -266,8 +275,9 @@ export function addEntity(doc, type, { id, name } = {}) {
 
   const safeName = escapeText(name == null ? "" : name);
   const nl = docNewline(doc);
+  const respAttr = ai ? ' resp="' + AI_RESP + '"' : "";
   const el =
-    nl + "      <" + desc.entity + ' xml:id="' + escapeAttr(finalId) + '">' +
+    nl + "      <" + desc.entity + ' xml:id="' + escapeAttr(finalId) + '"' + respAttr + ">" +
     "<" + desc.name + ">" + safeName + "</" + desc.name + ">" +
     "</" + desc.entity + ">";
 
@@ -327,6 +337,17 @@ export function deleteEntity(doc, id) {
   const el = findEntityElement(doc, id);
   if (!el || el.outerEnd == null) return doc;
   return spliceDocument(doc, el.outerStart, el.outerEnd, "");
+}
+
+/**
+ * Confirm an AI-proposed entity: drop its resp="#ai" marker so it reads as a
+ * human-verified entity. Reject is just deleteEntity. Returns a NEW doc, or the
+ * SAME doc when the entity is absent or carries no AI marker (no-op).
+ */
+export function confirmEntity(doc, id) {
+  const el = findEntityElement(doc, id);
+  if (!el || getAttr(el, "resp") !== AI_RESP) return doc;
+  return removeAttr(doc, el, "resp");
 }
 
 // ---- authority identifiers (idno) ------------------------------------------

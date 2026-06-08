@@ -17,9 +17,12 @@
  *     onSelect(entity),                      // row body clicked (also marks it active)
  *     onStartLink(entity),                   // small "link" button clicked
  *     onSetAuthority(id, { authority, value }), // add/replace (value set) or remove (value "") an idno
+ *     onConfirm(id),                         // confirm an AI-proposed (entity.ai) entity
  *   }
  *   render(entities) with entities = { persons:[E], places:[E], orgs:[E], works:[E], events:[E] }
- *   E = { id, type, name, authorities:[{ type, value }] }
+ *   E = { id, type, name, ai?, authorities:[{ type, value }] }
+ *   When E.ai is true the row is drawn in the violet AI family with a "confirm"
+ *   action (per design.md: AI assists, the human decides).
  *
  * Styling: token-only classes prefixed ed-idx- (defined in editor.css by the
  * integrator). No inline colors.
@@ -68,6 +71,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
   const onSelect = typeof hooks.onSelect === "function" ? hooks.onSelect : () => {};
   const onStartLink = typeof hooks.onStartLink === "function" ? hooks.onStartLink : () => {};
   const onSetAuthority = typeof hooks.onSetAuthority === "function" ? hooks.onSetAuthority : () => {};
+  const onConfirm = typeof hooks.onConfirm === "function" ? hooks.onConfirm : () => {};
 
   // Active id is owned here so re-rendering re-applies the highlight. Row nodes
   // are indexed by id for setActive() to toggle without a full re-render.
@@ -81,13 +85,16 @@ export function createIndexPanel(hostEl, hooks = {}) {
   // ---- one entity row ------------------------------------------------------
 
   function buildRow(entity) {
-    const row = el("div", { class: "ed-idx-row", dataset: { id: entity.id } });
+    const row = el("div", {
+      class: "ed-idx-row" + (entity.ai ? " ed-idx-row-ai" : ""),
+      dataset: { id: entity.id },
+    });
 
     // Body: name + faded id. Clicking it selects the entity.
     const body = el("button", {
       class: "ed-idx-rowbody",
       type: "button",
-      title: "Select this entity",
+      title: entity.ai ? "AI-proposed, unverified. Select, then confirm or delete." : "Select this entity",
       onclick: () => {
         setActive(entity.id);
         onSelect(entity);
@@ -128,6 +135,11 @@ export function createIndexPanel(hostEl, hooks = {}) {
     };
 
     const actions = el("div", { class: "ed-idx-actions" }, [
+      entity.ai ? el("button", {
+        class: "ed-idx-btn ed-idx-confirm", type: "button", title: "Confirm this AI suggestion",
+        "aria-label": "Confirm", text: "confirm",
+        onclick: () => onConfirm(entity.id),
+      }) : null,
       el("button", {
         class: "ed-idx-btn ed-idx-edit", type: "button", title: "Rename",
         "aria-label": "Rename", text: "edit",

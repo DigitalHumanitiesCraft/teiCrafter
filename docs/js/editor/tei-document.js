@@ -176,6 +176,8 @@ function parseAttrs(raw, tagStart, tagEnd) {
       quote,
       valueStart,
       valueEnd: valueStart + value.length,
+      start: tagStart + m.index,          // offset of the attribute name
+      end: valueStart + value.length + 1, // offset just after the closing quote
     });
   }
   return out;
@@ -356,6 +358,16 @@ export function editAttrValue(doc, attr, newValue) {
 /** Low-level lossless splice by absolute offsets. Returns a NEW document. */
 export function spliceDocument(doc, start, end, replacement) {
   return parseDocument(splice(doc.raw, start, end, replacement));
+}
+
+/** Remove an attribute (by local-name) from an element, including the single
+ *  separating space before it. Returns a NEW document, or the SAME doc if absent. */
+export function removeAttr(doc, el, localName) {
+  const attr = getAttrObj(el, localName);
+  if (!attr || attr.start == null) return doc;
+  let start = attr.start;
+  if (start > 0 && /\s/.test(doc.raw[start - 1])) start -= 1; // eat one leading space
+  return parseDocument(splice(doc.raw, start, attr.end, ""));
 }
 
 // ---- Layer 2: generic, schema-free TEI recognizers -------------------------

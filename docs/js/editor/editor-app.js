@@ -36,6 +36,7 @@ import {
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { createIndexPanel } from "./index-panel.js";
+import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
 import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
 
@@ -105,7 +106,7 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-validate", "btn-download", "btn-note"]) $(id).disabled = !on;
+  for (const id of ["btn-validate", "btn-download", "btn-note", "btn-suggest"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) setNoteMode(false);
   updateFolioButtons();
@@ -519,6 +520,16 @@ function ensureIndexPanel() {
         setStatus(`Could not set authority id: ${err.message}`);
       }
     },
+    onConfirm: (id) => {
+      try {
+        app.state = parseEdition(standoff.confirmEntity(app.state.doc, id).raw);
+        setDirty(true);
+        refreshAfterStandoffEdit();
+        setStatus("AI suggestion confirmed");
+      } catch (err) {
+        setStatus(`Could not confirm entity: ${err.message}`);
+      }
+    },
   });
   return indexPanel;
 }
@@ -533,6 +544,47 @@ function renderIndex() {
 function refreshAfterStandoffEdit() {
   render();
   renderIndex();
+}
+
+/**
+ * M3.7: ask the configured LLM to propose entities for the current folio. Each is
+ * inserted as an unverified resp="#ai" entity (rendered violet) for the human to
+ * confirm or delete. The model assists; the human decides. Requires a provider key
+ * configured via the "New from text (LLM)" dialog.
+ */
+async function suggestEntities() {
+  if (!app.state) return;
+  const folio = app.state.folios[app.folio];
+  const lines = folio ? folio.lines : [];
+  const text = lines.map((l) => l.cells.map((c) => c.text.trim()).join(" ").trim())
+    .filter(Boolean).join("\n").trim();
+  if (!text) { setStatus("No text on this folio to analyse"); return; }
+
+  const btn = $("btn-suggest");
+  if (btn) btn.disabled = true;
+  setStatus("Asking the model for entity suggestions...");
+  try {
+    const reply = await complete(buildSuggestPrompt(text));
+    const items = parseSuggestions(reply);
+    if (!items.length) { setStatus("The model proposed no entities"); return; }
+    let doc = app.state.doc;
+    let added = 0;
+    for (const it of items) {
+      doc = standoff.addEntity(doc, it.type, { name: it.name, ai: true });
+      added++;
+    }
+    if (added) {
+      app.state = parseEdition(doc.raw);
+      setDirty(true);
+      refreshAfterStandoffEdit();
+      selectTab("index");
+    }
+    setStatus(`${added} AI suggestion(s) added in violet. Confirm or delete each.`);
+  } catch (err) {
+    setStatus(`Suggestion failed: ${err.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 /**
@@ -816,6 +868,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("gen-
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
 $("btn-note").addEventListener("click", () => setNoteMode(!app.noteMode));
+$("btn-suggest").addEventListener("click", suggestEntities);
 $("btn-validate").addEventListener("click", () => { renderValidation(); setStatus("Live checks refreshed"); });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
