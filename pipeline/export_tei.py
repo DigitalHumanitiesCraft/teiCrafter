@@ -13,6 +13,12 @@ port is verified byte-equal to the prototype, see test/tools/port_parity.mjs).
 Usage:
   python pipeline/export_tei.py <in_page.json> <out.xml>
   python pipeline/export_tei.py --id <object_id> --out <dir> [--root <results_dir>]
+  python pipeline/export_tei.py --all [--out <dir>] [--root <results_dir>]
+
+The --all form converts every o_szd.*_page.json under <results_dir> (default
+SZD_DIR or ../../szd-htr/results) to <out>/<folder>__<id>.xml; the folder prefix
+keeps the duplicate id o_szd.161 (two folders) from colliding. This is M1.5;
+verify the result with test/tools/szd_loadability_sweep.mjs.
 
 The --id form resolves <object_id> to a single Page-JSON under <results_dir>;
 ambiguous ids (the same id in two folders, e.g. o_szd.161) are a hard error,
@@ -252,10 +258,42 @@ def convert_file(in_path, out_path):
     return tei
 
 
+def convert_all(root, out_dir):
+    os.makedirs(out_dir, exist_ok=True)
+    inputs = []
+    for dirpath, _dirs, files in os.walk(root):
+        for f in files:
+            if f.startswith("o_szd.") and f.endswith("_page.json"):
+                inputs.append(os.path.join(dirpath, f))
+    inputs.sort()
+    for p in inputs:
+        folder = os.path.basename(os.path.dirname(p))
+        oid = os.path.basename(p)[:-len("_page.json")]
+        convert_file(p, os.path.join(out_dir, folder + "__" + oid + ".xml"))
+    return len(inputs)
+
+
 def main(argv):
     args = argv[1:]
     if not args:
         sys.exit(__doc__)
+    if args[0] == "--all":
+        out_dir = "output/szd-tei"
+        root = os.environ.get("SZD_DIR", "../../szd-htr/results")
+        i = 0
+        while i < len(args):
+            a = args[i]
+            if a == "--all":
+                i += 1
+            elif a == "--out":
+                out_dir = args[i + 1]; i += 2
+            elif a == "--root":
+                root = args[i + 1]; i += 2
+            else:
+                sys.exit("unknown argument: " + a)
+        n = convert_all(root, out_dir)
+        print("converted %d objects -> %s" % (n, out_dir))
+        return
     if args[0] == "--id":
         object_id = None
         out_dir = "output"

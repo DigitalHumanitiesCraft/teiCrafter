@@ -121,6 +121,9 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   Referenz-Prototyps (pfad-getrieben plus `--id`-Modus, der bei mehrdeutiger ID hart abbricht).
   Byte-identisch zum Prototyp auf der Handvoll (`node test/tools/port_parity.mjs` 6/6) und über einen
   151-Objekt-Spread des ~2.103-Korpus (151/151). [proof]
+- **Voller Korpus konvertiert und geprüft (M1.4 + M1.5 erledigt).** `pipeline/export_tei.py --all`
+  konvertiert alle 2.103 Objekte; `node test/tools/szd_loadability_sweep.mjs`: 2.103/2.103 konvertiert,
+  2.103/2.103 byte-identischer Round-Trip, 0 Parse-Fehler, 40 leere/blanke Objekte (cells===0, valide). [proof] (deckt auch M4.4)
 - **SZD-Demo-Objekt real konvertiert.** o_szd.1079 aus dem echten `o_szd.1079_page.json` via
   `test/tools/szd-pagejson-to-tei.mjs`: 5 Folios, line-level, **byte-identischer Round-Trip**,
   GAMS-`<graphic>`-URLs, Zonen Prozent->Pixel, kein standOff (1079 hat keinen creator, wie der
@@ -135,12 +138,9 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
 
 ### Offen (Umsetzungs-Scope teiCrafter + SZD)
 
-- **M1.5 alle ~2.103** konvertieren + Ladbarkeits-Sweep. offen (Port-Parität über 151-Objekt-
-  Stichprobe bewiesen; voller Konvertier- und Ladbarkeits-Lauf ausstehend).
 - **M3.3 Live-Lookup** und **M3.7 Offline-Gemini-Vorschlag** (das Produkt-KI-Feature).
 - **M3.5 Notiz-/Fußnoten-Erstell-UI**; **M3.6 Textkritik** (`unclear`/`gap`/`del`/`add`, später).
-- **M4.4** SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`.
-- **M7.1/M7.2(SZD)/M7.3** Demo-Material.
+- **M7.1/M7.3** Demo-Material (M7.2-SZD erledigt: o_szd.1079 end-to-end im Browser 2026-06-08).
 
 ### Separat (Autor, ZBZ-Pipeline)
 
@@ -148,9 +148,9 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   oekosystem-synthese-Korrektur, ZBZ-Projektbericht. Das **ZBZ-Worked-Example** (M7.2-Hälfte) hängt an
   dieser Spur; die teiCrafter-Seite (Rendering, `<graphic>`-Support) ist erledigt.
 
-Noch NICHT bewiesen (ehrlicher Rest): der volle Konvertier-Lauf über alle ~2.103 Objekte plus
-Ladbarkeits-Sweep (M1.5) steht aus (Port-Parität bisher über eine 151-Objekt-Stichprobe); der
-Gemini-Annotations-Vorschlagsschritt (M3.7) ist konzipiert, nicht gebaut.
+Noch NICHT bewiesen (ehrlicher Rest): der Gemini-Annotations-Vorschlagsschritt (M3.7) ist konzipiert,
+nicht gebaut; Live-Lookup (M3.3) und Notiz-UI (M3.5) offen. Die deterministische SZD-Strecke
+(M1.2 bis M1.5) ist vollständig belegt.
 
 Hinweis: `pipeline.mjs` (Vor-Pivot) existiert noch in der teiCrafter-Wurzel, ist aber ein nicht
 lauffähiger Torso: er importiert das im Pivot gelöschte `docs/js/pipeline/` und bricht mit
@@ -243,7 +243,7 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
   `node test/tools/port_parity.mjs` 6/6, plus 151/151 über Korpus-Stichprobe).
 - ★ M1.4 SZD Demo-Handvoll konvertieren + engine-verifiziert. **erledigt** (1079 + 100/72/2215/161
   byte-identisch via port_parity und Prototyp-Engine-Check).
-- + M1.5 SZD alle ~2.103 konvertieren + Ladbarkeits-Sweep. offen.
+- + M1.5 SZD alle ~2.103 konvertieren + Ladbarkeits-Sweep. **erledigt** (`node test/tools/szd_loadability_sweep.mjs`: 2.103/2.103 byte-identisch, 40 leer/blank valide).
 
 **H2 - Sehen, navigieren, korrigieren**
 - ★ M2.1 Editor-Modell pro Datei. **erledigt**.
@@ -269,7 +269,7 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
 - ★ M4.1 Engine-Round-Trip-Sweep. **erledigt** (roundtrip_sweep.mjs, 294/294).
 - ★ M4.2 Editor-Ladbarkeits-Sweep. **erledigt** (hersch_loadability.mjs, 285/285).
 - ★ M4.3 Jedes Feature byte-clean (Regressionstest). laufend (szd_demo_check.mjs, 32/32).
-- ★ M4.4 SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`. offen.
+- ★ M4.4 SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`. **erledigt** (szd_loadability_sweep.mjs 2.103/2.103 Round-Trip; standoff.js via szd_demo_check.mjs).
 
 **H5 - Verifikation, Dokumentation**
 - ★ M5.1 Kanonisches integration.md + dieser Plan. **erledigt**.
@@ -302,10 +302,10 @@ Demo-Objekte:
 - **ZBZ-Objekt:** aus {1000, 1330, 1540, 2310} (nur diese haben committete Bilder), das textlich
   gehaltvollste; Auswahl in der separaten ZBZ-Spur.
 
-Kritischer Pfad (SZD-Kette): **M1.2 -> M1.3 -> M1.4** ist erledigt (Kontrakt eingefroren, Batch-
-Konverter byte-treu, Handvoll verifiziert). Nächstes: **M1.5** (alle ~2.103 konvertieren +
-Ladbarkeits-Sweep) und demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur).
-Unabhängig parallel: M3.5/M3.7. Zeit ist ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
+Kritischer Pfad (SZD-Kette): **M1.2 -> M1.3 -> M1.4 -> M1.5** ist vollständig erledigt (Kontrakt
+eingefroren, Batch-Konverter byte-treu, voller Korpus 2.103/2.103 byte-identisch geladen). Nächstes:
+demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur) und optional **M3.7**
+(Offline-Gemini). Zeit ist ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
 
 ## 10. Offene Punkte, am realen Page-JSON zu bestätigen
 
@@ -328,8 +328,8 @@ teiCrafter + SZD:
 2. **Whitespace-Vorbehalt entscheiden** (Zeilen-Edit kollabiert Einrückung, §10) und ggf. abstellen. offen.
 3. **M1.3 Batch-Konverter: erledigt 2026-06-08** (`pipeline/export_tei.py`, byte-treuer Port;
    port_parity.mjs 6/6, 151/151 Korpus-Stichprobe).
-4. **M1.4 Handvoll: erledigt** (100/72/2215/161 byte-identisch). **M1.5** alle ~2.103 +
-   Ladbarkeits-Sweep: offen (voller Lauf).
+4. **M1.4 + M1.5: erledigt 2026-06-08** (`export_tei.py --all` 2.103/2.103; `szd_loadability_sweep.mjs`
+   2.103/2.103 byte-identisch, 40 leer/blank valide; deckt auch M4.4).
 5. **M7.2** SZD-Hälfte erledigt (o_szd.1079, 2026-06-08); ZBZ-Hälfte liegt in der ZBZ-Spur.
 6. **M3.5 Notiz-UI**, dann **M3.7 Gemini-Vorschlag** (offline), dann **M3.3 Live-Lookup**.
 7. **M4.4 / M5.2 / M5.6 / M6.x:** byte-clean-Regression der SZD-TEI, integration.md anreichern,
