@@ -13,7 +13,7 @@ status: active
 created: 2026-06-07
 updated: 2026-06-08
 language: de
-version: 0.5
+version: 0.6
 topics: ["[[Projektplan]]", "[[TEI XML]]", "[[Digitale Editionen]]", "[[Promptotyping]]"]
 related: [goals, integration, converter-reference, project, data, architecture, specification, testing]
 ---
@@ -112,10 +112,15 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   `<idno type="GND|GeoNames|Wikidata">` mit add/replace/remove (M3.3-Kern), typ-unabhängiges
   Mention-Linking (M3.4). Ein gemeinsamer Proof deckt alles ab: `node test/tools/szd_demo_check.mjs`
   -> **32/32**. [proof] Die drei festen Sweeps bleiben grün.
-- **SZD-Konverter-Kontrakt geschrieben.** [converter-reference.md](knowledge/converter-reference.md)
-  (Entwurf, v0.4): vollständiges deterministisches Page-JSON-v0.2-zu-TEI-Mapping (Skelett, Body
-  Text-zu-`<pb>`+`<lb>`, teiHeader, facsimile `<graphic>`-URL und Pixel-Zonen, bbox-Formel,
-  standOff-Seeding, Marker, ID-Schema). (M1.2-Entwurf)
+- **SZD-Konverter-Kontrakt eingefroren (M1.2 erledigt).** [converter-reference.md](knowledge/converter-reference.md)
+  (status `active`, v0.5): vollständiges deterministisches Page-JSON-v0.2-zu-TEI-Mapping; die fünf
+  §9-Punkte am echten Datensatz aufgelöst (bbox bestätigt Prozent, nur `~~x~~`/`[?]`-Marker real,
+  `pages[].notes` in v1 verworfen per reversibler Entscheidung, kein weiteres standOff-Seeding,
+  images 1:1 zu pages; Zusatzbefunde: doppelte ID o_szd.161, leere/blanke Objekte mit `cells===0`). [proof]
+- **SZD-Batch-Konverter gebaut (M1.3 erledigt).** `pipeline/export_tei.py`: byte-treuer Python-Port des
+  Referenz-Prototyps (pfad-getrieben plus `--id`-Modus, der bei mehrdeutiger ID hart abbricht).
+  Byte-identisch zum Prototyp auf der Handvoll (`node test/tools/port_parity.mjs` 6/6) und über einen
+  151-Objekt-Spread des ~2.103-Korpus (151/151). [proof]
 - **SZD-Demo-Objekt real konvertiert.** o_szd.1079 aus dem echten `o_szd.1079_page.json` via
   `test/tools/szd-pagejson-to-tei.mjs`: 5 Folios, line-level, **byte-identischer Round-Trip**,
   GAMS-`<graphic>`-URLs, Zonen Prozent->Pixel, kein standOff (1079 hat keinen creator, wie der
@@ -130,10 +135,8 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
 
 ### Offen (Umsetzungs-Scope teiCrafter + SZD)
 
-- **M1.3 SZD-Batch-Konverter** `pipeline/export_tei.py` (Python-Port des Prototyps). Verifiziert: die
-  Datei existiert noch nicht.
-- **M1.4 restliche Demo-Handvoll** konvertieren + engine-verifizieren; **M1.5** alle ~2.103 +
-  Ladbarkeits-Sweep.
+- **M1.5 alle ~2.103** konvertieren + Ladbarkeits-Sweep. offen (Port-Parität über 151-Objekt-
+  Stichprobe bewiesen; voller Konvertier- und Ladbarkeits-Lauf ausstehend).
 - **M3.3 Live-Lookup** und **M3.7 Offline-Gemini-Vorschlag** (das Produkt-KI-Feature).
 - **M3.5 Notiz-/Fußnoten-Erstell-UI**; **M3.6 Textkritik** (`unclear`/`gap`/`del`/`add`, später).
 - **M4.4** SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`.
@@ -145,8 +148,9 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   oekosystem-synthese-Korrektur, ZBZ-Projektbericht. Das **ZBZ-Worked-Example** (M7.2-Hälfte) hängt an
   dieser Spur; die teiCrafter-Seite (Rendering, `<graphic>`-Support) ist erledigt.
 
-Noch NICHT bewiesen (ehrlicher Rest): der SZD-Batch-Konverter existiert nur als Einzel-Prototyp; der
-Browser-Visualtest steht aus; der Gemini-Annotations-Vorschlagsschritt ist konzipiert, nicht gebaut.
+Noch NICHT bewiesen (ehrlicher Rest): der volle Konvertier-Lauf über alle ~2.103 Objekte plus
+Ladbarkeits-Sweep (M1.5) steht aus (Port-Parität bisher über eine 151-Objekt-Stichprobe); der
+Gemini-Annotations-Vorschlagsschritt (M3.7) ist konzipiert, nicht gebaut.
 
 Hinweis: `pipeline.mjs` (Vor-Pivot) existiert noch in der teiCrafter-Wurzel, ist aber ein nicht
 lauffähiger Torso: er importiert das im Pivot gelöschte `docs/js/pipeline/` und bricht mit
@@ -234,11 +238,11 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
 **H1 - Beide Pipelines in teiCrafter bringen**
 - ★ M1.1 ZBZ direkt ladbar. **erledigt** (hersch_loadability.mjs, 285/285).
 - ★ M1.2 SZD `converter-reference.md` (volles Page-JSON->TEI-Mapping, deterministisch). **erledigt
-  (Entwurf v0.4)**; friert ein, sobald die offenen Punkte in §9 von converter-reference.md am realen
-  Page-JSON bestätigt sind.
-- ★ M1.3 SZD Batch-Konverter `pipeline/export_tei.py`. offen (existiert noch nicht).
-- ★ M1.4 SZD Demo-Handvoll konvertieren + engine-verifiziert. **teilweise erledigt** (o_szd.1079 ✓),
-  Rest der Handvoll offen.
+  (eingefroren, status active v0.5, 2026-06-08)**; alle fünf §9-Punkte am realen Page-JSON aufgelöst.
+- ★ M1.3 SZD Batch-Konverter `pipeline/export_tei.py`. **erledigt** (byte-treuer Python-Port;
+  `node test/tools/port_parity.mjs` 6/6, plus 151/151 über Korpus-Stichprobe).
+- ★ M1.4 SZD Demo-Handvoll konvertieren + engine-verifiziert. **erledigt** (1079 + 100/72/2215/161
+  byte-identisch via port_parity und Prototyp-Engine-Check).
 - + M1.5 SZD alle ~2.103 konvertieren + Ladbarkeits-Sweep. offen.
 
 **H2 - Sehen, navigieren, korrigieren**
@@ -298,10 +302,10 @@ Demo-Objekte:
 - **ZBZ-Objekt:** aus {1000, 1330, 1540, 2310} (nur diese haben committete Bilder), das textlich
   gehaltvollste; Auswahl in der separaten ZBZ-Spur.
 
-Kritischer Pfad (SZD-Kette): **M1.2 -> M1.3 -> M1.4**. M1.2 ist erledigt (Entwurf); damit steht als
-Nächstes der Realitätsabgleich am Page-JSON (Kontrakt einfrieren) und der Batch-Konverter M1.3.
-Unabhängig parallel: M2.2-Browser-Visualtest, M3.5/M3.7, und das SZD-Worked-Example (M7.2). Zeit ist
-ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
+Kritischer Pfad (SZD-Kette): **M1.2 -> M1.3 -> M1.4** ist erledigt (Kontrakt eingefroren, Batch-
+Konverter byte-treu, Handvoll verifiziert). Nächstes: **M1.5** (alle ~2.103 konvertieren +
+Ladbarkeits-Sweep) und demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur).
+Unabhängig parallel: M3.5/M3.7. Zeit ist ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
 
 ## 10. Offene Punkte, am realen Page-JSON zu bestätigen
 
@@ -319,13 +323,13 @@ ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
 ## 11. Umsetzungs-Backlog (nächste Schritte, geordnet)
 
 teiCrafter + SZD:
-1. **SZD-Realitätsabgleich:** die Handvoll am realen Page-JSON prüfen (bbox-Einheit, Marker, §9-Punkte),
-   converter-reference.md einfrieren (status active). Kritischer Pfad für M1.3.
-2. **Whitespace-Vorbehalt entscheiden** (Zeilen-Edit kollabiert Einrückung, §10) und ggf. abstellen.
-3. **M1.3 Batch-Konverter** `pipeline/export_tei.py`: den Prototyp `test/tools/szd-pagejson-to-tei.mjs`
-   faithful nach Python portieren (gleiche Ausgabe), Objekt-ID rein, TEI raus.
-4. **M1.4 Handvoll** konvertieren + engine-verifizieren (o_szd.100/72/2215/161), dann **M1.5** alle
-   ~2.103 + Ladbarkeits-Sweep.
+1. **SZD-Realitätsabgleich + Kontrakt einfrieren: erledigt 2026-06-08** (§9 am echten Page-JSON
+   aufgelöst, converter-reference.md status active v0.5).
+2. **Whitespace-Vorbehalt entscheiden** (Zeilen-Edit kollabiert Einrückung, §10) und ggf. abstellen. offen.
+3. **M1.3 Batch-Konverter: erledigt 2026-06-08** (`pipeline/export_tei.py`, byte-treuer Port;
+   port_parity.mjs 6/6, 151/151 Korpus-Stichprobe).
+4. **M1.4 Handvoll: erledigt** (100/72/2215/161 byte-identisch). **M1.5** alle ~2.103 +
+   Ladbarkeits-Sweep: offen (voller Lauf).
 5. **M7.2** SZD-Hälfte erledigt (o_szd.1079, 2026-06-08); ZBZ-Hälfte liegt in der ZBZ-Spur.
 6. **M3.5 Notiz-UI**, dann **M3.7 Gemini-Vorschlag** (offline), dann **M3.3 Live-Lookup**.
 7. **M4.4 / M5.2 / M5.6 / M6.x:** byte-clean-Regression der SZD-TEI, integration.md anreichern,

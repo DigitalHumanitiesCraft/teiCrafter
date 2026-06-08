@@ -9,11 +9,11 @@ method:
 template:
   name: Vorlage Reference
   version: 0.1
-status: draft
+status: active
 created: 2026-06-08
 updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.5
 topics: ["[[Converter]]", "[[SZD]]", "[[Page-JSON]]", "[[TEI]]"]
 related: [data, architecture, specification, goals, integration]
 ---
@@ -26,11 +26,11 @@ engine. The conversion is fully **deterministic** (a rule, never an LLM); the
 transcription is already done (it sits in `pages[].text`), so there is nothing for a
 model to generate here.
 
-This is a **draft**. The mappings, the id scheme, and the geometry are fixed from the
-v0.2 schema, the reference prototype, and two real objects (o_szd.100, o_szd.1079).
-What remains open is named in section 9 and is settled once the open points are
-resolved against real data (goals.md M1.2), after which the contract is frozen (status
-`active`).
+This contract is **frozen** (status `active`, M1.2 done). The mappings, the id scheme,
+and the geometry are fixed from the v0.2 schema, the reference prototype, and the demo
+handful. The open points named in section 9 were resolved against real data on
+2026-06-08 (the handful plus a 151-object deterministic spread across the ~2103-object
+corpus; `test/tools/port_parity.mjs` and `pipeline/export_tei.py`).
 
 ## 0. Sources of truth for this document
 
@@ -52,8 +52,14 @@ real engine (not by claim):
 
 1. **Byte-identical round-trip.** `serialize(parseEdition(tei)) === tei`. The string
    is canonical; nothing the editor does may change a byte on a no-op load/save.
-2. **Loads line-level.** `parseEdition(tei)` yields `profile === "line"`,
-   `folios.length === pages.length`, and `cells.length > 0`.
+2. **Loads line-level.** `parseEdition(tei)` yields `profile === "line"` and
+   `folios.length === pages.length`. `cells.length > 0` holds for every object with
+   transcribed text, but an object with no pages (`pages: []`, e.g. o_szd.70 / 2256 /
+   2314) or with only blank pages (e.g. o_szd.176) legitimately yields
+   `cells.length === 0` and still round-trips byte-identically. The prototype asserts
+   `cells > 0` because every handful member has text; a full-corpus run must treat
+   empty and all-blank objects as valid output, not as failures (about 3 percent of a
+   151-object sample).
 
 The prototype asserts exactly these before it exits
 ([szd-pagejson-to-tei.mjs:198-207](../test/tools/szd-pagejson-to-tei.mjs#L198)); the
@@ -269,25 +275,51 @@ later revision of this contract **only after** real data confirms which markers
 actually occur and with what exact syntax. Encoding markers we have not observed would
 be guesswork; v1 stays literal on purpose.
 
-## 9. Open points to resolve against real data before freezing the contract
+## 9. Resolved against real data (2026-06-08, M1.2 freeze)
 
-One line each; these are the only things not yet fixed:
+Checked over the handful (o_szd.100, 72, 161, 2215, 1079) and a 151-object deterministic
+spread across the full ~2103-object corpus. The five open points are settled:
 
-1. **bbox conformance:** confirm no bbox value exceeds 100 across o_szd.100, 72, 1079,
-   2215, 161; report any object that does (would indicate an absolute-unit generator
-   bug, not a contract change).
-2. **Markers actually present:** which of `[?]`, `[...]`/`[...N...]`, `~~x~~`, `{x}`,
-   `[Stempel:]` occur in the handful, with a verbatim example each, so section 8 can
-   later map only what is real.
-3. **Fields the contract drops:** confirm that ignoring `regions[].reading_order`,
-   `lines`, `label`, `source`, and `pages[].notes` is acceptable, or name any that
-   must be carried (e.g. `pages[].notes` -> a `<note>` on the `<pb>`).
-4. **Further standOff seeding:** decide whether `dm.holding.repository`(+`_gnd`) ->
-   `<listOrg>` and `correspondence.sender/recipient`(+gnd) -> `<listPerson>` should be
-   seeded in v1, or left for hand annotation (current draft: left for hand annotation).
-5. **Multi-image vs multi-page:** confirm `source.images[]` is in `pages[]` order and
-   1:1 with pages (o_szd.1079 has 5 images and 5 pages); report any object where the
-   counts differ, since `source.images[i]` is indexed by page position.
+1. **bbox: confirmed percent.** No bbox value exceeds 100 anywhere in the sample (handful
+   max 82.5, o_szd.2215). The percent-to-pixel formula (section 6) stands; no object uses
+   absolute units.
+2. **Markers present: only two of the five.** `~~x~~` (deletion, e.g. o_szd.72
+   `~~kleine~~`) and `[?]` (uncertain, o_szd.161/korrespondenzen) occur; `[...]`/`[...N...]`,
+   `{x}`, and `[Stempel:]` were not observed in the handful. v1 keeps all markers verbatim
+   (section 8); the later M3.6 mapping should encode only the observed `~~x~~` and `[?]`
+   until more syntaxes appear.
+3. **Dropped fields: confirmed, with `pages[].notes` recorded as a deferred decision.**
+   Regions carry `reading_order`, `lines`, `label`, and sometimes a non-schema `source`
+   field; none has line-level editor meaning and all stay dropped. `pages[].notes` is the
+   exception: it is present on every page of every handful object and is content-bearing
+   (machine-generated page descriptions, e.g. "Adressseite des Briefumschlags. Poststempel
+   'WIEN 1/1 22.5.01'"). **Decision (reversible): v1 drops it.** It is unreviewed model
+   commentary, not transcription; the human adds reviewed notes in teiCrafter (M3.5).
+   Carrying it as a machine-marked `<note>` on the `<pb>` is the first candidate for a v2
+   revision; the prototype and this port would change together.
+4. **Further standOff seeding: left for hand annotation (confirmed).** `correspondence`
+   is absent across the whole handful (including the letter o_szd.1079), so sender/recipient
+   seeding is moot for v1. `dm.holding.repository`(+`_gnd`) is reliably present
+   ("Literaturarchiv Salzburg") and could seed `<listOrg>`, but v1 keeps the rule small and
+   leaves it to hand annotation; the demo object o_szd.1079 has no repository anyway.
+5. **Multi-image vs multi-page: confirmed 1:1.** Every handful object has
+   `source.images.length === pages.length`; indexing `source.images[i]` by page position
+   is safe.
+
+Two further findings recorded at freeze:
+
+- **Duplicate object id across folders.** `o_szd.161` exists in both `lebensdokumente`
+  (creator Friderike Zweig, no markers) and `korrespondenzen` (no creator, `[?]` marker)
+  with different content. An id alone is not a unique key, so `export_tei.py` is
+  path-driven like the prototype; its `--id` convenience mode hard-errors on an ambiguous
+  id and lists the candidates rather than silently picking one. The contract's earlier
+  label of o_szd.161 as "Formular, Pipe-Tabellen" is wrong: both files are printed cards
+  (Eintrittskarte / Theaterkarte) with no pipe tables. v1's uniform line-level body handles
+  them regardless.
+- **Empty and all-blank objects.** o_szd.70 / 2256 / 2314 have `pages: []`; o_szd.176 has
+  four pages all without text. All four convert to byte-identical-round-trip TEI with
+  `folios === pages` and `cells === 0`; they are valid output, not failures (see the
+  acceptance note in section 1).
 
 ## 10. Reference implementation and how to run it
 
@@ -304,3 +336,7 @@ first (goals.md M1.3).
 teiCrafter's own per-feature proof for the engine side of this contract (graphic url,
 zones in pixels, place/work entities, authority idno, line-level model, byte-identical
 round-trip) is `node test/tools/szd_demo_check.mjs` (32/32).
+
+Port parity (this port produces byte-identical output to the reference prototype over the
+handful, so the Python output round-trips through the engine exactly as the prototype's
+does) is `node test/tools/port_parity.mjs` (6/6 byte-identical).

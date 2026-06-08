@@ -11,9 +11,9 @@ template:
   version: 0.1
 status: active
 created: 2026-06-07
-updated: 2026-06-07
+updated: 2026-06-08
 language: en
-version: 0.4
+version: 0.5
 topics: ["[[Project Goals]]", "[[Milestones]]"]
 related: [integration, project, specification, testing]
 ---
@@ -51,9 +51,9 @@ cites a re-runnable proof.
 ## H1 - Bring both pipelines into teiCrafter
 
 - (*) **M1.1** ZBZ `{id}_final.xml` loads directly. **done** -- `node test/tools/hersch_loadability.mjs` (285/285 usable editor view).
-- (*) **M1.2** SZD converter reference (`knowledge/converter-reference.md`, full Page-JSON v0.2 to TEI mapping). **draft on disk; freezes once the five open points in converter-reference.md section 9 are resolved against real data** -- [converter-reference.md](converter-reference.md) written 2026-06-08 from the v0.2 schema, the prototype, and two real objects; bbox unit resolved to percent (o_szd.100 `[3.9,2.9,4.8,0.3]`, o_szd.1079 `[17.5,37.9,34.9,5.2]`, both in 0-100, matching the schema); section 9 lists five open points, after which status lifts to active.
-- (*) **M1.3** SZD batch converter `pipeline/export_tei.py`. **open**
-- (*) **M1.4** SZD: produce and engine-verify the demo example TEI. **open**
+- (*) **M1.2** SZD converter reference (`knowledge/converter-reference.md`, full Page-JSON v0.2 to TEI mapping). **done (frozen, status active, v0.5, 2026-06-08)** -- the five section-9 points resolved against the handful plus a 151-object spread: bbox confirmed percent (no value > 100), only `~~x~~` and `[?]` markers occur, dropped fields confirmed (with `pages[].notes` dropped in v1 by reversible decision), no further standOff seeding, images 1:1 with pages. Also recorded: duplicate id o_szd.161 across folders; empty/all-blank objects (o_szd.70 / 176 / 2256 / 2314) round-trip with `cells === 0`.
+- (*) **M1.3** SZD batch converter `pipeline/export_tei.py`. **done** -- faithful Python port of the reference prototype (path-driven, plus an `--id` mode that hard-errors on ambiguous ids); byte-identical to `szd-pagejson-to-tei.mjs` on the handful (`node test/tools/port_parity.mjs`, 6/6) and across a 151-object deterministic spread of the ~2103-object corpus (151/151). The prototype round-trips its output through the engine, so byte-equality means the Python output round-trips too.
+- (*) **M1.4** SZD: produce and engine-verify the demo example TEI. **done for the handful** -- o_szd.1079 plus 100 / 72 / 2215 / 161 convert and round-trip byte-identically (port_parity + the prototype's engine check); full-corpus M1.5 still open.
 - (+) **M1.5** SZD: convert all ~2103 objects + loadability sweep. **open**
 
 ## H2 - See, navigate, correct
@@ -102,13 +102,14 @@ cites a re-runnable proof.
 
 ## Critical path to the demo
 
-The longest dependency chain is the SZD side: **M1.2 -> M1.3 -> M1.4**.
-M1.2 is now a frozen-pending draft, so the live bottleneck has moved to M1.3
-(`export_tei.py`). The annotation cluster that ran parallel to it is closed: M3.1 /
-M3.2 / M3.3 / M3.4 are all done (engine + UI, proven headless). What remains is M2.2's
-browser-visual test and, once the converter delivers, M1.4 / M7.2. The zbz frontend
-rendering work (M2.3 / M2.4) stays deferred; its ZBZ image-URL scheme is read into M7.2
-when the ZBZ example is built.
+The longest dependency chain is the SZD side: **M1.2 -> M1.3 -> M1.4**, and it is now
+cleared for the handful: M1.2 is frozen, M1.3 (`export_tei.py`) is done and proven
+byte-faithful, M1.4 is verified on the demo handful. The live bottleneck is now **M1.5**
+(convert all ~2103 objects + a full loadability sweep) and, demo-facing, **M7.2** (the SZD
+worked example is proven; the ZBZ half waits on the separate ZBZ spur). The annotation
+cluster M3.1 / M3.2 / M3.3 / M3.4 is done; M2.2's browser-visual test is done (2026-06-08).
+The zbz frontend rendering work (M2.3 / M2.4) stays deferred; its image-URL scheme is read
+into M7.2 when the ZBZ example is built.
 
 ## Verification
 
