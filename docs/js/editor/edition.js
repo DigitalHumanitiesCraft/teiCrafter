@@ -191,6 +191,29 @@ export function editCell(state, cellId, newText) {
 }
 export const editWordText = editCell;
 
+/**
+ * Split a cell's text into [lead, core, trail] where lead/trail are the node's
+ * edge whitespace (insignificant indentation/newlines) and core is the part a
+ * human actually edits. For a word-level <w>text</w> node both edges are empty.
+ */
+export function splitEdge(text) {
+  const lead = (text.match(/^\s*/) || [""])[0];
+  const trail = (text.match(/\s*$/) || [""])[0];
+  return [lead, text.slice(lead.length, text.length - trail.length), trail];
+}
+
+/**
+ * Edit a cell by its trimmed CORE text, re-attaching the original edge whitespace
+ * so a line edit never collapses the surrounding indentation. This is what the UI
+ * commits: the input shows the core, the splice keeps lead/trail verbatim.
+ */
+export function editCellCore(state, cellId, newCore) {
+  const cell = state.cellById.get(cellId);
+  if (!cell) throw new Error("Unknown cell id: " + cellId);
+  const [lead, , trail] = splitEdge(cell.text);
+  return editCell(state, cellId, lead + newCore + trail);
+}
+
 /** The canonical serialization is the raw string itself (lossless). */
 export function serialize(state) {
   return state.raw;

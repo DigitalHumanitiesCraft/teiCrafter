@@ -25,6 +25,8 @@
 import {
   parseEdition,
   editWordText,
+  editCellCore,
+  splitEdge,
   serialize,
   structuralSummary,
   xmlIdSet,
@@ -324,8 +326,13 @@ function beginEdit(span, cell, lineIndex) {
     return;
   }
 
-  const inp = el("input", { class: "ed-w-input", type: "text", value: cell.text });
-  inp.style.width = `${Math.min(60, Math.max(2, cell.text.length + 1))}ch`;
+  // Edit only the trimmed core; the node's edge whitespace (indentation/newlines)
+  // is re-attached on commit, so a line edit never collapses the surrounding
+  // formatting. Word-level <w> nodes have no edge whitespace (core === cell.text).
+  const [, core] = splitEdge(cell.text);
+
+  const inp = el("input", { class: "ed-w-input", type: "text", value: core });
+  inp.style.width = `${Math.min(60, Math.max(2, core.length + 1))}ch`;
   inp.style.maxWidth = "100%";
   span.replaceWith(inp);
   inp.focus();
@@ -335,10 +342,10 @@ function beginEdit(span, cell, lineIndex) {
   const commit = () => {
     if (done) return;
     done = true;
-    const next = inp.value;
-    if (next !== cell.text) {
+    const nextCore = inp.value;
+    if (nextCore !== core) {
       try {
-        app.state = editWordText(app.state, cell.id, next);
+        app.state = editCellCore(app.state, cell.id, nextCore);
         setDirty(true);
       } catch (err) {
         setStatus(`Edit failed: ${err.message}`);
