@@ -124,6 +124,22 @@
 .ed-w.has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
 .ed-w.editing { outline: 2px solid var(--color-gold); background: var(--color-panel); }
 .ed-w.linked { background: var(--color-gold-light); }
+
+/* Textual-critical markup (M3.6): editorial (not AI), so it uses the human
+   editorial colour families, never the violet AI family. */
+.ed-w.crit-unclear { text-decoration: underline dotted var(--color-review); text-underline-offset: 3px; }
+.ed-w.crit-del { text-decoration: line-through; text-decoration-color: var(--color-problem); color: var(--color-problem); }
+.ed-w.crit-add { text-decoration: underline; text-decoration-color: var(--color-blue); color: var(--color-blue); }
+.ed-w.crit-gap { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary);
+  background: var(--color-secondary); border: 1px dashed var(--color-border); border-radius: var(--radius-sm);
+  padding: 0 4px; cursor: pointer; }
+
+/* The inline textual-critical chooser shown in place of a clicked cell. */
+.ed-crit-pick { display: inline-flex; gap: var(--space-xs); align-items: center; vertical-align: baseline; }
+.ed-crit-btn { font-family: var(--font-ui); font-size: var(--font-size-xs); line-height: 1.4;
+  padding: 1px 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-panel); color: var(--color-text); cursor: pointer; }
+.ed-crit-btn:hover { border-color: var(--color-review); color: var(--color-review); background: var(--color-review-tint); }
 .ed-w-input { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.9;
   color: var(--color-text); background: var(--color-panel);
   border: none; outline: 2px solid var(--color-gold); border-radius: 2px;

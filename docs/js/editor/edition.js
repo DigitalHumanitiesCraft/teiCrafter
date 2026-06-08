@@ -27,15 +27,21 @@ import {
   readSurfaces,
   indexZonesById,
   ancestorWithXmlId,
+  isReadingContext,
+  CRITICAL_LOCALS,
   editTextNode,
   countLocals,
   escapeText,
   decodeEntities,
+  splitEdge,
 } from "./tei-document.js";
 
 // Back-compat re-exports (old names used elsewhere).
 export const escapeXmlText = escapeText;
 export const unescapeXmlText = decodeEntities;
+// splitEdge now lives in the shared core (used by the cell editor and the
+// textual-critical wrappers); re-export it so existing importers keep working.
+export { splitEdge } from "./tei-document.js";
 
 function stripHash(v) {
   return v ? v.replace(/^#/, "") : v;
@@ -72,6 +78,11 @@ function buildState(doc) {
     if (n.type === "element") {
       if (n.localName === "pb") events.push({ k: "pb", el: n });
       else if (n.localName === "lb" || n.localName === "l") events.push({ k: "line", el: n });
+      // A <gap/> stands in for omitted/illegible text: it has no text node, so emit
+      // it as its own event to keep the line visible and the marker navigable. Gate
+      // it the same way text cells are (no header/facsimile/standOff ancestor), so a
+      // gap in a non-reading subtree never leaks into the reading view.
+      else if (n.localName === "gap" && isReadingContext(n)) events.push({ k: "gap", el: n });
     } else if (n.type === "text" && isReadingText(n)) {
       const text = textOf(doc, n);
       if (text.trim()) events.push({ k: "cell", node: n, text });
@@ -125,30 +136,65 @@ function buildState(doc) {
     return null;
   };
 
+  // A cell id is the nearest ancestor xml:id, made unique against ids already used
+  // for cells (synthetic positional fallback otherwise). Shared by text and gap cells.
+  const makeCellId = (node) => {
+    const anc = ancestorWithXmlId(node);
+    let id = anc ? getAttr(anc, "id") : null;
+    if (!id || cellById.has(id)) id = (id ? id + "#" : "c") + cellSeq;
+    cellSeq++;
+    return id;
+  };
+  const pushCell = (cell) => {
+    curLine.cells.push(cell);
+    cells.push(cell);
+    cellById.set(cell.id, cell);
+  };
+
   for (const e of events) {
     if (e.k === "pb") { newFolio(e.el); continue; }
     if (e.k === "line") {
       lineTrigger({ n: getAttr(e.el, "n"), facs: stripHash(getAttr(e.el, "facs")) });
       continue;
     }
-    // cell
+    if (e.k === "gap") {
+      // A gap is a read-only marker cell (no text node to edit): it shows the
+      // omitted-text marker and can only be removed, not corrected inline.
+      if (!curLine) newLine({});
+      pushCell({
+        id: makeCellId(e.el),
+        text: "",
+        node: e.el,
+        start: e.el.outerStart,
+        end: e.el.outerEnd,
+        rawText: doc.raw.slice(e.el.outerStart, e.el.outerEnd),
+        facs: cellFacs(e.el) || curLine.facs,
+        gap: true,
+        crit: "gap",
+        critSole: false,
+      });
+      continue;
+    }
+    // text cell
     if (!curLine) newLine({});
-    const anc = ancestorWithXmlId(e.node);
-    let id = anc ? getAttr(anc, "id") : null;
-    if (!id || cellById.has(id)) id = (id ? id + "#" : "c") + cellSeq;
-    cellSeq++;
-    const cell = {
-      id,
+    // Tag the cell's critical status from its IMMEDIATE parent only, so the model
+    // agrees with what the criticism ops can act on (they wrap/unwrap the node's
+    // direct parent). critSole records whether this node is the wrapper's sole
+    // content, i.e. whether "clear" can remove it without touching sibling content.
+    const cp = e.node.parent;
+    const critParent = cp && cp.type === "element" && CRITICAL_LOCALS.has(cp.localName) ? cp : null;
+    pushCell({
+      id: makeCellId(e.node),
       text: e.text,
       node: e.node,
       start: e.node.start,
       end: e.node.end,
       rawText: doc.raw.slice(e.node.start, e.node.end),
       facs: cellFacs(e.node) || curLine.facs,
-    };
-    curLine.cells.push(cell);
-    cells.push(cell);
-    cellById.set(id, cell);
+      gap: false,
+      crit: critParent ? critParent.localName : null,
+      critSole: critParent ? (critParent.children.length === 1 && critParent.children[0] === e.node) : false,
+    });
   }
 
   // Drop render lines that ended up with no editable cell (stray milestones,
@@ -190,17 +236,6 @@ export function editCell(state, cellId, newText) {
   return buildState(newDoc);
 }
 export const editWordText = editCell;
-
-/**
- * Split a cell's text into [lead, core, trail] where lead/trail are the node's
- * edge whitespace (insignificant indentation/newlines) and core is the part a
- * human actually edits. For a word-level <w>text</w> node both edges are empty.
- */
-export function splitEdge(text) {
-  const lead = (text.match(/^\s*/) || [""])[0];
-  const trail = (text.match(/\s*$/) || [""])[0];
-  return [lead, text.slice(lead.length, text.length - trail.length), trail];
-}
 
 /**
  * Edit a cell by its trimmed CORE text, re-attaching the original edge whitespace

@@ -34,6 +34,7 @@ import {
 } from "./edition.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
+import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createIndexPanel } from "./index-panel.js";
 import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
@@ -59,6 +60,7 @@ const app = {
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
   linkTarget: null,   // entity selected for the next "link a mention" click, or null
   noteMode: false,    // true while waiting for a cell click to attach an editorial note
+  critMode: false,    // true while waiting for a cell click to apply textual-critical markup
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios) and the
@@ -106,9 +108,9 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-validate", "btn-download", "btn-note", "btn-suggest"]) $(id).disabled = !on;
+  for (const id of ["btn-validate", "btn-download", "btn-note", "btn-suggest", "btn-critic"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
-  if (!on) setNoteMode(false);
+  if (!on) { setNoteMode(false); setCritMode(false); }
   updateFolioButtons();
 }
 
@@ -142,6 +144,10 @@ function load(raw, name, handle) {
   // image base afterwards; every other entry (open, demo, generate) stays null.
   app.imageBase = null;
   app.linkTarget = null;
+  // Reset the click-capture modes so a mode left on in the previous document does
+  // not silently apply to the freshly opened one (button/hint would disagree).
+  setNoteMode(false);
+  setCritMode(false);
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
@@ -280,9 +286,10 @@ function renderReading() {
   clear(host);
   const folio = app.state.folios[app.folio];
   app.currentLines = folio ? folio.lines : [];
-  // hint reflects the detected granularity
+  // hint reflects the active click-capture mode, else the detected granularity, so
+  // the hint and the toolbar mode buttons never disagree after a re-render.
   const hint = $("ed-edit-hint");
-  if (hint) hint.textContent = app.state.profile === "word" ? "click a word to correct it" : "click a line to correct it";
+  if (hint) hint.textContent = critHint();
   if (!folio || !folio.lines.length) {
     host.appendChild(el("div", { class: "ed-empty", text: "This folio has no transcribed text." }));
     return;
@@ -294,16 +301,20 @@ function renderReading() {
       if (k > 0) row.appendChild(document.createTextNode(" "));
       const note = app.noteByWord.get(cell.id);
       const linking = app.linkTarget != null;
+      // A gap is a read-only marker (no text); other critical kinds add a class so
+      // the wrapped reading text shows its editorial status (dotted / struck / added).
+      const critClass = cell.crit ? " crit-" + cell.crit : "";
       const span = el("span", {
-        class: "ed-w" + (note ? " has-note" : ""),
+        class: "ed-w" + (note ? " has-note" : "") + critClass,
         dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
-        text: cell.text,
-        title: linking
-          ? `click to link to ${app.linkTarget.name}`
-          : (note ? `note: ${note}` : "click to correct"),
+        text: cell.gap ? "[...]" : cell.text,
+        title: critTitle(cell, note, linking),
       });
-      span.addEventListener("click", () =>
-        app.noteMode ? beginNote(span, cell) : beginEdit(span, cell, lineIndex));
+      span.addEventListener("click", () => {
+        if (app.critMode || cell.gap) beginCritic(span, cell);
+        else if (app.noteMode) beginNote(span, cell);
+        else beginEdit(span, cell, lineIndex);
+      });
       span.addEventListener("mouseenter", () => highlightLine(lineIndex));
       span.addEventListener("mouseleave", () => clearLinks());
       row.appendChild(span);
@@ -313,6 +324,10 @@ function renderReading() {
 }
 
 function beginEdit(span, cell, lineIndex) {
+  // A gap is a marker, not editable text: route any stray edit to the critical
+  // chooser (which offers removal) instead of splicing its empty content.
+  if (cell.gap) { beginCritic(span, cell); return; }
+
   // Link mode: a "link" was started from the index panel, so the next click on a
   // word/line wraps that mention in <name ref="#id"> instead of editing it.
   if (app.linkTarget) {
@@ -374,14 +389,12 @@ function beginEdit(span, cell, lineIndex) {
 /** Toggle "add note" mode: the next cell click attaches a note instead of editing. */
 function setNoteMode(on) {
   app.noteMode = on;
+  // The three click-capture modes (note, mark, link) are mutually exclusive.
+  if (on) { if (app.critMode) setCritMode(false); app.linkTarget = null; }
   const btn = $("btn-note");
   if (btn) btn.classList.toggle("active", on);
   const hint = $("ed-edit-hint");
-  if (hint && app.state) {
-    hint.textContent = on
-      ? "click a line to attach a note"
-      : (app.state.profile === "word" ? "click a word to correct it" : "click a line to correct it");
-  }
+  if (hint && app.state) hint.textContent = critHint();
 }
 
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
@@ -426,6 +439,100 @@ function beginNote(span, cell) {
     else if (e.key === "Escape") { e.preventDefault(); finish(false); }
   });
   inp.addEventListener("blur", () => finish(true));
+}
+
+// ---- textual-critical markup (M3.6) ----------------------------------------
+
+/** The reading-pane hint, reflecting the active click-capture mode. */
+function critHint() {
+  if (app.critMode) return "click a line to mark it (unclear / deleted / added / gap)";
+  if (app.noteMode) return "click a line to attach a note";
+  if (app.linkTarget) return `click a line to link it to ${app.linkTarget.name}`;
+  return app.state && app.state.profile === "word" ? "click a word to correct it" : "click a line to correct it";
+}
+
+/** Tooltip for a reading cell, reflecting its link / note / critical state. */
+function critTitle(cell, note, linking) {
+  if (linking) return `click to link to ${app.linkTarget.name}`;
+  if (cell.gap) return "gap: omitted or illegible text; click to remove";
+  if (cell.crit) return `${cell.crit}${cell.critSole ? "; click to change the markup" : " (shared markup)"}`;
+  if (note) return `note: ${note}`;
+  return app.critMode ? "click to mark this text" : "click to correct";
+}
+
+/** Toggle "mark text" mode: the next cell click applies textual-critical markup. */
+function setCritMode(on) {
+  app.critMode = on;
+  // The three click-capture modes (mark, note, link) are mutually exclusive.
+  if (on) { if (app.noteMode) setNoteMode(false); app.linkTarget = null; }
+  const btn = $("btn-critic");
+  if (btn) btn.classList.toggle("active", on);
+  const hint = $("ed-edit-hint");
+  if (hint && app.state) hint.textContent = critHint();
+}
+
+/**
+ * Replace a cell with a small chooser of textual-critical actions, then apply the
+ * chosen one losslessly. A gap cell offers only removal; any other cell offers the
+ * four markers, plus "clear" when it already carries a wrapper.
+ */
+function beginCritic(span, cell) {
+  const host = $("ed-reading");
+  // If a chooser is already open, rebuild the reading view first so we never leave
+  // an orphaned one behind, then re-acquire this cell's freshly rendered span.
+  if (host.querySelector(".ed-crit-pick")) {
+    render();
+    span = host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
+    if (!span) return;
+  }
+  const box = el("span", { class: "ed-crit-pick" });
+
+  const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); close(); } };
+  const close = (rerender = true) => {
+    document.removeEventListener("keydown", onKey);
+    setCritMode(false);
+    if (rerender) { render(); renderIndex(); }
+  };
+  const apply = (fn, label) => {
+    try {
+      const next = fn(app.state.doc);
+      if (next !== app.state.doc) {
+        app.state = parseEdition(next.raw);
+        app.noteByWord = indexNotes(app.state.raw);
+        setDirty(true);
+        setStatus(label);
+      }
+    } catch (err) {
+      setStatus(`Markup failed: ${err.message}`);
+    }
+    close();
+  };
+  const addBtn = (text, title, handler) => {
+    const b = el("button", { class: "ed-crit-btn", text, title });
+    b.addEventListener("click", (e) => { e.stopPropagation(); handler(); });
+    box.appendChild(b);
+  };
+
+  if (cell.gap) {
+    addBtn("remove gap", "remove the gap marker",
+      () => apply((doc) => removeGap(doc, cell.node), "Gap removed"));
+  } else {
+    for (const kind of Object.keys(CRITICAL_KINDS)) {
+      const label = CRITICAL_KINDS[kind].label;
+      addBtn(label, `mark as ${label}`,
+        () => apply((doc) => markCritical(doc, cell.node, kind), `Marked ${label}`));
+    }
+    // "clear" only when this cell is the SOLE content of its wrapper, so removing
+    // it can never strip a wrapper shared with sibling content (a silent data loss).
+    if (cell.crit && cell.critSole) {
+      addBtn("clear", "remove the critical markup",
+        () => apply((doc) => unwrapCritical(doc, cell.node), "Markup cleared"));
+    }
+  }
+  addBtn("x", "cancel", () => close());
+
+  span.replaceWith(box);
+  document.addEventListener("keydown", onKey);
 }
 
 // ---- facsimile (OpenSeadragon viewer with zone overlays) ------------------
@@ -507,6 +614,10 @@ function ensureIndexPanel() {
     },
     onSelect: (entity) => highlightMentions(entity),
     onStartLink: (entity) => {
+      // Link is the third click-capture mode; clear the other two so a click is
+      // never claimed by mark/note mode while a link is pending.
+      setNoteMode(false);
+      setCritMode(false);
       app.linkTarget = entity;
       setStatus(`Click a line or word to link it to <name> -> ${entity.name}`);
       render(); // refresh titles/affordances for link mode
@@ -912,6 +1023,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("gen-
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
 $("btn-note").addEventListener("click", () => setNoteMode(!app.noteMode));
+$("btn-critic").addEventListener("click", () => setCritMode(!app.critMode));
 $("btn-suggest").addEventListener("click", suggestEntities);
 $("btn-validate").addEventListener("click", () => { renderValidation(); setStatus("Live checks refreshed"); });
 $("btn-save").addEventListener("click", save);

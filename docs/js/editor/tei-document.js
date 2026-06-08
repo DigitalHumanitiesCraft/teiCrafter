@@ -309,23 +309,35 @@ export function textOf(doc, node) {
   return decodeEntities(doc.raw.slice(node.start, node.end));
 }
 
-/** Nearest ancestor element (inclusive of parents) carrying @xml:id, or null. */
-export function ancestorWithXmlId(node) {
+/**
+ * Split a text run into [lead, core, trail] where lead/trail are the edge
+ * whitespace (insignificant indentation/newlines) and core is the part a human
+ * actually edits or marks. Shared by the cell editor (edition.js) and the
+ * textual-critical wrappers (criticism.js) so both preserve edge whitespace the
+ * same way. For a word-level <w>text</w> node both edges are empty.
+ */
+export function splitEdge(text) {
+  const lead = (text.match(/^\s*/) || [""])[0];
+  const trail = (text.match(/\s*$/) || [""])[0];
+  return [lead, text.slice(lead.length, text.length - trail.length), trail];
+}
+
+/** Nearest ancestor element (exclusive of node) satisfying pred, or null. */
+export function nearestAncestor(node, pred) {
   let p = node.parent;
   while (p && p.type === "element") {
-    if (getAttr(p, "id") != null) return p;
+    if (pred(p)) return p;
     p = p.parent;
   }
   return null;
 }
+/** Nearest ancestor element (inclusive of parents) carrying @xml:id, or null. */
+export function ancestorWithXmlId(node) {
+  return nearestAncestor(node, (p) => getAttr(p, "id") != null);
+}
 /** True if the node has an ancestor with the given local-name. */
 export function hasAncestorLocal(node, localName) {
-  let p = node.parent;
-  while (p && p.type === "element") {
-    if (p.localName === localName) return true;
-    p = p.parent;
-  }
-  return false;
+  return nearestAncestor(node, (p) => p.localName === localName) != null;
 }
 
 // ---- lossless edit operations ---------------------------------------------
@@ -374,6 +386,9 @@ export function removeAttr(doc, el, localName) {
 
 export const MILESTONE_LOCALS = new Set(["lb", "pb", "cb", "gb", "milestone"]);
 export const ENTITY_LOCALS = new Set(["persName", "placeName", "orgName", "geogName", "date", "name", "rs"]);
+// Textual-critical wrappers handled by the editor (M3.6): unclear/del/add wrap
+// reading text; gap is the empty marker that stands in for omitted/illegible text.
+export const CRITICAL_LOCALS = new Set(["unclear", "del", "add", "gap"]);
 const NON_READING_LOCALS = new Set(["teiHeader", "facsimile", "standOff", "fsdecl", "sourceDoc"]);
 
 export function isMilestone(node) {
@@ -434,15 +449,18 @@ export function readingRoot(doc) {
   return firstByLocal(doc.root, "body") || firstByLocal(doc.root, "text") || doc.root;
 }
 
+/**
+ * Is this node inside the readable transcription (no header/facsimile/standOff/
+ * sourceDoc/fsdecl ancestor)? Works for any node kind, so the same exclusion gates
+ * both text-node cells and element markers (e.g. a <gap/>) consistently.
+ */
+export function isReadingContext(node) {
+  return nearestAncestor(node, (p) => NON_READING_LOCALS.has(p.localName)) == null;
+}
+
 /** Is this text node part of the readable transcription (not header/facsimile/standOff)? */
 export function isReadingText(node) {
-  if (node.type !== "text") return false;
-  let p = node.parent;
-  while (p && p.type === "element") {
-    if (NON_READING_LOCALS.has(p.localName)) return false;
-    p = p.parent;
-  }
-  return true;
+  return node.type === "text" && isReadingContext(node);
 }
 
 function num(v) {
