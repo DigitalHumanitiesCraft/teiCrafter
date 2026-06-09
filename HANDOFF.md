@@ -31,12 +31,15 @@ the ZBZ.
 
 ## State at handoff (all engine-proven, nothing pushed)
 
-Branch `session/2026-06-07-place-graphic`, clean working tree, **10 commits ahead
-of origin** (in order): 10eae74 ZBZ worked-example engine proof + local-only object,
-8ec4a11 paper evidence sheet, a3488cd ZBZ worked-example document, f744a77 knowledge
-sync 0.8, 83651e6 milestones M7.4/M7.5, 934c3d4 handoff, c2a2827 M7.4 curated set
-(generator + curated-set.md + knowledge 0.9), 2c20fdc TP5 chapter record, 90d4512
-TP7 Rohfassung record, plus the MS-D sync commit carrying this handoff.
+Branch `session/2026-06-07-place-graphic`, clean working tree, **13 commits ahead
+of origin** counting the commit that carries this handoff update (in order):
+10eae74 ZBZ worked-example engine proof + local-only object, 8ec4a11 paper evidence
+sheet, a3488cd ZBZ worked-example document, f744a77 knowledge sync 0.8, 83651e6
+milestones M7.4/M7.5, 934c3d4 handoff, c2a2827 M7.4 curated set (generator +
+curated-set.md + knowledge 0.9), 2c20fdc TP5 chapter record, 90d4512 TP7 Rohfassung
+record, a2c7b0b MS-D sync (README, HANDOFF, promptotyping-case), 80f83a5 live
+browser run + M2.5/M2.6 decision, 545cd33 implementation-plan pointer, plus this
+session-close update.
 
 - **M7.4 done for the two proven objects:** `node test/tools/make_curated_set.mjs`
   (exit 0) persists before/after/diff/summary per object under gitignored
