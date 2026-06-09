@@ -16,7 +16,10 @@ research project has eight subprojects; the cross-project master plan, the zbz-l
 order (now four points), the concept chapter draft, the nine-section full-text
 Rohfassung and the M7.1 provenance page live in the Obsidian vault
 (`Projects/zbz-ocr-tei/2026-06-09 - *` and `Projects/Research Tools/teiCrafter/`);
-session plan documents live in `~/.claude/plans/editopia-*.md`. The repo-side
+session plan documents live in `~/.claude/plans/editopia-*.md`; the complete
+implementation plan for ALL remaining work (packages AP-A to AP-L with steps,
+files, proofs, gates and the session sequence) is
+`~/.claude/plans/editopia-implementierungsplan-2026-06-09.md`. The repo-side
 milestone register is `knowledge/goals.md` (H1 to H7).
 
 Success criterion (operator, 2026-06-09): the experiment counts as successful when
