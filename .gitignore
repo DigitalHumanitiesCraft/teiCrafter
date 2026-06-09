@@ -6,3 +6,6 @@ __pycache__/
 
 # Real ZBZ Hersch example (rights: not redistributable) -- local-only demo data
 docs/data/editor/zbz-100/
+
+# Real ZBZ Hersch worked-example object (rights stance as zbz-100; regenerate via test/tools/make_zbz1000_demo.mjs)
+docs/data/editor/zbz-1000/
