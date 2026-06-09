@@ -11,9 +11,9 @@ template:
   version: 0.1
 status: active
 created: 2026-06-07
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
-version: 0.7
+version: 0.8
 topics: ["[[Project Goals]]", "[[Milestones]]"]
 related: [integration, project, specification, testing]
 ---
@@ -37,6 +37,12 @@ Data flow lives in [integration.md](integration.md); this document is the object
 - **Success criterion (the demo gate):** one real ZBZ object and one real SZD object
   taken end-to-end in the browser: open, correct line by line, annotate persons, places,
   and works with authority identifiers (GND / GeoNames / Wikidata), save byte-faithfully.
+- **Sharpened for the paper (operator, 2026-06-09):** the experiment counts as successful
+  when the workflow's added value for the Hersch project is demonstrable: from the
+  unverified pipeline TEI of a real object, curation in teiCrafter produces a demonstrably
+  better TEI (facsimile-linked, authority-linked entities, explicit editorial confidence,
+  explicit verification status) while preserving the pipeline output byte-exactly. The
+  before/after comparison lives in [worked-example-zbz.md](worked-example-zbz.md) section 6.
 - **Scope:** the full goal is everything (entity enrichment plus editorial annotation).
   Demo-critical is entity enrichment, notes, and image display; the rest proceeds in
   parallel and does not gate the demo.
@@ -61,7 +67,7 @@ cites a re-runnable proof.
 - (*) **M2.1** Editor model per file (folios / lines / cells). **done** -- `node test/tools/hersch_loadability.mjs`.
 - (*) **M2.2** Image display for opened files (`<graphic>` support). **done** -- engine: `readSurfaces` reads `<graphic url>` (`tei-document.js`), `renderFacsimile` falls back to `surface.graphic` (`editor-app.js`), proof `node test/tools/szd_demo_check.mjs`; browser-visual (2026-06-08): o_szd.1079 GAMS facsimile renders in OpenSeadragon (IMG.1/IMG.2 HTTP 200) under headless Chrome, observable proof `c:\tmp\m2_2_1079_folio1.png` (frontend check, not a repo test).
 - (*) **M2.3** Live browser pass over ZBZ (large docs, empty folios, zone linking, rendering of hi/foreign/note/choice/unclear/figure). **deferred**; the demo-relevant part (one ZBZ object) is folded into M7.2.
-- (*) **M2.4** ZBZ image-URL scheme for `<graphic>` injection (images committed only for docs 1000 / 1330 / 1540 / 2310). **open**
+- (*) **M2.4** ZBZ image-URL scheme for `<graphic>` injection (images committed only for docs 1000 / 1330 / 1540 / 2310). **done for the demo object (2026-06-09)** -- the scheme is `https://chpollin.github.io/zbz-ocr-tei/images/<id>/<id>_p###.png`, applied to doc 1000 by the deterministic generator `test/tools/make_zbz1000_demo.mjs` (one `<graphic url>` as first child of each `<surface>`); proof `node test/tools/zbz_worked_example.mjs` (graphic url read on all 4 surfaces). The object stays local-only (rights stance as zbz-100); emitting `<graphic>` upstream in the pipeline remains an order to the zbz lane.
 
 ## H3 - Semantic annotation
 
@@ -84,7 +90,7 @@ cites a re-runnable proof.
 
 - (*) **M5.1** Canonical `integration.md` on disk. **done**
 - (*) **M5.4** Project-status presentation (part of the paper demo). **done (repo-side substance, 2026-06-08)** -- the on-disk status spine lives in [promptotyping-case.md](promptotyping-case.md) section 3 (built and proven, the two success-criterion halves, an honest "not done" list); assembling it into the actual slides is talk work outside the repo (M7.3).
-- (+) **M5.2** Enrich `integration.md` with proof evidence + correct the "blocker not on disk" status. **open**
+- (+) **M5.2** Enrich `integration.md` with proof evidence + correct the "blocker not on disk" status. **done (2026-06-09)** -- the proof evidence is centralized in [paper-evidence.md](paper-evidence.md) (every paper number with source of record, re-runnable command and caveat), `integration.md` points there and its stale figures (CER, needs_review) are corrected; the "blocker not on disk" correction was already recorded in integration.md section 11.
 - (+) **M5.5** Correct `oekosystem-synthese.md` (in the zbz-ocr-tei repo) (EditionCrafter v0, not teiCrafter, is the Editopia Hersch demo). **open**
 - (+) **M5.6** Doc sync (`data.md` / `architecture.md` for the SZD converter and the new editor test). **open**
 
@@ -97,7 +103,7 @@ cites a re-runnable proof.
 ## H7 - Editopia contribution and demo material (teiCrafter as a Promptotyping case)
 
 - (*) **M7.1** teiCrafter as a presentable Promptotyping case (the tool plus its provenance in vault and repo). **done (repo side, 2026-06-08); vault side open** -- [promptotyping-case.md](promptotyping-case.md): the tool plus its three on-disk provenance traces (the knowledge base, the journal as decision record, Git history as build trace). The vault-side (Obsidian) provenance is the operator's to write.
-- (*) **M7.2** Two annotated worked examples (one ZBZ and one SZD object, end-to-end in the editor). This is the success criterion. **SZD half done, ZBZ half open** -- SZD: the worked example is written and reproducible, [worked-example-szd.md](worked-example-szd.md) (the object, the seven-step path, the entity table), and proven on the real CC-BY object by `node test/tools/szd_worked_example.mjs` (the full open -> correct -> annotate -> textual criticism -> save arc, every step a surgical byte-faithful splice, 38/38, exit 0); browser-verified 2026-06-08 (Playwright `c:\tmp\pwtest\m72.js`: open, byte-identical save, line correction, place annotation, re-open; plus the M2.2 GAMS render). The remaining browser paths (Mark-text, in-browser mention linking, live fetch) await an operator sight-check. The ZBZ half waits on the parallel ZBZ spur.
+- (*) **M7.2** Two annotated worked examples (one ZBZ and one SZD object, end-to-end in the editor). This is the success criterion. **SZD half done; ZBZ half engine-proven (2026-06-09), browser sight-check open** -- SZD: the worked example is written and reproducible, [worked-example-szd.md](worked-example-szd.md) (the object, the seven-step path, the entity table), and proven on the real CC-BY object by `node test/tools/szd_worked_example.mjs` (the full open -> correct -> annotate -> textual criticism -> save arc, every step a surgical byte-faithful splice, 38/38, exit 0); browser-verified 2026-06-08 (Playwright `c:\tmp\pwtest\m72.js`: open, byte-identical save, line correction, place annotation, re-open; plus the M2.2 GAMS render). ZBZ: doc 1000 (chosen over 1330/1540/2310 for its clean 1:1 pb/surface/image alignment, graded OCR defects, and dense entities), worked example written ([worked-example-zbz.md](worked-example-zbz.md), with the added-value before/after in section 6) and proven by `node test/tools/zbz_worked_example.mjs` (38/38, 11 surgical edits, exit 0). Browser paths for the ZBZ half (Pages facsimile render, inline correction, annotation, Mark-text, live fetch) and the remaining SZD browser paths await the operator sight-check.
 - (+) **M7.3** Contribution to the slide set and the full text where teiCrafter is concerned. **repo-side draft done (2026-06-08); deck/full-text outside repo** -- the talking-points spine (thesis, the seven demo beats, the honest claim/not-built list, the method pitch) is drafted in [promptotyping-case.md](promptotyping-case.md) section 5; assembling it into the actual slides and prose is talk work partly outside this repository.
 
 ## Critical path to the demo
@@ -109,15 +115,17 @@ byte-identical round-trip, 39 empty/all-blank objects valid; M4.4 covered). The 
 cluster is now complete: M3.1 / M3.2 / M3.3 (hand-entry + live lookup) / M3.4 /
 M3.5 (notes) / M3.6 (textual criticism) / M3.7 (AI proposal with verify gate) are done, each
 with a byte-clean regression test; M2.2's browser-visual test passed (2026-06-08); the whitespace caveat is closed (8fd281c).
-The only remaining demo-facing work is the **ZBZ half of M7.2** (it waits on the separate ZBZ
-spur); the SZD half is done (worked example written and proven, `node test/tools/szd_worked_example.mjs`,
-browser-verified 2026-06-08), and the repo side of **M7.1** (the Promptotyping case), **M5.4**
+Both halves of **M7.2** are now engine-proven: the SZD half is done (worked example written and
+proven, `node test/tools/szd_worked_example.mjs`, browser-verified 2026-06-08), and the ZBZ half
+landed 2026-06-09 (doc 1000, [worked-example-zbz.md](worked-example-zbz.md),
+`node test/tools/zbz_worked_example.mjs` 38/38, with **M2.4** done for the demo object via the
+deterministic generator). The repo side of **M7.1** (the Promptotyping case), **M5.4**
 (status spine), and **M7.3** (talking-points draft) is on disk in [promptotyping-case.md](promptotyping-case.md),
-leaving only the vault-side provenance and the live slide/text assembly outside the repo.
-Engine and parser of the three new annotation features are headless-proven; their
-browser paths (note click, LLM call, live fetch) await operator visual sign-off. The zbz frontend
-rendering work (M2.3 / M2.4) stays deferred; its image-URL scheme is read into M7.2 when the ZBZ
-example is built.
+and the paper numbers are fixed in [paper-evidence.md](paper-evidence.md) (**M5.2**), leaving the
+vault-side provenance and the live slide/text assembly outside the repo.
+The remaining demo-facing work is the operator browser sight-check of the ZBZ half and of the
+unexercised browser paths (Mark-text, in-browser mention linking, live fetch, note click, LLM call).
+The zbz frontend rendering work (M2.3) stays deferred.
 
 ## Verification
 

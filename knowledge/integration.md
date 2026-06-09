@@ -11,9 +11,9 @@ template:
   version: 0.1
 status: active
 created: 2026-06-07
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
-version: 0.7
+version: 0.8
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, user-stories, architecture, design, testing, goals]
 ---
@@ -174,9 +174,11 @@ OpenSeadragon facsimile, layout editor, transcription/TEI/XML text editor, manif
 editor). One Save button persists all unsaved streams; File System Access API (Chromium)
 or download fallback; dual-write to canonical `output/` and viewer mirror `docs/data/`.
 
-**Quality.** Fidelity-CER median 1.83%, mean 4.26% (n=25 GT, E70 methodology: case-
-sensitive full-text Levenshtein, fidelity isolates real OCR/layout errors from scope
-inserts). 285/285 schema-valid. 79 blank pages in 15 docs.
+**Quality.** Fidelity-CER median 1.40%, mean 2.71% (n=25 GT, corrected run of
+2026-06-08; E70 methodology: case-sensitive full-text Levenshtein, fidelity isolates
+real OCR/layout errors from scope inserts). 285/285 schema-valid. 79 blank pages in
+15 docs. Every citable number, with source and re-runnable command, is fixed in
+[paper-evidence.md](paper-evidence.md).
 
 ## 5. SZD Pipeline (szd-htr), verified
 
@@ -205,7 +207,8 @@ prompt (system + group A-I + auto object-context from TEI + optional per-object 
 all images in one batch, auto-chunk above 20 images, backoff on 429, JSON sanitization;
 output `{id}_{model}.json` with pages[] (transcription, notes, type), confidence, metadata.
 (2) `quality_signals.py` v1.5: 7 signals + page.type (content/blank/color_chart);
-needs_review ~27%. (3) `layout_analysis.py`: ensemble Docling (blocks) + Surya (lines) +
+needs_review 16.4% live on the post-dedup corpus (340/2069, 2026-06-09; the earlier
+~27% figure predates full transcription coverage, see [paper-evidence.md](paper-evidence.md)). (3) `layout_analysis.py`: ensemble Docling (blocks) + Surya (lines) +
 Gemini 3 Flash (merge+verify), output `{id}_layout.json` with regions (bbox in percent).
 (4) exports: `export_page_json.py` (Page-JSON v0.2), `export_pagexml.py` (PAGE XML 2019,
 deterministic), `export_mets.py` (METS/MODS, ~2074 objects).
@@ -253,10 +256,12 @@ SZD:  images -> Gemini VLM -> [layout] -> Page-JSON v0.2 -> export_tei ───
                                           \-> PAGE-XML / METS (archival, not editor)
 ```
 
-ZBZ to editor works today for text (the bundled `zbz-hersch-100.xml` is doc 100's
+ZBZ to editor works today for text (the local zbz-100 demo is doc 100's
 `_final.xml` plus a `<standOff>` demo block and inline `<name ref>` links). SZD needs the
-converter. There is no automated pipeline-to-teiCrafter link; the bundled ZBZ demo was
-prepared by hand.
+converter. The ZBZ worked-example object (doc 1000 plus per-surface `<graphic url>`,
+M2.4 scheme) is materialized deterministically by `test/tools/make_zbz1000_demo.mjs`
+from the zbz sibling checkout; like zbz-100 it stays local-only (rights). There is no
+automated pipeline-to-teiCrafter link beyond that generator.
 
 ## 7. teiCrafter Target Contract for Converters
 

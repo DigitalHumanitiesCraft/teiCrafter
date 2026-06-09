@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
-version: 0.7
+version: 0.8
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
@@ -78,7 +78,7 @@ The reference manuscript case. The real codex `codex-2759.xml` (~78 MB) carries 
 
 The real Wenzelsbibel codex is third-party material (Austrian National Library) with an unresolved redistribution licence and is absent from disk. All committed Wenzelsbibel material is a **synthetic structural twin** under `test/fixtures-synthetic/` and `docs/data/editor/` (no ONB data). Real third-party files used for proofs (Hersch, SZD catalog, any ONB slice) live only under the gitignored `test/fixtures/` and never enter version control.
 
-The one deliberate exception is `test/fixtures/real/o_szd.1079.tei.xml`, the SZD worked-example object: it is licensed **CC-BY** (its own `publicationStmt` carries the rights and attribution), so it is committed on purpose to make the M7.2 worked example and its proof (`test/tools/szd_worked_example.mjs`) fully reproducible. The rights-encumbered fixtures in the same folder (the Hersch files, the SZD catalog TEI `szd_werke_tei.xml`) stay gitignored.
+The one deliberate exception is `test/fixtures/real/o_szd.1079.tei.xml`, the SZD worked-example object: it is licensed **CC-BY** (its own `publicationStmt` carries the rights and attribution), so it is committed on purpose to make the M7.2 worked example and its proof (`test/tools/szd_worked_example.mjs`) fully reproducible. The rights-encumbered fixtures in the same folder (the Hersch files, the SZD catalog TEI `szd_werke_tei.xml`) stay gitignored. The ZBZ worked-example object (`docs/data/editor/zbz-1000/zbz-hersch-1000.xml`, doc 1000 plus per-surface `<graphic url>`) follows the Hersch rights stance: local-only and gitignored, materialized deterministically via `node test/tools/make_zbz1000_demo.mjs` from the zbz sibling checkout, so its proof (`test/tools/zbz_worked_example.mjs`) stays reproducible without redistributing the content.
 
 ## Negative Definition
 

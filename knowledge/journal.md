@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
-version: 0.7
+version: 0.8
 related: [project, specification, architecture, testing]
 ---
 
@@ -22,7 +22,15 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
-## 2026-06-08: SZD worked example (M7.2) and the Promptotyping case (M7.1 / M5.4 / M7.3)
+## 2026-06-09: ZBZ worked example (M7.2 ZBZ half, M2.4), Editopia evidence sheet, sharpened success criterion
+
+The Editopia frame was sharpened by the operator: "the experiment succeeded" was premature, since the ZBZ project partners are not yet convinced of the result's value. The experiment now counts as successful when the workflow's added value for the Hersch project is demonstrable: from the unverified pipeline TEI of a real object, curation in teiCrafter produces a demonstrably better TEI (facsimile-linked, authority-linked entities, explicit editorial confidence and verification status) while preserving the pipeline output byte-exactly. Recorded in goals.md (Frame) and as the before/after table in worked-example-zbz.md section 6. A second operator decision: both demo objects run in teiCrafter (the EditionCrafter-v0 note in the zbz repo's oekosystem-synthese.md is to be corrected there, M5.5 stays an order to the zbz lane).
+
+The ZBZ half of M7.2 landed. A research workflow (three parallel readers over zbz-ocr-tei, teiCrafter and the evidence base) compared the four candidates with committed images; doc 1000 won over 1330 (7 pb on 6 surfaces, double pages per scan), 2310 (image/surface index offset) and 1540 (strong runner-up, 8 pages) for its clean 1:1 pb/surface/image alignment, dense entities and graded OCR defects. The object is the unchanged pipeline `1000_final.xml` plus one `<graphic url>` per surface (the M2.4 scheme, `https://chpollin.github.io/zbz-ocr-tei/images/1000/1000_p00N.png`), injected by the deterministic generator `test/tools/make_zbz1000_demo.mjs`. The proof `test/tools/zbz_worked_example.mjs` (38/38, 11 surgical edits) drives the full arc: lossless load with graphic urls on all 4 surfaces, the OCR fix "inadaption" to "inadaptation" proven a two-byte insertion by full reconstruction, the standOff triad with resolved authorities (Hersch GND 118815679 via lobid; Geneve Wikidata Q71 plus GeoNames 7285902 via Wikidata P1566; Illich and "Une societe sans ecole" deliberately authority-free for the live lookup), a Geneve mention link, `<unclear>` on the column-split footnote fragment, `<gap/>` for the stray "Heft" token, idempotent save. Browser paths await the operator sight-check.
+
+A rights decision worth recording: the prepared object was briefly committed, then pulled back before any push. This repo's documented stance keeps Hersch material out of version control (zbz-100 precedent), and although doc 1000 is one of the four documents the zbz repo itself publishes, public is not redistributable; the object is now gitignored and materialized on demand by the generator, the proof gating local file, else sibling build, else SKIP. If ZBZ confirms redistributability of the four demo documents, committing is a one-line gitignore change.
+
+`knowledge/paper-evidence.md` (M5.2 resolved) fixes every number the paper may cite with source of record, re-runnable command and caveat, and supersedes four stale figures found by the verification pass: Fidelity-CER is median 1.40% / mean 2.71% (corrected run 2026-06-08; the 1.83/4.26 pair circulating in earlier notes and in integration.md was stale), SZD needs_review is live 16.4% (340/2069, not the documented 27% from the smaller corpus), ZBZ workflow states are three (E77), port parity is 5/5 with one upstream-deduped skip. integration.md was corrected accordingly. Full regression stayed green before and after (roundtrip 294/294, both worked examples 38/38).
 
 The teiCrafter half of the success criterion turned from "feature checks pass" into a presentable, reproducible artifact. `knowledge/worked-example-szd.md` walks the real CC-BY object `o_szd.1079` (an 1901 Stefan Zweig letter to Max Fleischer) end to end: open and verify the GAMS facsimile, navigate the five folios, correct an HTR slip by editorial judgement ("Gerichte" to "Gedichte"), add the person / place / work triad with the authority identifiers that are genuinely known (Zweig GND 118637495, Wien GeoNames 2761369 / Wikidata Q1741) and leave the rest to the live lookup, link a mention, mark `<unclear>` and `<gap>`, and save byte-faithfully. A new proof `test/tools/szd_worked_example.mjs` drives that whole arc through the real engine on the actual fixture and asserts every step is a surgical byte-faithful splice; the "Gerichte" fix is proven to change exactly one byte and nothing else by full reconstruction, not a tautological prefix check. 38/38, exit 0. The fixture is committed because it carries its own CC-BY licence and attribution in its `publicationStmt`, which makes the worked example fully reproducible; the rights-encumbered fixtures in the same folder stay gitignored (recorded in data.md).
 

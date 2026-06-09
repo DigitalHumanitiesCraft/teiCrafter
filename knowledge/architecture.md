@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
-version: 0.7
+version: 0.8
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
 ---
@@ -97,6 +97,7 @@ docs/
   data/editor/
     wenzelsbibel-synthetic-codex.xml   Served synthetic word-level demo edition
     zbz-100/              Real Jeanne Hersch example (TEI + page PNGs); gitignored, local-only (rights)
+    zbz-1000/             ZBZ worked-example object (doc 1000 + graphic urls, M7.2); gitignored, local-only (rights); regenerate via test/tools/make_zbz1000_demo.mjs
 pipeline/
   export_tei.py           SZD Page-JSON v0.2 -> teiCrafter-target TEI; deterministic (rule, never an LLM); contract frozen in knowledge/converter-reference.md
 ```
