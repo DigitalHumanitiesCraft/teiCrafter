@@ -1,110 +1,115 @@
 # teiCrafter Handoff and Working State
 
 Action-layer summary so work can resume without re-deriving anything. Snapshot:
-2026-06-09, end of the Editopia planning-and-execution session. Conceptual detail
-lives in `knowledge/` (version 0.8, start at `INDEX.md`). This file replaces the
-2026-06-04 snapshot; the tool description, code map, and constraints from that
-snapshot still hold and are not repeated where unchanged (see `knowledge/architecture.md`).
+2026-06-09, end of the Editopia execution round (milestones MS-A to MS-D of that
+round). Conceptual detail lives in `knowledge/` (version 0.9, start at
+`INDEX.md`); per-milestone evaluation reports live in `reports/`. This file
+replaces the earlier 2026-06-09 snapshot; the tool description, code map, and
+constraints still hold and are not repeated where unchanged (see
+`knowledge/architecture.md`).
 
 ## Frame: what this lane is working on
 
 The Editopia contribution (Pollin / Kreyenbuehl, "Agentenbasierte Editionsworkflows
 und epistemische Infrastrukturen", conference 02. to 04.09.2026, Wuppertal). The
-research project has eight subprojects; the cross-project master plan and the
-zbz-lane order live in the Obsidian vault (`Projects/zbz-ocr-tei/2026-06-09 -
-Editopia Gesamtplan.md` and `... - Auftrag zbz-Lane Editopia.md`); session plan
-documents live in `~/.claude/plans/editopia-*.md`. The repo-side milestone register
-is `knowledge/goals.md` (H1 to H7, now including M7.4 and M7.5).
+research project has eight subprojects; the cross-project master plan, the zbz-lane
+order (now four points), the concept chapter draft, the nine-section full-text
+Rohfassung and the M7.1 provenance page live in the Obsidian vault
+(`Projects/zbz-ocr-tei/2026-06-09 - *` and `Projects/Research Tools/teiCrafter/`);
+session plan documents live in `~/.claude/plans/editopia-*.md`. The repo-side
+milestone register is `knowledge/goals.md` (H1 to H7).
 
 Success criterion (operator, 2026-06-09): the experiment counts as successful when
 the workflow's added value for the Hersch project is demonstrable, that is, from
 unverified pipeline TEI a demonstrably better TEI emerges through curation in
 teiCrafter (facsimile-linked, authority-linked entities, explicit editorial
-confidence, explicit verification status, byte-exact preservation).
+confidence, explicit verification status, byte-exact preservation), confirmed by
+the ZBZ.
 
 ## State at handoff (all engine-proven, nothing pushed)
 
-Branch `session/2026-06-07-place-graphic`, clean working tree, **6 commits ahead of
-origin** (in order): 10eae74 ZBZ worked-example engine proof + local-only object
-(M2.4 + M7.2 ZBZ half), 8ec4a11 paper evidence sheet (`knowledge/paper-evidence.md`),
-a3488cd ZBZ worked-example document (`knowledge/worked-example-zbz.md`), f744a77
-knowledge sync (version 0.8), 83651e6 milestones M7.4/M7.5, plus this handoff commit.
+Branch `session/2026-06-07-place-graphic`, clean working tree, **10 commits ahead
+of origin** (in order): 10eae74 ZBZ worked-example engine proof + local-only object,
+8ec4a11 paper evidence sheet, a3488cd ZBZ worked-example document, f744a77 knowledge
+sync 0.8, 83651e6 milestones M7.4/M7.5, 934c3d4 handoff, c2a2827 M7.4 curated set
+(generator + curated-set.md + knowledge 0.9), 2c20fdc TP5 chapter record, 90d4512
+TP7 Rohfassung record, plus the MS-D sync commit carrying this handoff.
 
-- Both halves of the M7.2 demo gate are engine-proven: SZD `o_szd.1079`
-  (browser-verified 2026-06-08) and ZBZ doc 1000 (`node
-  test/tools/zbz_worked_example.mjs`, 38/38, 11 surgical edits, first green
-  2026-06-09).
-- The ZBZ object is LOCAL-ONLY (rights stance as zbz-100, gitignored):
-  `docs/data/editor/zbz-1000/zbz-hersch-1000.xml`, materialized deterministically by
-  `node test/tools/make_zbz1000_demo.mjs` from the zbz sibling checkout. The proof
-  gates local file, else sibling build, else SKIP.
-- `knowledge/paper-evidence.md` fixes every paper number with source and re-runnable
-  command; it superseded four stale figures (CER median 1.40 / mean 2.71, not
-  1.83/4.26; SZD needs_review live 16.4 %; three ZBZ workflow states per E77; port
-  parity 5/5).
-- Schema finding (2026-06-09, artifacts `c:\tmp\zbz1000_curated.xml`,
-  `c:\tmp\validate_steps.py`, `c:\tmp\make_curated_1000.mjs`): against
-  `zbz_hersch.rng` the curated additions validate for graphic / correction /
-  unclear / gap; `<standOff>` and `<name ref>` do NOT and need a schema extension
-  (order to the zbz lane is written, vault).
-- Full regression green 2026-06-09: roundtrip 294/294, hersch_loadability 285/285,
-  both worked examples, criticism 47/47, szd_demo_check.
+- **M7.4 done for the two proven objects:** `node test/tools/make_curated_set.mjs`
+  (exit 0) persists before/after/diff/summary per object under gitignored
+  `output/curated-set/` (zbz-1000: 8 steps, 11 splices, +17/-5; o_szd.1079: 9
+  steps, 12 splices, +18/-5; diff counts cross-checked against
+  `git diff --no-index --stat`). Extension (zbz-1540, SZD prompt-group objects)
+  awaits operator object sign-off; per-object browser approval is the operator's.
+- **TP5 chapter draft** in the vault (all five sharpening points, adversarially
+  reviewed, 22 findings worked in), with a three-point update proposal for the
+  concept note; operator approval pending.
+- **TP7 nine-section Rohfassung** in the vault, produced by a 24-agent workflow
+  (drafter, adversarial verifier, reviser per section; 49 findings worked in;
+  every number mapped to `knowledge/paper-evidence.md`); consolidated open points
+  at the end of the note; co-author approval pending. NOTE: the operator has since
+  restricted this lane to solo work (no dynamic workflows), 2026-06-09 night.
+- **M7.1 vault provenance page** drafted, approval pending. **M7.5** runs as
+  standing practice (journal per session, milestone commits with proof,
+  per-milestone evaluation reports in `reports/`).
+- Knowledge set at 0.9; README extended (full knowledge table, worked-example and
+  curated-set proofs, SZD case editable via the converter); promptotyping-case.md
+  de-staled (2,069 post-dedup, ZBZ half engine-proven, vault side drafted).
+- Full regression green 2026-06-09: roundtrip 294/294, both worked examples 38/38,
+  curated set PASS.
 
 ## Decisions this session (dated, with reasons)
 
 1. The experiment is NOT yet "gelungen"; success is the demonstrable added value
-   (operator, reframing the paper narrative from claim to criterion).
-2. Both Editopia demo objects run in teiCrafter; the 2026-06-07 note that
-   EditionCrafter v0 carries the Hersch demo is superseded (ACTIVE-WORK updated,
-   zbz-lane corrects oekosystem-synthese.md, M5.5). EditionCrafter's role in the
-   talk (outlook or absent) is an open operator decision.
-3. ZBZ demo object is doc 1000 (only candidate with clean 1:1 pb/surface/image
-   alignment; 1330 has 7 pb on 6 surfaces, 2310 an image/surface offset, 1540 is
-   the 8-page German runner-up).
-4. Doc 1000 was briefly committed, then removed from history before any push:
-   public on the zbz Pages is not redistributable, the repo's documented Hersch
-   rights stance wins; reproducibility via the deterministic generator instead.
-5. Paper style rules (operator): no rhetorical colons, no dashes, no slop patterns,
-   no metaphors; saved as durable memory and in the plans.
-6. The making of the contribution is itself documented as a Promptotyping case
-   (M7.5); every session ends with a journal entry, every operator decision is
-   dated.
+   confirmed by the ZBZ (operator, 2026-06-09).
+2. ZBZ demo object is doc 1000; Hersch material stays local-only (gitignored,
+   deterministic generators) until the rights answer; briefly committed material
+   was removed from history before any push.
+3. Paper style rules (operator): no rhetorical colons, no dashes, no slop
+   patterns, no metaphors; numbers only with an evidence-sheet row.
+4. Curated-set step counting: curation steps vs engine splices are two registered
+   figures, never to be mixed (paper-evidence.md section 3).
+5. The two concept additions (artifact carries its own verification status;
+   determinism of the surrounding tools) are led as an EXTENSION of the
+   verification milestones in the chapter draft, operator confirmation pending.
+6. Solo-mode constraint (operator, 2026-06-09 night): no dynamic multi-agent
+   workflows from now on; this lane works as a single model.
 
 ## Open threads (none lost, all registered)
 
-- Operator: CfP deadline and full-text format (drives the whole schedule; current
-  assumption: submission by 09.08.); browser sight-check of the ZBZ worked example
-  plus the five unexercised browser paths (Mark-text, mention link, live lookup,
-  note click, AI proposal); push approval for the 6 local commits; object sign-off
-  for M7.4; Kreyenbuehl package (redistributability of the four demo docs,
-  workflow comparison data, outline meeting).
-- zbz lane: written order in the vault (schema extension standOff/name per E68
-  precedent, graphic emission check, oekosystem correction).
-- This lane next: M7.4 curated example set (script-generated before/after pairs
-  with diff; proposed ZBZ 1000 + 1540, SZD 1079 plus two or three prompt-group
-  objects; ZBZ pairs local-only pending rights); then the full text (nine sections,
-  the epistemic-infrastructure chapter is the largest original writing, sharpening
-  points recorded in `~/.claude/plans/editopia-projektplan-v2-2026-06-09.md`).
+- Operator gates: browser sight-check of ZBZ doc 1000 and the five unexercised
+  paths (Mark-text, mention link, live lookup, note click, AI proposal); push
+  approval for the 10 local commits; object sign-off and per-object browser
+  approval for M7.4; approval of chapter draft, Rohfassung, provenance page;
+  CfP deadline and full-text format; Kreyenbuehl package (rights of the four demo
+  documents, institutional-context placeholder, pipeline stage-count confirmation,
+  workflow comparison data); EditionCrafter role in the talk.
+- zbz lane (written order in the vault, four points): schema extension
+  standOff/name (E68 precedent), graphic emission, oekosystem correction,
+  warnings-figure reconciliation (29/14 vs verified 121).
+- Consolidated paper open points: end of the Rohfassung note (references to
+  verify, ZBZ deliveries, operator decisions, pre-submission updates).
 
 ## The one next step
 
-Implement **M7.4**: build the curated example set script-generated through the
-engine (pattern: `c:\tmp\make_curated_1000.mjs`, generalized and moved into
-`test/tools/`), persist before/after/diff per object under a gitignored output
-directory, write the set table for the paper, and hand the objects to the operator
-for browser approval. Start with the two proven objects (ZBZ 1000, SZD 1079), then
-extend to the proposed set once the operator signs off the object list.
+Solo-executable without operator input: verify the open references via web search
+(Sapkota et al. 2025, Simons/Zichert/Wuethrich 2025, Sharkey et al. 2025, Sahle
+2016 page numbers, Pollin et al. 2025 / 2026a) and complete the Quellen lists of
+the chapter and Rohfassung notes; then add the genre-distribution and
+publication-period rows to `knowledge/paper-evidence.md` (values exist in zbz
+`knowledge/projekt.md`, read-only) so the section-2 placeholder can be filled.
+Everything else on the critical path is operator-gated (see open threads).
 
 ## Shared and held files
 
-- This repo: everything here is this lane's own; no foreign changes in the working
-  tree at handoff (status clean).
-- Obsidian vault (shared with the operator and other instances): created
-  `Projects/zbz-ocr-tei/2026-06-09 - Editopia Gesamtplan.md` and `... - Auftrag
-  zbz-Lane Editopia.md` (both `author: claude-code-worker`, `human-reviewed: false`);
-  updated ACTIVE-WORK (zbz and teiCrafter entries) and Erledigt-Log. Three flags for
-  the operator: the zbz ACTIVE-WORK entry still lists the CER baseline as open
-  although zbz `knowledge/quality.md` carries the corrected headline since 06.08;
-  that entry now has six arrow lines (convention says four to five); the teiCrafter
-  entry's morning claim "gepusht" predates the six local evening commits.
-- Sibling repos zbz-ocr-tei and szd-htr: untouched (working model: orders only).
+- This repo: everything here is this lane's own; status clean at handoff.
+- Obsidian vault (shared): created tonight `2026-06-09 - Editopia Begriffskapitel
+  epistemische Infrastruktur (Entwurf).md`, `2026-06-09 - Editopia Volltext
+  Rohfassung.md` (both Projects/zbz-ocr-tei) and `2026-06-09 - teiCrafter als
+  Promptotyping-Fall (Provenienz).md` (Projects/Research Tools/teiCrafter);
+  updated Gesamtplan (TP4 to TP7 status), zbz-lane order (point 4), ACTIVE-WORK
+  (zbz and teiCrafter entries), Erledigt-Log. All marked claude-code-worker.
+- Sibling repos zbz-ocr-tei and szd-htr: read-only this session (orders only).
+- Local-only artifacts: `output/curated-set/` (regenerable),
+  `docs/data/editor/zbz-1000/` (regenerable, rights-encumbered), `c:\tmp\*`
+  analysis artifacts.

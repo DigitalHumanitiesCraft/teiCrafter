@@ -11,7 +11,7 @@ template:
   version: 0.1
 status: active
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
 version: 0.9
 topics: ["[[Promptotyping]]", "[[Method]]", "[[Project Status]]", "[[Editopia]]"]
@@ -104,14 +104,16 @@ inserts a `<standOff>` block, and the re-opened file is stable. The remaining st
 example (textual-critical Mark-text, in-browser mention linking, the live authority fetch) are
 headless-proven (`node test/tools/szd_worked_example.mjs`, the full open to save arc as surgical
 splices) and await operator visual sign-off. The SZD converter chain (M1.2 to M1.5) is cleared end
-to end: the contract is frozen, `export_tei.py` is byte-faithful, and all 2103 objects convert and
-round-trip byte-identically.
+to end: the contract is frozen, `export_tei.py` is byte-faithful, and all 2,069 objects of the
+TEI-canonical, upstream-deduplicated corpus convert and round-trip byte-identically (the earlier
+2103 figure predates the dedup).
 
-Success criterion, ZBZ half. The ZBZ half runs in the parallel ZBZ lane (zbz-ocr-tei): ZBZ
-`{id}_final.xml` already loads directly into the editor (285/285 usable views), but the ZBZ
-worked example is open, blocked by a facsimile-rights gap (the Jeanne Hersch images are
-rights-encumbered and local-only; images are committed only for docs 1000 / 1330 / 1540 /
-2310) and the still-open ZBZ image-URL scheme (M2.4). Data flow across the three projects is
+Success criterion, ZBZ half. Done at engine level since 2026-06-09: ZBZ `{id}_final.xml` loads
+directly into the editor (285/285 usable views), and the ZBZ worked example on doc 1000 is
+engine-proven (`node test/tools/zbz_worked_example.mjs`, 38/38; [worked-example-zbz.md](worked-example-zbz.md)).
+The image-URL scheme (M2.4) is done for the demo object via the deterministic generator
+`make_zbz1000_demo.mjs`; the object stays local-only under the documented Hersch rights stance,
+and the browser sight-check is the operator's. Data flow across the three projects is
 in [integration.md](integration.md).
 
 Not done (stated plainly, so the status is honest):
@@ -139,9 +141,10 @@ await an operator visual sign-off.
   are inspectable together.
 - Talk work, partly outside the repo: the slide-deck and full-text assembly (M7.3) is talk
   work and lives partly outside this repository.
-- Vault side, the operator's to complete: the vault-side provenance of the Promptotyping case
-  (M7.1) lives in the operator's Obsidian space and is the operator's to write; it is
-  referenced here, not authored here.
+- Vault side, drafted and awaiting operator approval: the vault-side provenance of the
+  Promptotyping case (M7.1) is drafted in the operator's Obsidian space
+  (`Projects/Research Tools/teiCrafter/2026-06-09 - teiCrafter als Promptotyping-Fall
+  (Provenienz).md`, marked claude-code-worker); it closes with the operator's approval.
 
 ## 5. Talking points (repo-side M7.3 draft)
 

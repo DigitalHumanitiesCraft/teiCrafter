@@ -139,6 +139,9 @@ The editing core is proven headlessly by exit code:
 | `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 294/294 |
 | `test/tools/generic_roundtrip.mjs` | one engine reads Hersch/WB/SZD; surgical cell edit; model shape | all pass |
 | `test/tools/editor_roundtrip.mjs` | editor core identity + surgical word edit | 13/13 |
+| `test/tools/szd_worked_example.mjs` | real SZD object end-to-end (open, correct, annotate, criticize, save), every step a surgical splice | 38/38 |
+| `test/tools/zbz_worked_example.mjs` | real ZBZ object end-to-end, mirror of the SZD proof (SKIPs without the local-only object) | 38/38 |
+| `test/tools/make_curated_set.mjs` | curated before/after pairs with diff, generated through the engine and verified per object | PASS |
 | `test/harness/selftest.mjs` | negative gate (identity passes, corruption fails) | 14/14 |
 | `test/harness/run.mjs` | synthetic fixtures, MVP gate | all PASS |
 
@@ -152,7 +155,7 @@ The sweep reads source repositories directly; no third-party TEI is committed. R
 |------|--------|-------|-------------|---------------|
 | Wenzelsbibel | synthetic twin (Codex 2759) | `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | yes, directly |
 | Jeanne Hersch | zbz-ocr-tei | `<p>` + `<lb facs>`, real zones, no `<w>` | line | yes, directly |
-| Stefan Zweig | szd-htr | catalog TEI + Page-JSON (no transcription TEI) | (line) | needs Page-JSON to TEI conversion first |
+| Stefan Zweig | szd-htr | catalog TEI + Page-JSON (no transcription TEI) | line | yes, via the deterministic converter (`pipeline/export_tei.py`, byte-faithful to its reference prototype) |
 
 Real third-party TEI is never committed; only synthetic twins ship with the repository.
 
@@ -200,6 +203,16 @@ The project maintains a knowledge base in [`knowledge/`](knowledge/) following t
 | [design.md](knowledge/design.md) | Design system, tokens, UI components |
 | [testing.md](knowledge/testing.md) | Test approach, engine proofs, harness |
 | [journal.md](knowledge/journal.md) | Development log |
+| [integration.md](knowledge/integration.md) | Cross-project data flow (ZBZ and SZD pipelines into the editor) |
+| [goals.md](knowledge/goals.md) | Goals and milestones register (H1 to H7) with proof per "done" line |
+| [converter-reference.md](knowledge/converter-reference.md) | Deterministic SZD Page-JSON v0.2 to TEI mapping |
+| [worked-example-szd.md](knowledge/worked-example-szd.md) | Real SZD object end-to-end in the editor |
+| [worked-example-zbz.md](knowledge/worked-example-zbz.md) | Real ZBZ object end-to-end, with the added-value before/after |
+| [curated-set.md](knowledge/curated-set.md) | Curated example set: before/after pairs, method, rights status |
+| [paper-evidence.md](knowledge/paper-evidence.md) | Every externally citable number with source and verification command |
+| [promptotyping-case.md](knowledge/promptotyping-case.md) | teiCrafter as a Promptotyping case, status spine, talking points |
+
+Milestone evaluation reports live in [`reports/`](reports/).
 
 ---
 
