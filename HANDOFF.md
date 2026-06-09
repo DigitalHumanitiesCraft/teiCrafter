@@ -74,6 +74,17 @@ TP7 Rohfassung record, plus the MS-D sync commit carrying this handoff.
    verification milestones in the chapter draft, operator confirmation pending.
 6. Solo-mode constraint (operator, 2026-06-09 night): no dynamic multi-agent
    workflows from now on; this lane works as a single model.
+7. Browser checks are now agent-driven (operator, 2026-06-09 night): this lane
+   drives the Claude-in-Chrome tool itself. Method proven on o_szd.1079: repo
+   served on :8123, the native file picker bridged by a JS stub whose fake
+   handle also captures the save stream, so byte-identity is asserted in the
+   browser (no-op save === original, 5,247 chars). The operator's formal
+   sight-off remains a separate gate.
+8. UI restructuring decided (operator, 2026-06-09 night): annotations must be
+   visible in the reading text and every operation reachable at the cell;
+   registered as M2.5 (annotation visibility layer) and M2.6 (inline action
+   chooser), concept in design.md. Trigger findings: `.ed-w.mention` unwired,
+   entity-type tokens unused, modes hidden behind toggles.
 
 ## Open threads (none lost, all registered)
 
@@ -92,13 +103,18 @@ TP7 Rohfassung record, plus the MS-D sync commit carrying this handoff.
 
 ## The one next step
 
-Solo-executable without operator input: verify the open references via web search
-(Sapkota et al. 2025, Simons/Zichert/Wuethrich 2025, Sharkey et al. 2025, Sahle
-2016 page numbers, Pollin et al. 2025 / 2026a) and complete the Quellen lists of
-the chapter and Rohfassung notes; then add the genre-distribution and
-publication-period rows to `knowledge/paper-evidence.md` (values exist in zbz
-`knowledge/projekt.md`, read-only) so the section-2 placeholder can be filled.
-Everything else on the critical path is operator-gated (see open threads).
+Implement **M2.5 + M2.6** (the UI restructuring, operator priority 2026-06-09
+night; concept in design.md, milestones in goals.md): the `cell.mention`
+projection in `edition.js`, the renderer visibility layer with entity-type
+colours and legend, and the inline cell action chooser. Then re-run the full
+regression (the edition.js change touches the engine model) and re-verify both
+real objects in the browser with the proven picker-stub method (SZD already
+half-verified this run; the ZBZ leg and the unexercised paths are still open).
+Open finding to re-test along the way: the live authority lookup returned
+"Failed to fetch" (Wikidata, query Komotau) despite working 2026-06-08; the
+diagnosis was interrupted. After that: reference verification and the
+genre-distribution evidence rows (see consolidated open points in the vault
+Rohfassung note).
 
 ## Shared and held files
 

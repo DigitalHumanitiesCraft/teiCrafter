@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-06-08
+updated: 2026-06-09
 language: en
 version: 0.9
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
@@ -77,6 +77,15 @@ The editor itself uses no violet: deterministic, human-driven work is shown in t
 - **Information-seeking pattern:** overview first, then zoom and filter, then details on demand.
 - **No raw hex in components:** tokens only.
 
+## Planned Restructuring: Annotation Visibility and Unified Cell Actions (operator decision 2026-06-09)
+
+An agent-driven live review on the real SZD object found the central gap between this document's philosophy ("provenance and validation state shown, not hidden") and the built reading pane: annotations are invisible. Linked mentions carry no class (`.ed-w.mention` exists in `editor.css` but is never assigned by the renderer), the entity-type annotation tokens are unused in the editor, notes show only a thin underline, and the editing flow hides behind three pre-toggled toolbar modes. Two workstreams are decided (goals.md M2.5 and M2.6):
+
+1. **Annotation visibility layer (M2.5).** Linked mentions render with the entity-type colour family and a tooltip naming the entity; notes get a triple-coded marker (colour, icon, position); the existing critical-markup styles stay; a legend strip in the reading-pane header names every visual code (overview first). Requires a read-only `cell.mention` projection in the engine model.
+2. **Inline cell action chooser (M2.6).** Clicking a cell opens an in-place chooser (Edit / Note / unclear / del / add / gap / Link via entity picker / cancel) following the proven `.ed-crit-pick` pattern, so every operation is reachable at the text without pre-toggling a mode; the toolbar toggles remain as shortcuts, double-click is quick edit.
+
+Both stay token-only and keep label consistency; the chooser must preserve the index-initiated link flow (an active link target still completes on the next text click, without the chooser).
+
 ## Components Present vs Future
 
 | Component | Status |
@@ -89,6 +98,8 @@ The editor itself uses no violet: deterministic, human-driven work is shown in t
 | Authority lookup (M3.3): hand-entry plus live external lookup of authority records for index entries | Built |
 | Note creation (M3.5): adding `<note>` annotations to the document | Built |
 | Textual-critical markup (M3.6): a Mark-text mode wraps a line in `<unclear>`/`<del>`/`<add>` or marks a `<gap>`, in the editorial colour families (dotted gold / struck red / underlined blue / muted gap), never violet | Built |
+| Annotation visibility layer: mentions/notes/crit visible in the reading text, entity-type colours, legend (M2.5) | Planned (decided 2026-06-09) |
+| Inline cell action chooser replacing hidden mode toggles (M2.6) | Planned (decided 2026-06-09) |
 | Authoring-view forms for teiHeader and apparatus `<note>` bodies | Future |
 | standOff critical-apparatus / note-body authoring layer | Future |
 
