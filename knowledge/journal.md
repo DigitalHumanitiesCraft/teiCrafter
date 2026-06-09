@@ -14,13 +14,17 @@ status: active
 created: 2026-02-05
 updated: 2026-06-09
 language: en
-version: 0.8
+version: 0.9
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
+
+## 2026-06-09 (continued): Curated example set generated (M7.4 done for the two proven objects)
+
+The paper's empirical partial result moved from "open" to on disk. `test/tools/make_curated_set.mjs` is a registry-driven generator that applies the proven worked-example curation arcs through the real engine and persists, per object, the untouched pipeline TEI (`before.xml`), the curated TEI (`after.xml`), a unified diff (`diff.patch`, own line-based LCS implementation, line counts cross-checked against `git diff --no-index --stat`: +17/-5 for zbz-1000, +18/-5 for o_szd.1079), and a step-log summary, plus the set overview `SET.md`, all under gitignored `output/curated-set/` (the Hersch rights stance carries over: ZBZ pairs stay local-only, and the generator SKIPs an absent rights-encumbered source instead of failing). Verification per object: the before round-trips byte-identically, the after is idempotent and keeps its folio model, a `<standOff>` exists. First run 2026-06-09: 2 objects generated and verified (zbz-1000 with 8 curation steps and 11 engine splices, o_szd.1079 with 9 and 12), the two proposed extension entries (zbz-1540, SZD prompt-group objects) listed as pending the operator's object sign-off. Method and set table live in the new [curated-set.md](curated-set.md); the figures are registered in [paper-evidence.md](paper-evidence.md). Regression stayed green (roundtrip 294/294, both worked examples PASS). The knowledge set version moves to 0.9.
 
 ## 2026-06-09: ZBZ worked example (M7.2 ZBZ half, M2.4), Editopia evidence sheet, sharpened success criterion
 

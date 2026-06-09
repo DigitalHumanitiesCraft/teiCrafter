@@ -14,7 +14,7 @@ status: active
 created: 2026-06-08
 updated: 2026-06-08
 language: en
-version: 0.8
+version: 0.9
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Stefan Zweig]]", "[[Editopia]]"]
 related: [project, specification, goals, testing]
 ---

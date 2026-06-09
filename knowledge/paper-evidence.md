@@ -13,7 +13,7 @@ status: active
 created: 2026-06-09
 updated: 2026-06-09
 language: en
-version: 0.8
+version: 0.9
 topics: ["[[Editopia]]", "[[Evaluation]]", "[[Verification]]"]
 related: [integration, goals, testing, worked-example-szd, worked-example-zbz]
 ---
@@ -78,6 +78,7 @@ which matches the physical definition.
 | Feature regressions | szd_demo_check 32/32, note_create_check 15/15, ai_proposal_check 17/17, criticism_check 47/47, whitespace_edit_check 14/14 | `knowledge/testing.md` (Feature Proofs) | `node test/tools/<name>.mjs` (all re-run 2026-06-09) | each feature ships its own byte-clean regression test (M4.3) |
 | SZD worked example | o_szd.1079 end-to-end, 38 checks, 12 surgical edits | `knowledge/worked-example-szd.md` (M7.2 SZD half) | `node test/tools/szd_worked_example.mjs` (re-run 2026-06-09: PASS) | one object; corpus claims are carried by the 2,069 sweep |
 | ZBZ worked example | doc 1000 end-to-end, 38 checks, 11 surgical edits, graphic urls on all 4 surfaces | `knowledge/worked-example-zbz.md` (M7.2 ZBZ half) | `node test/tools/zbz_worked_example.mjs` (first run 2026-06-09: PASS) | engine proof; browser paths await operator sight-check; the object is local-only (rights stance as zbz-100), materialized via `make_zbz1000_demo.mjs`, the proof SKIPs without it |
+| Curated example set (M7.4) | 2 objects generated and verified: zbz-1000 (8 curation steps, 11 engine splices, diff +17/-5 lines) and o_szd.1079 (9 steps, 12 splices, +18/-5); 2 proposed objects pending operator sign-off | `knowledge/curated-set.md` | `node test/tools/make_curated_set.mjs` (first run 2026-06-09: PASS; diff line counts cross-checked against `git diff --no-index --stat`) | pairs live under gitignored `output/curated-set/` (Hersch rights stance); ZBZ after-file not yet fully schema-valid pending the standOff/name extension |
 
 ## 4. Corrections this sheet supersedes
 

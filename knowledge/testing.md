@@ -14,7 +14,7 @@ status: active
 created: 2026-05-30
 updated: 2026-06-09
 language: en
-version: 0.8
+version: 0.9
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
 ---
@@ -51,6 +51,7 @@ Each demo-critical feature added since the core engine proofs carries its own he
 | `test/tools/criticism_check.mjs` | Textual-critical markup (M3.6, done, commit 119a1a2): `<unclear>`/`<del>`/`<add>` wrap a node's core with edge whitespace kept outside, `<gap/>` replaces the core, `unwrapCritical` refuses to strip a shared wrapper, every mutation covers every byte and reverses byte-exact | 47/47 |
 | `test/tools/szd_worked_example.mjs` | M7.2 worked example: the real CC-BY `o_szd.1079` taken open -> correct (an HTR "Gerichte" -> "Gedichte" fix, proven a single-byte surgical splice by full reconstruction) -> annotate (person/place/work + GND/GeoNames/Wikidata authorities + a Wien mention, scaffolding a `<standOff>` where none existed) -> textual criticism (`<unclear>` wrap, `<gap/>` replace on folio 3) -> save, every step a byte-faithful splice and the final raw idempotent; gates to SKIP if the CC-BY fixture is absent | 38/38 |
 | `test/tools/zbz_worked_example.mjs` | M7.2 worked example, ZBZ half: the real ZBZ doc 1000 taken open -> correct (the OCR "inadaption" -> "inadaptation" fix, proven a two-byte surgical insertion by full reconstruction) -> annotate (Hersch GND 118815679 / Geneve Wikidata Q71 + GeoNames 7285902 / a work, scaffolding a `<standOff>` where none existed) -> mention link -> textual criticism (`<unclear>` wrap, `<gap/>` replace) -> save, every step a byte-faithful splice, all 4 surfaces carrying a GitHub-Pages `<graphic url>`; gates: local file, else built in memory from the zbz sibling via `make_zbz1000_demo.mjs`, else SKIP | 38/38 |
+| `test/tools/make_curated_set.mjs` | M7.4 curated example set: registry-driven generator that applies the proven worked-example curation arcs through the real engine and persists before/after/diff/summary per object under gitignored `output/curated-set/` plus the `SET.md` overview; verifies per object that the before round-trips byte-identically, the after is idempotent and keeps its folio model, and a `<standOff>` exists; registry entries pending operator sign-off are listed, not generated; SKIPs an absent rights-encumbered source | PASS (2 generated, 2 pending) |
 | `test/tools/hersch_loadability.mjs` | Editor-projection sweep (Layer 2, `parseEdition`) over the full Hersch corpus: every real file yields a usable editor view (folios, editable cells, real reading text), not merely a byte round-trip; writes a JSON anomaly report | sweep, anomalies reported |
 | `test/tools/szd_loadability_sweep.mjs` | M1.5: converts the whole szd-htr corpus via `pipeline/export_tei.py --all`, then verifies every converted TEI loads line-level and round-trips byte-identically; empty (`pages: []`) and all-blank objects legitimately yield `cells === 0` and still round-trip | sweep, all clean |
 | `test/tools/port_parity.mjs` | M1.3: `pipeline/export_tei.py` produces byte-identical output to the reference prototype `szd-pagejson-to-tei.mjs` over the SZD demo handful; a missing input (e.g. the upstream-deduped o_szd.161/korrespondenzen) is skipped, not failed | 5/5 byte-identical, 1 skipped |
@@ -107,6 +108,7 @@ Documentation is itself part of acceptance: the per-fixture JSON reports and the
 - `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`: the engine proofs above.
 - `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`, `szd_worked_example.mjs`, `zbz_worked_example.mjs`: the per-milestone feature proofs above.
 - `test/tools/make_zbz1000_demo.mjs`: materializes the local-only ZBZ worked-example object (doc 1000 plus deterministic `<graphic url>` injection, M2.4 scheme) from the zbz sibling checkout.
+- `test/tools/make_curated_set.mjs`: M7.4 curated example set generator (before/after/diff/summary per object under `output/curated-set/`).
 - `test/tools/hersch_loadability.mjs`, `szd_loadability_sweep.mjs`, `port_parity.mjs`, `szd-pagejson-to-tei.mjs`: corpus loadability sweeps and the SZD converter parity/prototype.
 - `test/tools/gen_synthetic_codex.py`, `extract_folio.py`: synthetic generation and folio slicing.
 - `test/schemas/tei_all.rng`: TEI All RelaxNG (~1.0 MB, gitignored).
@@ -133,6 +135,7 @@ node test/tools/criticism_check.mjs        # M3.6 textual-critical markup, 47/47
 node test/tools/szd_worked_example.mjs     # M7.2 worked example: real o_szd.1079 open->correct->annotate->criticism->save, 38/38 (SKIP if fixture absent)
 node test/tools/make_zbz1000_demo.mjs      # materialize the local-only ZBZ worked-example object (doc 1000 + graphic urls) from the zbz sibling
 node test/tools/zbz_worked_example.mjs     # M7.2 ZBZ half: real doc 1000 open->correct->annotate->criticism->save, 38/38 (SKIP without object/sibling)
+node test/tools/make_curated_set.mjs       # M7.4 curated set: before/after/diff/summary per object into output/curated-set/
 node test/tools/hersch_loadability.mjs     # editor-projection sweep over full Hersch (HERSCH_DIR)
 node test/tools/szd_loadability_sweep.mjs  # M1.5 convert whole szd-htr corpus, load + round-trip (SZD_DIR)
 node test/tools/port_parity.mjs            # M1.3 export_tei.py == reference prototype, 5/5 + 1 skipped (SZD_DIR)
