@@ -103,7 +103,7 @@ cites a re-runnable proof.
 - (*) **M5.4** Project-status presentation (part of the paper demo). **done (repo-side substance, 2026-06-08)** -- the on-disk status spine lives in [promptotyping-case.md](promptotyping-case.md) section 3 (built and proven, the two success-criterion halves, an honest "not done" list); assembling it into the actual slides is talk work outside the repo (M7.3).
 - (+) **M5.2** Enrich `integration.md` with proof evidence + correct the "blocker not on disk" status. **done (2026-06-09)** -- the proof evidence is centralized in [paper-evidence.md](paper-evidence.md) (every paper number with source of record, re-runnable command and caveat), `integration.md` points there and its stale figures (CER, needs_review) are corrected; the "blocker not on disk" correction was already recorded in integration.md section 11.
 - (+) **M5.5** Correct `oekosystem-synthese.md` (in the zbz-ocr-tei repo) (EditionCrafter v0, not teiCrafter, is the Editopia Hersch demo). **open**
-- (+) **M5.6** Doc sync (`data.md` / `architecture.md` for the SZD converter and the new editor test). **open**
+- (+) **M5.6** Doc sync (`data.md` / `architecture.md` for the SZD converter and the new editor test). **done (verified 2026-06-10)** -- both documents carry `pipeline/export_tei.py`, the frozen contract reference and the sweep proofs.
 
 - ( ) **M5.7** Capture the source projects' edition guidelines (SZD/GAMS and ZBZ Hersch) in the knowledge base, so annotation decisions in teiCrafter (what gets annotated, which registers, which granularity) can be checked against the original projects' rules instead of TEI P5 generically. Raised by the operator 2026-06-10; sources: the SZD edition guidelines on GAMS, the zbz-ocr-tei knowledge base. Not started.
 

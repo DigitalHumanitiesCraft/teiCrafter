@@ -29,11 +29,12 @@ teiCrafter (facsimile-linked, authority-linked entities, explicit editorial
 confidence, explicit verification status, byte-exact preservation), confirmed by
 the ZBZ.
 
-## State at handoff (all engine-proven, nothing pushed)
+## State at handoff (all engine-proven, partially pushed)
 
-Branch `session/2026-06-07-place-graphic`, clean working tree, **56 commits over
-`origin/main`**, nothing pushed (push requires the operator's word). Since the
-2026-06-09 snapshot:
+Branch `session/2026-06-07-place-graphic`, clean working tree, **60 commits over
+`main`**; 22 of them are already on `origin/session/2026-06-07-place-graphic`,
+the remaining 38 are local only (pushing them requires the operator's word).
+Since the 2026-06-09 snapshot:
 
 - **The UI rebuild through eight operator feedback rounds is landed and proven:**
   M2.5 annotation visibility + M2.6 chooser (superseded), M2.7 shell rework,
@@ -105,7 +106,7 @@ Branch `session/2026-06-07-place-graphic`, clean working tree, **56 commits over
 - Operator gates: browser sight-check of the UI rounds 6 to 8 (welcome state,
   load menu, About, dual view, panel switching, XML next to facsimile) at his
   window size, including the facsimile-toggle report from round 7 that did not
-  reproduce headless; push approval for the 53 local commits; object sign-off
+  reproduce headless; push approval for the 38 unpushed commits; object sign-off
   and per-object browser approval for M7.4; approval of chapter draft,
   Rohfassung, provenance page; Kreyenbuehl package; EditionCrafter role in the
   talk.

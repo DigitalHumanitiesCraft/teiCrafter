@@ -11,9 +11,9 @@ template:
   version: 0.1
 status: active
 created: 2026-06-07
-updated: 2026-06-08
+updated: 2026-06-10
 language: de
-version: 0.6
+version: 0.7
 topics: ["[[Projektplan]]", "[[TEI XML]]", "[[Digitale Editionen]]", "[[Promptotyping]]"]
 related: [goals, integration, converter-reference, project, data, architecture, specification, testing]
 ---
@@ -24,7 +24,7 @@ Dies ist NICHT nur der teiCrafter-Plan: er umfasst die drei Projekte teiCrafter,
 Vortrags-/Paper-Ziel. teiCrafter ist eines der drei Projekte, nicht das Ganze. Dieses Dokument ist
 zugleich der **Umsetzungsplan**: es hält den belegten Stand fest und ordnet die offene Arbeit.
 
-Vollständige, selbsttragende Synthese des Vorhabens (Stand 2026-06-08), bewusst auf Deutsch verfasst
+Vollständige, selbsttragende Synthese des Vorhabens (Stand 2026-06-10), bewusst auf Deutsch verfasst
 (bewusste Entscheidung; weicht von der CLAUDE.md-Regel "documentation in English" und den englischen
 Schwesterdokumenten ab). Es verweist auf die Detail-Dokumente, statt sie zu duplizieren:
 [goals.md](knowledge/goals.md) (englisches Milestone-Register), [converter-reference.md](knowledge/converter-reference.md)
@@ -106,8 +106,8 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
   **285/285** nutzbare Editor-Ansicht, 0 Parse-Fehler; gesamt 4.115 Folios, 49.324 Zellen,
   23.421 Zonen, 266 Notes. [proof] (M1.1, M4.2)
 - **Bildanzeige Engine-Seite.** Der Editor liest `<graphic url>` aus `<surface>` und nutzt
-  `surface.graphic` als imageUrl-Fallback (tei-document.js, editor-app.js). (M2.2 Engine; Browser-Sicht
-  offen, siehe unten.)
+  `surface.graphic` als imageUrl-Fallback (tei-document.js, editor-app.js). (M2.2; Browser-Visualtest
+  bestanden, siehe unten.)
 - **Annotationsschicht gebaut.** Ort (M3.1), Werk (M3.2), Normdaten-Handeingabe als
   `<idno type="GND|GeoNames|Wikidata">` mit add/replace/remove (M3.3-Kern), typ-unabhängiges
   Mention-Linking (M3.4). Ein gemeinsamer Proof deckt alles ab: `node test/tools/szd_demo_check.mjs`
@@ -178,11 +178,11 @@ headless belegt; ihre eigentlichen Browser-Pfade (Klick-UI, LLM-Aufruf, Live-fet
 Operator-Sichtprüfung aus. Die deterministische SZD-Strecke (M1.2 bis M1.5, M4.4) ist vollständig belegt
 (Paritätstest `port_parity.mjs` 6/6 byte-identisch).
 
-Hinweis: `pipeline.mjs` (Vor-Pivot) existiert noch in der teiCrafter-Wurzel, ist aber ein nicht
-lauffähiger Torso: er importiert das im Pivot gelöschte `docs/js/pipeline/` und bricht mit
-ERR_MODULE_NOT_FOUND ab. Seine ~2033 gitignored `output/*.tei.xml` stammen aus der gelöschten Engine
-(LLM-`<div>/<head>/<p>`-Blöcke, NICHT line-level) und sind mit heutigem Code nicht reproduzierbar.
-"2030 TEIs fertig" ist kein gültiger Stand.
+Hinweis: `pipeline.mjs` (Vor-Pivot) wurde 2026-06-10 aus der Wurzel gelöscht (aus der Git-History
+zurückholbar). Er war ein nicht lauffähiger Torso: er importierte das im Pivot gelöschte
+`docs/js/pipeline/` und brach mit ERR_MODULE_NOT_FOUND ab. Seine ~2033 gitignored `output/*.tei.xml`
+stammen aus der gelöschten Engine (LLM-`<div>/<head>/<p>`-Blöcke, NICHT line-level) und sind mit
+heutigem Code nicht reproduzierbar. "2030 TEIs fertig" ist kein gültiger Stand.
 
 ## 5. teiCrafter Ziel-Contract (was der Editor liest und bewahrt)
 
@@ -305,10 +305,14 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
 
 **H5 - Verifikation, Dokumentation**
 - ★ M5.1 Kanonisches integration.md + dieser Plan. **erledigt**.
-- + M5.2 integration.md mit Proof-Evidenz anreichern + "Blocker not on disk" korrigieren. offen.
+- + M5.2 integration.md mit Proof-Evidenz anreichern + "Blocker not on disk" korrigieren. **erledigt
+  (2026-06-09)**: Proof-Evidenz zentral in paper-evidence.md, integration.md verweist dorthin; die
+  "Blocker not on disk"-Behauptung ist entfernt (goals.md führt den Abschluss).
 - + M5.5 oekosystem-synthese korrigieren (EditionCrafter, nicht teiCrafter, ist die Hersch-Demo).
   **separat** (Autor, ZBZ-Spur).
-- + M5.6 Doku-Sync (data.md/architecture.md auf SZD-Konverter + neuen Test). offen.
+- + M5.6 Doku-Sync (data.md/architecture.md auf SZD-Konverter + neuen Test). **erledigt (verifiziert
+  2026-06-10)**: beide Dokumente tragen `pipeline/export_tei.py`, den eingefrorenen Kontrakt und die
+  Sweep-Proofs.
 
 **H6 - Wissensvaults pflegen** (Promptotyping-Methode, Reproduzierbarkeit fürs Paper)
 - + M6.1 teiCrafter-`knowledge/` aktuell halten. laufend.
@@ -365,8 +369,8 @@ teiCrafter + SZD:
 5. **M7.2** SZD-Hälfte erledigt (o_szd.1079, 2026-06-08); ZBZ-Hälfte liegt in der ZBZ-Spur.
 6. **M3.5 Notiz-UI, M3.7 KI-Vorschlag, M3.3 Live-Lookup: erledigt 2026-06-08** (commits d3fc922,
    f647e7e, 8ce938a; je headless belegt; Browser-Pfade zur Operator-Sichtprüfung offen).
-7. **M5.2 / M5.6 / M6.x:** integration.md mit Proof anreichern, data.md/architecture.md auf SZD-Konverter
-   und die neuen Annotations-Features nachziehen. offen.
+7. **M5.2 / M5.6: erledigt** (M5.2 am 2026-06-09 via paper-evidence.md; M5.6 verifiziert 2026-06-10).
+   **M6.x:** laufend (Wissensvaults werden je Session nachgezogen).
 
 Separat (Autor, ZBZ): ZBZ-Bild-URL-Schema verifizieren, Live-ZBZ-Durchlauf, ZBZ-Worked-Example,
 oekosystem-synthese-Korrektur, ZBZ-Projektbericht.
