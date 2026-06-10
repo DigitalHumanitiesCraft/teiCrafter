@@ -268,7 +268,6 @@
 .ed-w { cursor: text; padding: 0 1px; border-radius: 2px; }
 .ed-w:hover { background: var(--color-blue-light); }
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
-.ed-w.editing { outline: 2px solid var(--color-gold); background: var(--color-panel); }
 .ed-w.linked { background: var(--color-gold-light); }
 
 /* Textual-critical markup (M3.6): editorial (not AI), so it uses the human

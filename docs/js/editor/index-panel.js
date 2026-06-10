@@ -10,7 +10,7 @@
  * integrator's side; this module only draws the index sections and routes clicks.
  *
  * Contract:
- *   createIndexPanel(hostEl, hooks = {}) -> { render(entities), setActive(id), clear() }
+ *   createIndexPanel(hostEl, hooks = {}) -> { render(entities), setActive(id) }
  *   hooks: {
  *     onAdd(type, { name }),                 // type in person|place|org|work|event; id is the model's job
  *     onUpdate(id, { name }),                // inline rename committed
@@ -246,11 +246,5 @@ export function createIndexPanel(hostEl, hooks = {}) {
     applyActive();
   }
 
-  function clear() {
-    activeId = null;
-    rowById = new Map();
-    clearNode(hostEl);
-  }
-
-  return { render, setActive, clear };
+  return { render, setActive };
 }

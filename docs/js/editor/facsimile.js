@@ -216,20 +216,11 @@ export function createFacsimile(hostEl, opts = {}) {
     return hit || null;
   }
 
-  function highlightZone(zoneIdOrIndex, panTo = false) {
+  function highlightZone(zoneIdOrIndex) {
     clearHighlight();
     const hit = findOverlay(zoneIdOrIndex);
     if (!hit) return;
     hit.element.classList.add("linked");
-    if (panTo && viewer) {
-      try {
-        // Resolve the live OSD overlay to get its current viewport bounds,
-        // then center the viewport on it.
-        const overlay = viewer.getOverlayById && viewer.getOverlayById(hit.element);
-        const loc = overlay && overlay.getBounds ? overlay.getBounds(viewer.viewport) : null;
-        if (loc) viewer.viewport.panTo(loc.getCenter(), false);
-      } catch (e) { /* ignore pan failures */ }
-    }
   }
 
   function clearHighlight() {

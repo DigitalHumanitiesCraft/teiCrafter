@@ -300,10 +300,6 @@ export function textNodes(node) {
   return out;
 }
 
-/** Raw slice for any node. */
-export function rawOf(doc, node) {
-  return doc.raw.slice(node.start, node.end);
-}
 /** Decoded text for a text node. */
 export function textOf(doc, node) {
   return decodeEntities(doc.raw.slice(node.start, node.end));
@@ -335,11 +331,6 @@ export function nearestAncestor(node, pred) {
 export function ancestorWithXmlId(node) {
   return nearestAncestor(node, (p) => getAttr(p, "id") != null);
 }
-/** True if the node has an ancestor with the given local-name. */
-export function hasAncestorLocal(node, localName) {
-  return nearestAncestor(node, (p) => p.localName === localName) != null;
-}
-
 // ---- lossless edit operations ---------------------------------------------
 
 function splice(raw, start, end, replacement) {
@@ -384,19 +375,13 @@ export function removeAttr(doc, el, localName) {
 
 // ---- Layer 2: generic, schema-free TEI recognizers -------------------------
 
+// Milestone elements: empty markers that segment the text without wrapping it.
 export const MILESTONE_LOCALS = new Set(["lb", "pb", "cb", "gb", "milestone"]);
-export const ENTITY_LOCALS = new Set(["persName", "placeName", "orgName", "geogName", "date", "name", "rs"]);
 // Textual-critical wrappers handled by the editor (M3.6): unclear/del/add wrap
 // reading text; gap is the empty marker that stands in for omitted/illegible text.
 export const CRITICAL_LOCALS = new Set(["unclear", "del", "add", "gap"]);
 const NON_READING_LOCALS = new Set(["teiHeader", "facsimile", "standOff", "fsdecl", "sourceDoc"]);
 
-export function isMilestone(node) {
-  return node.type === "element" && MILESTONE_LOCALS.has(node.localName);
-}
-export function isEntity(node) {
-  return node.type === "element" && ENTITY_LOCALS.has(node.localName);
-}
 /** A facsimile pointer value (without the leading '#') from @facs, or null. */
 export function facsPointer(el) {
   const v = getAttr(el, "facs");
