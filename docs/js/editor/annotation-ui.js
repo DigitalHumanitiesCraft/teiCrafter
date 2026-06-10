@@ -76,9 +76,10 @@ export function createAnnotationUi(ctx) {
 
   const reading = () => document.getElementById("ed-reading");
 
-  // A project manifest's markup list replaces the built-in wraps project-wide
-  // (same [label, build] shape, produced by project-manifest.js).
-  const markupWraps = () => (app.project && app.project.markup) || MARKUP_WRAPS;
+  // A project manifest's markup list replaces the built-in wraps; it binds to
+  // the document's type within the project (resolved at load into app.markup,
+  // same [label, build] shape, produced by project-manifest.js).
+  const markupWraps = () => app.markup || MARKUP_WRAPS;
 
   function removeMenu() {
     const old = document.getElementById("ed-menu");

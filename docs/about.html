@@ -48,8 +48,10 @@
         <h2>What it is for, and what it is not</h2>
         <p>teiCrafter is a working environment for correcting and annotating TEI editions in
             the browser. Most editions reach it as the output of OCR or HTR pipelines that a
-            person now verifies and refines; an optional entry that drafts TEI from plain text
-            exists and is currently switched off. It is not an XML development environment:
+            person now verifies and refines. Plaintext files in a project folder open as
+            minimal TEI drafted by a fixed rule (the text is carried verbatim); a separate,
+            optional entry that drafts TEI from plain text with a language model exists and
+            is currently switched off. It is not an XML development environment:
             there is no schema design and no transformation toolchain. Because saving changes
             nothing outside your deliberate edits, the same files can move between teiCrafter
             and tools such as oXygen or ediarum without one disturbing the other's work. It
@@ -80,8 +82,9 @@
             (<code>&lt;lb&gt;</code>/<code>&lt;l&gt;</code>). Any TEI file opens without
             setup. A project can add settings on top through a manifest file
             (<code>teicrafter.project.json</code> next to the edition): its name, an image
-            resolver for the facsimile, the markup its guidelines allow, its indices and
-            views. The facsimile pane reads
+            resolver for the facsimile, the markup its guidelines allow (declared per
+            document type, since one project can hold letters, life documents and other
+            genres), its indices and views. The facsimile pane reads
             <code>&lt;facsimile&gt;</code>/<code>&lt;zone&gt;</code> and links text and image
             in both directions via <code>@facs</code>.</p>
 

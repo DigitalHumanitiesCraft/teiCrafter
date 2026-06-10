@@ -423,8 +423,14 @@ Round-Trip byte-identisch, 480 Folios, Wort-Profil):
    der Datenmodell-Entscheidung mit der Projektleitung.
 
 Editor-Pfad, unabhängig von der Wenzelsbibel:
-9. **M2.9 Open project folder**: entschieden als einmalig gewährtes Verzeichnis-Handle
-   (File System Access), nicht OPFS; profilloser Ein-Datei-Modus bleibt erhalten.
+9. **M2.9 Open project folder: engine-seitig erledigt 2026-06-10.** Verzeichnis-Handle (File
+   System Access), Projekt-Panel mit Dateiliste, "New project" schreibt ein Minimal-Manifest;
+   Korrektur am selben Tag (Operator): ein Projekt ist KEIN Editionstyp, das Manifest trägt
+   `documentTypes` + `files`, das Element-Inventar bindet an den Typ. Plaintext-Dateien öffnen
+   als deterministischer line-level-Entwurf (Transport, nicht Interpretation, bewusst nicht
+   violett); erster Save erzeugt die .xml im Ordner. Proofs project_manifest_check.mjs 41/41,
+   project_case_check.mjs 24/24 (der Operator-Test-Case headless: eigenes Projekt, ein TEI,
+   zwei Plaintexts). [proof] Offen: der Browser-Durchlauf genau dieses Test-Cases (Operator-Gate).
 10. **M5.7 Editionsrichtlinien der Quellprojekte** (SZD/GAMS, ZBZ Hersch) in die Wissensbasis.
 
 (Commit, Deploy und Veröffentlichung sind bewusst nicht Teil dieses Plans.)

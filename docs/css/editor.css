@@ -587,3 +587,21 @@
   box-shadow: 0 6px 24px rgba(26, 26, 26, .18);
 }
 .ed-val-pop[hidden] { display: none; }
+
+/* Project panel (M2.9): the open project folder's file list. */
+.ed-proj-head { font-size: var(--font-size-sm); color: var(--color-text); font-weight: 600; margin-bottom: var(--space-xs); }
+.ed-proj-empty { font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.ed-proj-list { display: flex; flex-direction: column; gap: 2px; }
+.ed-proj-file {
+  display: flex; align-items: center; gap: var(--space-xs);
+  padding: 4px var(--space-xs); border: none; background: none; text-align: left;
+  font: inherit; font-size: var(--font-size-sm); color: var(--color-text);
+  border-radius: var(--radius-sm); cursor: pointer;
+}
+.ed-proj-file:hover { background: var(--color-blue-light); }
+.ed-proj-file.active { background: var(--color-gold-light); }
+.ed-proj-file:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-proj-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ed-proj-file-type, .ed-proj-file-kind {
+  font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted);
+}

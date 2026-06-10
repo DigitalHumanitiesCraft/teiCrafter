@@ -14,6 +14,12 @@
  * from a fetch (example registry) or a directory handle (M2.9 "Open project
  * folder"). Pure module: no DOM, no fetch, mutates nothing.
  *
+ * A project is not an edition type: one project (e.g. Stefan Zweig Digital)
+ * holds several types (letters, life documents, typescripts), and the allowed
+ * element inventory binds to the TYPE. Project-level "markup" is the default;
+ * "documentTypes" carry per-type inventories and "files" assigns a type to a
+ * file by name.
+ *
  * Format v1 (all keys except "teicrafter" and "name" optional):
  *   {
  *     "teicrafter": 1,
@@ -21,6 +27,8 @@
  *     "schema": "https://...rng",
  *     "imageResolver": { "type": "iiif-image-template", "template": "...{stem}..." },
  *     "markup":  [ { "element": "hi", "label": "...", "attributes": { "rend": "inkRed" } } ],
+ *     "documentTypes": [ { "key": "letter", "label": "Letter", "markup": [ ... ] } ],
+ *     "files":   { "brief-001.xml": "letter" },
  *     "indices": [ { "key": "peoples", "label": "...", "listType": "...", "registers": ["GND"] } ],
  *     "views":   [ { "key": "diplomatic", "label": "..." } ]
  *   }
@@ -107,8 +115,32 @@ export function parseManifest(input) {
   }
 
   if (m.markup !== undefined && !Array.isArray(m.markup)) fail('"markup" is not an array');
+  if (m.documentTypes !== undefined && !Array.isArray(m.documentTypes)) fail('"documentTypes" is not an array');
   if (m.indices !== undefined && !Array.isArray(m.indices)) fail('"indices" is not an array');
   if (m.views !== undefined && !Array.isArray(m.views)) fail('"views" is not an array');
+
+  const documentTypes = Array.isArray(m.documentTypes)
+    ? m.documentTypes.map((t, i) => {
+        if (!t || typeof t !== "object") fail(`documentTypes[${i}] is not an object`);
+        if (typeof t.key !== "string" || !t.key.trim()) fail(`documentTypes[${i}].key is missing`);
+        if (t.markup !== undefined && !Array.isArray(t.markup)) fail(`documentTypes[${i}].markup is not an array`);
+        return {
+          key: t.key.trim(),
+          label: typeof t.label === "string" && t.label.trim() ? t.label.trim() : t.key.trim(),
+          markup: Array.isArray(t.markup) && t.markup.length ? t.markup.map(markupWrap) : null,
+        };
+      })
+    : [];
+
+  let files = {};
+  if (m.files !== undefined) {
+    if (!m.files || typeof m.files !== "object" || Array.isArray(m.files)) fail('"files" is not an object');
+    for (const [fileName, typeKey] of Object.entries(m.files)) {
+      if (typeof typeKey !== "string") fail(`files["${fileName}"] is not a type key string`);
+      if (!documentTypes.some((t) => t.key === typeKey)) fail(`files["${fileName}"] names unknown document type "${typeKey}"`);
+      files[fileName] = typeKey;
+    }
+  }
 
   return {
     source: "manifest",
@@ -116,7 +148,28 @@ export function parseManifest(input) {
     schema: typeof m.schema === "string" && m.schema.trim() ? m.schema.trim() : null,
     iiifImageTemplate,
     markup: Array.isArray(m.markup) && m.markup.length ? m.markup.map(markupWrap) : null,
+    documentTypes,
+    files,
     indices: Array.isArray(m.indices) ? m.indices.map(indexDef) : [],
     views: Array.isArray(m.views) ? m.views.map(viewDef) : [],
   };
+}
+
+/** The document type assigned to a file name, or null (no manifest, no assignment). */
+export function typeForFile(project, fileName) {
+  if (!project || !project.files || !fileName) return null;
+  const key = project.files[fileName];
+  if (!key) return null;
+  return (project.documentTypes || []).find((t) => t.key === key) || null;
+}
+
+/**
+ * The markup wrap list that applies to a file: its document type's inventory
+ * if assigned, else the project-level default, else null (built-in wraps).
+ */
+export function markupForFile(project, fileName) {
+  if (!project) return null;
+  const type = typeForFile(project, fileName);
+  if (type && type.markup) return type.markup;
+  return project.markup || null;
 }

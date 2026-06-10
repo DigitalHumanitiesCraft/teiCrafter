@@ -39,7 +39,8 @@ import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { FEATURES } from "../utils/constants.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
-import { parseManifest } from "./project-manifest.js";
+import { parseManifest, markupForFile, typeForFile, MANIFEST_FILENAME } from "./project-manifest.js";
+import { teiFromPlaintext } from "./plaintext-import.js";
 import * as recents from "./recent-files.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
@@ -63,7 +64,10 @@ const app = {
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
   sourceMode: false,  // true while the left pane shows the editable XML source
-  project: null,      // detected project profile (project-profiles.js), or null
+  project: null,      // active project: manifest-parsed or PID-detected, or null
+  projectFolder: null, // open project folder: { dir, name, files[], project }, or null (M2.9)
+  markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
+  saveTarget: null,   // { dir, name }: create this file in the project folder on first save (plaintext drafts)
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios),
@@ -207,8 +211,11 @@ function load(raw, name, handle, project) {
   // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
   // Project: an explicit manifest (teicrafter.project.json, parsed by the
-  // caller) wins; PID detection stays the fallback for bare files.
+  // caller) wins; PID detection stays the fallback for bare files. The markup
+  // wrap list binds to the document's TYPE within the project, not the project.
   app.project = project || detectProject(app.state.doc);
+  app.markup = markupForFile(app.project, name);
+  app.saveTarget = null;
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
@@ -224,8 +231,10 @@ function load(raw, name, handle, project) {
   refreshAfterStandoffEdit();
   const unit = app.state.profile === "word" ? "word" : "line";
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
+  const docType = typeForFile(app.project, name);
   setStatus(`Loaded ${app.state.folios.length} folio(s), ${app.state.cells.length} ${unit}(s) [${app.state.profile}-level]`
     + (app.project ? `, project: ${app.project.name} (${app.project.source === "manifest" ? "manifest" : "detected"})` : "")
+    + (docType ? `, type: ${docType.label}` : "")
     + ` in ${secs}s`);
 }
 
@@ -906,7 +915,146 @@ const PANELS = [
     available: () => true,
     render: () => overlay.renderIndex(),
   },
+  {
+    id: "project", label: "Project", host: "ed-panel-project",
+    title: "The open project folder's files; click one to open it in the editor",
+    unavailableTitle: "No project folder is open (Load... > Open project folder)",
+    available: () => !!app.projectFolder,
+    render: () => renderProjectPanel(),
+  },
 ];
+
+// ---- project folder (M2.9) ---------------------------------------------------
+// A project folder is granted once via the File System Access directory picker
+// and holds TEI files, optional plaintext files and an optional manifest
+// (teicrafter.project.json). Files stay in the visible file system (git-able,
+// readable by other tools); nothing is copied into browser storage.
+
+function renderProjectPanel() {
+  const host = panelHost(activePanels().find((p) => p.id === "project"));
+  clear(host);
+  const pf = app.projectFolder;
+  if (!pf) return;
+  host.appendChild(el("div", { class: "ed-proj-head", text: pf.name }));
+  if (!pf.files.length) {
+    host.appendChild(el("p", { class: "ed-proj-empty", text: "No .xml or .txt files in this folder yet." }));
+    return;
+  }
+  const list = el("div", { class: "ed-proj-list" });
+  for (const f of pf.files) {
+    const docType = typeForFile(pf.project, f.name);
+    const row = el("button", {
+      class: "ed-proj-file" + (f.name === app.docName ? " active" : ""), type: "button",
+      title: f.kind === "text"
+        ? "Plaintext: opens as a deterministic line-level TEI draft; Save writes the .xml into the project folder"
+        : "Open this TEI file",
+    });
+    row.appendChild(el("span", { class: "ed-proj-file-name", text: f.name }));
+    if (docType) row.appendChild(el("span", { class: "ed-proj-file-type", text: docType.label }));
+    if (f.kind === "text") row.appendChild(el("span", { class: "ed-proj-file-kind", text: "plaintext" }));
+    row.addEventListener("click", () => openProjectFile(f));
+    list.appendChild(row);
+  }
+  host.appendChild(list);
+}
+
+async function openProjectFile(f) {
+  if (!confirmDiscard()) return;
+  try {
+    const file = await f.handle.getFile();
+    const project = app.projectFolder ? app.projectFolder.project : null;
+    if (f.kind === "text") {
+      // Deterministic transport, no model: the draft exists only in the editor
+      // until Save creates the .xml next to the source in the project folder.
+      const baseName = f.name.replace(/\.txt$/i, "");
+      const xmlName = baseName + ".xml";
+      load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project);
+      app.saveTarget = { dir: app.projectFolder.dir, name: xmlName };
+      setDirty(true);
+      setStatus(`Drafted ${xmlName} deterministically from ${f.name} (text carried verbatim). Save writes it into the project folder.`);
+    } else {
+      load(await file.text(), f.name, f.handle, project);
+    }
+    // Stay in the project context: switching to the next file is one click.
+    showPanel("project");
+  } catch (err) {
+    setStatus(`Could not open ${f.name}: ${err.message}`);
+  }
+}
+
+async function adoptProjectFolder(dir) {
+  const files = [];
+  let manifestText = null;
+  for await (const entry of dir.values()) {
+    if (entry.kind !== "file") continue;
+    if (entry.name === MANIFEST_FILENAME) manifestText = await (await entry.getFile()).text();
+    else if (/\.xml$/i.test(entry.name)) files.push({ name: entry.name, kind: "tei", handle: entry });
+    else if (/\.txt$/i.test(entry.name)) files.push({ name: entry.name, kind: "text", handle: entry });
+  }
+  files.sort((a, b) => a.name.localeCompare(b.name));
+  let project = null, note = "";
+  if (manifestText !== null) {
+    try { project = parseManifest(manifestText); }
+    catch (err) { note = ` ${err.message}; the folder opened without project settings.`; }
+  }
+  app.projectFolder = { dir, name: project ? project.name : dir.name, files, project };
+  const teiCount = files.filter((x) => x.kind === "tei").length;
+  setStatus(`Project folder "${app.projectFolder.name}": ${files.length} file(s) (${teiCount} TEI, ${files.length - teiCount} plaintext).${note}`);
+  if (files.length) await openProjectFile(files[0]);
+  else updatePanels();
+}
+
+async function openProjectFolder() {
+  if (!window.showDirectoryPicker) {
+    setStatus("Open project folder needs the File System Access API (Chromium-based browsers).");
+    return;
+  }
+  // The discard guard sits in openProjectFile, where a document is replaced.
+  let dir;
+  try {
+    dir = await window.showDirectoryPicker({ mode: "readwrite" });
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    setStatus(`Could not open the folder: ${err.message}`);
+    return;
+  }
+  await adoptProjectFolder(dir);
+}
+
+async function newProject() {
+  if (!window.showDirectoryPicker) {
+    setStatus("New project needs the File System Access API (Chromium-based browsers).");
+    return;
+  }
+  // Writing the manifest replaces no document; the guard sits in openProjectFile.
+  let dir;
+  try {
+    dir = await window.showDirectoryPicker({ mode: "readwrite" });
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    setStatus(`Could not open the folder: ${err.message}`);
+    return;
+  }
+  let exists = false;
+  try { await dir.getFileHandle(MANIFEST_FILENAME); exists = true; } catch { /* not a project yet */ }
+  if (exists) {
+    setStatus("This folder already carries a teicrafter.project.json; opening it as a project.");
+    await adoptProjectFolder(dir);
+    return;
+  }
+  const name = window.prompt("Project name:", dir.name);
+  if (name === null) return;
+  try {
+    const handle = await dir.getFileHandle(MANIFEST_FILENAME, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write(JSON.stringify({ teicrafter: 1, name: name.trim() || dir.name }, null, 2) + "\n");
+    await writable.close();
+  } catch (err) {
+    setStatus(`Could not write the project manifest: ${err.message}`);
+    return;
+  }
+  await adoptProjectFolder(dir);
+}
 
 function activePanels() {
   const extra = app.project && Array.isArray(app.project.panels) ? app.project.panels : [];
@@ -1158,6 +1306,23 @@ function kv(label, value) {
 async function save() {
   if (!app.state) return;
   const raw = serialize(app.state);
+  // A plaintext draft has no file yet: first save creates the .xml in the
+  // project folder, then the normal in-place path takes over.
+  if (!app.fileHandle && app.saveTarget && app.saveTarget.dir) {
+    try {
+      app.fileHandle = await app.saveTarget.dir.getFileHandle(app.saveTarget.name, { create: true });
+      app.saveTarget = null;
+      if (app.projectFolder) {
+        const known = app.projectFolder.files.some((f) => f.name === app.docName);
+        if (!known) {
+          app.projectFolder.files.push({ name: app.docName, kind: "tei", handle: app.fileHandle });
+          app.projectFolder.files.sort((a, b) => a.name.localeCompare(b.name));
+        }
+      }
+    } catch (err) {
+      setStatus(`Could not create ${app.saveTarget.name} in the project folder (${err.message}); downloading instead`);
+    }
+  }
   if (app.fileHandle && app.fileHandle.createWritable) {
     try {
       const writable = await app.fileHandle.createWritable();
@@ -1247,6 +1412,14 @@ document.addEventListener("keydown", (e) => {
 $("menu-open").addEventListener("click", () => {
   closeLoadMenu();
   openLocal();
+});
+$("menu-open-project").addEventListener("click", () => {
+  closeLoadMenu();
+  openProjectFolder();
+});
+$("menu-new-project").addEventListener("click", () => {
+  closeLoadMenu();
+  newProject();
 });
 for (const item of document.querySelectorAll("[data-example]")) {
   item.addEventListener("click", () => {

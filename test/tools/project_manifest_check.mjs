@@ -16,7 +16,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { parseManifest, MANIFEST_FILENAME, MANIFEST_VERSION } from "../../docs/js/editor/project-manifest.js";
+import { parseManifest, markupForFile, typeForFile, MANIFEST_FILENAME, MANIFEST_VERSION } from "../../docs/js/editor/project-manifest.js";
 import { detectProject, projectTileSource } from "../../docs/js/editor/project-profiles.js";
 import { parseEdition } from "../../docs/js/editor/edition.js";
 import { tokenize } from "../../docs/js/editor/tei-document.js";
@@ -103,7 +103,42 @@ check(doc !== state.doc && doc.raw.includes('<w xml:id="w1"><hi>Hallo</hi></w>')
 check(doc.raw.includes('<w xml:id="w2">Welt</w>'), "sibling word is byte-identical");
 check(reparses(doc.raw), "the wrapped document still tokenizes byte-covering");
 
-// --- 4. Malformed manifests are rejected, never half-read ---------------------
+// --- 4. Document types: the element inventory binds to the type, not the project
+
+const szd = parseManifest({
+  teicrafter: 1,
+  name: "Stefan Zweig Digital (test)",
+  markup: [{ element: "hi" }],
+  documentTypes: [
+    { key: "letter", label: "Letter", markup: [{ element: "salute" }, { element: "signed" }] },
+    { key: "lifeDocument", label: "Life document" },
+  ],
+  files: { "brief-001.xml": "letter", "dok-001.xml": "lifeDocument" },
+});
+check(szd.documentTypes.length === 2 && szd.documentTypes[1].markup === null,
+  "documentTypes parsed; a type may leave markup to the project default");
+check(typeForFile(szd, "brief-001.xml") && typeForFile(szd, "brief-001.xml").label === "Letter",
+  "typeForFile resolves the files map");
+check(typeForFile(szd, "unknown.xml") === null, "a file without assignment has no type");
+check(markupForFile(szd, "brief-001.xml").length === 2 && markupForFile(szd, "brief-001.xml")[0][0] === "salute",
+  "a letter gets the letter inventory");
+check(markupForFile(szd, "dok-001.xml")[0][0] === "hi",
+  "a type without markup falls back to the project default");
+check(markupForFile(szd, "unknown.xml")[0][0] === "hi", "an unassigned file gets the project default");
+check(markupForFile(null, "x.xml") === null, "no project yields null (built-in wraps apply)");
+check(wb.documentTypes.length === 0 && Object.keys(wb.files).length === 0,
+  "a manifest without types (WB: one-type codex) parses with empty types/files");
+
+// --- 4b. Malformed manifests are rejected, never half-read ---------------------
+
+rejects({ teicrafter: 1, name: "x", documentTypes: [{ label: "no key" }] }, /documentTypes\[0\]\.key is missing/,
+  "a document type without a key is rejected");
+rejects({ teicrafter: 1, name: "x", files: { "a.xml": "ghost" } }, /unknown document type "ghost"/,
+  "a files entry naming an unknown type is rejected");
+rejects({ teicrafter: 1, name: "x", files: "a.xml" }, /"files" is not an object/,
+  "a non-object files map is rejected");
+
+// --- 4c. Malformed manifests are rejected, never half-read ---------------------
 
 rejects("{not json", /not valid JSON/, "invalid JSON is rejected");
 rejects([], /not a JSON object/, "a JSON array is rejected");
