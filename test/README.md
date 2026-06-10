@@ -2,8 +2,8 @@
 
 Testing-first eval harness for the Wenzelsbibel (WB) Editor-path round-trip. It builds the
 measuring stick (fixtures + graded validators + a machine-readable report) before the editor
-features, so every later change can be measured. See the plan in
-`C:\Users\Chrisi\.claude\plans\glistening-dazzling-valley.md`.
+features, so every later change can be measured. The test approach and the
+proof inventory live in `knowledge/testing.md`.
 
 ## What "validate" means here
 
