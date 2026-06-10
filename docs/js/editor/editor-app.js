@@ -37,6 +37,7 @@ import { createAnnotationUi } from "./annotation-ui.js";
 import { createEntityIndex } from "./entity-index.js";
 import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
+import { FEATURES } from "../utils/constants.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
 import * as recents from "./recent-files.js";
 
@@ -1186,7 +1187,17 @@ const annot = createAnnotationUi({
   revealEntity: overlay.revealEntity,
   highlightMentions, beginTextInput, beginNote, beginCritic,
 });
-const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
+// LLM on-ramp ("New from text"), hidden while the flag is off. The flag
+// restores the toolbar button, the welcome card and the #generate deep link.
+if (FEATURES.llmOnRamp) {
+  const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
+  $("btn-generate").hidden = false;
+  $("card-generate").hidden = false;
+  $("btn-generate").addEventListener("click", genModal.open);
+  $("card-generate").addEventListener("click", () => genModal.open());
+  // Deep link from the landing page: editor.html#generate opens the LLM entry.
+  if (location.hash === "#generate") genModal.open();
+}
 
 // ---- wire-up ---------------------------------------------------------------
 
@@ -1225,8 +1236,6 @@ for (const item of document.querySelectorAll("[data-example]")) {
     loadExample(item.dataset.example);
   });
 }
-$("card-generate").addEventListener("click", () => genModal.open());
-
 setupDragDrop();
 renderRecents();
 // Left pane view switcher: reading text or XML source, one always active.
@@ -1239,7 +1248,6 @@ function setSourceMode(on) {
 }
 $("view-reading").addEventListener("click", () => setSourceMode(false));
 $("view-xml").addEventListener("click", () => setSourceMode(true));
-$("btn-generate").addEventListener("click", genModal.open);
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
 // Page turning where one expects it: arrow keys, unless typing in an input or
@@ -1282,6 +1290,3 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 updatePanels(); // start state: no document, panel tabs built but disabled
-
-// Deep link from the landing page: editor.html#generate opens the LLM entry.
-if (location.hash === "#generate") genModal.open();

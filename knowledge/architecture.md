@@ -26,10 +26,11 @@ How teiCrafter is built. Client-only, no backend, native ES6 modules without a b
 ## Two Entry Points, One Editor
 
 ```
-index.html   (landing: two cards)
+index.html   (landing: one card while the on-ramp flag is off)
   |
   +-- editor.html ........ open existing TEI, edit, save        (deterministic)
-  +-- editor.html#generate New from text (LLM) -> same editor   (LLM on-ramp)
+  +-- editor.html#generate New from text (LLM) -> same editor   (LLM on-ramp,
+                           hidden behind FEATURES.llmOnRamp since 2026-06-10)
 ```
 
 Both entries land in the same editor. There is no multi-step stepper; the prior LLM Generator workflow (a five-step Import/Mapping/Transform/Validate/Export app) was removed in the 2026-05-30 consolidation (recoverable from git history).
@@ -59,7 +60,7 @@ The engine is three pure-then-UI layers. The lower two are DOM-free, so the exac
 | `js/editor/dom.js` | Tiny shared DOM helpers (`el`, `clear`), one source instead of per-module copies. |
 | `js/editor/annotation-ui.js` | Everything that opens at the text under the M2.10 paradigm: the right-click context menu, the evidence-first annotate popover on a selection (M2.8, incl. the provenance-grouped entity choice and the full-TEI markup wraps), the annotation editor on a clicked mention with in-place authority editing (M2.11), and the word-profile entity picker. Receives its dependencies via ctx (`applyDocFn`, `refresh`, `entityMetaMap`/`entityUsage`, `runLookup`, `revealEntity`, the inline cell editors); wires its own global selection/contextmenu listeners. |
 | `js/editor/entity-index.js` | The entity index controller (M2.11 overlay, a right-pane context panel since M2.14): index-panel hosting with the standOff mutation hooks, the M3.3 live authority lookup popover, mention-count merging, the filter, jump-to-first-mention (the panel stays open) and reveal-entry (switches the right pane to the index). |
-| `js/editor/gen-modal.js` | The LLM on-ramp modal ("New from text"): provider/model/type selectors, in-memory key handling via llm.js, the minimal annotate prompt, response XML extraction, and its own modal wiring. |
+| `js/editor/gen-modal.js` | The LLM on-ramp modal ("New from text"): provider/model/type selectors, in-memory key handling via llm.js, the minimal annotate prompt, response XML extraction, and its own modal wiring. Wired only when `FEATURES.llmOnRamp` is on (off since 2026-06-10). |
 | `js/editor/recent-files.js` | Persisted recent files for the welcome screen: FileSystemFileHandle records in IndexedDB (`listRecents`/`rememberRecent`/`forgetRecent`, max 5, keyed by name so reopening refreshes instead of duplicating). Chromium-only by nature; `supported` is false elsewhere and the Recent section simply does not render. Reopening re-requests permission inside the click (a user gesture); a dead handle removes its own row. |
 
 ### Why an offset-splice core, not the DOM
@@ -73,7 +74,7 @@ The engine is three pure-then-UI layers. The lower two are DOM-free, so the exac
 | `js/services/llm.js` | Multi-provider LLM client (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama). API keys live only in a module-scoped Map, never written to storage or any backend, volatile on tab close. `fetch` uses `credentials: 'omit'`. |
 | `js/services/authority-lookup.js` | DOM-free live authority search (M3.3): builds the query URL and parses the response for GND (lobid.org), Wikidata (`wbsearchentities`), and GeoNames (search JSON, requires a username). Feeds a picked identifier into `standoff.js` `setAuthority`. |
 | `js/services/storage.js` | LocalStorage for non-secret settings (provider, model choice). |
-| `js/utils/constants.js` | Provider ids, source-type labels, and default mapping rules for the LLM on-ramp. |
+| `js/utils/constants.js` | Feature flags (`FEATURES.llmOnRamp`), provider ids, source-type labels, and default mapping rules for the LLM on-ramp. |
 
 The LLM on-ramp builds a minimal annotate prompt in `editor-app.js`, calls `llm.js` `complete()`, extracts the XML from the response, and loads it into the editor flagged as generated (violet banner, unreviewed).
 
@@ -81,7 +82,7 @@ The LLM on-ramp builds a minimal annotate prompt in `editor-app.js`, calls `llm.
 
 ```
 docs/
-  index.html              Landing: two entry cards (editor, LLM on-ramp)
+  index.html              Landing: entry card into the editor (LLM card hidden, flag off)
   editor.html             The editor: dual-view shell (left text surface, right context panels) + LLM modal; loads OpenSeadragon 5.0.1 from CDN
   css/
     style.css             Design tokens (--color-*, --space-*, --font-*, --radius-*) + base

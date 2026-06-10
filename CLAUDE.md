@@ -4,11 +4,12 @@
 - No emojis. Never in outputs, files, or commit messages.
 - No em dashes or en dashes as punctuation; use commas, colons, or parentheses.
 - All code, UI text, and documentation in English.
+- Code comments: compact, descriptive, plain English, only where the code cannot speak for itself. State the constraint or intent, not implementation history; no dates, decision references, or restoration instructions (that context belongs in knowledge/journal.md).
 - Knowledge documents follow the Promptotyping Documents convention: standard Markdown with YAML frontmatter (title, project, method, template, status, created, updated; plus topics, language, version, related). This replaces the former "no frontmatter" rule.
 
 ## Project
 - A browser-based, lossless editor for arbitrary TEI-XML. Open an existing edition, correct it folio by folio at its natural granularity (word-level if `<w>` is present, else line-level), save it back byte-faithfully. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
-- An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides.
+- An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides. Currently hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10); the code stays in place.
 - Real cases: Wenzelsbibel (word-level), Jeanne Hersch / zbz-ocr-tei (line-level), Stefan Zweig / szd-htr (catalog TEI + Page-JSON, needs conversion first).
 - Client-only, deployed via GitHub Pages from `/docs`. ES6 modules, no bundler, no build step.
 - An independent tool, not a module of EditionCrafter.

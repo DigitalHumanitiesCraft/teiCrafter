@@ -201,6 +201,7 @@
   border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text);
   transition: border-color .15s, box-shadow .15s;
 }
+.ed-card[hidden] { display: none; } /* display:flex above would beat the user-agent [hidden] rule */
 .ed-card:hover { border-color: var(--color-gold); box-shadow: 0 4px 16px rgba(26, 26, 26, .08); }
 .ed-card b { font-family: var(--font-serif); font-size: var(--font-size-lg); font-weight: 600; }
 .ed-card-desc { color: var(--color-text-secondary); line-height: 1.5; }

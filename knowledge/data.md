@@ -38,7 +38,7 @@ What teiCrafter consumes and produces, and which TEI proves the engine. teiCraft
 | Input | Entry | Notes |
 |-------|-------|-------|
 | Existing TEI edition | Editor | Any TEI; opened from local disk, edited losslessly, saved back |
-| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor |
+| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor. Hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10) |
 
 Output is the same TEI, edited byte-losslessly (only edited text runs change), saved in place via the File System Access API or downloaded. The LLM on-ramp output is a fresh TEI draft, marked as machine-generated and unreviewed until the human verifies it.
 

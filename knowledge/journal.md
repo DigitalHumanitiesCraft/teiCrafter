@@ -22,6 +22,14 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (night, continued): LLM on-ramp hidden behind a feature flag
+
+The operator decided to hide the "New from text (LLM)" entry for now ("das koennten wir mal ausblenden, vorerst"). Rationale matches the project state: the deterministic editor path is proven (295/295 round-trip), the on-ramp is not, and a research preview should not lead with an unproven entry. Implementation: `FEATURES.llmOnRamp` in `utils/constants.js` (off). The flag gates the toolbar button, the welcome card and the `#generate` deep link; `setupGenModal` is only called when on. The landing page (`index.html`) is static HTML, so its violet card was removed there directly (a marker comment names the flag) and the card grid became one centered card. The About page now states the on-ramp exists and is switched off. Nothing was deleted: gen-modal.js, llm.js and the prompt constants stay in place, and the flag restores everything except the landing card, which is restored by hand. One CSS trap resurfaced: `.ed-card { display: flex }` beats the user-agent `[hidden]` rule, the same trap already documented twice in editor.css, so `.ed-card[hidden] { display: none; }` was added.
+
+Also this round: a comment-style rule entered CLAUDE.md (compact, descriptive, plain English, only where the code cannot speak for itself; no dates, decision references or restoration instructions in code comments) after the operator interrupted an overlong comment block in exactly that shape.
+
+Proof: smoke test extended to the hidden state and green (38/38, three visible cards, LLM card and toolbar button hidden, no console errors), harness 4/4 PASS, selftest 14/14.
+
 ## 2026-06-10 (night, continued): The dual view (operator feedback round 8, M2.14)
 
 The operator rejected the single-pane XML mode ("not nicely integrated": the round-7 layout collapsed to one centered 1100px column with dead space around it, and the facsimile was forced away) and set the layout concept: two panes, always. Left is the text work surface; right is always a context view (page image, or another surface such as the entity index), and the right side must be customizable per project. Implemented as M2.14:

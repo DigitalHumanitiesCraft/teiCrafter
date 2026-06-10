@@ -26,7 +26,7 @@
         .lp-main { max-width: 880px; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
         .lp-main h2 { font-size: 1.6rem; color: var(--color-text); margin: 0 0 var(--space-sm); }
         .lp-lede { font-size: var(--font-size-lg); color: var(--color-text-secondary); line-height: 1.6; margin: 0 0 var(--space-xl); }
-        .lp-cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+        .lp-cards { display: grid; grid-template-columns: minmax(0, 520px); justify-content: center; gap: var(--space-md); }
         @media (max-width: 640px) { .lp-cards { grid-template-columns: 1fr; } }
         .lp-card {
             display: flex; flex-direction: column; gap: var(--space-sm);
@@ -67,7 +67,7 @@
 
     <main class="lp-main">
         <h2>A browser TEI working environment</h2>
-        <p class="lp-lede">Edit any TEI edition directly, losslessly, and without an LLM, or let a model draft an initial TEI from plaintext and refine it by hand. One workbench, two ways in.</p>
+        <p class="lp-lede">Edit any TEI edition directly, losslessly, and without an LLM in the loop. Open an edition, correct it folio by folio at its natural granularity, and save it back byte for byte.</p>
 
         <div class="lp-cards">
             <a class="lp-card" href="editor.html">
@@ -76,12 +76,7 @@
                 <p>Open a local edition, word-level like the Wenzelsbibel or line-level like a Jeanne Hersch edition. Folio reading text, facsimile zones linked by @facs, live integrity checks, lossless save. No LLM in the loop.</p>
                 <span class="lp-cta">Open the editor</span>
             </a>
-            <a class="lp-card lp-card-ai" href="editor.html#generate">
-                <span class="lp-card-tag">[ llm assist ]</span>
-                <h3>New from text (LLM)</h3>
-                <p>Paste plaintext, the model produces an initial TEI, and it opens straight in the editor for you to verify and correct. AI output is marked violet and counts as unreviewed.</p>
-                <span class="lp-cta">Generate and edit</span>
-            </a>
+            <!-- "New from text (LLM)" card removed while FEATURES.llmOnRamp is off. -->
         </div>
 
         <div class="lp-foot">

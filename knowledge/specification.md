@@ -60,6 +60,8 @@ Save in place when a File System handle exists (Chromium), else download. Nothin
 
 ## LLM On-Ramp
 
+Currently switched off behind the feature flag `FEATURES.llmOnRamp` (`docs/js/utils/constants.js`, operator decision 2026-06-10): the deterministic editor path is proven, the on-ramp is not yet, so its entries (toolbar button, welcome card, landing card, `#generate` deep link) are hidden. The modal, prompt and provider client remain in the codebase.
+
 "New from text (LLM)" accepts plaintext, a source type (which selects default mapping rules), a provider and model, and an API key (held in memory only). It builds a minimal annotate prompt, calls the provider, extracts the XML, and opens the draft in the same editor, flagged as machine-generated and unreviewed (violet banner). The human then verifies and corrects it deterministically. The model assists; the human decides.
 
 Six providers (Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama). Keys never persisted; `fetch` uses `credentials: 'omit'`.
@@ -83,6 +85,7 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - **Granularity emerges.** Word-level if `<w>` present, else line-level; no per-project branching.
 - **Hybrid validation.** Browser-light live, harness-heavy offline (Node + Python/lxml).
 - **LLM output is marked.** Generated TEI is violet and unreviewed; keys in memory only.
+- **LLM on-ramp hidden for now** (2026-06-10, operator). All "New from text (LLM)" entries are behind `FEATURES.llmOnRamp` (off); the code stays in place and the flag restores them. The landing-page card is static HTML and changes with the flag.
 - **Licence boundary.** Real third-party TEI never committed; synthetic twins only.
 - **Authority ids as `<idno>`, not `@ref`** (2026-06-08). Authority identifiers (GND / GeoNames / Wikidata) attach to an entity as `<idno type="...">value</idno>` children: this allows several registers per entity, matches what the SZD converter already emits for creators, and keeps `@ref` reserved for the in-text mention pointer (`<name ref="#id">`). Hand-entry is the foundation; a live lookup and an offline Gemini proposal layer build on the same mechanism.
 - **Dual view, always** (2026-06-10, M2.14, operator order). The editor is two panes at all times: the left pane is the text work surface (reading text or XML source, switched by view tabs in its head), the right pane is a context panel switched by tabs from an open registry (facsimile and entity index built in; project profiles can contribute panels via `project.panels`). There is no single-pane mode and no facsimile hide toggle; a document without page images falls back to the Index panel and the Facsimile tab is disabled with the reason as tooltip. The XML source is explicitly usable next to the facsimile.

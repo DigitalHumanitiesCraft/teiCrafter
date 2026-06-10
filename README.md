@@ -15,10 +15,10 @@
 
 teiCrafter is a client-only, browser-based editor for arbitrary [TEI-XML](https://tei-c.org/). You open an existing edition, correct it folio by folio at its natural granularity, and save it back byte-faithfully. The editing core is a generic, offset-true reader: the raw TEI string is canonical, every edit is an absolute-offset splice, and `serialize()` is byte-identical for untouched content by construction. Granularity emerges from the document itself: word-level when `<w>` is present (for example the Wenzelsbibel), line-level otherwise (for example a Jeanne Hersch edition). There is no per-project profile and no build step.
 
-The landing page offers two ways into the same editor:
+The landing page leads into the editor:
 
 - **Open and edit existing TEI** -- the deterministic path. Open a local edition, correct word or line text, manage an index, link facsimile zones, and save losslessly. No LLM is involved.
-- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides.
+- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides. *Currently switched off* behind the feature flag `FEATURES.llmOnRamp`; the code remains in place.
 
 The tool occupies a specific position in the digital scholarly editing pipeline:
 
@@ -56,7 +56,7 @@ Annotation happens at the text: select words to annotate them, click a mention t
 | **Real OpenSeadragon facsimile** | Deep-zoom page image with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook. |
 | **In-browser index management** | Editable `<standOff>` of persons, organisations, and events with mention linking via `<name ref>`. |
 | **Live validation and structure** | Integrity checks and a structural outline alongside the reading text. |
-| **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. |
+| **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. Currently switched off (feature flag). |
 | **Zero infrastructure** | No server, no account, no installation; runs entirely in the browser, deployed from `/docs`. |
 | **Bring Your Own API Key** | For the LLM on-ramp only; keys are held in memory for the session and never persisted. |
 
@@ -71,7 +71,7 @@ Annotation happens at the text: select words to annotate them, click a mention t
 5. Switch the right pane to **Index** to add or link persons, organisations, and events.
 6. Save the edition back losslessly.
 
-To try the LLM on-ramp instead, choose **New from text (LLM)**, paste plaintext, and supply an API key for your chosen provider. The drafted TEI opens in the same editor, marked violet and unreviewed for you to verify.
+The LLM on-ramp ("New from text (LLM)") is currently switched off in the preview. When enabled, it accepts plaintext and an API key, and the drafted TEI opens in the same editor, marked violet and unreviewed for you to verify.
 
 ---
 
@@ -82,7 +82,7 @@ teiCrafter is a client-only single-page application built from native ES6 module
 ```
 teiCrafter/
 ├── docs/
-│   ├── index.html              Landing: two cards (editor, LLM on-ramp)
+│   ├── index.html              Landing: entry card into the editor
 │   ├── editor.html             Editor: dual-view shell; loads OpenSeadragon 5.0.1 from CDN
 │   ├── css/
 │   │   ├── style.css           Design tokens (--color-*/--space-*/--font-*/--radius-*) + base
@@ -123,7 +123,7 @@ For the complete technical specification, see the [knowledge base](knowledge/).
 
 ## LLM Integration (on-ramp only)
 
-The optional "New from text" path supports multiple providers through a unified client. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key.
+The optional "New from text" path supports multiple providers through a unified client. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key. The on-ramp is currently switched off behind the feature flag `FEATURES.llmOnRamp` (in `docs/js/utils/constants.js`); the modal, prompt, and provider client remain in the codebase.
 
 AI-generated drafts open in the editor marked in the violet token family (`--color-ai`) and are counted as unreviewed until a human confirms them.
 
@@ -234,7 +234,6 @@ Then open:
 
 - Landing: `http://localhost:8000/`
 - Editor: `http://localhost:8000/editor.html`
-- LLM on-ramp deep link: `http://localhost:8000/editor.html#generate`
 
 A modern browser with ES6 module support is required.
 

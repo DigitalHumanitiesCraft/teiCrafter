@@ -44,6 +44,8 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 
 ## LLM On-Ramp
 
+All L stories are built but currently hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10); the modal and provider client stay in the codebase.
+
 - **L.1** As an editor I want to paste plaintext and have a model draft an initial TEI that opens in the editor so that I have a starting point to refine. *Built* (the "New from text (LLM)" modal).
 - **L.2** As an editor I want generated content clearly marked as machine-made and unreviewed so that I never mistake a draft for finished work. *Built* (violet marking, unreviewed banner).
 - **L.3** As an editor I want my API key kept in memory only and never persisted so that my credentials are safe. *Built* (module-scoped Map in llm.js, `credentials: 'omit'`).

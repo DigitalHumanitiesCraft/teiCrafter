@@ -6,6 +6,12 @@
  * default TEI mapping rules per source type that seed the generation prompt.
  */
 
+// Feature flags. llmOnRamp shows or hides the "New from text (LLM)" entries;
+// the landing-page card in index.html is static and changes with this flag.
+export const FEATURES = Object.freeze({
+  llmOnRamp: false,
+});
+
 // LLM provider ids (keys of the provider catalog in services/llm.js).
 export const LLM_PROVIDERS = Object.freeze({
   GEMINI: 'gemini',
