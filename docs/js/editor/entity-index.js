@@ -7,15 +7,15 @@
  * authority forms; clicking an entry jumps to its first in-text mention while
  * the index stays visible. Day-to-day authority work happens in the annotation
  * popover on the text itself (operator decision 2026-06-10). Every mutation
- * goes through standoff.js (lossless offset splice) and re-parses the edition
- * so all offsets stay correct.
+ * routes through the integrator's commitStandoff (lossless offset splice,
+ * SAME-doc no-op contract, exactly one re-render on a real change).
  *
  * Contract:
  *   createEntityIndex(ctx) -> { renderIndex, open, revealEntity, runLookup }
  *   ctx: {
  *     app,                       // shared mutable editor state (state, folio)
- *     setStatus(msg), setDirty(d),
- *     refresh(),                 // re-render reading view + active panel after a standOff edit
+ *     setStatus(msg),
+ *     commitStandoff(fn, { label, failPrefix, noopLabel }) -> bool,
  *     gotoFolio(i),              // page switch (jump-to-mention)
  *     highlightMentions(entity), // mark all of an entity's mentions on the page
  *     entityUsage(),             // id -> { count, onPage } over all mention cells
@@ -27,13 +27,12 @@
 import { el, clear } from "./dom.js";
 import { createIndexPanel } from "./index-panel.js";
 import * as standoff from "./standoff.js";
-import { parseEdition } from "./edition.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 
 const $ = (id) => document.getElementById(id);
 
 export function createEntityIndex(ctx) {
-  const { app, setStatus, setDirty, refresh, gotoFolio, highlightMentions, entityUsage, showPanel } = ctx;
+  const { app, setStatus, commitStandoff, gotoFolio, highlightMentions, entityUsage, showPanel } = ctx;
   let indexPanel = null;
 
   /** Lazily create the single index panel bound to the panel host, with its hooks. */
@@ -42,53 +41,22 @@ export function createEntityIndex(ctx) {
     const host = $("ed-index-host");
     if (!host) return null;
     indexPanel = createIndexPanel(host, {
-      onAdd: (type, { name }) => {
-        try {
-          app.state = parseEdition(standoff.addEntity(app.state.doc, type, { name }).raw);
-          setDirty(true);
-          refresh();
-        } catch (err) {
-          setStatus(`Could not add entity: ${err.message}`);
-        }
-      },
-      onUpdate: (id, { name }) => {
-        try {
-          app.state = parseEdition(standoff.updateEntity(app.state.doc, id, { name }).raw);
-          setDirty(true);
-          refresh();
-        } catch (err) {
-          setStatus(`Could not rename entity: ${err.message}`);
-        }
-      },
-      onDelete: (id) => {
-        try {
-          app.state = parseEdition(standoff.deleteEntity(app.state.doc, id).raw);
-          setDirty(true);
-          refresh();
-        } catch (err) {
-          setStatus(`Could not delete entity: ${err.message}`);
-        }
-      },
+      onAdd: (type, { name }) => commitStandoff(
+        (doc) => standoff.addEntity(doc, type, { name }),
+        { label: "Entity added", failPrefix: "Add entity" }),
+      onUpdate: (id, { name }) => commitStandoff(
+        (doc) => standoff.updateEntity(doc, id, { name }),
+        { label: "Entity renamed", failPrefix: "Rename entity" }),
+      onDelete: (id) => commitStandoff(
+        (doc) => standoff.deleteEntity(doc, id),
+        { label: "Entity deleted", failPrefix: "Delete entity" }),
       onSelect: (entity) => jumpToEntity(entity),
-      onSetAuthority: (id, { authority, value }) => {
-        try {
-          app.state = parseEdition(standoff.setAuthority(app.state.doc, id, authority, value).raw);
-          setDirty(true);
-          refresh();
-        } catch (err) {
-          setStatus(`Could not set authority id: ${err.message}`);
-        }
-      },
-      onConfirm: (id) => {
-        try {
-          app.state = parseEdition(standoff.confirmEntity(app.state.doc, id).raw);
-          setDirty(true);
-          refresh();
-          setStatus("AI suggestion confirmed");
-        } catch (err) {
-          setStatus(`Could not confirm entity: ${err.message}`);
-        }
-      },
+      onSetAuthority: (id, { authority, value }) => commitStandoff(
+        (doc) => standoff.setAuthority(doc, id, authority, value),
+        { label: "Authority id updated", failPrefix: "Set authority id" }),
+      onConfirm: (id) => commitStandoff(
+        (doc) => standoff.confirmEntity(doc, id),
+        { label: "AI suggestion confirmed", failPrefix: "Confirm entity" }),
       onLookup: (id, { authority, query, anchor, onPick }) => runLookup(authority, query, anchor, onPick),
     });
     return indexPanel;

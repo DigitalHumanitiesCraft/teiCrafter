@@ -3,8 +3,8 @@
  *
  * A schema-light layer over the generic core: it reads and edits TEI standOff
  * entities (person, place, org, event, work) and the in-text mentions that link to
- * them. It imports only from ./tei-document.js so it runs in the browser
- * (editor-app.js) and in Node (headless proofs) with identical logic.
+ * them. It imports only from ./tei-document.js and ./edition.js so it runs in
+ * the browser (editor-app.js) and in Node (headless proofs) with identical logic.
  *
  * The raw string stays canonical. Every mutation is an offset splice via
  * spliceDocument, which returns a NEW re-parsed doc; a no-op returns the SAME doc,
@@ -38,6 +38,7 @@ import {
   escapeAttr,
   ancestorWithXmlId,
 } from "./tei-document.js";
+import { parseEdition } from "./edition.js";
 
 // Responsibility pointer marking an AI-proposed, human-unverified entity. The
 // editor renders these violet (per design.md) until a human confirms (drops the
@@ -602,4 +603,18 @@ export function noteIndex(doc) {
     }
   }
   return map;
+}
+
+/**
+ * The DOM-free core of the editor's commit path. Applies a doc -> doc mutation
+ * and re-projects: a SAME-doc result (the no-op contract) reports changed false
+ * and carries the doc through; a NEW doc is re-parsed into a fresh edition
+ * state and note index. The browser integrator and the Node proofs run this
+ * exact function.
+ */
+export function applyMutation(doc, fn) {
+  const next = fn(doc);
+  if (next === doc) return { changed: false, doc, edition: null, notes: null };
+  const edition = parseEdition(next.raw);
+  return { changed: true, doc: edition.doc, edition, notes: noteIndex(edition.doc) };
 }

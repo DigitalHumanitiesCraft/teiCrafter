@@ -747,21 +747,42 @@ function beginTextInput(span, cell) {
   inp.addEventListener("blur", commit);
 }
 
-// ---- shared document-mutation helper (M2.6 refactor) ------------------------
+// ---- the single standOff mutation path ---------------------------------------
 
 /**
- * Apply a doc -> doc function to the current document, then refresh state, the
- * note index, the dirty flag, and the status line. A no-op (SAME doc) changes
- * nothing; when noopLabel is given, the status line says so instead of staying
- * silent. Shared by the critical chooser and both link entries, so every inline
- * mutation runs through one code path.
+ * Commit a doc -> doc mutation: standoff.applyMutation does the DOM-free core
+ * (SAME-doc no-op check, re-parse, note index), this wrapper adopts the new
+ * state, sets the dirty flag and the status line, and re-renders exactly once.
+ * A no-op changes nothing; with noopLabel the status line says so. Returns
+ * true on a real change, false on a no-op or failure.
  */
+function commitStandoff(fn, { label, failPrefix = "Edit", noopLabel = null } = {}) {
+  try {
+    const r = standoff.applyMutation(app.state.doc, fn);
+    if (!r.changed) {
+      if (noopLabel) setStatus(noopLabel);
+      return false;
+    }
+    app.state = r.edition;
+    app.noteByWord = r.notes;
+    setDirty(true);
+    if (label) setStatus(label);
+    refreshAfterStandoffEdit();
+    return true;
+  } catch (err) {
+    setStatus(`${failPrefix} failed: ${err.message}`);
+    return false;
+  }
+}
+
+// Positional legacy entry for the annotation-ui callers; unlike commitStandoff
+// it does not re-render (those callers still refresh themselves).
 function applyDocFn(fn, label, failPrefix = "Edit", noopLabel = null) {
   try {
-    const next = fn(app.state.doc);
-    if (next !== app.state.doc) {
-      app.state = parseEdition(next.raw);
-      app.noteByWord = standoff.noteIndex(app.state.doc);
+    const r = standoff.applyMutation(app.state.doc, fn);
+    if (r.changed) {
+      app.state = r.edition;
+      app.noteByWord = r.notes;
       setDirty(true);
       setStatus(label);
     } else if (noopLabel) {
@@ -794,20 +815,12 @@ function beginNote(span, cell) {
     if (done) return;
     done = true;
     const text = inp.value.trim();
-    if (save && text) {
-      try {
-        const next = standoff.addNoteForNode(app.state.doc, cell.node, cell.facs, text);
-        if (next !== app.state.doc) {
-          app.state = parseEdition(next.raw);
-          app.noteByWord = standoff.noteIndex(app.state.doc);
-          setDirty(true);
-          setStatus(`Note attached to "${cell.text.trim()}"`);
-        }
-      } catch (err) {
-        setStatus(`Note failed: ${err.message}`);
-      }
-    }
-    refreshAfterStandoffEdit();
+    const changed = (save && text)
+      ? commitStandoff((doc) => standoff.addNoteForNode(doc, cell.node, cell.facs, text),
+          { label: `Note attached to "${cell.text.trim()}"`, failPrefix: "Note" })
+      : false;
+    // No commit still re-renders once: the input swapped the cell's span out.
+    if (!changed) refreshAfterStandoffEdit();
   };
   inp.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); finish(true); }
@@ -870,9 +883,9 @@ function beginCritic(span, cell) {
     if (e.key === "Escape") { e.preventDefault(); cancel(); }
   };
   const apply = (fn, label) => {
-    applyDocFn(fn, label, "Markup");
     document.removeEventListener("keydown", onKey);
-    refreshAfterStandoffEdit();
+    // No commit still re-renders once: the chooser box swapped the span out.
+    if (!commitStandoff(fn, { label, failPrefix: "Markup" })) refreshAfterStandoffEdit();
   };
   const addBtn = (text, title, handler) => {
     const b = el("button", { class: "ed-crit-btn", text, title });
@@ -1507,8 +1520,7 @@ function applyDocLayout() {
 // surfaces (popovers, overlay, modal) flow back through the returned APIs.
 
 const overlay = createEntityIndex({
-  app, setStatus, setDirty,
-  refresh: refreshAfterStandoffEdit,
+  app, setStatus, commitStandoff,
   gotoFolio, highlightMentions, entityUsage,
   showPanel,
 });
