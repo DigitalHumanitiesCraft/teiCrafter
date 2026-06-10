@@ -1,10 +1,11 @@
 # teiCrafter Handoff and Working State
 
 Action-layer summary so work can resume without re-deriving anything. Snapshot:
-2026-06-10 (evening), end of the project-layer session (WB-AP3 manifest, M2.9
-project folders, plaintext intake, public-text corrections). This file replaces
-the previous 2026-06-10 snapshot. Conceptual detail lives in `knowledge/`
-(start at `INDEX.md`); per-milestone evaluation reports live in `reports/`.
+2026-06-10 (evening, continued), end of the editor-surface session (welcome
+screen dissolved, pane layout flexibility, line-number gutter, text zoom,
+XML-source find/replace, selection fix). Replaces the previous 2026-06-10
+project-layer snapshot. Conceptual detail lives in `knowledge/` (start at
+`INDEX.md`); per-milestone evaluation reports live in `reports/`.
 
 ## Frame: what this lane is working on
 
@@ -18,116 +19,103 @@ Success criterion for the Editopia experiment (operator, 2026-06-09): demonstrab
 added value for the Hersch project, confirmed by the ZBZ. The Wenzelsbibel
 (PLUS Salzburg, autumn 2026) is the primary own use case beyond Editopia.
 
-## State at handoff (all engine-proven, partially pushed)
+## State at handoff (engine-proven, local only)
 
 Branch `session/2026-06-07-place-graphic`, clean working tree, no stash,
-**67 commits over `main`**; 22 of them are on the remote session branch, the
-remaining **45 are local only** (pushing requires the operator's word).
+**73 commits over `main`**, **51 ahead of `origin`** (pushing requires the
+operator's word). Git anchor: HEAD `9c4ec20`.
 
-This session (7 commits, f3a59c4 .. 163dd2e):
+Since the last handoff snapshot (`6afc983`), five commits on two threads: a
+loadable DEPCHA account-ledger project (`8d00dc2`), the landing revision plus a
+large-document loading overlay and a synthetic ZBZ fallback (`8beb302`,
+`37d6714`), and this conversation's editor-surface work (`b43a6b4`, plus a doc
+tweak `9c4ec20`).
 
-- **Housekeeping:** stale plan markers closed (M5.2/M5.6 were long done),
-  HANDOFF push-state corrected against the real remote, dead pre-pivot
-  `pipeline.mjs` deleted (recoverable from git history).
-- **WB-AP3, project manifest v1:** `docs/js/editor/project-manifest.js` parses
-  and validates `teicrafter.project.json` (entry-agnostic, strict, normalized
-  to the runtime profile shape); manifest wins, PID detection stays the
-  fallback. The Wenzelsbibel manifest is the first profile, derived from the
-  editorial guidelines; committed inside the gitignored codex dir via
-  contents-ignore plus negation.
-- **Public-text corrections at the root:** byte fidelity is now EXPLAINED where
-  claimed (an editor is not a copier; tree re-serialization normalises, the
-  splice does not; the diff is exactly the human intervention), with an example,
-  in specification.md, About and README. "Emergent granularity" renamed
-  repo-wide to "the editing unit is read from the document". The About/project
-  boundary texts dropped false negative identity claims (oXygen/ediarum,
-  TEI-only input). "by construction" removed from public surfaces.
-- **M2.9 project folders + corrected project model:** a project is NOT an
-  edition type (operator): the manifest carries `documentTypes` + a `files`
-  map, the markup wrap list binds to the open document's type. "Open project
-  folder" (once-granted directory handle), Project panel in the right-pane
-  registry, "New project" writes a minimal manifest. Plaintext `.txt` opens as
-  a deterministic line-level TEI draft (`plaintext-import.js`; transport not
-  interpretation, deliberately NOT AI-marked); first save creates the `.xml`
-  in the folder.
-- **"Example projects":** the example cards renamed (not all examples are
-  editions); SZD and ZBZ examples received minimal manifests (name + letter
-  type, no invented markup), so every example loads as a project and the
-  status line names project and type.
-- **Knowledge distillation rule** (now in CLAUDE.md): knowledge documents carry
-  patterns, decisions, constraints, mechanisms, never surface counts the
-  artifact shows on sight. design.md and user-stories.md swept; a real
-  staleness in integration.md (pre-M2.14 three-pane description) corrected.
-- **Landing consolidation attempted and REVERSED:** the operator chose
-  consolidation (editor becomes index.html), then reversed on sight (the
-  landing looks better). Both pages stay; the reversal is a recorded journal
-  decision. Do not re-propose.
-- Proofs green at handoff: `project_manifest_check.mjs` 45/45,
-  `project_case_check.mjs` 24/24 (the operator's acceptance case headless:
-  one project, one TEI, two plaintexts), roundtrip sweep 295/295, full
-  regression unchanged.
+This conversation (editor surface, `b43a6b4` + `9c4ec20`):
 
-## Decisions this session (dated, with reasons; journal carries the long form)
+- **Welcome screen dissolved.** The editor opens directly on its empty two-pane
+  layout; the text pane carries a lean load prompt and the recent files, the
+  document toolbar group and view controls stay hidden until a load. The public
+  landing page is unaffected.
+- **Reading-text gutter.** The edition's line label (`@n`) sits in a fixed,
+  right-aligned mono channel with a continuous rule, non-selectable, like a code
+  editor's gutter; the numbering stays the source's (an unnumbered line shows an
+  empty cell, repeats and restarts stand), not a running count.
+- **XML source.** A translucent selection token (`--color-selection`) so the
+  coloured overlay text shows through a selection (the opaque highlight had
+  hidden it); find / replace and go-to-line (Ctrl/Cmd+F); no reformat button
+  (it would break byte fidelity).
+- **Layout flexibility.** Editor-wide text zoom (global); a draggable splitter
+  (min 320px per pane, double-click reset, keyboard); context-pane collapse
+  (header button or Ctrl/Cmd+backslash); a vertical stack below 900px. Split
+  position, collapsed state and the active context tab persist per document,
+  the zoom globally, through `storage.js` (localStorage); no second store.
+- **Bundled, not authored by this lane:** `docs/js/editor/facsimile.js` carries
+  a zones-toggle change (zone overlays hidden by default, revealed on hover or a
+  "Zones" button) that pre-existed in the working tree; it was committed with
+  the rest on the operator's "commit everything".
+- Knowledge docs updated (architecture, design, specification, journal, INDEX);
+  repo version 0.9 to 0.10.
+- Proofs green at handoff: highlight 18/18, editor roundtrip 13/13, generic
+  roundtrip 34/34, edit-fidelity 21/21, project-manifest 45/45; both edited JS
+  modules pass a syntax check.
 
-1. A project is not an edition type; one project holds several document types
-   and the element inventory binds to the type (operator, 2026-06-10; SZD is
-   the counterexample that settled it).
-2. Plaintext intake is deterministic transport and never AI-marked (the violet
-   family stays reserved for machine-plausible content a human must judge).
-3. The operator's acceptance case for the project layer: create an own project,
-   one TEI + two plaintexts, open and edit all three. Headless proven; the
-   browser run is the operator's gate.
-4. Knowledge documents describe patterns, not surface counts (rule in CLAUDE.md).
-5. Coined terms must survive "explain it literally": "emergent granularity"
-   dropped; properties are only claimed where their mechanism is explained.
-6. The landing page stays; functional redundancy alone does not settle a
-   page-structure question, appearance of the public surface is part of the
-   decision basis.
-7. Solo mode lifted (operator): sub-agents allowed again, explicit model
-   override per agent (opus/sonnet), main model stays orchestrator, disjoint
-   file sets, diffs verified before commit.
+## Decisions this conversation (dated, with reasons; journal carries the long form)
+
+1. **No welcome screen** (2026-06-10): landing in the empty editor is the more
+   direct truth than an intermediate page; the tool's pitch and example projects
+   live on the landing page, not here.
+2. **The gutter shows the edition's own `@n`**, not an editor-invented count:
+   unnumbered lines stay empty, repeats and restarts stand.
+3. **Markup quick-actions were NOT duplicated** as a source-view bar: applying
+   markup already lives in the reading view's selection-to-annotate flow.
+4. **No pretty-print / reformat action**: re-indenting would break the
+   byte-faithful core.
+5. **Responsive case is a vertical stack, not pane-level tabs** (the one
+   deviation from the PLAN.md wording, surfaced to the operator): a third tab
+   level over the view and panel tabs would confuse on a desktop-oriented tool.
+6. **Layout persistence reuses `storage.js`** keyed per document; zoom is a
+   global preference. No parallel store (the layout work order said coordinate,
+   not duplicate).
 
 ## Open threads (none lost, all registered)
 
-- **Operator gates:** browser sight-check of the UI rounds 6 to 8 AND of this
-  session's surfaces (URL checklist was given in-session: landing "Example
-  projects", About texts, the three example deep links with manifest status
-  lines, the WB markup list in the annotate popover); the M2.9 acceptance case
-  in a Chromium browser (New project, one TEI + two .txt, edit all three, save
-  creates the .xml); push approval for the 45 local commits; TEI-Guidelines
-  feature decision (link-out vs p5subset.json panel); M7.4 object sign-off;
-  approval of chapter draft, Rohfassung, provenance page; Kreyenbuehl package.
-- **Wenzelsbibel packages** per the ratified definition decisions: WB
-  dual reading (F4: diplomatic|normalised view switcher + two-field edit with
-  an attribute-precise splice), WB-AP4 standOff apparatus, ED.1-ED.7 user
-  stories + gate W1, WB-AP5 PAGE-XML import (after the data-model decision
-  with the project lead).
-- **Manifest consumers still open:** declared `indices` driving the entity
-  index (incl. peoples/Voelker), `views` as real authoring views, schema field
-  for per-edition validation.
-- **Sibling-lane orders unchanged:** szd-htr converter guard (empty page must
-  not copy the previous page); zbz lane four-point order (schema extension,
-  graphic emission, oekosystem correction, warnings reconciliation); ZBZ
-  worked-example half depends on that track.
+- **Operator browser sight-check of this session's surfaces:** the empty editor
+  with recents; gutter alignment under zoom; the XML-source selection now
+  visible; find / replace / go-to-line; the splitter (drag, double-click reset,
+  keyboard); collapse (button and Ctrl/Cmd+backslash); the vertical stack below
+  900px; and that split / collapsed / active-tab survive a reload (the PLAN.md
+  acceptance criterion). One thing to watch: OpenSeadragon re-sizing when the
+  context pane returns from collapsed (auto-resize should cover it; verify).
+- **Push approval** for the local commits (now 51 ahead of `origin`).
+- Carried over and still open: the M2.9 project-layer acceptance case in a
+  browser; Wenzelsbibel packages (F4 dual reading is the next implementable
+  item, then WB-AP4 standOff apparatus, ED.1 to ED.7, WB-AP5 PAGE-XML import);
+  manifest consumers (declared `indices`, `views`, `schema`); sibling-lane
+  orders (szd-htr converter empty-page guard; zbz four-point order); the
+  TEI-Guidelines feature decision; M7.4 object sign-off; Editopia chapter draft,
+  Rohfassung, provenance page, Kreyenbuehl package.
 - Pre-existing: the ZBZ example is local-only (rights) and fails with a status
   message on public Pages.
 
 ## The one next step
 
-The operator verifies this session's surfaces in his browser (the in-session
-URL checklist) and runs the M2.9 acceptance case; then either his feedback
-round or the next Wenzelsbibel package (F4 dual reading is the plan's next
-implementable item).
+The operator verifies this session's editor surfaces in his browser (the
+checklist above, especially that the per-document layout survives a reload);
+then either his feedback round or the next Wenzelsbibel package (F4 dual
+reading is the plan's next implementable item).
 
 ## Shared and held files
 
-- This repo: everything is this lane's own; clean at handoff, nothing
-  uncommitted, no stash. No foreign changes touched.
-- Memory (`~/.claude/projects/...teiCrafter/memory/`): working-model.md updated
-  (solo mode lifted 2026-06-10), no-metaphors memory extended (literalness test
-  for coined terms).
-- Obsidian vault and sibling repos (szd-htr, zbz-ocr-tei): untouched this
-  session.
+- This repo: every change is this lane's own except
+  `docs/js/editor/facsimile.js` (the zones-toggle change pre-existed in the
+  working tree, authored outside this conversation; bundled into `b43a6b4` on
+  the operator's "commit everything"). Clean at handoff, nothing uncommitted,
+  no stash.
+- Memory (`~/.claude/projects/...teiCrafter/memory/`): untouched this
+  conversation.
+- Obsidian vault and sibling repos (szd-htr, zbz-ocr-tei): untouched.
 - Local-only artifacts unchanged: `docs/data/editor/wb-codex/` (real codex),
-  `docs/data/editor/zbz-100/`, `docs/data/editor/zbz-1000/` (rights-encumbered,
-  regenerable), `output/curated-set/`.
+  `docs/data/editor/zbz-100/`, `docs/data/editor/zbz-1000/`,
+  `docs/data/editor/depcha-wheaton/` (rights-encumbered, regenerable),
+  `output/curated-set/`.
