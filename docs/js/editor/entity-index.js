@@ -27,11 +27,14 @@
 import { el, clear } from "./dom.js";
 import { createIndexPanel } from "./index-panel.js";
 import * as standoff from "./standoff.js";
+import { requireCtx } from "./ctx.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 
 const $ = (id) => document.getElementById(id);
 
 export function createEntityIndex(ctx) {
+  requireCtx("createEntityIndex", ctx,
+    ["setStatus", "commitStandoff", "gotoFolio", "highlightMentions", "entityUsage", "showPanel"], ["app"]);
   const { app, setStatus, commitStandoff, gotoFolio, highlightMentions, entityUsage, showPanel } = ctx;
   let indexPanel = null;
 

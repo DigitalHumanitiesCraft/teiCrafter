@@ -33,6 +33,7 @@ import { el, clear } from "./dom.js";
 import * as standoff from "./standoff.js";
 import { parseEdition, rawRangeForDisplay, unescapeXmlText } from "./edition.js";
 import { buildAuthorityForm } from "./authority-form.js";
+import { requireCtx } from "./ctx.js";
 
 const ENTITY_TYPE_LABELS = [
   ["person", "person"], ["place", "place"], ["org", "organisation"],
@@ -67,6 +68,9 @@ function allEntityIds(doc) {
 }
 
 export function createAnnotationUi(ctx) {
+  requireCtx("createAnnotationUi", ctx,
+    ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage", "runLookup",
+     "revealEntity", "highlightMentions", "beginTextInput", "beginNote", "beginCritic"], ["app"]);
   const {
     app, setStatus, commitStandoff,
     entityMetaMap, entityUsage, runLookup, revealEntity,

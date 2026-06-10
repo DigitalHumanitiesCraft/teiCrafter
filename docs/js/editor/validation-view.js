@@ -18,10 +18,12 @@
 
 import { el, clear } from "./dom.js";
 import { serialize, structuralSummary, xmlIdSet } from "./edition.js";
+import { requireCtx } from "./ctx.js";
 
 const $ = (id) => document.getElementById(id);
 
 export function createValidationView(ctx) {
+  requireCtx("createValidationView", ctx, [], ["app"]);
   const { app } = ctx;
 
   let valCache = null; // { doc, rows, summary }

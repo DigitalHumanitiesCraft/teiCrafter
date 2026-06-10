@@ -25,8 +25,12 @@
 import { el, clear } from "./dom.js";
 import { parseManifest, typeForFile, MANIFEST_FILENAME } from "./project-manifest.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
+import { requireCtx } from "./ctx.js";
 
 export function createProjectFolder(ctx) {
+  requireCtx("createProjectFolder", ctx,
+    ["setStatus", "setDirty", "confirmDiscard", "load", "showPanel", "updatePanels", "getProjectPanelHost"],
+    ["app"]);
   const {
     app, setStatus, setDirty, confirmDiscard, load,
     showPanel, updatePanels, getProjectPanelHost,
