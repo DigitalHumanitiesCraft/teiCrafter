@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About teiCrafter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* About page, tokens only (no raw hex). Same frame as the landing page. */
+        .ab-header {
+            display: flex; align-items: center; justify-content: space-between;
+            height: var(--header-height); padding: 0 var(--space-md);
+            background: var(--color-header); color: var(--color-text-inverse);
+        }
+        .ab-logo { font-family: var(--font-mono); font-size: var(--font-size-lg); font-weight: 600;
+            color: inherit; text-decoration: none; }
+        .ab-logo .accent { color: var(--color-gold); }
+        .ab-nav a { font-family: var(--font-ui); font-size: var(--font-size-sm);
+            color: var(--color-text-inverse); text-decoration: none; opacity: .85; margin-left: var(--space-md); }
+        .ab-nav a:hover { opacity: 1; text-decoration: underline; }
+        body { margin: 0; background: var(--color-surface); }
+        .ab-main { max-width: 720px; margin: 0 auto; padding: var(--space-xl) var(--space-md);
+            font-family: var(--font-ui); color: var(--color-text); line-height: 1.65; }
+        .ab-main h1 { font-family: var(--font-serif); font-size: 1.7rem; font-weight: 600;
+            margin: 0 0 var(--space-sm); }
+        .ab-main h2 { font-family: var(--font-serif); font-size: 1.15rem; font-weight: 600;
+            margin: var(--space-xl) 0 var(--space-xs); }
+        .ab-main p { margin: 0 0 var(--space-sm); color: var(--color-text-secondary); }
+        .ab-main p b, .ab-main p a { color: var(--color-text); }
+        .ab-main a { color: var(--color-gold-hover); }
+        .ab-main code { font-family: var(--font-mono); font-size: var(--font-size-sm);
+            background: var(--color-secondary); border-radius: var(--radius-sm); padding: 0 4px; }
+        .ab-ai { color: var(--color-ai); }
+        .ab-foot {
+            display: flex; align-items: center; gap: var(--space-md);
+            max-width: 720px; margin: 0 auto; padding: var(--space-md);
+            border-top: 1px solid var(--color-border);
+            font-size: var(--font-size-xs); color: var(--color-text-secondary);
+            font-family: var(--font-ui);
+        }
+        .ab-foot a { color: var(--color-text-secondary); text-decoration: none;
+            display: inline-flex; align-items: center; gap: var(--space-xs); }
+        .ab-foot a:hover { color: var(--color-text); text-decoration: underline; }
+        .ab-foot img { height: 16px; width: auto; display: block; }
+        .ab-foot .spacer { flex: 1; }
+    </style>
+</head>
+<body>
+    <header class="ab-header">
+        <a class="ab-logo" href="index.html" title="teiCrafter start page"><span class="accent">&lt;</span>tei<span class="accent">Crafter</span><span class="accent">&gt;</span></a>
+        <nav class="ab-nav">
+            <a href="editor.html">Editor</a>
+            <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+    </header>
+
+    <main class="ab-main">
+        <h1>About teiCrafter</h1>
+        <p><b>teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML.</b> Open an
+            existing edition, correct it folio by folio, annotate persons, places, organisations and
+            works with authority data (GND, Wikidata, GeoNames), and save it back. It runs entirely
+            in your browser: no server, no upload, no account. Your edition never leaves your
+            computer.</p>
+
+        <h2>Lossless, defined</h2>
+        <p>The opened XML file is the single source of truth. Every edit is a precise splice into
+            that raw text; everything you did not touch is preserved byte for byte, including
+            whitespace, attribute order, comments and entities. Saving an unchanged document
+            reproduces the input exactly. This property is verified continuously: live checks in the
+            editor (the <code>well-formed, lossless</code> chip) and an offline test harness that
+            round-trips hundreds of real edition files byte-identically.</p>
+
+        <h2>Natural granularity</h2>
+        <p>The editable unit emerges from the document instead of a forced profile: word-level when
+            the TEI encodes words (<code>&lt;w&gt;</code>), line-level otherwise
+            (<code>&lt;lb&gt;</code>/<code>&lt;l&gt;</code>). Page images travel along: the
+            facsimile pane reads <code>&lt;facsimile&gt;</code>/<code>&lt;zone&gt;</code> and links
+            text and image both ways via <code>@facs</code>.</p>
+
+        <h2>AI assists, the human decides</h2>
+        <p>An optional on-ramp (<span class="ab-ai">New from text (LLM)</span>) lets a language
+            model draft an initial TEI from plaintext. Such output opens in the same editor,
+            <span class="ab-ai">marked violet</span> and counted as unreviewed until a human
+            verifies it. Deterministic, human-driven work and machine proposals are visually
+            separable at all times; violet appears on AI-origin content and nothing else.</p>
+
+        <h2>The example editions</h2>
+        <p>Three real cases drive the tool: the <b>Wenzelsbibel</b> (word-level, a synthetic
+            stand-in for the licence-restricted codex), a <b>Jeanne Hersch</b> letter from the
+            Zentralbibliothek Zürich pipeline (line-level, page scans), and a letter from
+            <b>Stefan Zweig Digital</b> (line-level, facsimile via the GAMS repository).</p>
+
+        <h2>Method and provenance</h2>
+        <p>teiCrafter is developed with <a href="https://dhcraft.org/Promptotyping/" target="_blank"
+            rel="noopener">Promptotyping</a>: an AI-assisted, knowledge-document-driven development
+            method in which every capability is backed by a verifiable proof. The repository,
+            including the full knowledge base and test harness, is open:
+            <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank"
+            rel="noopener">github.com/DigitalHumanitiesCraft/teiCrafter</a>.</p>
+
+        <h2>Who makes this</h2>
+        <p>teiCrafter is a research tool by <a href="https://dhcraft.org" target="_blank"
+            rel="noopener">Digital Humanities Craft OG</a> (Graz, Austria). Contact:
+            <a href="mailto:office@dhcraft.org">office@dhcraft.org</a>. Legal information:
+            <a href="https://dhcraft.org/imprint.html" target="_blank" rel="noopener">imprint</a>.</p>
+    </main>
+
+    <footer class="ab-foot">
+        <a href="https://dhcraft.org" target="_blank" rel="noopener" title="Digital Humanities Craft OG">
+            <img src="assets/dhcraft-logo.svg" alt="DHCraft logo">
+            <span>Digital Humanities Craft</span>
+        </a>
+        <a href="https://dhcraft.org/imprint.html" target="_blank" rel="noopener">Imprint</a>
+        <span class="spacer"></span>
+        <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank" rel="noopener">GitHub</a>
+    </footer>
+</body>
+</html>

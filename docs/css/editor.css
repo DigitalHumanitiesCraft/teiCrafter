@@ -19,6 +19,9 @@
 .ed-logo .accent { color: var(--color-gold); }
 .ed-header .spacer { flex: 1; }
 .ed-doc-name { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-gold-light); }
+.ed-header-link { font-family: var(--font-ui); font-size: var(--font-size-sm);
+  color: var(--color-text-inverse); text-decoration: none; opacity: .85; }
+.ed-header-link:hover { opacity: 1; text-decoration: underline; }
 
 .ed-toolbar {
   display: flex; align-items: center; gap: var(--space-sm);
@@ -69,6 +72,7 @@
   cursor: pointer; border: none; background: none; color: var(--color-text);
   padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); white-space: nowrap; }
 .ed-dd-item:hover { background: var(--color-gold-light); }
+.ed-dd-sep { height: 1px; background: var(--color-border); margin: var(--space-xs) 0; }
 /* AI-assisted action (violet family, per design.md) */
 .ed-btn-ai { border-color: var(--color-ai); color: var(--color-ai); }
 .ed-btn-ai:hover { background: var(--color-ai-tint); border-color: var(--color-ai); }
@@ -127,10 +131,15 @@
   flex: 1; min-height: 0;
 }
 .ed-main[hidden] { display: none; }
-/* No page images (or facsimile hidden): one centered pane at reading width. */
+/* No page images (or facsimile hidden): one centered pane at reading width,
+   without the pane divider (there is no second pane to divide from). */
 .ed-main.no-facs { grid-template-columns: minmax(0, 1100px); justify-content: center; }
+.ed-main.no-facs .ed-pane { border-right: none; }
 #ed-pane-facs[hidden] { display: none; }
-.ed-pane { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--color-border); }
+/* min-height: 0 on the pane AND its body breaks the min-height:auto chain, so
+   tall content (the XML source gutter) scrolls INSIDE the pane instead of
+   growing the pane past the viewport ("everything slides down"). */
+.ed-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--color-border); }
 .ed-pane:last-child { border-right: none; }
 .ed-pane-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -138,7 +147,13 @@
   border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text);
 }
-.ed-pane-body { flex: 1; overflow: auto; padding: var(--space-md); }
+.ed-pane-head-right { display: inline-flex; align-items: center; gap: var(--space-md); }
+.ed-pane-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-md); }
+/* XML source view fills the pane exactly: the editor frame brings its own
+   spacing, and height:100% plus the body padding would otherwise overflow
+   (the "everything slides down" finding, operator feedback 2026-06-10). */
+.ed-pane-body.src { padding: 0; }
+.ed-pane-body.src .ed-src-root { box-sizing: border-box; padding: var(--space-sm) var(--space-md); }
 
 /* Page turning lives in the reading-pane header, where one expects it. */
 .ed-pager { display: inline-flex; align-items: center; gap: var(--space-xs); }
@@ -551,7 +566,13 @@
   background: var(--color-panel); border-top: 1px solid var(--color-border);
   font-size: var(--font-size-xs); color: var(--color-text-secondary);
 }
-.ed-footer a { color: var(--color-gold-hover); }
+.ed-footer a { color: var(--color-text-secondary); text-decoration: none; }
+.ed-footer a:hover { color: var(--color-text); text-decoration: underline; }
+.ed-foot-brand { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.ed-foot-logo { height: 16px; width: auto; display: block; }
+.ed-foot-gh { display: inline-flex; align-items: center; color: var(--color-text-secondary); }
+.ed-foot-gh:hover { color: var(--color-text); }
+.ed-status-wrap[hidden] { display: none; }
 .ed-status-dot { color: var(--color-confident); }
 .ed-status-dot.dirty { color: var(--color-review); }
 
@@ -564,8 +585,10 @@
 .ed-val-chip.ok { color: var(--color-confident); background: var(--color-confident-tint); border-color: var(--color-confident); }
 .ed-val-chip.warn { color: var(--color-review); background: var(--color-review-tint); border-color: var(--color-review); }
 .ed-val-chip.err { color: var(--color-problem); background: var(--color-problem-tint); border-color: var(--color-problem); }
+/* Anchored under the chip in the reading-pane header; top/right are set by the
+   click handler from the chip's rect. */
 .ed-val-pop {
-  position: fixed; right: var(--space-md); bottom: calc(var(--footer-height) + 8px); z-index: 40;
+  position: fixed; z-index: 40;
   width: 340px; max-height: 60vh; overflow: auto;
   padding: var(--space-md); border: 1px solid var(--color-border);
   border-radius: var(--radius-sm); background: var(--color-panel);

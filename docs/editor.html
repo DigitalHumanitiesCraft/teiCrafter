@@ -17,6 +17,7 @@
         <a class="ed-logo" href="index.html" title="Back to the teiCrafter start page"><span class="accent">&lt;</span>tei<span class="accent">Crafter</span><span class="accent">&gt;</span></a>
         <span class="spacer"></span>
         <span class="ed-doc-name" id="ed-doc-name" hidden></span>
+        <a class="ed-header-link" href="about.html" title="What teiCrafter is, who makes it, and how it works">About</a>
     </header>
 
     <div class="ed-genbanner" id="ed-genbanner" hidden role="status">
@@ -25,11 +26,13 @@
 
     <div class="ed-toolbar">
         <div class="group">
-            <button class="ed-btn" id="btn-open" title="Open a TEI edition from your computer">Open TEI...</button>
             <span class="ed-dd-wrap">
-                <button class="ed-btn" id="btn-examples" aria-haspopup="true" aria-expanded="false"
-                        title="Load one of the bundled example editions">Examples</button>
-                <span class="ed-dd" id="ed-examples-menu" hidden role="menu">
+                <button class="ed-btn" id="btn-load" aria-haspopup="true" aria-expanded="false"
+                        title="Open a TEI edition from your computer or load an example">Load...</button>
+                <span class="ed-dd" id="ed-load-menu" hidden role="menu">
+                    <button class="ed-dd-item" id="menu-open" role="menuitem"
+                            title="Open a TEI edition from your computer">Open TEI...</button>
+                    <span class="ed-dd-sep" role="separator"></span>
                     <button class="ed-dd-item" data-example="wb" role="menuitem">Wenzelsbibel (synthetic codex, word-level)</button>
                     <button class="ed-dd-item" data-example="zbz" role="menuitem">ZBZ Jeanne Hersch (letter with page scans, line-level)</button>
                     <button class="ed-dd-item" data-example="szd" role="menuitem">Stefan Zweig Digital (letter with GAMS facsimile, line-level)</button>
@@ -104,11 +107,14 @@
     <main class="ed-main" id="ed-main" hidden>
         <section class="ed-pane">
             <div class="ed-pane-head">
-                <span>Reading text (diplomatic)</span>
-                <span class="ed-pager">
-                    <button class="ed-btn ed-pager-btn" id="btn-prev" disabled title="Previous page (ArrowLeft)">&#8249;</button>
-                    <span class="ed-folio-label" id="ed-folio-label">-</span>
-                    <button class="ed-btn ed-pager-btn" id="btn-next" disabled title="Next page (ArrowRight)">&#8250;</button>
+                <span id="ed-pane-title">Reading text (diplomatic)</span>
+                <span class="ed-pane-head-right">
+                    <button class="ed-val-chip" id="ed-val-chip" type="button" hidden></button>
+                    <span class="ed-pager">
+                        <button class="ed-btn ed-pager-btn" id="btn-prev" disabled title="Previous page (ArrowLeft)">&#8249;</button>
+                        <span class="ed-folio-label" id="ed-folio-label">-</span>
+                        <button class="ed-btn ed-pager-btn" id="btn-next" disabled title="Next page (ArrowRight)">&#8250;</button>
+                    </span>
                 </span>
             </div>
             <div class="ed-legend" id="ed-legend" hidden
@@ -151,10 +157,23 @@
     <div class="ed-drop" id="ed-drop" hidden><span>Drop the TEI file to open it</span></div>
 
     <footer class="ed-footer">
-        <span><span class="ed-status-dot" id="ed-status-dot">&#9679;</span> <span id="ed-status">Ready</span></span>
+        <a class="ed-foot-brand" href="https://dhcraft.org" target="_blank" rel="noopener"
+           title="Digital Humanities Craft OG">
+            <img class="ed-foot-logo" src="assets/dhcraft-logo.svg" alt="DHCraft logo">
+            <span>Digital Humanities Craft</span>
+        </a>
+        <a href="about.html">About</a>
+        <a href="https://dhcraft.org/imprint.html" target="_blank" rel="noopener">Imprint</a>
+        <span class="ed-status-wrap" id="ed-status-wrap" hidden>
+            <span class="ed-status-dot" id="ed-status-dot">&#9679;</span> <span id="ed-status"></span>
+        </span>
         <span class="spacer" style="flex:1"></span>
-        <button class="ed-val-chip" id="ed-val-chip" type="button" hidden title="Live checks (well-formedness, lossless integrity). Full RelaxNG and Schematron run in the offline harness. Click for details."></button>
-        <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank" rel="noopener">GitHub</a>
+        <a class="ed-foot-gh" href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank"
+           rel="noopener" title="teiCrafter on GitHub" aria-label="teiCrafter on GitHub">
+            <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+        </a>
     </footer>
 
     <div class="ed-modal" id="gen-modal" hidden>

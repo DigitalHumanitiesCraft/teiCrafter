@@ -68,8 +68,15 @@ const $ = (id) => document.getElementById(id);
 
 // ---- status / dirty --------------------------------------------------------
 
+/**
+ * Action feedback in the footer: what just happened (loaded, saved, failed).
+ * Empty by default and hidden when empty; it is a transient report line, not
+ * an ambient state display (the live checks have their own chip).
+ */
 function setStatus(msg) {
-  $("ed-status").textContent = msg;
+  $("ed-status").textContent = msg || "";
+  const wrap = $("ed-status-wrap");
+  if (wrap) wrap.hidden = !msg;
 }
 
 function setDirty(d) {
@@ -95,11 +102,7 @@ function enableControls(on) {
   }
   // M2.5 legend strip: visible while a document is loaded;
   // render() keeps the chips current after every mutation.
-  const legend = $("ed-legend");
-  if (legend) {
-    if (on) buildLegend();
-    legend.hidden = !on;
-  }
+  if (on) buildLegend(); else $("ed-legend").hidden = true;
   updateFolioButtons();
   updateFacsState();
 }
@@ -117,7 +120,10 @@ function buildLegend() {
   const host = $("ed-legend-chips");
   if (!host) return;
   clear(host);
-  if (!app.state) return;
+  // The legend explains the reading-text codes; in the XML source view it is
+  // dead vertical space, so it hides with the reading text.
+  $("ed-legend").hidden = !app.state || app.sourceMode;
+  if (!app.state || app.sourceMode) return;
 
   // Collect the codes the loaded document actually renders.
   const meta = entityMetaMap();
@@ -500,6 +506,10 @@ function entityUsage() {
 function renderReading() {
   const host = $("ed-reading");
   clear(host);
+  // The pane head names what the pane currently shows; the source view drops
+  // the body padding (the editor frame brings its own) so nothing overflows.
+  $("ed-pane-title").textContent = app.sourceMode ? "XML source" : "Reading text (diplomatic)";
+  host.classList.toggle("src", app.sourceMode);
   if (app.sourceMode) { renderSourceView(host); return; }
   const folio = app.state.folios[app.folio];
   app.currentLines = folio ? folio.lines : [];
@@ -851,14 +861,17 @@ function updateFacsState() {
   const btn = $("btn-facs");
   if (!main || !pane) return;
   const has = docHasImages();
-  const hidden = !app.state || app.facsHidden || !has;
+  // The XML source view takes the full width: side-by-side with the facsimile
+  // neither has room, and source work does not need the page image.
+  const hidden = !app.state || app.facsHidden || !has || app.sourceMode;
   pane.hidden = hidden;
   main.classList.toggle("no-facs", hidden);
   if (btn) {
-    btn.disabled = !app.state || !has;
+    btn.disabled = !app.state || !has || app.sourceMode;
     btn.classList.toggle("active", !hidden);
     btn.title = !app.state ? "Show or hide the facsimile pane"
       : !has ? "This document carries no page images"
+      : app.sourceMode ? "The facsimile returns when you leave the XML source view"
       : hidden ? "Show the facsimile pane" : "Hide the facsimile pane";
   }
 }
@@ -1011,6 +1024,10 @@ function renderValidation() {
   chip.hidden = false;
   chip.className = "ed-val-chip " + level;
   chip.textContent = errs ? "checks failing" : warns ? `checks: ${warns} warning(s)` : "well-formed, lossless";
+  chip.title = "Live checks. well-formed: the XML parses without errors. "
+    + "lossless: saving now would reproduce the opened file byte for byte, apart from your own edits "
+    + "(no ids lost, element counts unchanged). Full RelaxNG and Schematron run in the offline harness. "
+    + "Click for details.";
 
   // Detail popover
   clear(pop);
@@ -1096,34 +1113,38 @@ const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
 
 // ---- wire-up ---------------------------------------------------------------
 
-$("btn-open").addEventListener("click", openLocal);
 $("start-open").addEventListener("click", openLocal);
 
-// Examples: the toolbar menu and the welcome cards share one registry.
-// The menu is a real button menu (not a select-as-action): toggle on the
-// button, close on item click, outside click, or Escape.
-const examplesBtn = $("btn-examples");
-const examplesMenu = $("ed-examples-menu");
-function closeExamplesMenu() {
-  examplesMenu.hidden = true;
-  examplesBtn.setAttribute("aria-expanded", "false");
+// One loading entry (operator feedback 2026-06-10): the "Load..." menu carries
+// the local-file picker AND the three examples. A real button menu, not a
+// select-as-action: toggle on the button, close on item click, outside click,
+// or Escape. The welcome cards stay wired to the same example registry.
+const loadBtn = $("btn-load");
+const loadMenu = $("ed-load-menu");
+function closeLoadMenu() {
+  loadMenu.hidden = true;
+  loadBtn.setAttribute("aria-expanded", "false");
 }
-examplesBtn.addEventListener("click", (e) => {
+loadBtn.addEventListener("click", (e) => {
   e.stopPropagation();
-  examplesMenu.hidden = !examplesMenu.hidden;
-  examplesBtn.setAttribute("aria-expanded", String(!examplesMenu.hidden));
+  loadMenu.hidden = !loadMenu.hidden;
+  loadBtn.setAttribute("aria-expanded", String(!loadMenu.hidden));
 });
 document.addEventListener("click", (e) => {
-  if (!examplesMenu.hidden && !(e.target instanceof Element && e.target.closest(".ed-dd-wrap"))) {
-    closeExamplesMenu();
+  if (!loadMenu.hidden && !(e.target instanceof Element && e.target.closest(".ed-dd-wrap"))) {
+    closeLoadMenu();
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !examplesMenu.hidden) closeExamplesMenu();
+  if (e.key === "Escape" && !loadMenu.hidden) closeLoadMenu();
+});
+$("menu-open").addEventListener("click", () => {
+  closeLoadMenu();
+  openLocal();
 });
 for (const item of document.querySelectorAll("[data-example]")) {
   item.addEventListener("click", () => {
-    closeExamplesMenu();
+    closeLoadMenu();
     loadExample(item.dataset.example);
   });
 }
@@ -1159,11 +1180,18 @@ document.addEventListener("keydown", (e) => {
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
 
-// Validation chip: the live checks run on every render; the chip opens the
-// detail popover, a click elsewhere or Escape closes it.
+// Validation chip (in the reading-pane header, next to where the work happens):
+// the live checks run on every render; the chip opens the detail popover
+// anchored under itself, a click elsewhere or Escape closes it.
 $("ed-val-chip").addEventListener("click", (e) => {
   e.stopPropagation();
-  $("ed-val-pop").hidden = !$("ed-val-pop").hidden;
+  const pop = $("ed-val-pop");
+  if (pop.hidden) {
+    const r = e.currentTarget.getBoundingClientRect();
+    pop.style.top = `${r.bottom + 8}px`;
+    pop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
+  }
+  pop.hidden = !pop.hidden;
 });
 document.addEventListener("click", (e) => {
   const pop = $("ed-val-pop");
@@ -1177,7 +1205,6 @@ window.addEventListener("beforeunload", (e) => {
   if (app.dirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
-setStatus("Ready. Open a TEI edition, pick an example, or generate from text.");
 updateFacsState(); // start state: no document, facsimile pane collapsed
 
 // Deep link from the landing page: editor.html#generate opens the LLM entry.
