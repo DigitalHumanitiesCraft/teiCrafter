@@ -775,24 +775,6 @@ function commitStandoff(fn, { label, failPrefix = "Edit", noopLabel = null } = {
   }
 }
 
-// Positional legacy entry for the annotation-ui callers; unlike commitStandoff
-// it does not re-render (those callers still refresh themselves).
-function applyDocFn(fn, label, failPrefix = "Edit", noopLabel = null) {
-  try {
-    const r = standoff.applyMutation(app.state.doc, fn);
-    if (r.changed) {
-      app.state = r.edition;
-      app.noteByWord = r.notes;
-      setDirty(true);
-      setStatus(label);
-    } else if (noopLabel) {
-      setStatus(noopLabel);
-    }
-  } catch (err) {
-    setStatus(`${failPrefix} failed: ${err.message}`);
-  }
-}
-
 // ---- editorial notes (M3.5) ------------------------------------------------
 
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
@@ -1525,11 +1507,8 @@ const overlay = createEntityIndex({
   showPanel,
 });
 const annot = createAnnotationUi({
-  app, setStatus, setDirty, applyDocFn,
-  refresh: refreshAfterStandoffEdit,
+  app, setStatus, commitStandoff,
   entityMetaMap, entityUsage,
-  // The raw argument is ignored: the index always reads the current doc.
-  indexNotes: () => standoff.noteIndex(app.state.doc),
   runLookup: overlay.runLookup,
   revealEntity: overlay.revealEntity,
   highlightMentions, beginTextInput, beginNote, beginCritic,

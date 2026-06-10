@@ -7,7 +7,8 @@
  * (with in-place authority editing, M2.11), and the word-profile entity
  * picker. Extracted from editor-app.js in the M2.13 module split; the
  * behaviour is unchanged. Every mutation routes through the integrator's
- * applyDocFn (lossless splice, SAME-doc no-op contract).
+ * commitStandoff (lossless splice, SAME-doc no-op contract, exactly one
+ * re-render on a real change).
  *
  * Contract:
  *   createAnnotationUi(ctx) -> {
@@ -16,12 +17,10 @@
  *   }
  *   ctx: {
  *     app,                        // shared mutable editor state
- *     setStatus(msg), setDirty(d),
- *     applyDocFn(fn, label, failPrefix, noopLabel),
- *     refresh(),                  // re-render reading view + index
+ *     setStatus(msg),
+ *     commitStandoff(fn, { label, failPrefix, noopLabel }) -> bool,
  *     entityMetaMap(),            // id -> { name, kind, ai }
  *     entityUsage(),              // id -> { count, onPage }
- *     indexNotes(raw),            // wordId -> note text (after a raw change)
  *     runLookup(authority, query, anchor, onPick),
  *     revealEntity(id),           // switch the right pane to the index, scrolled to an entry
  *     highlightMentions(entity),
@@ -69,8 +68,8 @@ function allEntityIds(doc) {
 
 export function createAnnotationUi(ctx) {
   const {
-    app, setStatus, setDirty, applyDocFn, refresh,
-    entityMetaMap, entityUsage, indexNotes, runLookup, revealEntity,
+    app, setStatus, commitStandoff,
+    entityMetaMap, entityUsage, runLookup, revealEntity,
     highlightMentions, beginTextInput, beginNote, beginCritic,
   } = ctx;
 
@@ -168,13 +167,11 @@ export function createAnnotationUi(ctx) {
     pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `link "${cell.text.trim()}"` }));
     buildEntityChoiceRows(pop, cell.text.trim(), (entId) => {
       removeSelPopover();
-      applyDocFn(
+      commitStandoff(
         (doc) => standoff.linkMention(doc, cell.node, entId),
-        `Linked "${cell.text.trim()}" to ${entId}`,
-        "Link",
-        "Already linked to this entity",
+        { label: `Linked "${cell.text.trim()}" to ${entId}`, failPrefix: "Link",
+          noopLabel: "Already linked to this entity" },
       );
-      refresh();
     }, null);
     const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
     xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
@@ -184,13 +181,12 @@ export function createAnnotationUi(ctx) {
 
   /**
    * Commit a standOff edit from inside the annotation editor, then reopen the
-   * editor on the same cell (refresh() rebuilds the reading pane, which removes
-   * the popover; the cell id is stable across standOff-region edits), so adding
-   * several authority ids in a row stays one uninterrupted gesture.
+   * editor on the same cell (a real change rebuilds the reading pane, which
+   * removes the popover; the cell id is stable across standOff-region edits),
+   * so adding several authority ids in a row stays one uninterrupted gesture.
    */
   function commitAndReopen(fn, label, cellId) {
-    applyDocFn(fn, label, "Edit");
-    refresh();
+    commitStandoff(fn, { label });
     const c = app.state.cellById.get(cellId);
     const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
     if (c && s && c.mention) openAnnotationEditor(s, c);
@@ -248,23 +244,19 @@ export function createAnnotationUi(ctx) {
       clear(row);
       buildEntityChoiceRows(row, cell.text.trim(), (entId) => {
         removeSelPopover();
-        applyDocFn(
+        commitStandoff(
           (doc) => standoff.linkMention(doc, cell.node, entId),
-          `Relinked "${cell.text.trim()}" to ${entId}`,
-          "Relink",
-          "Already linked to this entity",
+          { label: `Relinked "${cell.text.trim()}" to ${entId}`, failPrefix: "Relink",
+            noopLabel: "Already linked to this entity" },
         );
-        refresh();
       }, cell.mention);
     });
     btn("remove link", "unwrap the <name> around this text (the text itself survives)", () => {
       removeSelPopover();
-      applyDocFn(
+      commitStandoff(
         (doc) => standoff.unwrapMention(doc, cell.node),
-        `Removed the link on "${cell.text.trim()}" (index entry kept)`,
-        "Unlink",
+        { label: `Removed the link on "${cell.text.trim()}" (index entry kept)`, failPrefix: "Unlink" },
       );
-      refresh();
     });
     btn("x", "close", () => removeSelPopover());
     pop.appendChild(row);
@@ -344,19 +336,17 @@ export function createAnnotationUi(ctx) {
       const c = st.cellById.get(target.cell.id);
       if (!c) throw new Error("the selected line is no longer addressable");
       const next = standoff.linkMentionRange(doc, c.node, target.relFrom, target.relTo, id);
-      if (next === doc && !createType) {
-        setStatus("Nothing annotated (the text may already sit inside a link)");
-        return;
-      }
-      app.state = parseEdition(next.raw);
-      app.noteByWord = indexNotes(app.state.raw);
-      setDirty(true);
-      setStatus(`Annotated "${target.text}" (${id})`);
-      refresh();
+      // Commit only the finished doc: the multi-stage offset work above stays
+      // here, the state adoption and the single re-render are commitStandoff's.
+      const changed = commitStandoff(() => next, {
+        label: `Annotated "${target.text}" (${id})`,
+        failPrefix: "Annotate",
+        noopLabel: "Nothing annotated (the text may already sit inside a link)",
+      });
       // Continue in place: open the annotation editor on the fresh mention so
       // authority ids (GND, Wikidata, GeoNames) are attachable without leaving
       // the text (the index logic lives where the annotating happens).
-      openAnnotationEditorFor(id);
+      if (changed) openAnnotationEditorFor(id);
     } catch (err) {
       setStatus(`Annotate failed: ${err.message}`);
     }
@@ -466,13 +456,11 @@ export function createAnnotationUi(ctx) {
   }
 
   function applyMarkupWrap(target, build, label) {
-    applyDocFn(
+    commitStandoff(
       (doc) => standoff.wrapRange(doc, target.cell.node, target.relFrom, target.relTo, build),
-      `Marked "${target.text}" as ${label}`,
-      "Annotate",
-      "Nothing changed (invalid range or text would be lost)",
+      { label: `Marked "${target.text}" as ${label}`, failPrefix: "Annotate",
+        noopLabel: "Nothing changed (invalid range or text would be lost)" },
     );
-    refresh();
   }
 
   /**
