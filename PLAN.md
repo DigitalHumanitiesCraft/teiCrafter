@@ -371,6 +371,36 @@ teiCrafter + SZD:
 Separat (Autor, ZBZ): ZBZ-Bild-URL-Schema verifizieren, Live-ZBZ-Durchlauf, ZBZ-Worked-Example,
 oekosystem-synthese-Korrektur, ZBZ-Projektbericht.
 
+### Nächste Schritte (Stand 2026-06-10 nachts, nach den UI-Runden M2.7-M2.13)
+
+Gates zuerst (Operator):
+1. **Browser-Sichtprüfung** der fünf Feedback-Runden vom 10.06. an beiden Objektstrecken
+   (o_szd.1079, ZBZ Doc 1000): Editor-Paradigma, Annotations-Editor mit Normdaten am Text,
+   Index-Overlay, XML-Quellansicht mit Highlighting/Check, Home-Navigation. Danach Push-Freigabe
+   (24 lokale Commits auf session/2026-06-07-place-graphic) und Merge-Entscheidung.
+
+Wenzelsbibel (Auftrag `Wenzelsbibel/knowledge/auftrag-teicrafter-wenzelsbibel.md`, Daten lokal,
+NICHT committen; Machbarkeit am 10.06. headless bewiesen: codex-2759.xml 78 MB parst in 1,3 s,
+Round-Trip byte-identisch, 480 Folios, Wort-Profil):
+2. **WB-AP1 Lade-Pfad im Browser**: codex-2759.xml via Open TEI laden; prüfen, ob Folio-Rendering
+   und die ~1,3 s Re-Parse nach jedem Edit akzeptabel sind; No-Op-Save byte-identisch als
+   Regressionskriterium von Anfang an.
+3. **WB-AP2 IIIF-Resolver**: `graphic/@url` -> ÖNB-Image-API-Template (jpg->jp2) als
+   Projekt-Konfiguration; Zonen-Overlay mit px->Prozent-Umrechnung gegen Surface-Maße.
+   Gate: "Projekt lädt, Faksimile steht".
+4. **WB-AP3 Projekt-Modul** (= M5.7-Anschluss): Editionsrichtlinien Wenzelsbibel (Vault) als
+   zuschaltbare Annotationsregeln (Wraps, Entitätstypen), nicht als Codegabel. Designentscheidung
+   beim Operator (siehe Definitionsfragen vom 10.06.).
+5. **WB-AP4 StandOff-Apparat**: `app from/to` auf die Inline-`<anchor>`-Paare auflösen und im
+   Lesetext markieren (Mechanik analog Textkritik-Schicht).
+6. **WB-neu Doppellesung**: `<w orig norm>` im Zellmodell sichtbar machen (diplomatisch/normalisiert);
+   Anforderung aus der realen Struktur, im Editor bisher nicht abgebildet.
+
+Editor-Pfad, unabhängig von der Wenzelsbibel:
+7. **M2.9 interne TEI-Ablage**: Designentscheidung Operator (OPFS vs. einmalig gewährtes
+   Verzeichnis-Handle; Zusammenhang mit Projekt-Begriff aus WB-AP3).
+8. **M5.7 Editionsrichtlinien der Quellprojekte** (SZD/GAMS, ZBZ Hersch) in die Wissensbasis.
+
 (Commit, Deploy und Veröffentlichung sind bewusst nicht Teil dieses Plans.)
 
 ## 12. Abnahme und Evaluation (einfach, je Ziel genau ein Beweis)
