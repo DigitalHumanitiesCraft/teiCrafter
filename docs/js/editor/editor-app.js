@@ -47,6 +47,7 @@ const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const WB_CODEX_URL = "data/editor/wb-codex/codex-2759.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
 const ZBZ_IMAGE_BASE = "data/editor/zbz-100/";
+const ZBZ_SYNTH_URL = "data/editor/zbz-hersch-synthetic.xml";
 const SZD_URL = "data/editor/szd/o_szd.1079.tei.xml";
 
 // ---- state -----------------------------------------------------------------
@@ -100,11 +101,8 @@ function setDirty(d) {
 function enableControls(on) {
   $("btn-download").disabled = !on;
   $("btn-save").disabled = !on;
-  // The welcome surface and the editor chrome are mutually exclusive: the
-  // document toolbar group, pane heads, pager and legend only exist with a
-  // document; before that the full-width welcome screen owns the space.
-  $("ed-welcome").hidden = on;
-  $("ed-main").hidden = !on;
+  // The editor chrome is always present; only the document-scoped toolbar
+  // group (Save/Download and the document name) toggles with a loaded document.
   for (const n of document.querySelectorAll(".ed-tool-doc")) n.hidden = !on;
   if (!on) {
     app.sourceMode = false;
@@ -122,6 +120,8 @@ function syncViewTabs() {
   const reading = $("view-reading");
   const xml = $("view-xml");
   if (!reading || !xml) return;
+  // Both text views need a document; until one loads the tabs stay inert.
+  reading.disabled = xml.disabled = !app.state;
   reading.classList.toggle("active", !app.sourceMode);
   reading.setAttribute("aria-selected", String(!app.sourceMode));
   xml.classList.toggle("active", app.sourceMode);
@@ -200,7 +200,33 @@ function indexNotes(raw) {
 
 // ---- loading ---------------------------------------------------------------
 
-function load(raw, name, handle, project) {
+// Large documents (the Wenzelsbibel codex is tens of MB) parse synchronously on
+// the main thread for a second or more. Above this size load() shows a loading
+// overlay and yields two frames so the spinner actually paints before the parse
+// blocks the thread; smaller documents take the synchronous fast path.
+const BIG_DOC_CHARS = 2_000_000;
+const nextPaint = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+function showLoading(name) {
+  const label = $("ed-loading-label");
+  if (label) label.textContent = name ? `Loading ${name}...` : "Loading...";
+  const o = $("ed-loading");
+  if (o) o.hidden = false;
+}
+function hideLoading() {
+  const o = $("ed-loading");
+  if (o) o.hidden = true;
+}
+
+async function load(raw, name, handle, project) {
+  if (raw.length <= BIG_DOC_CHARS) { applyLoad(raw, name, handle, project); return; }
+  showLoading(name);
+  await nextPaint();
+  try { applyLoad(raw, name, handle, project); }
+  finally { hideLoading(); }
+}
+
+function applyLoad(raw, name, handle, project) {
   const t0 = performance.now();
   app.state = parseEdition(raw);
   app.folio = 0;
@@ -225,7 +251,7 @@ function load(raw, name, handle, project) {
   $("ed-doc-name").textContent = name;
   $("ed-doc-name").hidden = false;
   enableControls(true);
-  if (handle) { recents.rememberRecent(handle, name).then(renderRecents); }
+  if (handle) { recents.rememberRecent(handle, name); }
   setDirty(false);
   markGenerated(false); // opening a real file clears the AI-generated flag
   refreshAfterStandoffEdit();
@@ -255,7 +281,7 @@ async function openLocal() {
         multiple: false,
       });
       const file = await handle.getFile();
-      load(await file.text(), file.name, handle);
+      await load(await file.text(), file.name, handle);
       return;
     } catch (err) {
       if (err && err.name === "AbortError") return; // user cancelled
@@ -272,15 +298,15 @@ function fileInput() {
   _fileInput.addEventListener("change", async () => {
     const file = _fileInput.files && _fileInput.files[0];
     if (!file) return;
-    load(await file.text(), file.name, null);
+    await load(await file.text(), file.name, null);
     _fileInput.value = "";
   });
   document.body.appendChild(_fileInput);
   return _fileInput;
 }
 
-// Example registry: the toolbar menu, the welcome cards and the landing-page
-// deep links (#example=KEY) load the same way. imageBase: local page images
+// Example registry: the toolbar menu and the landing-page deep links
+// (#example=KEY) load the same way. imageBase: local page images
 // next to the XML; without it the facsimile uses each surface's <graphic url>.
 // fallback: tried when the primary URL is absent (the real Wenzelsbibel codex
 // is licence-restricted, lives only on machines that materialized it, and the
@@ -299,6 +325,10 @@ const EXAMPLES = {
     label: "ZBZ Jeanne Hersch example", url: ZBZ_URL, file: "zbz-hersch-100.xml",
     manifest: "data/editor/zbz-100/teicrafter.project.json",
     imageBase: ZBZ_IMAGE_BASE, done: "Loaded the ZBZ Jeanne Hersch example with real page images.",
+    fallback: {
+      label: "synthetic ZBZ Hersch sample", url: ZBZ_SYNTH_URL, file: "zbz-hersch-synthetic.xml",
+      done: "Loaded the synthetic ZBZ Hersch sample (the rights-restricted original is not present here).",
+    },
   },
   szd: {
     label: "Stefan Zweig Digital example", url: SZD_URL, file: "o_szd.1079.tei.xml",
@@ -336,7 +366,7 @@ async function loadExample(key) {
         manifestNote = ` ${err.message}; built-in detection used instead.`;
       }
     }
-    load(await res.text(), ex.file, null, project);
+    await load(await res.text(), ex.file, null, project);
     if (manifestNote && ex.done) ex = { ...ex, done: ex.done + manifestNote };
     if (ex.imageBase) {
       app.imageBase = ex.imageBase;
@@ -375,7 +405,7 @@ async function openDropped(dt) {
   const h = await handlePromise;
   const handle = h && h.kind === "file" ? h : null;
   try {
-    load(await file.text(), file.name, handle);
+    await load(await file.text(), file.name, handle);
   } catch (err) {
     setStatus(`Could not open ${file.name}: ${err.message}`);
   }
@@ -406,7 +436,7 @@ function setupDragDrop() {
   });
 }
 
-// ---- recent files (welcome screen) ------------------------------------------
+// ---- recent files (empty-state list) ----------------------------------------
 
 async function reopenRecent(rec) {
   if (!confirmDiscard()) return;
@@ -418,7 +448,7 @@ async function reopenRecent(rec) {
       return;
     }
     const file = await rec.handle.getFile();
-    load(await file.text(), file.name, rec.handle);
+    await load(await file.text(), file.name, rec.handle);
   } catch (err) {
     // The file moved or the handle died: drop the stale row instead of failing again.
     await recents.forgetRecent(rec.name);
@@ -558,6 +588,7 @@ function renderReading() {
   // The view tabs name what the pane currently shows; the source view drops
   // the body padding (the editor frame brings its own) so nothing overflows.
   syncViewTabs();
+  if (!app.state) { host.classList.remove("src"); renderEmptyReading(host); return; }
   host.classList.toggle("src", app.sourceMode);
   if (app.sourceMode) { renderSourceView(host); return; }
   const folio = app.state.folios[app.folio];
@@ -614,6 +645,25 @@ function renderReading() {
     });
     host.appendChild(row);
   });
+}
+
+// ---- empty state (no document loaded) --------------------------------------
+// No separate welcome screen: the editor opens on its empty two-pane layout
+// and the reading pane carries a lean prompt to load a document or project,
+// plus the recent files (when any) for quick re-entry.
+function renderEmptyReading(host) {
+  const box = el("div", { class: "ed-empty-start" });
+  box.appendChild(el("p", { class: "ed-empty-lead",
+    text: "Open a TEI document or a project folder to start editing." }));
+  box.appendChild(el("p", { class: "ed-empty-hint",
+    text: "Use the Load... menu above, or drop a .xml file anywhere on this page." }));
+  const recent = el("div", { class: "ed-recent", id: "ed-recent" });
+  recent.hidden = true;
+  recent.appendChild(el("h2", { text: "Recent files" }));
+  recent.appendChild(el("div", { class: "ed-recent-list", id: "ed-recent-list" }));
+  box.appendChild(recent);
+  host.appendChild(box);
+  renderRecents();
 }
 
 /**
@@ -970,12 +1020,12 @@ async function openProjectFile(f) {
       // until Save creates the .xml next to the source in the project folder.
       const baseName = f.name.replace(/\.txt$/i, "");
       const xmlName = baseName + ".xml";
-      load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project);
+      await load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project);
       app.saveTarget = { dir: app.projectFolder.dir, name: xmlName };
       setDirty(true);
       setStatus(`Drafted ${xmlName} deterministically from ${f.name} (text carried verbatim). Save writes it into the project folder.`);
     } else {
-      load(await file.text(), f.name, f.handle, project);
+      await load(await file.text(), f.name, f.handle, project);
     }
     // Stay in the project context: switching to the next file is one click.
     showPanel("project");
@@ -1373,25 +1423,21 @@ const annot = createAnnotationUi({
   highlightMentions, beginTextInput, beginNote, beginCritic,
 });
 // LLM on-ramp ("New from text"), hidden while the flag is off. The flag
-// restores the toolbar button, the welcome card and the #generate deep link.
+// restores the toolbar button and the #generate deep link.
 if (FEATURES.llmOnRamp) {
   const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
   $("btn-generate").hidden = false;
-  $("card-generate").hidden = false;
   $("btn-generate").addEventListener("click", genModal.open);
-  $("card-generate").addEventListener("click", () => genModal.open());
   // Deep link from the landing page: editor.html#generate opens the LLM entry.
   if (location.hash === "#generate") genModal.open();
 }
 
 // ---- wire-up ---------------------------------------------------------------
 
-$("start-open").addEventListener("click", openLocal);
-
 // One loading entry (operator feedback 2026-06-10): the "Load..." menu carries
 // the local-file picker AND the three examples. A real button menu, not a
 // select-as-action: toggle on the button, close on item click, outside click,
-// or Escape. The welcome cards stay wired to the same example registry.
+// or Escape.
 const loadBtn = $("btn-load");
 const loadMenu = $("ed-load-menu");
 function closeLoadMenu() {
@@ -1430,9 +1476,9 @@ for (const item of document.querySelectorAll("[data-example]")) {
   });
 }
 setupDragDrop();
-renderRecents();
 // Left pane view switcher: reading text or XML source, one always active.
 function setSourceMode(on) {
+  if (!app.state) return; // no document: the text views stay inert
   if (app.sourceMode === on) return;
   app.sourceMode = on;
   annot.removeSelPopover();
@@ -1482,7 +1528,7 @@ window.addEventListener("beforeunload", (e) => {
   if (app.dirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
-updatePanels(); // start state: no document, panel tabs built but disabled
+render(); // start state: the empty editor (no document) with its load prompt
 
 // Deep link from the landing page: editor.html#example=KEY loads that example.
 const exampleLink = location.hash.match(/^#example=([a-z]+)$/);

@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" type="synthetic-sample">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title type="main">A LETTER ON READING AND PATIENCE (synthetic sample)</title>
+        <author>Sample correspondent</author>
+      </titleStmt>
+      <publicationStmt>
+        <publisher>DHCraft</publisher>
+        <idno type="docID">synthetic-zbz</idno>
+      </publicationStmt>
+      <sourceDesc>
+        <bibl>
+          <title>A LETTER ON READING AND PATIENCE (synthetic sample)</title>
+          <author>Sample correspondent</author>
+        </bibl>
+      </sourceDesc>
+    </fileDesc>
+    <profileDesc>
+      <langUsage>
+        <language ident="en" />
+      </langUsage>
+    </profileDesc>
+  <revisionDesc>
+    <change when="2026-06-10" who="teiCrafter">Synthetic structural twin of the line-level ZBZ Hersch encoding. The markup mirrors the real object (page breaks, line breaks, facsimile zones, standOff entities, @facs linking); every word of the text is invented placeholder prose and stands in for the rights-restricted original, which is local-only.</change>
+  </revisionDesc>
+  </teiHeader>
+  <!-- Sample index data: illustrative entities seeded for the editor entity index. -->
+  <standOff>
+    <listPerson>
+      <person xml:id="pers_vautier"><persName>Marguerite Vautier</persName></person>
+      <person xml:id="pers_reader"><persName>the attentive reader</persName></person>
+    </listPerson>
+    <listPlace>
+      <place xml:id="plc_geneva"><placeName>Geneva</placeName></place>
+    </listPlace>
+  </standOff>
+  <facsimile>
+    <surface xml:id="facs_1" ulx="0" uly="0" lrx="1240" lry="1754">
+      <zone xml:id="facs_1_r_1" ulx="244" uly="149" lrx="1125" lry="198" />
+      <zone xml:id="facs_1_r_2" ulx="216" uly="378" lrx="1152" lry="451" />
+      <zone xml:id="facs_1_r_3" ulx="215" uly="449" lrx="1152" lry="1066" />
+      <zone xml:id="facs_1_r_4" ulx="230" uly="1054" lrx="1153" lry="1137" />
+    </surface>
+    <surface xml:id="facs_2" ulx="0" uly="0" lrx="1240" lry="1754">
+      <zone xml:id="facs_2_r_1" ulx="105" uly="151" lrx="1077" lry="243" />
+      <zone xml:id="facs_2_r_2" ulx="96" uly="265" lrx="1077" lry="791" />
+      <zone xml:id="facs_2_r_3" ulx="94" uly="781" lrx="1065" lry="938" />
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+<div n="1">
+        <pb facs="#facs_1" n="1" />
+        <head>
+          <title type="main">A LETTER ON READING AND PATIENCE</title>
+        </head>
+        <p facs="#facs_1_r_2">
+          <lb facs="#facs_1_r_2" n="N001" />A book asks for the one thing we are least willing to give it,
+        </p>
+        <p facs="#facs_1_r_3">
+          <lb facs="#facs_1_r_3" n="N001" />which is time without a purpose. We open it expecting an answer <lb facs="#facs_1_r_3" n="N002" />and grow impatient when it offers only a slower question. Yet <lb facs="#facs_1_r_3" n="N003" />the page does not withhold its meaning out of malice; it waits <lb facs="#facs_1_r_3" n="N004" />until the reader has stopped hurrying. To read well is to <lb facs="#facs_1_r_3" n="N005" />consent to that delay, to let a sentence stand unfinished in <lb facs="#facs_1_r_3" n="N006" />the mind until its weight settles. <name ref="#pers_vautier">Marguerite Vautier</name> once <lb facs="#facs_1_r_3" n="N007" />wrote from <name ref="#plc_geneva">Geneva</name> that she had learned more from the <lb facs="#facs_1_r_3" n="N008" />books she reread than from those she merely fin<lb break="no" facs="#facs_1_r_3" n="N009" />ished.
+        </p>
+        <p facs="#facs_1_r_4">
+          <lb facs="#facs_1_r_4" n="N001" />The habit she described is not erudition but <hi rendition="#i">patience</hi>: <lb facs="#facs_1_r_4" n="N002" />a willingness to be changed at the speed of the text.
+        </p>
+      <pb facs="#facs_2" n="2" />
+        <p facs="#facs_2_r_1">
+          <lb facs="#facs_2_r_1" n="N001" />There is a second patience that the first one teaches, harder <lb facs="#facs_2_r_1" n="N002" />than the patience of waiting.
+        </p>
+        <p facs="#facs_2_r_2">
+          <lb facs="#facs_2_r_2" n="N001" />It is the patience of being misunderstood, of setting a thought <lb facs="#facs_2_r_2" n="N002" />on the page and trusting that <name ref="#pers_reader">the attentive reader</name>, whom one <lb facs="#facs_2_r_2" n="N003" />will never meet, will return to it with more care than the first <lb facs="#facs_2_r_2" n="N004" />glance allows. The writer who demands to be understood at once <lb facs="#facs_2_r_2" n="N005" />writes for nobody, because no one reads at once. So I have <lb facs="#facs_2_r_2" n="N006" />stopped polishing these lines for clarity and begun leaving in <lb facs="#facs_2_r_2" n="N007" />them the small resistances that make a reader slow down.
+        </p>
+        <p facs="#facs_2_r_3">
+          <lb facs="#facs_2_r_3" n="N001" />If this letter has asked for your time without returning an <lb facs="#facs_2_r_3" n="N002" />answer, that was its only honest subject.
+        </p>
+      </div>
+    </body>
+  </text>
+</TEI>

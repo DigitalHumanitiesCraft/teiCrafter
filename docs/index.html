@@ -11,116 +11,204 @@
     <style>
         /* Landing styles, tokens only (no raw hex). The page states what the
            editor is, offers one primary action and the example projects,
-           and describes the core behaviour in plain sentences. */
+           and describes the core behaviour in plain sentences. Sections are
+           separated by the spacing scale, not rules; the principles band uses
+           a full-width sunken background instead of borders. */
+
+        /* Smooth in-page scroll only when the visitor has not asked to reduce
+           motion (the "Try an example" jump to #examples). */
+        @media (prefers-reduced-motion: no-preference) {
+            html { scroll-behavior: smooth; }
+        }
+
+        /* Header: wordmark left, nav right; status pill is non-interactive. */
         .lp-header { justify-content: space-between; }
-        .lp-tag {
-            font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: .08em;
-            color: var(--color-gold-light); border: 1px solid var(--color-gold);
-            border-radius: var(--radius-sm); padding: 2px var(--space-sm);
+        .lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
+        .lp-status {
+            font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+            font-weight: 500; color: var(--color-text-inverse);
+            background: rgba(255, 255, 255, .15); border-radius: var(--radius-pill);
+            padding: 3px 10px; cursor: default; user-select: none;
         }
-        .lp-main { max-width: 1080px; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
-        .lp-hero h2 { font-family: var(--font-serif); font-size: 2rem; font-weight: 600;
-            color: var(--color-text); margin: 0 0 var(--space-sm); }
-        .lp-lede { font-size: var(--font-size-lg); color: var(--color-text-secondary);
-            line-height: 1.6; margin: 0 0 var(--space-lg); max-width: 760px; }
-        .lp-open {
+
+        /* Centered content column, reused by every section and the footer. */
+        .lp-wrap { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-md); }
+
+        .lp-hero { padding: var(--space-3xl) 0 var(--space-2xl); }
+        .lp-hero h1 {
+            font-family: var(--font-serif); font-size: 2.4rem; font-weight: 600;
+            letter-spacing: -.01em; color: var(--color-text); margin: 0 0 var(--space-md);
+        }
+        .lp-lede {
+            font-size: var(--font-size-lg); color: var(--color-text-body);
+            line-height: 1.6; max-width: 68ch; margin: 0 0 var(--space-lg);
+        }
+
+        /* Call to action: filled primary plus ghost secondary, then the
+           reassurance line. */
+        .lp-cta-group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+        .lp-btn {
             display: inline-block; font-family: var(--font-ui); font-weight: 600;
-            font-size: var(--font-size-base); color: var(--color-text); text-decoration: none;
-            background: var(--color-gold); border: 1px solid var(--color-gold);
+            font-size: var(--font-size-base); text-decoration: none;
             border-radius: var(--radius-sm); padding: var(--space-sm) var(--space-lg);
+            border: 1px solid transparent; transition: background .15s, border-color .15s;
         }
+        /* Primary: dark text on TEI yellow (8.8:1, AA pass). */
+        .lp-open { color: var(--color-text); background: var(--color-gold); border-color: var(--color-gold); }
         .lp-open:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
-        .lp-section-title {
-            font-size: var(--font-size-sm); font-weight: 600; text-transform: uppercase;
-            letter-spacing: .08em; color: var(--color-text-muted);
-            margin: var(--space-xl) 0 var(--space-sm);
+        /* Ghost: dark text on transparent with a neutral border (high contrast). */
+        .lp-ghost { color: var(--color-text); background: transparent; border-color: var(--color-border); }
+        .lp-ghost:hover { background: var(--color-secondary); border-color: var(--color-gold); }
+        .lp-cta-note { margin: var(--space-sm) 0 0; font-size: var(--font-size-sm); color: var(--color-text-body); }
+
+        /* Hero screenshot slot (placeholder image until the next build). */
+        .lp-shot { margin: var(--space-2xl) 0 0; }
+        .lp-shot img {
+            display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
+            border: 1px solid var(--color-border); border-radius: var(--radius-md);
+            box-shadow: 0 6px 24px rgba(26, 26, 26, .08);
         }
+
+        .lp-section-title {
+            font-family: var(--font-serif); font-size: 1.4rem; font-weight: 600;
+            color: var(--color-text); margin: 0 0 var(--space-lg);
+        }
+
+        .lp-examples { padding: var(--space-2xl) 0; }
         .lp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); }
-        @media (max-width: 900px) { .lp-cards, .lp-features { grid-template-columns: 1fr; } }
         .lp-card {
             display: flex; flex-direction: column; gap: var(--space-sm);
             padding: var(--space-lg); text-decoration: none;
             background: var(--color-panel); border: 1px solid var(--color-border);
-            border-radius: var(--radius-sm); transition: border-color .15s, box-shadow .15s;
+            border-radius: var(--radius-sm); transition: border-color .15s, box-shadow .15s, transform .15s;
         }
-        .lp-card:hover { border-color: var(--color-gold); box-shadow: 0 4px 16px rgba(26,26,26,.08); }
-        .lp-card-tag { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
+        .lp-card:hover { border-color: var(--color-gold); box-shadow: 0 4px 16px rgba(26, 26, 26, .08); transform: translateY(-2px); }
+        /* The badge states a detected fact, not a fixed category: the editor
+           reads the editing unit from the document, so any TEI unit (entries,
+           sentences, ...) fits this same pattern later. */
+        .lp-badge {
+            align-self: flex-start; font-family: var(--font-ui); font-weight: 500;
+            font-size: var(--font-size-xs); color: var(--color-blue);
+            background: var(--color-blue-light); border-radius: var(--radius-pill);
+            padding: 2px 10px;
+        }
         .lp-card h3 { margin: 0; font-size: 1.1rem; color: var(--color-text); }
-        .lp-card p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-secondary); line-height: 1.6; }
-        .lp-card .lp-cta { margin-top: auto; font-size: var(--font-size-sm); font-weight: 600; color: var(--color-gold-hover); }
-        .lp-features {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg);
-            margin-top: var(--space-xl); padding-top: var(--space-lg);
-            border-top: 1px solid var(--color-border);
+        .lp-card p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
+        /* "Load example" is orange TEXT on a white card: uses --color-link
+           (#B45309, 5.0:1 on #FFFFFF, AA pass). The previous --color-gold-hover
+           (#DE9712) measured 2.5:1 here and failed. */
+        .lp-card .lp-cta { margin-top: auto; font-size: var(--font-size-sm); font-weight: 600; color: var(--color-link); }
+
+        /* Principles band: full-width sunken background instead of a rule. The
+           band and the footer share the sunken tone so the grey runs to the
+           bottom of the page with no cream gap between them. */
+        .lp-principles { background: var(--color-surface-sunken); padding: var(--space-4xl) 0 var(--space-3xl); }
+        .lp-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
+        /* Feature headings carry the cool TEI blue (the badges' colour), the one
+           accent besides the gold action colour; violet stays AI-only. */
+        .lp-feature h3 { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-blue); margin: 0 0 var(--space-xs); }
+        .lp-feature p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
+        .lp-feature a { color: var(--color-link); }
+        /* Inline TEI tokens read in the same blue-on-blue-tint as the badges, so
+           markup names stand out as one consistent family instead of grey. */
+        .lp-feature code { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-blue);
+            background: var(--color-blue-light); border-radius: var(--radius-sm); padding: 0 4px; }
+
+        .lp-footer { margin-top: 0; background: var(--color-surface-sunken); }
+        .lp-footer .lp-wrap { padding-top: var(--space-md); padding-bottom: var(--space-md); }
+
+        @media (max-width: 900px) {
+            .lp-cards, .lp-features { grid-template-columns: 1fr; }
         }
-        .lp-feature h3 { font-size: var(--font-size-sm); font-weight: 600;
-            color: var(--color-text); margin: 0 0 var(--space-xs); }
-        .lp-feature p { margin: 0; font-size: var(--font-size-sm);
-            color: var(--color-text-secondary); line-height: 1.6; }
-        .lp-feature a { color: var(--color-gold-hover); }
-        .lp-feature code { font-family: var(--font-mono); font-size: var(--font-size-xs);
-            background: var(--color-secondary); border-radius: var(--radius-sm); padding: 0 3px; }
-        .lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
-        .lp-foot { margin-top: var(--space-xl); padding-top: var(--space-md); }
+
+        /* Visible focus ring on every interactive element. */
+        .lp-card:focus-visible, .lp-btn:focus-visible,
+        .lp-lede a:focus-visible, .lp-feature a:focus-visible, .site-foot a:focus-visible {
+            outline: 2px solid var(--color-blue); outline-offset: 2px; border-radius: var(--radius-sm);
+        }
+        .site-head-link:focus-visible { outline: 2px solid var(--color-text-inverse); outline-offset: 2px; }
     </style>
 </head>
 <body>
     <header class="lp-header site-head">
         <span class="site-logo"><span class="accent">&lt;</span>tei<span class="accent">Crafter</span><span class="accent">&gt;</span></span>
-        <span class="lp-nav">
+        <nav class="lp-nav" aria-label="Site">
             <a class="site-head-link" href="about.html" title="What teiCrafter is, who makes it, and how it works">About</a>
-            <span class="lp-tag">Research Preview</span>
-        </span>
+            <span class="lp-status">Research Preview</span>
+        </nav>
     </header>
 
-    <main class="lp-main">
+    <main>
         <section class="lp-hero">
-            <h2>A browser editor for TEI-XML editions</h2>
-            <p class="lp-lede">teiCrafter opens an existing TEI edition, shows it page by page next to its facsimile, and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). It runs in the browser; the edition stays a local file on your computer.</p>
-            <a class="lp-open" href="editor.html" title="Open the editor and load your own TEI file">Open the editor</a>
+            <div class="lp-wrap">
+                <h1>A browser editor for TEI-XML</h1>
+                <p class="lp-lede">teiCrafter opens a TEI document, whether an edition, a dictionary or a language corpus, and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). Where the document links a facsimile, text and page image appear side by side. It runs in the browser; the file stays a local file on your computer.</p>
+                <div class="lp-cta-group">
+                    <a class="lp-btn lp-open" href="editor.html" title="Open the editor to load a TEI document or a project folder">Open the editor</a>
+                    <a class="lp-btn lp-ghost" href="#examples">Try an example</a>
+                </div>
+                <p class="lp-cta-note">No upload. Your files never leave your device.</p>
+                <figure class="lp-shot">
+                    <img src="assets/editor-screenshot.png" alt="teiCrafter editor: facsimile left, TEI text right, entity annotation panel open">
+                </figure>
+            </div>
         </section>
 
-        <p class="lp-section-title">Example projects</p>
-        <div class="lp-cards">
-            <!-- The same three examples as in the editor's welcome state; the
-                 #example deep link loads them directly. The LLM card returns
-                 here with FEATURES.llmOnRamp. -->
-            <a class="lp-card" href="editor.html#example=wb">
-                <span class="lp-card-tag">[ word-level ]</span>
-                <h3>Wenzelsbibel</h3>
-                <p>Codex 2759 of the Austrian National Library: word-level encoding with IIIF facsimile. Where the licence-restricted file is not present, a synthetic structural twin loads instead.</p>
-                <span class="lp-cta">Load example</span>
-            </a>
-            <a class="lp-card" href="editor.html#example=zbz">
-                <span class="lp-card-tag">[ line-level ]</span>
-                <h3>ZBZ Jeanne Hersch</h3>
-                <p>A letter from the Jeanne Hersch papers at the Zentralbibliothek Z&uuml;rich: line-level OCR-derived TEI with page scans.</p>
-                <span class="lp-cta">Load example</span>
-            </a>
-            <a class="lp-card" href="editor.html#example=szd">
-                <span class="lp-card-tag">[ line-level ]</span>
-                <h3>Stefan Zweig Digital</h3>
-                <p>A letter by Stefan Zweig (1901): line-level transcription with the facsimile from the GAMS repository.</p>
-                <span class="lp-cta">Load example</span>
-            </a>
-        </div>
+        <section id="examples" class="lp-examples">
+            <div class="lp-wrap">
+                <h2 class="lp-section-title">Example projects</h2>
+                <div class="lp-cards">
+                    <!-- The same three examples as in the editor's welcome state; the
+                         #example deep link loads them directly. The LLM card returns
+                         here with FEATURES.llmOnRamp.
+                         The "Editing unit" badge reports a detected fact, not a fixed
+                         category: the editor reads the unit from the document, so any
+                         TEI unit (entries, sentences, ...) fits the same pattern. -->
+                    <a class="lp-card" href="editor.html#example=wb">
+                        <span class="lp-badge" title="The editor reads the editing unit from the document. Edits in this example apply per word.">Editing unit: words</span>
+                        <h3>Wenzelsbibel</h3>
+                        <p>Codex 2759 of the Austrian National Library: word-level encoding with IIIF facsimile. Where the licence-restricted file is not present, a structurally identical sample file loads instead.</p>
+                        <span class="lp-cta">Load example</span>
+                    </a>
+                    <a class="lp-card" href="editor.html#example=zbz">
+                        <span class="lp-badge" title="The editor reads the editing unit from the document. Edits in this example apply per line.">Editing unit: lines</span>
+                        <h3>ZBZ Jeanne Hersch</h3>
+                        <p>A letter from the Jeanne Hersch papers at the Zentralbibliothek Z&uuml;rich: line-level OCR-derived TEI with page scans. Where the rights-restricted original is not present, a structurally identical sample file loads instead.</p>
+                        <span class="lp-cta">Load example</span>
+                    </a>
+                    <a class="lp-card" href="editor.html#example=szd">
+                        <span class="lp-badge" title="The editor reads the editing unit from the document. Edits in this example apply per line.">Editing unit: lines</span>
+                        <h3>Stefan Zweig Digital</h3>
+                        <p>A letter by Stefan Zweig (1901): line-level transcription with the facsimile from the GAMS repository.</p>
+                        <span class="lp-cta">Load example</span>
+                    </a>
+                </div>
+            </div>
+        </section>
 
-        <div class="lp-features">
-            <div class="lp-feature">
-                <h3>What saving does</h3>
-                <p>Saving writes your edits into the original file text and changes nothing else: whitespace, attribute order, comments and entity notation outside the edited passages remain untouched. A document saved without edits is identical to the opened file.</p>
+        <section id="principles" class="lp-principles">
+            <div class="lp-wrap">
+                <h2 class="lp-section-title">How teiCrafter treats your document</h2>
+                <div class="lp-features">
+                    <div class="lp-feature">
+                        <h3>Lossless saving</h3>
+                        <p>Your edits go into the original file text and nothing else changes: whitespace, attribute order, comments and entity notation outside the edited passages remain untouched. A document saved without edits is identical to the opened file. Direct saving to disk requires a Chromium-based browser; elsewhere the file is offered as a download.</p>
+                    </div>
+                    <div class="lp-feature">
+                        <h3>No configuration needed</h3>
+                        <p>The editing unit is read from the document itself: words where the edition encodes <code>&lt;w&gt;</code>, lines otherwise. Image zones and text are linked through <code>@facs</code> in both directions.</p>
+                    </div>
+                    <div class="lp-feature">
+                        <h3>Validated while you type</h3>
+                        <p>As you edit, the editor checks that the XML stays well-formed and that no text content is lost, and reports the result next to the text. How machine-generated content is handled is described in <a href="about.html">About</a>.</p>
+                    </div>
+                </div>
             </div>
-            <div class="lp-feature">
-                <h3>What the editing unit is</h3>
-                <p>Words where the edition encodes <code>&lt;w&gt;</code>, lines otherwise; the editor reads this from the document, no configuration is needed. Image zones and text are linked through <code>@facs</code> in both directions.</p>
-            </div>
-            <div class="lp-feature">
-                <h3>What is checked</h3>
-                <p>While you edit, the editor checks that the XML stays well-formed and that no text content is lost, and reports the result next to the text. How machine-generated content is handled is described in <a href="about.html">About</a>.</p>
-            </div>
-        </div>
+        </section>
+    </main>
 
-        <div class="lp-foot site-foot">
+    <footer class="lp-footer">
+        <div class="lp-wrap site-foot">
             <a href="https://dhcraft.org" target="_blank" rel="noopener" title="Digital Humanities Craft OG">
                 <img src="assets/dhcraft-logo.svg" alt="DHCraft logo">
                 <span>Digital Humanities Craft</span>
@@ -134,6 +222,6 @@
                 </svg>
             </a>
         </div>
-    </main>
+    </footer>
 </body>
 </html>

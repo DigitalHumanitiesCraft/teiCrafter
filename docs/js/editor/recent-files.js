@@ -1,8 +1,8 @@
 /**
  * Recent files: persisted FileSystemFileHandle records in IndexedDB, so the
- * welcome screen can reopen the editions the user works on daily without the
- * picker. Chromium-only by nature (File System Access API); everywhere else
- * `supported` is false and the welcome screen simply shows no Recent section.
+ * editor's empty-state list can reopen the editions the user works on daily
+ * without the picker. Chromium-only by nature (File System Access API);
+ * everywhere else `supported` is false and the list simply does not appear.
  *
  * Records are { name, when, handle }, keyed by name (reopening the same file
  * updates its timestamp instead of duplicating the row). Handles stay valid

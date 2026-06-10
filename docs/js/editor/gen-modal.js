@@ -119,7 +119,7 @@ export function setupGenModal(ctx) {
       const response = await complete(buildPrompt(text, getDefaultMapping(type)));
       const xml = extractXml(response);
       if (!xml) throw new Error("The model response contained no XML.");
-      load(xml, `generated-${type}.xml`, null);
+      await load(xml, `generated-${type}.xml`, null);
       markGenerated(true);
       setDirty(true);
       close();

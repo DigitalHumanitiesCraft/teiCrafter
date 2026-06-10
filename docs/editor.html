@@ -51,63 +51,11 @@
         </div>
     </div>
 
-    <!-- Welcome state: shown until a document is loaded; the editor chrome
-         (pane heads, pager, legend, facsimile) only appears with a document. -->
-    <section class="ed-welcome" id="ed-welcome">
-        <div class="ed-welcome-inner">
-            <h1>Edit a TEI edition</h1>
-            <p class="ed-welcome-lede">Open an edition to correct its text page by page (words or
-                lines, following the encoding) and to annotate entities with authority identifiers.
-                Saving changes only what you edited; the rest of the file stays as it was.
-                Machine-generated content, where present, is marked violet until a human verifies it.</p>
-            <div class="ed-welcome-actions">
-                <button class="ed-btn ed-btn-primary" id="start-open" type="button"
-                        title="Open a TEI edition from your computer">Open TEI...</button>
-                <span class="ed-welcome-drophint">or drop a .xml file anywhere on this page</span>
-            </div>
-            <div class="ed-recent" id="ed-recent" hidden>
-                <h2>Recent files</h2>
-                <div class="ed-recent-list" id="ed-recent-list"></div>
-            </div>
-            <h2>Example projects</h2>
-            <div class="ed-cards">
-                <button class="ed-card" data-example="wb" type="button"
-                        title="codex-2759.xml (the synthetic twin where the real codex is not present)">
-                    <b>Wenzelsbibel</b>
-                    <span class="ed-card-desc">Codex 2759, the real codex where present, else its synthetic twin</span>
-                    <span class="ed-card-meta">word-level, IIIF facsimile (real codex)</span>
-                    <span class="ed-card-cta">Load example</span>
-                </button>
-                <button class="ed-card" data-example="zbz" type="button"
-                        title="zbz-hersch-100.xml">
-                    <b>ZBZ Jeanne Hersch</b>
-                    <span class="ed-card-desc">real letter with page scans</span>
-                    <span class="ed-card-meta">line-level, local page images</span>
-                    <span class="ed-card-cta">Load example</span>
-                </button>
-                <button class="ed-card" data-example="szd" type="button"
-                        title="o_szd.1079.tei.xml">
-                    <b>Stefan Zweig Digital</b>
-                    <span class="ed-card-desc">real letter with GAMS facsimile</span>
-                    <span class="ed-card-meta">line-level, facsimile via GAMS</span>
-                    <span class="ed-card-cta">Load example</span>
-                </button>
-                <button class="ed-card ed-card-ai" id="card-generate" type="button" hidden
-                        title="Generate an initial TEI from plaintext with an LLM, then edit it here">
-                    <b>New from text (LLM)</b>
-                    <span class="ed-card-desc">paste plaintext, a model drafts an initial TEI</span>
-                    <span class="ed-card-meta">opens unreviewed, marked violet</span>
-                    <span class="ed-card-cta">Generate and edit</span>
-                </button>
-            </div>
-        </div>
-    </section>
-
     <!-- Dual view (operator decision 2026-06-10): two panes, always. The left
          pane is the text work surface (reading text or XML source); the right
          pane is a switchable context panel (facsimile, entity index; the panel
          registry in editor-app.js is open for project-specific panels). -->
-    <main class="ed-main" id="ed-main" hidden>
+    <main class="ed-main" id="ed-main">
         <section class="ed-pane">
             <div class="ed-pane-head">
                 <span class="ed-tabs" id="ed-view-tabs" role="tablist" aria-label="Text view">
@@ -154,6 +102,14 @@
     <div class="ed-val-pop" id="ed-val-pop" hidden></div>
 
     <div class="ed-drop" id="ed-drop" hidden><span>Drop the TEI file to open it</span></div>
+
+    <!-- Loading overlay: shown only for large documents (see BIG_DOC_CHARS in
+         editor-app.js), where the synchronous parse blocks the thread for a
+         noticeable moment. -->
+    <div class="ed-loading" id="ed-loading" hidden role="status" aria-live="polite">
+        <span class="ed-spinner" aria-hidden="true"></span>
+        <span class="ed-loading-label" id="ed-loading-label">Loading...</span>
+    </div>
 
     <footer class="ed-footer site-foot">
         <a class="ed-foot-brand" href="https://dhcraft.org" target="_blank" rel="noopener"
