@@ -1,26 +1,19 @@
 /**
- * teiCrafter Editor (Editor path) -- UI controller.
+ * teiCrafter Editor (Editor path) -- UI controller / shell.
  *
- * Wires the deterministic, DOM-free edition core (edition.js) to the three-pane
- * shell in editor.html. No LLM anywhere in this path: every change is a direct,
+ * Wires the deterministic, DOM-free edition core (edition.js) to the shell in
+ * editor.html. No LLM anywhere in this path: every change is a direct,
  * human-driven, lossless offset splice on the raw TEI string.
  *
- * Responsibilities:
- *   - Open a local TEI edition (File System Access API, with a file-input fallback),
- *     load the served synthetic Wenzelsbibel demo, or the real ZBZ Jeanne Hersch
- *     example (local XML plus page images).
- *   - Navigate folios (one <pb> to the next).
- *   - Render the diplomatic reading text word-by-word; click a word for the inline
- *     action chooser (edit / note / mark / link / entity). Corrections run through
- *     editCellCore (surgical, lossless, edge-whitespace preserving).
- *   - Show the folio's page image in an OpenSeadragon viewer (facsimile.js) with the
- *     <zone> rectangles overlaid and bidirectionally linked to the reading text
- *     (real @facs link when present, positional fallback otherwise).
- *   - Manage standOff entities (person/org/event) and in-text <name> mentions via the
- *     index panel (index-panel.js) and the lossless standoff.js splices.
- *   - Hybrid validation: browser-light here (well-formed + structural integrity vs
- *     the loaded baseline); the heavy RNG + Schematron pass is the offline harness.
- *   - Save in place (File System Access) when a handle exists, else download.
+ * Since the M2.13 module split this file is the integrator: it owns the shared
+ * app state, loading, rendering of the reading text, the facsimile, the live
+ * checks, save/download, and the inline cell editing (text / note / critical
+ * chooser). The feature surfaces live in their own modules and receive their
+ * dependencies via a ctx object:
+ *   - annotation-ui.js   context menu, annotate popover, annotation editor
+ *   - index-overlay.js   on-demand entity index + live authority lookup
+ *   - source-view.js     editable XML source view
+ *   - gen-modal.js       LLM on-ramp ("New from text")
  */
 
 import {
@@ -32,17 +25,15 @@ import {
   xmlIdSet,
   countTags,
   unescapeXmlText,
-  rawRangeForDisplay,
 } from "./edition.js";
+import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
-import { createIndexPanel } from "./index-panel.js";
-import { buildAuthorityForm } from "./authority-form.js";
+import { createAnnotationUi } from "./annotation-ui.js";
+import { createIndexOverlay } from "./index-overlay.js";
 import { mountSourceView } from "./source-view.js";
-import { lookup as authorityLookup } from "../services/authority-lookup.js";
-import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
-import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
+import { setupGenModal } from "./gen-modal.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
@@ -66,35 +57,11 @@ const app = {
   sourceMode: false,  // true while the reading pane shows the editable XML source
 };
 
-// Persistent facsimile controller (one OSD instance reused across folios) and the
-// entity index panel. Both created lazily once the DOM hosts exist.
+// Persistent facsimile controller (one OSD instance reused across folios),
+// created lazily once the DOM host exists.
 let facsimile = null;
-let indexPanel = null;
-
-// ---- tiny DOM helpers ------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k === "html") node.innerHTML = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if (k === "dataset") for (const [dk, dv] of Object.entries(v)) node.dataset[dk] = dv;
-    else if (v != null) node.setAttribute(k, v);
-  }
-  for (const c of [].concat(children)) {
-    if (c == null) continue;
-    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-  }
-  return node;
-}
-
-function clear(node) {
-  while (node.firstChild) node.removeChild(node.firstChild);
-}
 
 // ---- status / dirty --------------------------------------------------------
 
@@ -378,6 +345,27 @@ function entityMetaMap() {
   return meta;
 }
 
+/**
+ * Where has each entity been used? id -> { count, onPage } over all mention
+ * cells, so the popovers and the index can say WHERE an entry comes from
+ * (this page / this document / index only) instead of listing the raw standOff.
+ */
+function entityUsage() {
+  const usage = new Map();
+  app.state.folios.forEach((folio, fi) => {
+    for (const line of folio.lines) {
+      for (const c of line.cells) {
+        if (!c.mention) continue;
+        const rec = usage.get(c.mention) || { count: 0, onPage: false };
+        rec.count += 1;
+        if (fi === app.folio) rec.onPage = true;
+        usage.set(c.mention, rec);
+      }
+    }
+  });
+  return usage;
+}
+
 function renderReading() {
   const host = $("ed-reading");
   clear(host);
@@ -421,7 +409,7 @@ function renderReading() {
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
         if (cell.gap) { beginCritic(span, cell); return; }
-        if (cell.mention) { openAnnotationEditor(span, cell); return; }
+        if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
         // plain reading text: the click is just a cursor, not a command
       });
       span.addEventListener("dblclick", (e) => {
@@ -542,588 +530,6 @@ function applyDocFn(fn, label, failPrefix = "Edit", noopLabel = null) {
     setStatus(`${failPrefix} failed: ${err.message}`);
   }
 }
-
-// ---- context menu (editor paradigm, 2026-06-10) ------------------------------
-
-function removeMenu() {
-  const old = document.getElementById("ed-menu");
-  if (old) old.remove();
-}
-
-/**
- * Oxygen-style right-click menu on the reading text. Contextual: a live
- * selection offers annotation; an annotated element offers its editor; every
- * cell offers edit / note / mark. Closes on click elsewhere or Escape.
- */
-function openContextMenu(x, y, span, cell) {
-  removeMenu();
-  removeSelPopover();
-  const menu = el("div", { class: "ed-menu", id: "ed-menu" });
-  const item = (label, fn) => {
-    const b = el("button", { class: "ed-menu-item", text: label });
-    b.addEventListener("click", (e) => { e.stopPropagation(); removeMenu(); fn(); });
-    menu.appendChild(b);
-  };
-
-  const target = selectionTarget();
-  if (target) {
-    const shortText = target.text.length > 28 ? target.text.slice(0, 28) + "..." : target.text;
-    item(`Annotate "${shortText}"...`, () => openSelPopover());
-  }
-  if (cell) {
-    const c = () => app.state.cellById.get(cell.id);
-    if (cell.mention) item("Edit annotation...", () => { if (c()) openAnnotationEditor(span, c()); });
-    if (!cell.gap) {
-      item(app.state.profile === "word" ? "Edit word" : "Edit line", () => { if (c()) beginTextInput(span, c()); });
-      item("Add note...", () => { if (c()) beginNote(span, c()); });
-      item("Mark: unclear / deleted / added / gap...", () => { if (c()) beginCritic(span, c()); });
-      if (app.state.profile === "word") {
-        item("Link this word to an entity...", () => { if (c()) openEntityPickerFor(span, c()); });
-      }
-    } else {
-      item("Remove gap...", () => { if (c()) beginCritic(span, c()); });
-    }
-  }
-  if (!menu.childElementCount) return;
-
-  document.body.appendChild(menu);
-  menu.style.left = Math.min(x, window.innerWidth - menu.offsetWidth - 8) + "px";
-  menu.style.top = Math.min(y, window.innerHeight - menu.offsetHeight - 8) + "px";
-  const onAway = (e) => {
-    if (!(e.target instanceof Element && e.target.closest("#ed-menu"))) {
-      removeMenu();
-      document.removeEventListener("mousedown", onAway, true);
-    }
-  };
-  document.addEventListener("mousedown", onAway, true);
-  const onKey = (e) => {
-    if (e.key === "Escape") { removeMenu(); document.removeEventListener("keydown", onKey); }
-    if (!document.getElementById("ed-menu")) document.removeEventListener("keydown", onKey);
-  };
-  document.addEventListener("keydown", onKey);
-}
-
-/** Word-profile whole-cell link via a small anchored entity picker. */
-function openEntityPickerFor(span, cell) {
-  const host = $("ed-reading");
-  removeSelPopover();
-  const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
-  pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `link "${cell.text.trim()}"` }));
-  buildEntityChoiceRows(pop, cell.text.trim(), (entId) => {
-    removeSelPopover();
-    applyDocFn(
-      (doc) => standoff.linkMention(doc, cell.node, entId),
-      `Linked "${cell.text.trim()}" to ${entId}`,
-      "Link",
-      "Already linked to this entity",
-    );
-    refreshAfterStandoffEdit();
-  }, null);
-  const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
-  xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
-  pop.appendChild(xBtn);
-  anchorPopAt(pop, span.getBoundingClientRect(), host);
-}
-
-// ---- annotation editor (click an annotated element) --------------------------
-
-/** The full entity record for an id, or null. */
-function findEntity(id) {
-  const all = standoff.readEntities(app.state.doc);
-  return ["persons", "places", "orgs", "works", "events"]
-    .flatMap((k) => all[k] || [])
-    .find((e) => e.id === id) || null;
-}
-
-/**
- * Commit a standOff edit from inside the annotation editor, then reopen the
- * editor on the same cell (render() rebuilds the reading pane, which removes
- * the popover; the cell id is stable across standOff-region edits), so adding
- * several authority ids in a row stays one uninterrupted gesture.
- */
-function commitAndReopen(fn, label, cellId) {
-  applyDocFn(fn, label, "Edit");
-  refreshAfterStandoffEdit();
-  const c = app.state.cellById.get(cellId);
-  const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
-  if (c && s && c.mention) openAnnotationEditor(s, c);
-}
-
-/**
- * Clicking an annotated element edits the annotation in place: what it is
- * linked to, the entity's authority ids (add / remove / live lookup, moved
- * here from the index pane, operator decision 2026-06-10), its occurrences,
- * confirm for AI proposals, relink, or remove the link (lossless unwrap).
- */
-function openAnnotationEditor(span, cell) {
-  removeSelPopover();
-  const host = $("ed-reading");
-  const meta = entityMetaMap().get(cell.mention) || null;
-  const entity = findEntity(cell.mention);
-  const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
-  pop.appendChild(el("span", {
-    class: "ed-sel-pop-title",
-    text: meta
-      ? `linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unverified" : ""}`
-      : `linked to a missing entity (${cell.mention})`,
-  }));
-
-  if (entity) pop.appendChild(buildAuthorityEditor(entity, cell));
-
-  const row = el("div", { class: "ed-sel-pop-row" });
-  const btn = (text, title, fn, cls) => {
-    const b = el("button", { class: "ed-act-btn" + (cls ? " " + cls : ""), text, title });
-    b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
-    row.appendChild(b);
-  };
-  if (entity) {
-    const u = entityUsage().get(entity.id);
-    const n = u ? u.count : 0;
-    btn(`occurrences (${n})`, "highlight every mention of this entity; the first one on another page is reachable via the Index", () => {
-      removeSelPopover();
-      highlightMentions(entity);
-    });
-    if (meta && meta.ai) {
-      btn("confirm", "accept this AI proposal as verified (removes the violet marking)", () => {
-        commitAndReopen(
-          (doc) => standoff.confirmEntity(doc, entity.id),
-          `Confirmed ${entity.name || entity.id}`,
-          cell.id,
-        );
-      }, "ed-btn-ai");
-    }
-  }
-  btn("open in index", "show this entity in the full index overlay", () => {
-    removeSelPopover();
-    revealEntity(cell.mention);
-  });
-  btn("relink...", "point this text at a different entity", () => {
-    clear(row);
-    buildEntityChoiceRows(row, cell.text.trim(), (entId) => {
-      removeSelPopover();
-      applyDocFn(
-        (doc) => standoff.linkMention(doc, cell.node, entId),
-        `Relinked "${cell.text.trim()}" to ${entId}`,
-        "Relink",
-        "Already linked to this entity",
-      );
-      refreshAfterStandoffEdit();
-    }, cell.mention);
-  });
-  btn("remove link", "unwrap the <name> around this text (the text itself survives)", () => {
-    removeSelPopover();
-    applyDocFn(
-      (doc) => standoff.unwrapMention(doc, cell.node),
-      `Removed the link on "${cell.text.trim()}" (index entry kept)`,
-      "Unlink",
-    );
-    refreshAfterStandoffEdit();
-  });
-  btn("x", "close", () => removeSelPopover());
-  pop.appendChild(row);
-  anchorPopAt(pop, span.getBoundingClientRect(), host);
-}
-
-/**
- * Authority ids (GND / GeoNames / Wikidata) of the linked entity, editable at
- * the mention: the shared form (authority-form.js, same UI as in the index
- * overlay), committing losslessly and reopening the editor on the same cell.
- */
-function buildAuthorityEditor(entity, cell) {
-  const form = buildAuthorityForm(entity, {
-    onSet: (authority, value) => commitAndReopen(
-      (doc) => standoff.setAuthority(doc, entity.id, authority, value),
-      value
-        ? `Set ${authority} id on ${entity.name || entity.id}`
-        : `Removed ${authority} id from ${entity.name || entity.id}`,
-      cell.id,
-    ),
-    onLookup: runLookup,
-  });
-  form.classList.add("ed-sel-auth");
-  return form;
-}
-
-/** Open the index overlay scrolled to an entity's row and flash it. */
-function revealEntity(id) {
-  openIndexOverlay();
-  if (indexPanel) indexPanel.setActive(id);
-  const row = document.querySelector(`#ed-index-host .ed-idx-row[data-id="${CSS.escape(id)}"]`);
-  if (!row) { setStatus(`No index entry for ${id}`); return; }
-  row.scrollIntoView({ block: "center" });
-  row.classList.add("ed-idx-row-flash");
-  setTimeout(() => row.classList.remove("ed-idx-row-flash"), 1200);
-}
-
-// ---- selection annotation (M2.8) --------------------------------------------
-// Select any words inside a line with the mouse and annotate exactly that text:
-// a popover offers "new entity from selection" per type, or linking an existing
-// entity. The wrap is a lossless sub-range splice (standoff.linkMentionRange);
-// afterwards the index entry is revealed so authority ids (GND, Wikidata,
-// GeoNames) are one click away via the existing live lookup.
-
-const ENTITY_TYPE_LABELS = [
-  ["person", "person"], ["place", "place"], ["org", "organisation"],
-  ["work", "work"], ["event", "event"],
-];
-
-function removeSelPopover() {
-  const old = document.getElementById("ed-sel-pop");
-  if (old) old.remove();
-}
-
-/** Resolve the current selection to { cell, relFrom, relTo, text } or null. */
-function selectionTarget() {
-  const sel = window.getSelection();
-  if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !app.state) return null;
-  const range = sel.getRangeAt(0);
-  const spanOf = (node) => {
-    const elNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-    return elNode ? elNode.closest("#ed-reading .ed-w") : null;
-  };
-  const startSpan = spanOf(range.startContainer);
-  const endSpan = spanOf(range.endContainer);
-  if (!startSpan || startSpan !== endSpan) return null; // one segment at a time
-  const cell = app.state.cellById.get(startSpan.dataset.id);
-  if (!cell || cell.gap) return null;
-  // Display offsets inside the span's single text node, trimmed to the words.
-  let dFrom = Math.min(range.startOffset, range.endOffset);
-  let dTo = Math.max(range.startOffset, range.endOffset);
-  const shown = startSpan.textContent;
-  while (dFrom < dTo && /\s/.test(shown[dFrom])) dFrom++;
-  while (dTo > dFrom && /\s/.test(shown[dTo - 1])) dTo--;
-  if (dFrom >= dTo) return null;
-  const rel = rawRangeForDisplay(cell.rawText, dFrom, dTo);
-  if (!rel) return null;
-  const text = shown.slice(dFrom, dTo);
-  // Safety: the mapped raw slice must decode to exactly the selected text,
-  // otherwise refuse rather than wrap the wrong bytes.
-  if (unescapeXmlText(cell.rawText.slice(rel[0], rel[1])) !== text) return null;
-  return { cell, span: startSpan, relFrom: rel[0], relTo: rel[1], text };
-}
-
-/** Apply: optionally create the entity, then wrap the selected sub-range. */
-function annotateSelection(target, entityId, createType) {
-  try {
-    let doc = app.state.doc;
-    let id = entityId;
-    if (createType) {
-      const before = new Set(allEntityIds(doc));
-      doc = standoff.addEntity(doc, createType, { name: target.text });
-      id = allEntityIds(doc).find((x) => !before.has(x));
-      if (!id) throw new Error("could not resolve the new entity's id");
-    }
-    // Re-locate the cell: addEntity shifted offsets, but the cell id is stable
-    // and the relative offsets address the unchanged node content.
-    const st = parseEdition(doc.raw);
-    const c = st.cellById.get(target.cell.id);
-    if (!c) throw new Error("the selected line is no longer addressable");
-    const next = standoff.linkMentionRange(doc, c.node, target.relFrom, target.relTo, id);
-    if (next === doc && !createType) {
-      setStatus("Nothing annotated (the text may already sit inside a link)");
-      return;
-    }
-    app.state = parseEdition(next.raw);
-    app.noteByWord = indexNotes(app.state.raw);
-    setDirty(true);
-    setStatus(`Annotated "${target.text}" (${id})`);
-    refreshAfterStandoffEdit();
-    // Continue in place: open the annotation editor on the fresh mention so
-    // authority ids (GND, Wikidata, GeoNames) are attachable without leaving
-    // the text (the index logic lives where the annotating happens).
-    openAnnotationEditorFor(id);
-  } catch (err) {
-    setStatus(`Annotate failed: ${err.message}`);
-  }
-}
-
-/** Open the annotation editor on the current folio's first mention of an entity. */
-function openAnnotationEditorFor(id) {
-  const folio = app.state.folios[app.folio];
-  if (!folio) return;
-  for (const line of folio.lines) {
-    for (const c of line.cells) {
-      if (c.mention !== id) continue;
-      const span = document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
-      if (span) openAnnotationEditor(span, c);
-      return;
-    }
-  }
-}
-
-function allEntityIds(doc) {
-  const all = standoff.readEntities(doc);
-  return ["persons", "places", "orgs", "works", "events"]
-    .flatMap((k) => (all[k] || []).map((e) => e.id));
-}
-
-/** Anchor a popover at a viewport rect, inside the scrolling reading pane. */
-function anchorPopAt(pop, rect, host) {
-  const hostRect = host.getBoundingClientRect();
-  host.appendChild(pop);
-  pop.style.left = Math.max(0, Math.min(rect.left - hostRect.left, host.clientWidth - pop.offsetWidth - 8)) + "px";
-  pop.style.top = (rect.bottom - hostRect.top + host.scrollTop + 6) + "px";
-}
-
-/**
- * Where has each entity been used? id -> { count, onPage } over all mention
- * cells, so the popovers can say WHERE an entry comes from (this page / this
- * document / index only) instead of listing the raw standOff.
- */
-function entityUsage() {
-  const usage = new Map();
-  app.state.folios.forEach((folio, fi) => {
-    for (const line of folio.lines) {
-      for (const c of line.cells) {
-        if (!c.mention) continue;
-        const rec = usage.get(c.mention) || { count: 0, onPage: false };
-        rec.count += 1;
-        if (fi === app.folio) rec.onPage = true;
-        usage.set(c.mention, rec);
-      }
-    }
-  });
-  return usage;
-}
-
-const TYPE_LABEL = { pers: "person", plc: "place", org: "organisation", wrk: "work", evt: "event" };
-
-/**
- * Shared entity-choice list with provenance: suggestions first (same name as
- * the selection, or the same text already annotated), then groups "annotated
- * on this page" / "annotated in this document" / "in the index (not yet
- * linked)", with a filter once the list grows. onPick(entityId) applies;
- * excludeId hides the entity the text is currently linked to.
- */
-function buildEntityChoiceRows(container, selText, onPick, excludeId) {
-  const meta = entityMetaMap();
-  const usage = entityUsage();
-  const all = standoff.readEntities(app.state.doc);
-  const entities = ["persons", "places", "orgs", "works", "events"]
-    .flatMap((k) => all[k] || [])
-    .filter((ent) => ent.id !== excludeId);
-  if (!entities.length) {
-    container.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet" }));
-    return;
-  }
-  const norm = (s) => (s || "").trim().toLowerCase();
-  const want = norm(selText);
-
-  const entBtn = (ent, why) => {
-    const m = meta.get(ent.id);
-    const u = usage.get(ent.id);
-    const kindLabel = m ? TYPE_LABEL[m.kind] : "entity";
-    const b = el("button", {
-      class: "ed-act-btn" + (m && m.ai ? " ed-btn-ai" : ""),
-      text: `${ent.name || "(unnamed)"} (${kindLabel})`,
-      title: `${ent.id}${why ? "; " + why : ""}${u ? `; ${u.count} mention(s) in this document` : "; no mentions yet"}`,
-    });
-    b.addEventListener("click", (e) => { e.stopPropagation(); if (e.detail > 1) return; onPick(ent.id); });
-    return b;
-  };
-
-  // Suggestions: hard evidence only (name equals the selection, or the exact
-  // selected text is already annotated with this entity somewhere).
-  const suggested = new Set();
-  const sugRow = el("div", { class: "ed-sel-pop-row" });
-  for (const ent of entities) {
-    if (norm(ent.name) === want && want) { suggested.add(ent.id); sugRow.appendChild(entBtn(ent, "index entry with exactly this name")); }
-  }
-  for (const folio of app.state.folios) {
-    for (const line of folio.lines) {
-      for (const c of line.cells) {
-        if (!c.mention || suggested.has(c.mention)) continue;
-        if (norm(c.text) !== want || !want) continue;
-        const ent = entities.find((x) => x.id === c.mention);
-        if (ent) { suggested.add(ent.id); sugRow.appendChild(entBtn(ent, "this exact text is already annotated with it")); }
-      }
-    }
-  }
-  if (sugRow.childElementCount) {
-    container.appendChild(el("span", { class: "ed-act-group", text: "suggested (matches this text)" }));
-    container.appendChild(sugRow);
-  }
-
-  // Provenance groups for the rest, filterable when long.
-  const rest = entities.filter((ent) => !suggested.has(ent.id));
-  const groups = [
-    ["annotated on this page", (ent) => { const u = usage.get(ent.id); return u && u.onPage; }],
-    ["annotated in this document", (ent) => { const u = usage.get(ent.id); return u && !u.onPage; }],
-    ["in the index, not yet linked", (ent) => !usage.get(ent.id)],
-  ];
-  const listHost = el("div", {});
-  const renderGroups = (filter) => {
-    clear(listHost);
-    const f = norm(filter);
-    for (const [label, match] of groups) {
-      const items = rest.filter((ent) => match(ent) && (!f || norm(ent.name).includes(f) || ent.id.toLowerCase().includes(f)));
-      if (!items.length) continue;
-      listHost.appendChild(el("span", { class: "ed-act-group", text: label }));
-      const row = el("div", { class: "ed-sel-pop-row" });
-      for (const ent of items) row.appendChild(entBtn(ent, label));
-      listHost.appendChild(row);
-    }
-    if (!listHost.childElementCount && f) {
-      listHost.appendChild(el("span", { class: "ed-act-empty", text: "no entity matches the filter" }));
-    }
-  };
-  if (rest.length > 8) {
-    const filter = el("input", { class: "ed-sel-filter", type: "text", placeholder: `filter ${rest.length} entities...` });
-    filter.addEventListener("input", () => renderGroups(filter.value));
-    filter.addEventListener("mouseup", (e) => e.stopPropagation());
-    container.appendChild(filter);
-  }
-  renderGroups("");
-  container.appendChild(listHost);
-}
-
-// Full-TEI markup wraps (no standOff entity): the scholarly elements first,
-// then any element by name. Each build keeps the reading text byte-identical
-// (enforced by standoff.wrapRange).
-const MARKUP_WRAPS = [
-  ["persName", (inner) => `<persName>${inner}</persName>`],
-  ["persName + forename/surname", (inner) => {
-    const m = inner.match(/^(\s*)([\s\S]*\S)(\s+)(\S+)(\s*)$/);
-    if (!m) return `<persName>${inner}</persName>`;
-    return `${m[1]}<persName><forename>${m[2]}</forename>${m[3]}<surname>${m[4]}</surname></persName>${m[5]}`;
-  }],
-  ["placeName", (inner) => `<placeName>${inner}</placeName>`],
-  ["orgName", (inner) => `<orgName>${inner}</orgName>`],
-  ["date", (inner) => `<date>${inner}</date>`],
-  ["term", (inner) => `<term>${inner}</term>`],
-  ["foreign", (inner) => `<foreign>${inner}</foreign>`],
-  ["hi", (inner) => `<hi>${inner}</hi>`],
-  ["title", (inner) => `<title>${inner}</title>`],
-];
-
-function applyMarkupWrap(target, build, label) {
-  applyDocFn(
-    (doc) => standoff.wrapRange(doc, target.cell.node, target.relFrom, target.relTo, build),
-    `Marked "${target.text}" as ${label}`,
-    "Annotate",
-    "Nothing changed (invalid range or text would be lost)",
-  );
-  refreshAfterStandoffEdit();
-}
-
-/**
- * The annotate popover on a finished selection. Evidence first (suggestions
- * with provenance), then collapsed sections: link an existing entity, create a
- * new index entity, or apply plain TEI markup (full flexibility, no entity).
- */
-function openSelPopover() {
-  removeSelPopover();
-  removeMenu();
-  const target = selectionTarget();
-  if (!target) return;
-  if (target.cell.mention) {
-    setStatus("This text already sits inside a link; click it to edit the annotation.");
-    return;
-  }
-  const host = $("ed-reading");
-  const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
-  pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
-
-  // Collapsible section helper: header toggles the body.
-  const section = (label, open) => {
-    const body = el("div", { class: "ed-sel-sec-body" });
-    body.hidden = !open;
-    const head = el("button", { class: "ed-sel-sec-head", text: label, type: "button" });
-    head.addEventListener("click", (e) => { e.stopPropagation(); body.hidden = !body.hidden; });
-    pop.appendChild(head);
-    pop.appendChild(body);
-    return body;
-  };
-
-  // 1. Entities: suggestions (always visible inside) + provenance groups.
-  const all = standoff.readEntities(app.state.doc);
-  const haveEntities = ["persons", "places", "orgs", "works", "events"].some((k) => (all[k] || []).length);
-  if (haveEntities) {
-    const entBody = section("link to an index entity", true);
-    buildEntityChoiceRows(entBody, target.text, (entId) => {
-      removeSelPopover();
-      annotateSelection(target, entId, null);
-    }, null);
-  }
-
-  // 2. New index entity from the selection (collapsed when entities exist:
-  //    not every selection is an entity, so this must not be the loudest offer).
-  const newBody = section("new index entity from this text", !haveEntities);
-  const newRow = el("div", { class: "ed-sel-pop-row" });
-  for (const [type, label] of ENTITY_TYPE_LABELS) {
-    const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}", link this text, then add authority ids right here` });
-    b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeSelPopover();
-      annotateSelection(target, null, type);
-    });
-    newRow.appendChild(b);
-  }
-  newBody.appendChild(newRow);
-
-  // 3. Plain TEI markup (full flexibility, no index entry).
-  const muBody = section("TEI markup (no index entry)", false);
-  const muRow = el("div", { class: "ed-sel-pop-row" });
-  for (const [label, build] of MARKUP_WRAPS) {
-    const b = el("button", { class: "ed-act-btn", text: label, title: `wrap the selection in <${label.split(" ")[0]}>` });
-    b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeSelPopover();
-      applyMarkupWrap(target, build, label);
-    });
-    muRow.appendChild(b);
-  }
-  // Any element by name (the full-TEI escape hatch).
-  const freeWrap = el("div", { class: "ed-sel-pop-row" });
-  const freeInput = el("input", { class: "ed-sel-filter", type: "text", placeholder: "any element name..." });
-  freeInput.addEventListener("mouseup", (e) => e.stopPropagation());
-  const freeBtn = el("button", { class: "ed-act-btn", text: "wrap", title: "wrap the selection in the named element" });
-  freeBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const tag = freeInput.value.trim();
-    if (!/^[A-Za-z_][\w.-]*$/.test(tag)) { setStatus("Not a valid element name"); return; }
-    removeSelPopover();
-    applyMarkupWrap(target, (inner) => `<${tag}>${inner}</${tag}>`, `<${tag}>`);
-  });
-  freeWrap.appendChild(freeInput);
-  freeWrap.appendChild(freeBtn);
-  muBody.appendChild(muRow);
-  muBody.appendChild(freeWrap);
-
-  const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
-  xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
-  pop.appendChild(xBtn);
-
-  anchorPopAt(pop, window.getSelection().getRangeAt(0).getBoundingClientRect(), host);
-}
-
-// Selection handling: a finished mouse DRAG selection inside the reading pane
-// opens the annotate popover; Escape or a click elsewhere closes it. A
-// double-click (e.detail > 1) belongs to direct text editing, not annotation.
-document.addEventListener("mouseup", (e) => {
-  if (!app.state || app.sourceMode) return;
-  if (e.detail > 1) return;
-  const inReading = e.target instanceof Element && e.target.closest("#ed-reading");
-  const inPop = e.target instanceof Element && (e.target.closest("#ed-sel-pop") || e.target.closest("#ed-menu"));
-  if (inPop) return;
-  setTimeout(() => {
-    if (!inReading) { removeSelPopover(); return; }
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed) { removeSelPopover(); return; }
-    openSelPopover();
-  }, 0);
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && document.getElementById("ed-sel-pop")) removeSelPopover();
-});
-// Right-click: the Oxygen-style context menu, on words and on selections.
-$("ed-reading").addEventListener("contextmenu", (e) => {
-  if (!app.state || app.sourceMode) return;
-  e.preventDefault();
-  const span = e.target instanceof Element ? e.target.closest(".ed-w") : null;
-  const cell = span ? app.state.cellById.get(span.dataset.id) : null;
-  openContextMenu(e.clientX, e.clientY, span, cell || null);
-});
 
 // ---- editorial notes (M3.5) ------------------------------------------------
 
@@ -1330,184 +736,10 @@ function renderFacsimile() {
   });
 }
 
-// ---- entity index / standOff ----------------------------------------------
-// The on-demand Index overlay (toolbar button) manages standOff entities
-// (person/place/org/work/event); day-to-day authority work happens in the
-// annotation popover on the text itself (operator decision 2026-06-10).
-// Every mutation goes through standoff.js (lossless offset splice) and re-parses
-// the edition so all offsets stay correct.
-
-/** Lazily create the single index panel bound to the overlay host, with its hooks. */
-function ensureIndexPanel() {
-  if (indexPanel) return indexPanel;
-  const host = $("ed-index-host");
-  if (!host) return null;
-  indexPanel = createIndexPanel(host, {
-    onAdd: (type, { name }) => {
-      try {
-        app.state = parseEdition(standoff.addEntity(app.state.doc, type, { name }).raw);
-        setDirty(true);
-        refreshAfterStandoffEdit();
-      } catch (err) {
-        setStatus(`Could not add entity: ${err.message}`);
-      }
-    },
-    onUpdate: (id, { name }) => {
-      try {
-        app.state = parseEdition(standoff.updateEntity(app.state.doc, id, { name }).raw);
-        setDirty(true);
-        refreshAfterStandoffEdit();
-      } catch (err) {
-        setStatus(`Could not rename entity: ${err.message}`);
-      }
-    },
-    onDelete: (id) => {
-      try {
-        app.state = parseEdition(standoff.deleteEntity(app.state.doc, id).raw);
-        setDirty(true);
-        refreshAfterStandoffEdit();
-      } catch (err) {
-        setStatus(`Could not delete entity: ${err.message}`);
-      }
-    },
-    onSelect: (entity) => jumpToEntity(entity),
-    onSetAuthority: (id, { authority, value }) => {
-      try {
-        app.state = parseEdition(standoff.setAuthority(app.state.doc, id, authority, value).raw);
-        setDirty(true);
-        refreshAfterStandoffEdit();
-      } catch (err) {
-        setStatus(`Could not set authority id: ${err.message}`);
-      }
-    },
-    onConfirm: (id) => {
-      try {
-        app.state = parseEdition(standoff.confirmEntity(app.state.doc, id).raw);
-        setDirty(true);
-        refreshAfterStandoffEdit();
-        setStatus("AI suggestion confirmed");
-      } catch (err) {
-        setStatus(`Could not confirm entity: ${err.message}`);
-      }
-    },
-    onLookup: (id, { authority, query, anchor, onPick }) => runLookup(authority, query, anchor, onPick),
-  });
-  return indexPanel;
-}
-
-/**
- * M3.3 live lookup: query an authority register and show the hits in a small
- * popover anchored to the entity's id form. Picking one fills the id field via
- * onPick (which commits through onSetAuthority). The human chooses the match.
- */
-async function runLookup(authority, query, anchor, onPick) {
-  if (!anchor) return;
-  let pop = anchor.querySelector(".ed-idx-lookupresults");
-  if (pop) pop.remove();
-  if (!query) { setStatus("Type a name (or name the entity) before looking up"); return; }
-  pop = el("div", { class: "ed-idx-lookupresults" });
-  pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: `Searching ${authority}...` }));
-  anchor.appendChild(pop);
-  try {
-    const hits = await authorityLookup(authority, query, { limit: 7 });
-    // If a newer lookup replaced this popover, or the index re-rendered while we
-    // awaited, this node is detached: drop the stale result instead of writing to
-    // an orphaned element. isConnected (not parentElement) is required, since a
-    // re-render detaches the whole subtree while the local parent link survives.
-    if (!pop.isConnected) return;
-    clear(pop);
-    if (!hits.length) {
-      pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: `No ${authority} match for "${query}"` }));
-      return;
-    }
-    for (const h of hits) {
-      pop.appendChild(el("button", {
-        class: "ed-idx-lookuphit", type: "button",
-        title: h.description || h.id,
-        onclick: () => { pop.remove(); onPick(h.id); },
-      }, [
-        el("span", { class: "ed-idx-lookuplabel", text: h.label || h.id }),
-        el("span", { class: "ed-idx-lookupid", text: h.id }),
-        h.description ? el("span", { class: "ed-idx-lookupdesc", text: h.description }) : null,
-      ]));
-    }
-  } catch (err) {
-    if (!pop.isConnected) return;
-    clear(pop);
-    pop.appendChild(el("div", { class: "ed-idx-lookupmsg", text: err.message }));
-  }
-}
-
-/** Render the entity index from the current document, with mention counts. */
-function renderIndex() {
-  const panel = ensureIndexPanel();
-  if (!panel || !app.state) return;
-  const all = standoff.readEntities(app.state.doc);
-  const usage = entityUsage();
-  for (const k of ["persons", "places", "orgs", "works", "events"]) {
-    for (const e of all[k] || []) e.count = (usage.get(e.id) || {}).count || 0;
-  }
-  panel.render(all);
-}
-
-// ---- index overlay (M2.11) --------------------------------------------------
-
-function openIndexOverlay() {
-  if (!app.state) return;
-  renderIndex();
-  $("ed-idx-overlay").hidden = false;
-  $("btn-index").classList.add("active");
-  const f = $("idx-filter");
-  f.value = "";
-  applyIndexFilter("");
-  f.focus();
-}
-
-function closeIndexOverlay() {
-  $("ed-idx-overlay").hidden = true;
-  $("btn-index").classList.remove("active");
-}
-
-/** DOM-level filter over the rendered panel: rows by name/id, empty sections fold. */
-function applyIndexFilter(q) {
-  const f = q.trim().toLowerCase();
-  for (const row of document.querySelectorAll("#ed-index-host .ed-idx-row")) {
-    row.hidden = !!f && !row.textContent.toLowerCase().includes(f);
-  }
-  for (const sec of document.querySelectorAll("#ed-index-host .ed-idx-section")) {
-    sec.hidden = !!f && !sec.querySelector(".ed-idx-row:not([hidden])");
-  }
-}
-
-/**
- * Index row clicked: close the overlay and jump to the entity's first in-text
- * mention (switching the page when needed), then highlight all its mentions.
- */
-function jumpToEntity(entity) {
-  closeIndexOverlay();
-  let targetFolio = -1;
-  let targetCellId = null;
-  outer: for (let fi = 0; fi < app.state.folios.length; fi++) {
-    for (const line of app.state.folios[fi].lines) {
-      for (const c of line.cells) {
-        if (c.mention === entity.id) { targetFolio = fi; targetCellId = c.id; break outer; }
-      }
-    }
-  }
-  if (targetFolio < 0) {
-    setStatus(`${entity.name}: no in-text mentions on any folio`);
-    return;
-  }
-  if (targetFolio !== app.folio) gotoFolio(targetFolio);
-  highlightMentions(entity);
-  const span = document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(targetCellId)}"]`);
-  if (span) span.scrollIntoView({ block: "center" });
-}
-
 /** After any standOff edit: re-render the whole view and the index panel. */
 function refreshAfterStandoffEdit() {
   render();
-  renderIndex();
+  overlay.renderIndex();
 }
 
 /**
@@ -1681,115 +913,24 @@ function download() {
   setStatus(`Downloaded ${app.docName || "edition.xml"}`);
 }
 
-// ---- LLM entry: generate an initial TEI, then edit it here -----------------
-// One workbench, two entries. The model produces the first draft; the human
-// verifies and corrects it deterministically in the same editor. The API key is
-// held in memory only (llm.js keeps it in a module-scoped map), never persisted.
+// ---- feature modules (M2.13 split) ------------------------------------------
+// Instantiated once at startup; dependencies flow in via a ctx object, the
+// surfaces (popovers, overlay, modal) flow back through the returned APIs.
 
-const gen = { key: "", provider: "anthropic", model: "", type: "generic" };
-
-function fillSelect(sel, entries, current) {
-  clear(sel);
-  for (const [val, label] of entries) {
-    const opt = el("option", { value: val, text: label });
-    if (val === current) opt.selected = true;
-    sel.appendChild(opt);
-  }
-}
-
-function refreshModels() {
-  const cfg = getProviderConfigs()[$("gen-provider").value];
-  const models = (cfg && cfg.models) || [];
-  fillSelect($("gen-model"), models.map((m) => [m, m]), gen.model || (cfg && cfg.defaultModel));
-}
-
-function openGenModal() {
-  const configs = getProviderConfigs();
-  fillSelect($("gen-type"), Object.entries(SOURCE_LABELS), gen.type);
-  fillSelect($("gen-provider"), Object.entries(configs).map(([id, c]) => [id, c.name]), gen.provider);
-  refreshModels();
-  $("gen-key").value = gen.key;
-  const status = $("gen-status");
-  status.textContent = "";
-  status.className = "ed-modal-status";
-  $("gen-modal").hidden = false;
-  $("gen-text").focus();
-}
-
-function closeGenModal() {
-  $("gen-modal").hidden = true;
-}
-
-// Self-contained prompt + response parsing (the old transform.js pipeline depends
-// on a missing prompt.js, so the editor builds its own minimal annotate prompt and
-// calls the LLM service directly via complete()).
-function buildPrompt(text, mappingRules) {
-  return [
-    "You are a TEI-XML assistant. Convert the source text into a well-formed TEI P5 document.",
-    "Rules:",
-    '1. Output a complete <TEI xmlns="http://www.tei-c.org/ns/1.0"> with a minimal <teiHeader> and <text><body>.',
-    "2. Preserve every character of the source text exactly. Do not paraphrase, translate, or omit anything.",
-    "3. Apply the mapping rules below where they fit; do not invent markup beyond them.",
-    "4. Return ONLY the XML inside a single ```xml code block, with no commentary.",
-    "",
-    mappingRules || "",
-    "",
-    "Source text:",
-    text,
-  ].join("\n");
-}
-
-function extractXml(resp) {
-  if (!resp) return null;
-  const fenced = resp.match(/```xml\s*([\s\S]*?)```/i) || resp.match(/```\s*([\s\S]*?)```/);
-  let xml = (fenced ? fenced[1] : resp).trim();
-  const lt = xml.indexOf("<");
-  if (lt > 0) xml = xml.slice(lt);
-  return xml.startsWith("<") ? xml : null;
-}
-
-async function runGenerate() {
-  const text = $("gen-text").value;
-  const type = $("gen-type").value;
-  const provider = $("gen-provider").value;
-  const model = $("gen-model").value;
-  const apiKey = $("gen-key").value.trim();
-  gen.key = apiKey; gen.provider = provider; gen.model = model; gen.type = type;
-
-  const status = $("gen-status");
-  if (!text.trim()) { status.className = "ed-modal-status err"; status.textContent = "Please paste some source text."; return; }
-
-  // Configure the LLM service. The key is stored inside llm.js (module-scoped),
-  // not here, and never persisted.
-  setProvider(provider);
-  if (model) setModel(model);
-  const cfg = getProviderConfigs()[provider];
-  if (apiKey && !setApiKey(provider, apiKey)) {
-    status.className = "ed-modal-status err"; status.textContent = "API key format is invalid."; return;
-  }
-  if (cfg && cfg.authType !== "none" && !apiKey && !cfg.hasKey) {
-    status.className = "ed-modal-status err"; status.textContent = "An API key is required (kept in memory only)."; return;
-  }
-
-  $("gen-run").disabled = true;
-  status.className = "ed-modal-status busy";
-  status.textContent = `Contacting ${cfg ? cfg.name : provider}...`;
-  try {
-    const response = await complete(buildPrompt(text, getDefaultMapping(type)));
-    const xml = extractXml(response);
-    if (!xml) throw new Error("The model response contained no XML.");
-    load(xml, `generated-${type}.xml`, null);
-    markGenerated(true);
-    setDirty(true);
-    closeGenModal();
-    setStatus("Generated an initial TEI. Review and correct it; nothing is saved until you save or download.");
-  } catch (err) {
-    status.className = "ed-modal-status err";
-    status.textContent = `Generation failed: ${err.message}`;
-  } finally {
-    $("gen-run").disabled = false;
-  }
-}
+const overlay = createIndexOverlay({
+  app, setStatus, setDirty,
+  refresh: refreshAfterStandoffEdit,
+  gotoFolio, highlightMentions, entityUsage,
+});
+const annot = createAnnotationUi({
+  app, setStatus, setDirty, applyDocFn,
+  refresh: refreshAfterStandoffEdit,
+  entityMetaMap, entityUsage, indexNotes,
+  runLookup: overlay.runLookup,
+  revealEntity: overlay.revealEntity,
+  highlightMentions, beginTextInput, beginNote, beginCritic,
+});
+const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
 
 // ---- wire-up ---------------------------------------------------------------
 
@@ -1812,17 +953,11 @@ $("btn-facs").addEventListener("click", () => {
 $("btn-xml").addEventListener("click", () => {
   app.sourceMode = !app.sourceMode;
   $("btn-xml").classList.toggle("active", app.sourceMode);
-  removeSelPopover();
-  removeMenu();
+  annot.removeSelPopover();
+  annot.removeMenu();
   render();
 });
-$("btn-generate").addEventListener("click", openGenModal);
-$("gen-close").addEventListener("click", closeGenModal);
-$("gen-cancel").addEventListener("click", closeGenModal);
-$("gen-provider").addEventListener("change", refreshModels);
-$("gen-run").addEventListener("click", runGenerate);
-$("gen-modal").addEventListener("click", (e) => { if (e.target.id === "gen-modal") closeGenModal(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("gen-modal").hidden) closeGenModal(); });
+$("btn-generate").addEventListener("click", genModal.open);
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
 // Page turning where one expects it: arrow keys, unless typing in an input or
@@ -1836,17 +971,6 @@ document.addEventListener("keydown", (e) => {
   if (!$("gen-modal").hidden || !$("ed-idx-overlay").hidden) return;
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });
-// Index overlay: toolbar toggle, close button, backdrop click, Escape, filter.
-$("btn-index").addEventListener("click", () => {
-  if ($("ed-idx-overlay").hidden) openIndexOverlay();
-  else closeIndexOverlay();
-});
-$("idx-close").addEventListener("click", closeIndexOverlay);
-$("ed-idx-overlay").addEventListener("click", (e) => { if (e.target.id === "ed-idx-overlay") closeIndexOverlay(); });
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !$("ed-idx-overlay").hidden) closeIndexOverlay();
-});
-$("idx-filter").addEventListener("input", (e) => applyIndexFilter(e.target.value));
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
 
@@ -1872,4 +996,4 @@ setStatus("Ready. Open a TEI edition, pick an example, or generate from text.");
 updateFacsState(); // start state: no document, facsimile pane collapsed
 
 // Deep link from the landing page: editor.html#generate opens the LLM entry.
-if (location.hash === "#generate") openGenModal();
+if (location.hash === "#generate") genModal.open();
