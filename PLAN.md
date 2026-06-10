@@ -373,11 +373,22 @@ oekosystem-synthese-Korrektur, ZBZ-Projektbericht.
 
 ### Nächste Schritte (Stand 2026-06-10 nachts, nach den UI-Runden M2.7-M2.13)
 
+**Beschlüsse 2026-06-10 (Operator, Definitionsfragen):** alle fünf Empfehlungen aus
+`Wenzelsbibel/knowledge/definitionsfragen-teicrafter-wenzelsbibel.md` ratifiziert.
+F1: Editopia-Anteil eingefroren auf laden, blättern, ein Wort korrigieren, No-Op-Save, Faksimile;
+Vertiefung läuft auf der Herbst-Schiene fürs PLUS-Team. F2: Kern jetzt Edit-Bestand;
+PAGE-XML->TEI-Import als **WB-AP5** registriert, Datenmodell (eine Datei vs. Datei je Buch)
+MIT Projektleitung. F3: Projekt first-class als deklaratives Manifest `teicrafter.project.json`;
+M2.9 entschieden als "Open project folder" über Verzeichnis-Handle (File System Access), NICHT OPFS.
+F4: Ansicht-Umschalter diplomatisch|normalisiert plus Zwei-Feld-Doppelklick-Edit mit attributgenauem
+Splice. F5: zweistufiges Abnahme-Gate W1 (Operator-Proxy, echtes Folio end-to-end) / W2
+(PLUS-Bearbeiterin ohne Einweisung); Vorbedingung ED.1-ED.7 schreiben.
+
 Gates zuerst (Operator):
 1. **Browser-Sichtprüfung** der fünf Feedback-Runden vom 10.06. an beiden Objektstrecken
    (o_szd.1079, ZBZ Doc 1000): Editor-Paradigma, Annotations-Editor mit Normdaten am Text,
    Index-Overlay, XML-Quellansicht mit Highlighting/Check, Home-Navigation. Danach Push-Freigabe
-   (24 lokale Commits auf session/2026-06-07-place-graphic) und Merge-Entscheidung.
+   (lokale Commits auf session/2026-06-07-place-graphic) und Merge-Entscheidung.
 
 Wenzelsbibel (Auftrag `Wenzelsbibel/knowledge/auftrag-teicrafter-wenzelsbibel.md`, Daten lokal,
 NICHT committen; Machbarkeit am 10.06. headless bewiesen: codex-2759.xml 78 MB parst in 1,3 s,
@@ -388,18 +399,23 @@ Round-Trip byte-identisch, 480 Folios, Wort-Profil):
 3. **WB-AP2 IIIF-Resolver**: `graphic/@url` -> ÖNB-Image-API-Template (jpg->jp2) als
    Projekt-Konfiguration; Zonen-Overlay mit px->Prozent-Umrechnung gegen Surface-Maße.
    Gate: "Projekt lädt, Faksimile steht".
-4. **WB-AP3 Projekt-Modul** (= M5.7-Anschluss): Editionsrichtlinien Wenzelsbibel (Vault) als
-   zuschaltbare Annotationsregeln (Wraps, Entitätstypen), nicht als Codegabel. Designentscheidung
-   beim Operator (siehe Definitionsfragen vom 10.06.).
-5. **WB-AP4 StandOff-Apparat**: `app from/to` auf die Inline-`<anchor>`-Paare auflösen und im
+4. **WB-AP3 Projekt-Modul** (= M5.7-Anschluss): entschieden als Manifest `teicrafter.project.json`
+   (name, schema, imageResolver, markup, indices inkl. Völker, views); Wenzelsbibel als erstes Profil,
+   Ableitung der Editionsrichtlinien (Vault), nicht als Codegabel.
+5. **WB-neu Doppellesung** (F4): Ansicht-Umschalter diplomatisch|normalisiert (Anzeige-Projektion)
+   plus Zwei-Feld-Doppelklick-Edit für `<w orig norm>`; neuer attributgenauer Offset-Splice in der
+   Engine mit Byte-Beweis.
+6. **WB-AP4 StandOff-Apparat**: `app from/to` auf die Inline-`<anchor>`-Paare auflösen und im
    Lesetext markieren (Mechanik analog Textkritik-Schicht).
-6. **WB-neu Doppellesung**: `<w orig norm>` im Zellmodell sichtbar machen (diplomatisch/normalisiert);
-   Anforderung aus der realen Struktur, im Editor bisher nicht abgebildet.
+7. **ED.1-ED.7 User Stories** schreiben (hängender Verweis im Project Overview; vier Arbeitsachsen),
+   dann **Gate W1** durchführen.
+8. **WB-AP5 PAGE-XML->TEI-Import** der Roh-HTR-Bücher (Muster SZD-Konverter); startet erst nach
+   der Datenmodell-Entscheidung mit der Projektleitung.
 
 Editor-Pfad, unabhängig von der Wenzelsbibel:
-7. **M2.9 interne TEI-Ablage**: Designentscheidung Operator (OPFS vs. einmalig gewährtes
-   Verzeichnis-Handle; Zusammenhang mit Projekt-Begriff aus WB-AP3).
-8. **M5.7 Editionsrichtlinien der Quellprojekte** (SZD/GAMS, ZBZ Hersch) in die Wissensbasis.
+9. **M2.9 Open project folder**: entschieden als einmalig gewährtes Verzeichnis-Handle
+   (File System Access), nicht OPFS; profilloser Ein-Datei-Modus bleibt erhalten.
+10. **M5.7 Editionsrichtlinien der Quellprojekte** (SZD/GAMS, ZBZ Hersch) in die Wissensbasis.
 
 (Commit, Deploy und Veröffentlichung sind bewusst nicht Teil dieses Plans.)
 

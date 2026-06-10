@@ -22,6 +22,10 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (closing): The five definition questions answered and ratified
+
+To define what the editor line is actually building toward, five definition questions (primary user, target workflow, project concept, dual reading, acceptance criteria) were worked out solo against the vault contract documents (Project Overview and Editorial Guidelines Wenzelsbibel, Angebot 26/25), the real codex XML (sampled `<w orig norm>` elements), and external precedents (ediarum.BASE oXygen frameworks and per-type register files; LEAF-Writer per-document RelaxNG-URL configuration; TEI ODD). The full answers live in `Wenzelsbibel/knowledge/definitionsfragen-teicrafter-wenzelsbibel.md` (local, next to the order). The operator ratified all five recommendations the next morning; they are recorded as decisions in PLAN.md §11. The structurally largest one: a project becomes first-class via a declarative `teicrafter.project.json` manifest in the project folder, and M2.9 resolves as "Open project folder" over a directory handle, not OPFS. A side finding: the user stories ED.1-ED.7 referenced in the vault Project Overview exist nowhere and must be written before acceptance gate W1. Work order from here: WB-AP1+AP2 (browser load path + IIIF), manifest v1, dual reading, standOff apparatus, ED stories + gate W1, PAGE import after the data-model decision with the project lead.
+
 ## 2026-06-10 (late night, second package): Refactor sweep, real source editor, home navigation (M2.12)
 
 Operator asked "gibt es etwas zu refactoren?" and approved all four proposed packages; a fifth feedback round arrived mid-work (home button, "sehr schönes Highlighting" plus line numbers plus a check button for the XML view). Landed as separate commits:
