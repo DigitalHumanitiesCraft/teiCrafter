@@ -16,7 +16,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { parseManifest, markupForFile, typeForFile, MANIFEST_FILENAME, MANIFEST_VERSION } from "../../docs/js/editor/project-manifest.js";
+import {
+  parseManifest, markupForFile, typeForFile, teiScopeForFile, resolveMarkup,
+  MANIFEST_FILENAME, MANIFEST_VERSION,
+} from "../../docs/js/editor/project-manifest.js";
+import { parseGuidelines } from "../../docs/js/editor/tei-guidelines.js";
 import { detectProject, projectTileSource } from "../../docs/js/editor/project-profiles.js";
 import { parseEdition } from "../../docs/js/editor/edition.js";
 import { tokenize } from "../../docs/js/editor/tei-document.js";
@@ -172,6 +176,68 @@ rejects({ teicrafter: 1, name: "x", views: [42] }, /views\[0\]/, "a non-string, 
 
 check(parseManifest({ teicrafter: 1, name: "x", views: ["diplomatic"] }).views[0].label === "diplomatic",
   "string shorthand views normalize to {key, label}");
+
+// --- 5. TEI vocabulary scope (teiModules / teiElements) ------------------------
+
+const scoped = parseManifest({
+  teicrafter: 1,
+  name: "Scoped",
+  markup: [{ element: "supplied", label: "supplied (editor)" }],
+  teiModules: ["namesdates"],
+  teiElements: ["supplied", "persName", "ghostElement"],
+  documentTypes: [
+    { key: "letter", teiElements: ["foreign"] },
+    { key: "plain" },
+  ],
+  files: { "brief.xml": "letter", "doc.xml": "plain" },
+});
+check(scoped.teiScope.modules.join(",") === "namesdates"
+  && scoped.teiScope.elements.join(",") === "supplied,persName,ghostElement",
+  "project-level teiModules/teiElements parse into the scope");
+check(teiScopeForFile(scoped, "brief.xml").elements.join(",") === "foreign",
+  "a type with its own scope wins for its files (same precedence as markup)");
+check(teiScopeForFile(scoped, "doc.xml").elements.includes("persName"),
+  "a type without a scope falls back to the project scope");
+check(teiScopeForFile(scoped, "unknown.xml").modules.join(",") === "namesdates",
+  "an unassigned file gets the project scope");
+check(teiScopeForFile(null, "x.xml").modules.length === 0 && teiScopeForFile(wb, "x.xml").elements.length === 0,
+  "no project and pre-scope manifests yield the empty scope (old manifests unchanged)");
+
+rejects({ teicrafter: 1, name: "x", teiModules: "core" }, /"teiModules" is not an array/,
+  "a non-array teiModules is rejected");
+rejects({ teicrafter: 1, name: "x", teiElements: ["foo bar"] }, /teiElements\[0\] is not a valid XML element name/,
+  "an injected teiElements name is rejected");
+rejects({ teicrafter: 1, name: "x", documentTypes: [{ key: "t", teiModules: [42] }] },
+  /documentTypes\[0\]\.teiModules\[0\]/, "a type-level scope error names its position");
+
+// --- 6. resolveMarkup: explicit wraps + teiElements-derived wraps --------------
+
+const g = parseGuidelines(readFileSync(join(ROOT, "docs", "data", "tei", "p5subset_en.json"), "utf8"));
+
+// Degradation contract: without guidelines the explicit list is the whole answer.
+check(resolveMarkup(scoped, "doc.xml", null) === markupForFile(scoped, "doc.xml"),
+  "null guidelines: resolveMarkup returns exactly the explicit markup (degradation)");
+check(resolveMarkup(null, "x.xml", null) === null,
+  "null guidelines, no project: null (built-in wraps apply)");
+
+const resolved = resolveMarkup(scoped, "doc.xml", g);
+check(resolved[0][0] === "supplied (editor)",
+  "explicit markup entries come first and keep their labels");
+check(resolved.filter((w) => w[2] === "supplied").length === 1,
+  "a teiElements entry already covered by explicit markup is not derived twice");
+const derivedPers = resolved.find((w) => w[2] === "persName");
+check(!!derivedPers && derivedPers[0] === "personal name (persName)",
+  'derived wraps are labelled "gloss (element)"');
+check(derivedPers && derivedPers[1]("x") === "<persName>x</persName>",
+  "a derived wrap builds the bare element around the selection");
+check(!resolved.some((w) => w[2] === "ghostElement"),
+  "an element unknown to the guidelines is skipped silently");
+check(!resolved.some((w) => w[2] === "placeName"),
+  "teiModules never feed the wrap menu (namesdates is scoped, placeName not derived)");
+
+const modulesOnly = parseManifest({ teicrafter: 1, name: "m", teiModules: ["namesdates"] });
+check(resolveMarkup(modulesOnly, "x.xml", g) === null,
+  "a modules-only scope derives no wraps: built-in wraps stay in force");
 
 // --- summary ------------------------------------------------------------------
 

@@ -27,12 +27,25 @@
  *     "schema": "https://...rng",
  *     "imageResolver": { "type": "iiif-image-template", "template": "...{stem}..." },
  *     "markup":  [ { "element": "hi", "label": "...", "attributes": { "rend": "inkRed" } } ],
- *     "documentTypes": [ { "key": "letter", "label": "Letter", "markup": [ ... ] } ],
+ *     "teiModules":  [ "core", "namesdates" ],
+ *     "teiElements": [ "persName", "supplied" ],
+ *     "documentTypes": [ { "key": "letter", "label": "Letter", "markup": [ ... ],
+ *                          "teiModules": [ ... ], "teiElements": [ ... ] } ],
  *     "files":   { "brief-001.xml": "letter" },
  *     "indices": [ { "key": "peoples", "label": "...", "listType": "...", "registers": ["GND"] } ],
  *     "views":   [ { "key": "diplomatic", "label": "..." } ]
  *   }
+ *
+ * teiModules / teiElements declare the project's TEI vocabulary scope against
+ * the vendored P5 Guidelines (their union; allow-lists only). Role split:
+ * wraps in the annotate popover derive ONLY from teiElements (a deliberately
+ * small, curated list); teiModules scope the attribute editor's vocabulary
+ * and the project panel display, never the wrap menu. The names cannot be
+ * validated against the Guidelines here (those load lazily); unknown names
+ * are skipped at resolution time.
  */
+
+import { elementByName } from "./tei-guidelines.js";
 
 export const MANIFEST_FILENAME = "teicrafter.project.json";
 export const MANIFEST_VERSION = 1;
@@ -52,7 +65,11 @@ function escapeAttr(value) {
     .replace(/"/g, "&quot;");
 }
 
-/** One markup entry -> [label, build] in the MARKUP_WRAPS shape (annotation-ui). */
+/**
+ * One markup entry -> [label, build, element] in the MARKUP_WRAPS shape
+ * (annotation-ui reads the first two; the element name lets resolveMarkup
+ * deduplicate derived wraps against explicit ones).
+ */
 function markupWrap(entry, i) {
   if (!entry || typeof entry !== "object") fail(`markup[${i}] is not an object`);
   const el = entry.element;
@@ -67,7 +84,27 @@ function markupWrap(entry, i) {
   const label = typeof entry.label === "string" && entry.label.trim() ? entry.label.trim() : el;
   const open = `<${el}${attrStr}>`;
   const close = `</${el}>`;
-  return [label, (inner) => `${open}${inner}${close}`];
+  return [label, (inner) => `${open}${inner}${close}`, el];
+}
+
+/** Validate the optional teiModules / teiElements pair into a scope object. */
+function teiScopeDef(obj, where) {
+  const scope = { modules: [], elements: [] };
+  if (obj.teiModules !== undefined) {
+    if (!Array.isArray(obj.teiModules)) fail(`${where}"teiModules" is not an array`);
+    scope.modules = obj.teiModules.map((v, i) => {
+      if (typeof v !== "string" || !RE_XML_NAME.test(v)) fail(`${where}teiModules[${i}] is not a valid TEI module name`);
+      return v;
+    });
+  }
+  if (obj.teiElements !== undefined) {
+    if (!Array.isArray(obj.teiElements)) fail(`${where}"teiElements" is not an array`);
+    scope.elements = obj.teiElements.map((v, i) => {
+      if (typeof v !== "string" || !RE_XML_NAME.test(v)) fail(`${where}teiElements[${i}] is not a valid XML element name`);
+      return v;
+    });
+  }
+  return scope;
 }
 
 function indexDef(entry, i) {
@@ -128,6 +165,7 @@ export function parseManifest(input) {
           key: t.key.trim(),
           label: typeof t.label === "string" && t.label.trim() ? t.label.trim() : t.key.trim(),
           markup: Array.isArray(t.markup) && t.markup.length ? t.markup.map(markupWrap) : null,
+          teiScope: teiScopeDef(t, `documentTypes[${i}].`),
         };
       })
     : [];
@@ -148,6 +186,7 @@ export function parseManifest(input) {
     schema: typeof m.schema === "string" && m.schema.trim() ? m.schema.trim() : null,
     iiifImageTemplate,
     markup: Array.isArray(m.markup) && m.markup.length ? m.markup.map(markupWrap) : null,
+    teiScope: teiScopeDef(m, ""),
     documentTypes,
     files,
     indices: Array.isArray(m.indices) ? m.indices.map(indexDef) : [],
@@ -172,4 +211,52 @@ export function markupForFile(project, fileName) {
   const type = typeForFile(project, fileName);
   if (type && type.markup) return type.markup;
   return project.markup || null;
+}
+
+/**
+ * The TEI vocabulary scope that applies to a file: its document type's scope
+ * when the type declares one (same precedence as markupForFile), else the
+ * project-level scope. Always returns { modules, elements }; both empty
+ * without a manifest or for pre-scope manifests.
+ */
+export function teiScopeForFile(project, fileName) {
+  const empty = { modules: [], elements: [] };
+  if (!project) return empty;
+  const type = typeForFile(project, fileName);
+  if (type && type.teiScope && (type.teiScope.modules.length || type.teiScope.elements.length)) {
+    return type.teiScope;
+  }
+  return project.teiScope || empty;
+}
+
+/**
+ * The effective wrap list for a file: explicit markup entries first and with
+ * precedence, then wraps derived from the file's scope. Derived wraps come
+ * ONLY from teiElements (teiModules never feed the wrap menu: a module-wide
+ * list does not fit a flat popover; modules scope the attribute editor).
+ * Degradation contract: with guidelines null (not loaded, fetch failed) the
+ * result is exactly markupForFile, so the explicit list, or null for the
+ * built-in wraps. Derived entries are labelled "gloss (element)", skip idents
+ * unknown to the guidelines, and deduplicate against explicit wraps.
+ */
+export function resolveMarkup(project, fileName, guidelines) {
+  const explicit = markupForFile(project, fileName);
+  if (!guidelines) return explicit;
+  const scope = teiScopeForFile(project, fileName);
+  if (!scope.elements.length) return explicit;
+  const seen = new Set((explicit || []).map((w) => w[2]).filter(Boolean));
+  const derived = [];
+  for (const ident of scope.elements) {
+    if (seen.has(ident)) continue;
+    const spec = elementByName(guidelines, ident);
+    if (!spec) continue;
+    seen.add(ident);
+    derived.push([
+      spec.gloss ? `${spec.gloss} (${ident})` : ident,
+      (inner) => `<${ident}>${inner}</${ident}>`,
+      ident,
+    ]);
+  }
+  if (!derived.length) return explicit;
+  return [...(explicit || []), ...derived];
 }
