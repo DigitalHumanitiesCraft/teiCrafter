@@ -116,6 +116,7 @@ docs/
       constants.js        Providers, source labels, default mappings
   data/editor/
     wenzelsbibel-synthetic-codex.xml   Served synthetic word-level demo edition (public fallback)
+    zbz-hersch-synthetic.xml           Served synthetic line-level demo (public fallback for the ZBZ example; invented placeholder prose)
     wb-codex/                          Real Codex 2759 (gitignored, local-only; tried first) + committed teicrafter.project.json (the WB project manifest, no licensed content)
     zbz-100/              Real Jeanne Hersch example (TEI + page PNGs); gitignored, local-only (rights)
     zbz-1000/             ZBZ worked-example object (doc 1000 + graphic urls, M7.2); gitignored, local-only (rights); regenerate via test/tools/make_zbz1000_demo.mjs
@@ -126,6 +127,8 @@ pipeline/
 ## State
 
 The editor holds a single `app` state object: the current edition model, the current folio index, an optional File System file handle (for save-in-place), the document name, a dirty flag, a load-time baseline (word ids and tag counts, for the integrity check), a generated flag, the active project (manifest-parsed, else PID-detected, else null), the open project folder (directory handle, file list, parsed manifest; M2.9), the current document's type-resolved markup wrap list, a pending save target (a plaintext draft's `.xml` is created in the project folder on first save), and the two view choices of the M2.14 dual view (`sourceMode` for the left pane, `panel` for the right). Edits return a new immutable model from `edition.js` and replace `app.state`; offsets stay correct because the model is re-parsed from the spliced raw string.
+
+Loading is async at the shell so a large document can show progress. `load()` runs the synchronous parse directly for normal files, but above a size threshold (`BIG_DOC_CHARS`, the Wenzelsbibel codex is tens of MB) it shows a loading overlay and yields two animation frames first, so the spinner actually paints before the parse blocks the thread; every load entry awaits it. An example that fetches rights-restricted data falls back to a committed synthetic twin: the example-registry entry carries an optional `fallback` (url, file, done), and on a 404 the loader switches to it (without the original's manifest or image base), so the public deployment serves the synthetic stand-in while the real object loads locally.
 
 ## Validation (hybrid)
 

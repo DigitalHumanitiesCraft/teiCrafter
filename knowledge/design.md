@@ -45,15 +45,17 @@ Colour, typography and spacing are defined once as CSS custom properties in `doc
 
 | Family | Tokens (examples) | Purpose |
 |--------|-------------------|---------|
-| Surfaces | `--color-surface`, `--color-panel`, `--color-secondary` | Page, panels, warm paper for text and facsimile |
-| Header / accent | `--color-header` (TEI blue), `--color-gold` (TEI yellow), `--color-gold-hover` | Header, primary action, active state |
-| Text | `--color-text`, `--color-text-secondary`, `--color-text-muted`, `--color-text-inverse` | Reading and UI text |
+| Surfaces | `--color-surface`, `--color-surface-sunken`, `--color-panel`, `--color-secondary` | Page, panels, warm paper for text and facsimile; `-sunken` is the full-width band tone (~3% darker than the page) |
+| Header / accent | `--color-header` (TEI blue), `--color-gold` (TEI yellow), `--color-gold-hover`, `--color-link` | Header, primary action, active state; `--color-link` is the accessible orange for text links (5:1 on white), so fills keep the brighter `--color-gold` and small orange text stays legible |
+| Text | `--color-text`, `--color-text-body`, `--color-text-secondary`, `--color-text-muted`, `--color-text-inverse` | Reading and UI text; `--color-text-body` is the darker grey for body copy on light pages |
 | Confidence | `--color-confident`, `--color-review`, `--color-problem` (+ `-tint`) | Categorical validation states, never numeric |
 | AI-generated | `--color-ai`, `--color-ai-tint` (violet) | Marks LLM on-ramp output and nothing else, so machine output is always separable |
 | Annotation | `--color-persName`, `--color-placeName`, `--color-orgName`, ... | Per entity type in rendered text, muted |
 | Zone | `--color-blue`, `--color-gold-light` | Facsimile zone outline and link highlight |
 
 Status is triple-coded (colour plus icon plus position), never colour alone, so it survives colour-blindness and print.
+
+Two accents carry meaning and no third competes: **gold** (`--color-gold`) is the action colour (primary buttons, active state), **TEI blue** (`--color-blue`) is the cool accent for non-AI technical emphasis (the editing-unit badges, inline TEI tokens such as `<w>`/`@facs`, the loading spinner, facsimile zones), and **violet** (`--color-ai`) stays reserved for machine-generated content and nothing else. Spacing has a section-rhythm tier above the 8px grid (`--space-2xl`/`-3xl`/`-4xl`), so full-width bands and page sections are spaced from the same scale rather than ad-hoc values.
 
 ## Layout
 
@@ -80,7 +82,7 @@ Toolbar discipline follows from the same round, sharpened by round 7 (operator: 
 
 **Identity surfaces (round 7; About restructured 2026-06-10 day).** The About page (`about.html`) is the tool's full self-description for researchers, organised as short sections that follow what a researcher must know about the tool: what it is and is for, what saving does (lossless defined), the editing unit and what can be annotated, what leaves the browser (the honest network list: facsimile repositories, authority registers, CDNs, the optional LLM provider), machine-generated content, the example projects with rights notes, and method, status, citation, licence and maker with the imprint link. The page itself shows the current section set; it is not enumerated here. It is linked from every header (right side) and footer. The footer is an identity strip, not a status bar: DHCraft logo plus "Digital Humanities Craft" (linking dhcraft.org), About, Imprint, and a GitHub icon at the right; the status line appears only while it has something to report (an action's outcome: loaded, saved, failed) and is hidden when empty.
 
-The landing page (`index.html`) is the front door in three layers: a serif hero (value proposition, one gold "Open the editor" action), the example-project cards (one per example-registry entry, deep-linking `editor.html#example=KEY`, same labels as the welcome cards; "project" is meant technically, each example loads with its `teicrafter.project.json`), and a quiet feature strip (lossless, granularity, human decides) above the identity footer. The violet New from text (LLM) card returns with the on-ramp flag. The editor header's logo leads back to it; the separate Home button and the "EDITOR" mode badge were removed in the welcome round (the logo is the home link, and a badge naming the only mode carries no information). The header shows the document name only while a document is loaded.
+The landing page (`index.html`) is the public front door. Its parts: a serif hero with the value proposition and a call-to-action pair (the gold "Open the editor" primary and a ghost "Try an example" that scrolls to the examples, motion guarded by `prefers-reduced-motion`); a hero screenshot slot (a placeholder image until a real capture replaces it); the example-project cards (one per example-registry entry, deep-linking `editor.html#example=KEY`, each example loading with its `teicrafter.project.json`), each carrying an "Editing unit: words|lines" pill that states a detected fact, not a fixed category, so any TEI unit fits the same pattern later; and a titled principles section ("How teiCrafter treats your document") on a full-width sunken band above the identity footer. Sections are separated by the spacing scale and the sunken band, not by rules. Body copy uses the darker `--color-text-body`, feature headings and inline TEI tokens take the cool blue accent, and "Load example" and the other text links use the accessible `--color-link` orange (the brighter gold failed AA as small text). The violet New from text (LLM) card returns with the on-ramp flag. The editor header's logo leads back here; the header shows the document name only while a document is loaded.
 
 ## Determinism vs AI, Visually
 
