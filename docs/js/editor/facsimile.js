@@ -77,6 +77,8 @@ export function createFacsimile(hostEl, opts = {}) {
   let openHandler = null;  // current 'open' handler, removed before each page swap
   let overlays = [];       // [{ id, index, element }] for the current page
   let warned = false;
+  let zonesShown = false;  // layout zones are hidden by default; hover or the toggle reveals them
+  let toggleBtn = null;    // the panel's "Zones" show/hide control
 
   if (!hasOSD) {
     console.warn("facsimile.js: window.OpenSeadragon is undefined; facsimile viewer degraded to empty state.");
@@ -185,6 +187,7 @@ export function createFacsimile(hostEl, opts = {}) {
     }
 
     ensureViewer();
+    ensureZonesToggle();
     teardownOverlays();
     detachOpenHandler();
 
@@ -233,6 +236,37 @@ export function createFacsimile(hostEl, opts = {}) {
     for (const o of overlays) o.element.classList.remove("linked");
   }
 
+  // ---- zone visibility (layout on/off) -------------------------------------
+  // Zones are hidden by default and revealed on hover (the reading text drives
+  // highlightZone). The toggle shows or hides them all at once. The control is a
+  // panel-corner button, not an OSD overlay, so it stays put while the image pans.
+
+  function applyZonesShown() {
+    if (osdHost) osdHost.classList.toggle("ed-zones-shown", zonesShown);
+    if (toggleBtn) {
+      toggleBtn.setAttribute("aria-pressed", String(zonesShown));
+      toggleBtn.classList.toggle("active", zonesShown);
+    }
+  }
+
+  function setZonesShown(on) {
+    zonesShown = !!on;
+    applyZonesShown();
+  }
+
+  function ensureZonesToggle() {
+    if (toggleBtn && toggleBtn.isConnected) { applyZonesShown(); return; }
+    toggleBtn = el("button", {
+      class: "ed-zones-toggle", type: "button",
+      title: "Show the layout zones on the image (otherwise a zone is revealed when you hover its line)",
+      "aria-pressed": String(zonesShown),
+      text: "Zones",
+      onclick: () => setZonesShown(!zonesShown),
+    });
+    hostEl.appendChild(toggleBtn);
+    applyZonesShown();
+  }
+
   // ---- public: destroy -----------------------------------------------------
 
   function destroy() {
@@ -243,8 +277,9 @@ export function createFacsimile(hostEl, opts = {}) {
       viewer = null;
     }
     osdHost = null;
+    toggleBtn = null;
     clear(hostEl);
   }
 
-  return { showPage, highlightZone, clearHighlight, destroy };
+  return { showPage, highlightZone, clearHighlight, setZonesShown, destroy };
 }

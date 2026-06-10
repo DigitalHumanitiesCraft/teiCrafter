@@ -20,6 +20,10 @@
     --color-gold: #F7A824;       /* TEI yellow */
     --color-gold-light: #FDE9C8;
     --color-gold-hover: #DE9712;
+    /* Translucent text-selection tint. The XML source view layers a transparent
+       textarea over a coloured <pre>; an opaque selection would hide the text,
+       so selection uses this alpha tint and the coloured text shows through. */
+    --color-selection: rgba(247, 168, 36, 0.30);
     /* Text-link orange: a darker tone for orange TEXT on a light background
        (WCAG AA 5.0:1 on white). Fills and buttons keep the brighter --color-gold
        (dark text on gold is 8.8:1), so only orange text links use this. */

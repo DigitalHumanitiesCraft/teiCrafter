@@ -42,6 +42,7 @@ import { detectProject, projectTileSource } from "./project-profiles.js";
 import { parseManifest, markupForFile, typeForFile, MANIFEST_FILENAME } from "./project-manifest.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import * as recents from "./recent-files.js";
+import { getSetting, setSetting } from "../services/storage.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const WB_CODEX_URL = "data/editor/wb-codex/codex-2759.xml";
@@ -69,6 +70,7 @@ const app = {
   projectFolder: null, // open project folder: { dir, name, files[], project }, or null (M2.9)
   markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
   saveTarget: null,   // { dir, name }: create this file in the project folder on first save (plaintext drafts)
+  rightCollapsed: false, // true while the context pane is folded away (per-document, persisted)
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios),
@@ -122,6 +124,9 @@ function syncViewTabs() {
   if (!reading || !xml) return;
   // Both text views need a document; until one loads the tabs stay inert.
   reading.disabled = xml.disabled = !app.state;
+  // The view controls (zoom, collapse) belong with a loaded document.
+  const vc = $("ed-view-controls");
+  if (vc) vc.hidden = !app.state;
   reading.classList.toggle("active", !app.sourceMode);
   reading.setAttribute("aria-selected", String(!app.sourceMode));
   xml.classList.toggle("active", app.sourceMode);
@@ -251,6 +256,7 @@ function applyLoad(raw, name, handle, project) {
   $("ed-doc-name").textContent = name;
   $("ed-doc-name").hidden = false;
   enableControls(true);
+  applyDocLayout();
   if (handle) { recents.rememberRecent(handle, name); }
   setDirty(false);
   markGenerated(false); // opening a real file clears the AI-generated flag
@@ -515,7 +521,8 @@ function highlightLine(lineIndex) {
   clearLinks();
   if (lineIndex == null || lineIndex < 0) return;
   for (const w of document.querySelectorAll(`#ed-reading [data-line="${lineIndex}"]`)) w.classList.add("linked");
-  if (!facsimile) return;
+  // When the context pane is collapsed the @facs sync simply has no target.
+  if (!facsimile || app.rightCollapsed) return;
   const line = (app.currentLines || [])[lineIndex];
   facsimile.highlightZone(line && line.facs ? line.facs : lineIndex);
 }
@@ -600,9 +607,12 @@ function renderReading() {
   const mentions = entityMetaMap();
   folio.lines.forEach((line, lineIndex) => {
     const row = el("div", { class: "ed-line", dataset: { line: String(lineIndex) } });
+    // The line label (the document's @n) sits in the gutter; the cells go into a
+    // body cell that wraps independently of the fixed-width number channel.
     row.appendChild(el("span", { class: "ed-line-n", text: line.n != null ? line.n : "" }));
+    const body = el("span", { class: "ed-line-body" });
     line.cells.forEach((cell, k) => {
-      if (k > 0) row.appendChild(document.createTextNode(" "));
+      if (k > 0) body.appendChild(document.createTextNode(" "));
       const note = app.noteByWord.get(cell.id);
       // A gap is a read-only marker (no text); other critical kinds add a class so
       // the wrapped reading text shows its editorial status (dotted / struck / added).
@@ -641,8 +651,9 @@ function renderReading() {
       });
       span.addEventListener("mouseenter", () => highlightLine(lineIndex));
       span.addEventListener("mouseleave", () => clearLinks());
-      row.appendChild(span);
+      body.appendChild(span);
     });
+    row.appendChild(body);
     host.appendChild(row);
   });
 }
@@ -1159,6 +1170,7 @@ function updatePanels() {
 
 function showPanel(id) {
   app.panel = id;
+  saveDocLayout({ panel: id });
   updatePanels();
   renderActivePanel();
 }
@@ -1173,7 +1185,7 @@ function renderActivePanel() {
 }
 
 function renderFacsimile() {
-  if (!app.state || app.panel !== "facs") return;
+  if (!app.state || app.panel !== "facs" || app.rightCollapsed) return;
   const ctrl = ensureFacsimile();
   if (!ctrl) return;
   const folio = app.state.folios[app.folio];
@@ -1404,6 +1416,111 @@ function download() {
   setStatus(`Downloaded ${app.docName || "edition.xml"}`);
 }
 
+// ---- view controls: zoom, collapse, splitter, layout persistence ------------
+// One persistence mechanism (storage.js, localStorage): text zoom is a global
+// preference; the per-document layout (split position, collapsed pane, active
+// context tab) is keyed by document name. No second store.
+
+const ZOOM_MIN = 0.7, ZOOM_MAX = 1.8, ZOOM_STEP = 0.1;
+
+function currentZoom() { return getSetting("editorZoom", 1); }
+function applyZoom(z) {
+  z = Math.round(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)) * 10) / 10;
+  setSetting("editorZoom", z);
+  const main = $("ed-main");
+  if (main) main.style.setProperty("--ed-zoom", String(z));
+  const lbl = $("ed-zoom-reset");
+  if (lbl) lbl.textContent = Math.round(z * 100) + "%";
+}
+
+function layoutKey() { return app.docName ? "layout:" + app.docName : null; }
+function loadDocLayout() { const k = layoutKey(); return k ? getSetting(k, {}) : {}; }
+function saveDocLayout(patch) {
+  const k = layoutKey();
+  if (!k) return;
+  setSetting(k, { ...getSetting(k, {}), ...patch });
+}
+
+function setRightCollapsed(on, persist = true, rerender = true) {
+  app.rightCollapsed = on;
+  const main = $("ed-main");
+  if (main) main.classList.toggle("right-collapsed", on);
+  const btn = $("ed-collapse-btn");
+  if (btn) {
+    btn.setAttribute("aria-pressed", String(on));
+    btn.title = on ? "Show the context pane" : "Hide the context pane";
+    btn.textContent = on ? "⇤" : "⇥"; // expand back / collapse away
+  }
+  if (persist) saveDocLayout({ collapsed: on });
+  // Re-render the now-visible panel so OpenSeadragon sizes to the restored width.
+  if (rerender && !on && app.state) renderActivePanel();
+}
+
+const SPLIT_MIN_PX = 320;
+function setSplitPct(pct, persist = true) {
+  const main = $("ed-main");
+  if (!main) return;
+  pct = Math.max(10, Math.min(90, pct));
+  main.style.setProperty("--ed-split", pct + "%");
+  if (persist) saveDocLayout({ split: Math.round(pct * 10) / 10 });
+}
+
+function setupSplitter() {
+  const main = $("ed-main");
+  const splitter = $("ed-splitter");
+  const left = $("ed-pane-left");
+  if (!main || !splitter || !left) return;
+  const widthPct = (px) => (px / (main.getBoundingClientRect().width || 1)) * 100;
+  const clamp = (pct) => {
+    const minPct = widthPct(SPLIT_MIN_PX);
+    return Math.max(minPct, Math.min(100 - minPct, pct));
+  };
+  const curPct = () => widthPct(left.getBoundingClientRect().width);
+  let dragging = false;
+  splitter.addEventListener("pointerdown", (e) => {
+    if (main.classList.contains("right-collapsed")) return;
+    dragging = true;
+    splitter.setPointerCapture(e.pointerId);
+    document.body.style.cursor = "col-resize";
+    e.preventDefault();
+  });
+  splitter.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const rect = main.getBoundingClientRect();
+    setSplitPct(clamp(widthPct(e.clientX - rect.left)), false);
+  });
+  const end = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    try { splitter.releasePointerCapture(e.pointerId); } catch (_) { /* not captured */ }
+    document.body.style.cursor = "";
+    saveDocLayout({ split: Math.round(curPct() * 10) / 10 });
+  };
+  splitter.addEventListener("pointerup", end);
+  splitter.addEventListener("pointercancel", end);
+  splitter.addEventListener("dblclick", () => setSplitPct(50));
+  splitter.addEventListener("keydown", (e) => {
+    const step = e.shiftKey ? 5 : 2;
+    if (e.key === "ArrowLeft") { setSplitPct(clamp(curPct() - step)); e.preventDefault(); }
+    else if (e.key === "ArrowRight") { setSplitPct(clamp(curPct() + step)); e.preventDefault(); }
+    else if (e.key === "Home") { setSplitPct(50); e.preventDefault(); }
+  });
+}
+
+// Restore the per-document layout after a load: collapsed state, split position,
+// and the active context tab (only when that tab is available for this document).
+function applyDocLayout() {
+  const L = loadDocLayout();
+  setRightCollapsed(!!L.collapsed, false, false);
+  const main = $("ed-main");
+  if (typeof L.split === "number") setSplitPct(L.split, false);
+  else if (main) main.style.removeProperty("--ed-split");
+  if (L.panel) {
+    const p = activePanels().find((x) => x.id === L.panel);
+    if (p && (!p.available || p.available())) app.panel = L.panel;
+  }
+}
+
 // ---- feature modules (M2.13 split) ------------------------------------------
 // Instantiated once at startup; dependencies flow in via a ctx object, the
 // surfaces (popovers, overlay, modal) flow back through the returned APIs.
@@ -1502,6 +1619,21 @@ document.addEventListener("keydown", (e) => {
 });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
+
+// View controls: text zoom (a global preference) and the context-pane collapse
+// toggle. Ctrl/Cmd+\ mirrors the collapse button; the splitter resizes the panes.
+$("ed-zoom-in").addEventListener("click", () => applyZoom(currentZoom() + ZOOM_STEP));
+$("ed-zoom-out").addEventListener("click", () => applyZoom(currentZoom() - ZOOM_STEP));
+$("ed-zoom-reset").addEventListener("click", () => applyZoom(1));
+$("ed-collapse-btn").addEventListener("click", () => setRightCollapsed(!app.rightCollapsed));
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "\\" && app.state) {
+    e.preventDefault();
+    setRightCollapsed(!app.rightCollapsed);
+  }
+});
+setupSplitter();
+applyZoom(currentZoom());
 
 // Validation chip (in the reading-pane header, next to where the work happens):
 // the live checks run on every render; the chip opens the detail popover

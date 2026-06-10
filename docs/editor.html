@@ -56,7 +56,7 @@
          pane is a switchable context panel (facsimile, entity index; the panel
          registry in editor-app.js is open for project-specific panels). -->
     <main class="ed-main" id="ed-main">
-        <section class="ed-pane">
+        <section class="ed-pane" id="ed-pane-left">
             <div class="ed-pane-head">
                 <span class="ed-tabs" id="ed-view-tabs" role="tablist" aria-label="Text view">
                     <button class="ed-tab active" id="view-reading" type="button" role="tab" aria-selected="true"
@@ -71,6 +71,12 @@
                         <span class="ed-folio-label" id="ed-folio-label">-</span>
                         <button class="ed-btn ed-pager-btn" id="btn-next" disabled title="Next page (ArrowRight)">&#8250;</button>
                     </span>
+                    <span class="ed-view-controls" id="ed-view-controls" hidden>
+                        <button class="ed-btn ed-icon-btn" id="ed-zoom-out" type="button" title="Smaller text">A-</button>
+                        <button class="ed-btn ed-icon-btn ed-zoom-level" id="ed-zoom-reset" type="button" title="Reset text size">100%</button>
+                        <button class="ed-btn ed-icon-btn" id="ed-zoom-in" type="button" title="Larger text">A+</button>
+                        <button class="ed-btn ed-icon-btn" id="ed-collapse-btn" type="button" aria-pressed="false" title="Hide the context pane">&#8677;</button>
+                    </span>
                 </span>
             </div>
             <div class="ed-legend" id="ed-legend" hidden
@@ -79,6 +85,10 @@
             </div>
             <div class="ed-pane-body ed-reading" id="ed-reading"></div>
         </section>
+
+        <div class="ed-splitter" id="ed-splitter" role="separator" aria-orientation="vertical"
+             tabindex="0" aria-label="Resize panes"
+             title="Drag to resize; double-click to reset; arrow keys to nudge"></div>
 
         <section class="ed-pane" id="ed-pane-right">
             <div class="ed-pane-head">

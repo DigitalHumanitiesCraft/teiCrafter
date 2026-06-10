@@ -14,13 +14,23 @@ status: active
 created: 2026-02-05
 updated: 2026-06-10
 language: en
-version: 0.9
+version: 0.10
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-10 (evening, continued): The editor surface settles, the welcome screen dissolved
+
+Operator review of the open-document surface over several rounds; the pre-document state and pane layout left open in the entry below are now settled, and the editor gained the working controls a text editor is expected to carry. Decisions:
+
+- **No welcome screen.** The editor opens directly on its empty two-pane layout; the reading pane carries a lean prompt to load a document or project (the Load... menu and drag-and-drop are the entries) plus the recent files when any. Reason: the separate full-width start surface read as an intermediate page in the way; landing in the empty editor is the more direct truth, and the recent files moved into the empty pane so re-entry survives. The public landing page is unaffected.
+- **The reading-text line numbers became a gutter.** The document's own line label (`@n`) now sits in a fixed, right-aligned mono channel set off by a continuous rule, like a code editor's gutter. The semantics stay the edition's, not a running count: an unnumbered line shows an empty cell, repeats and restarts stand. Reason: the operator wanted the numbers clearly set off and part of the editor's furniture; giving them an IDE gutter's look while keeping the source's meaning was the line to hold.
+- **The XML source selection no longer hides the text.** The source view layers a transparent textarea over a coloured `<pre>`; the selection highlight was opaque and painted over the only legible copy of the text, so a selection looked broken. A translucent selection token lets the coloured text show through. Reason: a diagnosis, not a redesign: the selection worked, its colour hid it.
+- **Text zoom, and function controls where each belongs.** Editor-wide text zoom (a global preference) sits in the text-pane header by the page controls; find / replace / go-to-line live in the XML source view's own bar (Ctrl/Cmd+F), where raw-text search belongs. Markup quick-actions were deliberately NOT added as a second surface: applying markup already lives in the reading view's selection-to-annotate flow, and a raw-tag bar would duplicate it. A pretty-print / reformat button was refused outright, because reformatting breaks the byte-faithful core.
+- **Pane layout flexibility, persisted per document.** A draggable splitter (min 320px per pane, double-click reset, keyboard-resizable) sits between the panes; the context pane folds away via a header toggle or Ctrl/Cmd+\ (the `@facs` sync then simply has no visible target); below 900px the panes stack. Split position, collapsed state and the active context tab persist per document, text zoom globally, through the existing settings store (`storage.js`/localStorage), not a second mechanism. The responsive case was simplified from the planned pane-level tabs to a vertical stack, because a third tab level over the existing view and panel tabs would confuse more than help on a desktop-oriented tool.
 
 ## 2026-06-10 (evening): Landing revision, a large-document loading indicator, and a public ZBZ demo
 

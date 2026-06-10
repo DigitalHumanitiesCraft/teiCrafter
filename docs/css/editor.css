@@ -114,15 +114,34 @@
    text or XML source, the view tabs switch it); right is the context panel
    (facsimile, entity index, project panels; the panel tabs switch it). */
 .ed-main {
-  display: grid; grid-template-columns: 1.1fr 1fr;
+  display: grid;
+  grid-template-columns: var(--ed-split, 52%) 6px minmax(0, 1fr);
   flex: 1; min-height: 0;
 }
 .ed-main[hidden] { display: none; }
+/* Collapsed: the context pane and the splitter fold away and the text pane
+   takes the full width. The @facs click sync then has no visible target. */
+.ed-main.right-collapsed { grid-template-columns: 1fr; }
+.ed-main.right-collapsed > #ed-splitter,
+.ed-main.right-collapsed > #ed-pane-right { display: none; }
 /* min-height: 0 on the pane AND its body breaks the min-height:auto chain, so
    tall content (the XML source gutter) scrolls INSIDE the pane instead of
    growing the pane past the viewport ("everything slides down"). */
-.ed-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--color-border); }
-.ed-pane:last-child { border-right: none; }
+.ed-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+/* Draggable splitter between the panes: a thin rule whose 6px column widens the
+   hit area. Resizable by pointer drag, double-click reset, or arrow keys when
+   focused; each pane stays at least 320px wide (clamped in editor-app.js). */
+.ed-splitter { background: var(--color-border); cursor: col-resize; }
+.ed-splitter:hover { background: var(--color-gold); }
+.ed-splitter:focus-visible { background: var(--color-gold); outline: 2px solid var(--color-gold); outline-offset: -1px; }
+/* Below 900px the panes stack vertically (a splitter makes no sense there): the
+   text pane on top, the context pane beneath it. */
+@media (max-width: 900px) {
+  .ed-main { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .ed-main > #ed-splitter { display: none; }
+  .ed-main.right-collapsed { grid-template-rows: 1fr; }
+  #ed-pane-right { border-top: 1px solid var(--color-border); }
+}
 .ed-pane-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: var(--space-sm) var(--space-md); background: var(--color-secondary);
@@ -160,6 +179,13 @@
 /* Page turning lives in the reading-pane header, where one expects it. */
 .ed-pager { display: inline-flex; align-items: center; gap: var(--space-xs); }
 .ed-pager-btn { font-size: var(--font-size-sm); line-height: 1; padding: 2px 10px; }
+
+/* View controls at the right edge of the text-pane header: text zoom and the
+   context-pane collapse toggle (the collapse button sits last, the edge). */
+.ed-view-controls { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.ed-view-controls[hidden] { display: none; }
+.ed-icon-btn { font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 1; padding: 3px 6px; }
+.ed-zoom-level { min-width: 3.4em; text-align: center; }
 
 /* Empty editor state: no separate welcome screen. The editor opens on its
    empty two-pane layout; the reading pane shows a lean prompt to load a
@@ -223,13 +249,22 @@
 
 /* Reading text (diplomatic). position:relative anchors the selection-annotate
    popover inside the scrolling pane. */
-.ed-reading { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.9; color: var(--color-text);
+.ed-reading { --ed-read-size: calc(1.05rem * var(--ed-zoom, 1));
+  font-family: var(--font-serif); font-size: var(--ed-read-size); line-height: 1.9; color: var(--color-text);
   background: var(--color-surface); position: relative; }
-.ed-line { display: block; padding: 2px 0; }
+/* Line rows carry an IDE-style gutter: the document's own line label (@n) in a
+   fixed, right-aligned mono channel set off by a continuous rule, then the text.
+   The label is the edition's, not a running count, so an unnumbered line shows
+   an empty cell (nothing fabricated) and the rule still runs unbroken. */
+.ed-line { display: flex; align-items: stretch; }
 .ed-line.linked { background: var(--color-gold-light); border-radius: var(--radius-sm); }
-.ed-line-n { display: inline-block; width: 2.2em; margin-right: var(--space-sm);
-  font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted);
-  user-select: none; text-align: right; }
+.ed-line-n { flex: 0 0 3.4em; text-align: right;
+  padding: 2px var(--space-sm) 2px 0; margin-right: var(--space-sm);
+  border-right: 1px solid var(--color-border);
+  font-family: var(--font-mono); font-size: var(--font-size-xs);
+  line-height: calc(1.9 * var(--ed-read-size)); color: var(--color-text-muted);
+  user-select: none; white-space: nowrap; }
+.ed-line-body { flex: 1 1 auto; min-width: 0; padding: 2px 0; }
 .ed-w { cursor: text; padding: 0 1px; border-radius: 2px; }
 .ed-w:hover { background: var(--color-blue-light); }
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
@@ -262,12 +297,23 @@
 .ed-osd { position: relative; width: 100%; min-height: 60vh; height: 100%;
   background: var(--color-secondary); border: 1px solid var(--color-border);
   border-radius: var(--radius-sm); overflow: hidden; }
-/* Per-zone overlay: transparent but hittable; subtle outline, accent on link. */
-.ed-osd-zone { position: absolute; border: 1px solid var(--color-blue);
+/* Per-zone overlay: hittable but invisible by default (transparent border), so
+   the layout does not clutter the image. The reading-text hover reveals the
+   linked zone; the panel's "Zones" toggle (.ed-zones-shown) shows them all. */
+.ed-osd-zone { position: absolute; border: 1px solid transparent;
   background: transparent; cursor: pointer; border-radius: 2px; }
+.ed-zones-shown .ed-osd-zone { border-color: var(--color-blue); }
 .ed-osd-zone:hover, .ed-osd-zone.linked {
   border-color: var(--color-gold-hover); background: var(--color-gold-light);
   opacity: .35; box-shadow: 0 0 0 1px var(--color-gold-hover); }
+/* Zones show/hide control, top-right of the facsimile panel. */
+.ed-zones-toggle { position: absolute; top: var(--space-sm); right: var(--space-sm); z-index: 30;
+  font-family: var(--font-ui); font-size: var(--font-size-xs); cursor: pointer;
+  padding: 2px var(--space-sm); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text-secondary); }
+.ed-zones-toggle:hover { border-color: var(--color-gold); }
+.ed-zones-toggle.active { border-color: var(--color-blue); color: var(--color-blue); }
+.ed-zones-toggle:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
 
 /* Validation / info side pane */
 .ed-section { margin-bottom: var(--space-md); }
@@ -516,12 +562,25 @@
    textarea, kept in scroll lockstep; metrics MUST stay identical). */
 .ed-src-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .ed-src-bar { display: flex; align-items: center; gap: var(--space-sm); padding-bottom: var(--space-sm); }
+/* Find / replace / go-to-line bar in the XML source view: toggled with the Find
+   button or Ctrl/Cmd+F, closed with Escape. Edits stage in the textarea and
+   commit only on Apply, like every other source edit. */
+.ed-src-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); padding-bottom: var(--space-sm); }
+.ed-src-find[hidden] { display: none; }
+.ed-src-find input { font-family: var(--font-mono); font-size: var(--font-size-xs);
+  color: var(--color-text); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
+.ed-src-find input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+.ed-find-q, .ed-find-r { width: 16ch; }
+.ed-find-ln { width: 5ch; text-align: right; }
+.ed-src-find-count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); min-width: 6ch; }
+.ed-src-find-sep { width: 1px; height: 18px; background: var(--color-border); margin: 0 var(--space-xs); }
 .ed-src-result { flex: 1; font-family: var(--font-mono); font-size: var(--font-size-xs);
   min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ed-src-result.ok { color: var(--color-confident); }
 .ed-src-result.err { color: var(--color-problem); }
 .ed-src-wrap { flex: 1; min-height: 0; display: flex;
-  font-family: var(--font-mono); font-size: var(--font-size-sm); line-height: 1.5;
+  font-family: var(--font-mono); font-size: calc(var(--font-size-sm) * var(--ed-zoom, 1)); line-height: 1.5;
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   background: var(--color-panel); overflow: hidden; }
 .ed-src-gutter { padding: var(--space-sm) var(--space-xs); min-width: 3.5ch; text-align: right;
@@ -538,7 +597,7 @@
 .ed-src-hl code { font: inherit; }
 .ed-src-ta { resize: none; overflow: auto; outline: none;
   background: transparent; color: transparent; caret-color: var(--color-text); }
-.ed-src-ta::selection { background: var(--color-gold-light); color: transparent; }
+.ed-src-ta::selection { background: var(--color-selection); color: transparent; }
 /* Syntax palette: deterministic families only (violet stays AI-only). */
 .xs-punc { color: var(--color-text-muted); }
 .xs-tag { color: var(--color-blue); }

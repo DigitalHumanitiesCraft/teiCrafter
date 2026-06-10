@@ -13,7 +13,7 @@ status: active
 created: 2026-06-09
 updated: 2026-06-09
 language: en
-version: 0.9
+version: 0.10
 topics: ["[[Editopia]]", "[[Evaluation]]", "[[Verification]]"]
 related: [integration, goals, testing, worked-example-szd, worked-example-zbz]
 ---

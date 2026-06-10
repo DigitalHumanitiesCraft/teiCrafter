@@ -106,7 +106,31 @@ export function mountSourceView(host, opts = {}) {
     class: "ed-btn", text: "Cancel",
     title: "Back to the reading view, discarding source edits",
   });
-  const bar = el("div", { class: "ed-src-bar" }, [result, checkBtn, applyBtn, cancelBtn]);
+  const findBtn = el("button", {
+    class: "ed-btn", text: "Find",
+    title: "Find, replace and go to line (Ctrl/Cmd+F; Escape closes)",
+  });
+  const bar = el("div", { class: "ed-src-bar" }, [result, findBtn, checkBtn, applyBtn, cancelBtn]);
+
+  // ---- find / replace / go-to-line bar (toggled, hidden by default) --------
+  // Matching is literal and case-insensitive; edits stage in the textarea and
+  // commit to the document only on Apply, like every other source edit.
+  const findInput = el("input", { class: "ed-find-q", type: "text", placeholder: "Find", spellcheck: "false", "aria-label": "Find" });
+  const replaceInput = el("input", { class: "ed-find-r", type: "text", placeholder: "Replace", spellcheck: "false", "aria-label": "Replace with" });
+  const findCount = el("span", { class: "ed-src-find-count" });
+  const prevBtn = el("button", { class: "ed-btn", text: "‹", title: "Previous match (Shift+Enter)" });
+  const nextBtn = el("button", { class: "ed-btn", text: "›", title: "Next match (Enter)" });
+  const replaceBtn = el("button", { class: "ed-btn", text: "Replace", title: "Replace the current match" });
+  const replaceAllBtn = el("button", { class: "ed-btn", text: "All", title: "Replace every match" });
+  const lnInput = el("input", { class: "ed-find-ln", type: "text", inputmode: "numeric", placeholder: "Ln", title: "Go to line number (Enter)", "aria-label": "Go to line" });
+  const findBar = el("div", { class: "ed-src-find" }, [
+    findInput, prevBtn, nextBtn, findCount,
+    el("span", { class: "ed-src-find-sep" }),
+    replaceInput, replaceBtn, replaceAllBtn,
+    el("span", { class: "ed-src-find-sep" }),
+    lnInput,
+  ]);
+  findBar.hidden = true;
 
   // ---- editing surface: gutter + highlight overlay + textarea --------------
   const gutter = el("div", { class: "ed-src-gutter", "aria-hidden": "true" });
@@ -150,21 +174,100 @@ export function mountSourceView(host, opts = {}) {
   ta.addEventListener("scroll", syncScroll);
 
   // ---- caret helpers --------------------------------------------------------
-  const caretTo = (offset) => {
-    const pos = Math.max(0, Math.min(offset, ta.value.length));
+  const selectRange = (start, end) => {
+    const len = ta.value.length;
+    const a = Math.max(0, Math.min(start, len));
+    const b = Math.max(a, Math.min(end, len));
     ta.focus();
-    ta.setSelectionRange(pos, pos);
-    const before = ta.value.slice(0, pos).split("\n").length;
+    ta.setSelectionRange(a, b);
+    const before = ta.value.slice(0, a).split("\n").length;
     const total = ta.value.split("\n").length || 1;
     ta.scrollTop = Math.max(0, (before / total) * ta.scrollHeight - ta.clientHeight / 2);
     syncScroll();
   };
+  const caretTo = (offset) => selectRange(offset, offset);
   const caretToLineCol = (line, column) => {
     const lines = ta.value.split("\n");
     let off = 0;
     for (let i = 0; i < Math.min(line - 1, lines.length); i++) off += lines[i].length + 1;
     caretTo(off + Math.max(0, (column || 1) - 1));
   };
+
+  // ---- find / replace / go-to-line -----------------------------------------
+  const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let matches = [];
+  let matchIdx = -1;
+  const computeMatches = (q) => {
+    matches = [];
+    if (q) {
+      const hay = ta.value.toLowerCase();
+      const needle = q.toLowerCase();
+      let i = 0;
+      while ((i = hay.indexOf(needle, i)) !== -1) { matches.push(i); i += needle.length || 1; }
+    }
+    if (matchIdx >= matches.length) matchIdx = matches.length - 1;
+  };
+  const showCount = (msg) => {
+    findCount.textContent = msg != null ? msg
+      : matches.length ? `${matchIdx + 1}/${matches.length}`
+      : (findInput.value ? "0/0" : "");
+  };
+  const clearResult = () => { result.textContent = ""; result.className = "ed-src-result"; };
+  const gotoMatch = (delta) => {
+    computeMatches(findInput.value);
+    if (!matches.length) { showCount(); return; }
+    matchIdx = ((matchIdx + delta) % matches.length + matches.length) % matches.length;
+    const s = matches[matchIdx];
+    selectRange(s, s + findInput.value.length);
+    showCount();
+  };
+  const replaceCurrent = () => {
+    if (!findInput.value) return;
+    computeMatches(findInput.value);
+    if (matchIdx < 0 || matchIdx >= matches.length) { gotoMatch(1); return; }
+    const s = matches[matchIdx];
+    ta.value = ta.value.slice(0, s) + replaceInput.value + ta.value.slice(s + findInput.value.length);
+    clearResult();
+    refresh(); syncScroll();
+    computeMatches(findInput.value);
+    if (matches.length) { matchIdx = Math.min(matchIdx, matches.length - 1); gotoMatch(0); }
+    else { matchIdx = -1; showCount(); }
+  };
+  const replaceAll = () => {
+    const q = findInput.value;
+    if (!q) return;
+    let count = 0;
+    ta.value = ta.value.replace(new RegExp(escRe(q), "gi"), () => { count++; return replaceInput.value; });
+    clearResult();
+    refresh(); syncScroll();
+    matchIdx = -1; matches = [];
+    showCount(`${count} replaced`);
+  };
+  const gotoLine = () => {
+    const n = parseInt(lnInput.value, 10);
+    if (Number.isFinite(n) && n > 0) caretToLineCol(n, 1);
+  };
+  const setFindOpen = (open) => {
+    findBar.hidden = !open;
+    if (open) { findInput.focus(); findInput.select(); computeMatches(findInput.value); showCount(); }
+    else { showCount(""); ta.focus(); }
+  };
+
+  findBtn.addEventListener("click", () => setFindOpen(findBar.hidden));
+  findInput.addEventListener("input", () => { computeMatches(findInput.value); showCount(); });
+  findInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); gotoMatch(e.shiftKey ? -1 : 1); }
+    else if (e.key === "Escape") { e.preventDefault(); setFindOpen(false); }
+  });
+  prevBtn.addEventListener("click", () => gotoMatch(-1));
+  nextBtn.addEventListener("click", () => gotoMatch(1));
+  replaceBtn.addEventListener("click", replaceCurrent);
+  replaceAllBtn.addEventListener("click", replaceAll);
+  lnInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); gotoLine(); } });
+  root.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) { e.preventDefault(); setFindOpen(true); }
+    else if (e.key === "Escape" && !findBar.hidden) { e.preventDefault(); setFindOpen(false); }
+  });
 
   // ---- actions --------------------------------------------------------------
   const runCheck = () => {
@@ -194,6 +297,7 @@ export function mountSourceView(host, opts = {}) {
   cancelBtn.addEventListener("click", onCancel);
 
   root.appendChild(bar);
+  root.appendChild(findBar);
   root.appendChild(wrap);
   host.appendChild(root);
 

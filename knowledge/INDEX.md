@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-10
 language: en
-version: 0.9
+version: 0.10
 related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference, worked-example-szd, worked-example-zbz, promptotyping-case, paper-evidence, curated-set]
 ---
 
@@ -70,4 +70,4 @@ teiCrafter shares architecture principles, UI patterns and the design system wit
 
 ## History Note
 
-Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor). The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Versions 0.4 to 0.9 then track the as-built growth: the editorial annotation layer (0.6), the SZD worked example and the Promptotyping case (0.7), the ZBZ worked example and the Editopia evidence sheet (0.8), the curated example set (0.9). The full narrative is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.
+Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor). The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Versions 0.4 to 0.9 then track the as-built growth: the editorial annotation layer (0.6), the SZD worked example and the Promptotyping case (0.7), the ZBZ worked example and the Editopia evidence sheet (0.8), the curated example set (0.9). Version 0.10 settles the editor surface: the welcome screen dissolved into the empty two-pane editor, an IDE-style line-number gutter, editor-wide text zoom, a draggable splitter and context-pane collapse with per-document layout persistence, and XML-source find/replace with go-to-line. The full narrative is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.
