@@ -9,7 +9,7 @@
 
 import { parseEdition, serialize, rawRangeForDisplay, unescapeXmlText } from "../../docs/js/editor/edition.js";
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
-import { addEntity, linkMention, linkMentionRange, readEntities } from "../../docs/js/editor/standoff.js";
+import { addEntity, linkMention, linkMentionRange, unwrapMention, wrapRange, readEntities } from "../../docs/js/editor/standoff.js";
 import { markCritical } from "../../docs/js/editor/criticism.js";
 
 let passed = 0, failed = 0;
@@ -170,6 +170,36 @@ const erel = rawRangeForDisplay(eraw, 6, 10); // display "nach" in "vor & nach"
 check(erel !== null && eraw.slice(erel[0], erel[1]) === "nach"
   && unescapeXmlText(eraw).slice(6, 10) === "nach",
   "display offsets map correctly across entity references");
+
+// --- 9. unwrapMention and generic TEI markup wraps (editor paradigm) ----------
+
+// link -> unwrap is byte-identical to never having linked.
+let udoc = parseEdition(WRAW).doc;
+udoc = addEntity(udoc, "person", { name: "Stefan Zweig" });
+const uBase = udoc.raw;
+let ustate = parseEdition(udoc.raw);
+const uid = readEntities(ustate.doc).persons[0].id;
+udoc = linkMention(ustate.doc, ustate.cellById.get("w1").node, uid);
+ustate = parseEdition(udoc.raw);
+udoc = unwrapMention(ustate.doc, cellByText(ustate, "Zweig").node);
+check(udoc.raw === uBase, "link -> unwrap restores the exact pre-link bytes");
+const ustate2 = parseEdition(udoc.raw);
+check(unwrapMention(ustate2.doc, ustate2.cellById.get("w1").node) === ustate2.doc,
+  "unwrap outside any <name> is a no-op (SAME doc)");
+
+// wrapRange: structured persName keeps the reading text byte-identical.
+let wstate = parseEdition(LRAW);
+const wcell = cellByText(wstate, "Komotau liegt in Boehmen");
+const wrel = rawRangeForDisplay(wcell.rawText, 0, "Komotau liegt".length);
+const structured = (inner) => inner.replace(/^([\s\S]*\S)(\s+)(\S+)$/,
+  "<persName><forename>$1</forename>$2<surname>$3</surname></persName>");
+const wdoc = wrapRange(wstate.doc, wcell.node, wrel[0], wrel[1], structured);
+check(wdoc.raw.includes("<persName><forename>Komotau</forename> <surname>liegt</surname></persName>"),
+  "wrapRange applies structured markup (forename/surname) around the selection");
+check(parseDocument(wdoc.raw).serialize() === wdoc.raw,
+  "markup-wrapped document round-trips byte-identically");
+check(wrapRange(wstate.doc, wcell.node, wrel[0], wrel[1], () => "<persName>oops</persName>") === wstate.doc,
+  "a build that loses reading text is refused (SAME doc)");
 
 // --- summary -----------------------------------------------------------------
 

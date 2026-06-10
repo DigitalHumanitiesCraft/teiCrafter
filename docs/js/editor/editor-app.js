@@ -65,6 +65,7 @@ const app = {
   noteMode: false,    // true while waiting for a cell click to attach an editorial note
   critMode: false,    // true while waiting for a cell click to apply textual-critical markup
   facsHidden: false,  // user choice: hide the facsimile pane (auto-hidden when no images)
+  sourceMode: false,  // true while the reading pane shows the editable XML source
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios) and the
@@ -112,9 +113,14 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-download", "btn-suggest"]) $(id).disabled = !on;
+  for (const id of ["btn-download", "btn-suggest", "btn-xml"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
-  if (!on) { setNoteMode(false); setCritMode(false); }
+  if (!on) {
+    setNoteMode(false);
+    setCritMode(false);
+    app.sourceMode = false;
+    $("btn-xml").classList.remove("active");
+  }
   // M2.5 legend strip (hint + chips): visible while a document is loaded;
   // render() keeps the chips current after every mutation.
   const legend = $("ed-legend");
@@ -385,6 +391,7 @@ function entityMetaMap() {
 function renderReading() {
   const host = $("ed-reading");
   clear(host);
+  if (app.sourceMode) { renderSourceView(host); return; }
   const folio = app.state.folios[app.folio];
   app.currentLines = folio ? folio.lines : [];
   // hint reflects the active click-capture mode, else the detected granularity, so
@@ -420,19 +427,26 @@ function renderReading() {
         text: cell.gap ? "[...]" : cell.text,
         title: critTitle(cell, note, linking, meta),
       });
+      // Editor paradigm (operator decision 2026-06-10): a plain click only sets
+      // the cursor. Clicking an ANNOTATED element opens its annotation editor;
+      // a gap opens its remove chooser; double-click edits the text directly;
+      // right-click opens the context menu; selecting text annotates it.
       span.addEventListener("click", (e) => {
-        // A span can never legitimately receive the second click of a
-        // double-click (click 1 replaces it with a box or input), so e.detail > 1
-        // here means the first click's UI vanished and the words reflowed under
-        // the cursor: ignore it instead of opening something unintended.
-        if (e.detail > 1) return;
-        // A mouse text-selection ends in a click on the same span; that click
-        // belongs to the selection (the annotate popover), not to the chooser.
+        if (e.detail > 1) return; // second click of a double-click
         const sel = window.getSelection();
-        if (sel && !sel.isCollapsed) return;
-        if (app.critMode || cell.gap) beginCritic(span, cell);
-        else if (app.noteMode) beginNote(span, cell);
-        else beginEdit(span, cell, lineIndex);
+        if (sel && !sel.isCollapsed) return; // the selection owns this click
+        if (app.linkTarget) { completeLink(cell); return; } // index-initiated link
+        if (app.critMode) { beginCritic(span, cell); return; }
+        if (app.noteMode) { beginNote(span, cell); return; }
+        if (cell.gap) { beginCritic(span, cell); return; }
+        if (cell.mention) { openAnnotationEditor(span, cell); return; }
+        // plain reading text: the click is just a cursor, not a command
+      });
+      span.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        if (cell.gap) return;
+        const c = app.state.cellById.get(cell.id);
+        if (c) beginTextInput(span, c);
       });
       span.addEventListener("mouseenter", () => highlightLine(lineIndex));
       span.addEventListener("mouseleave", () => clearLinks());
@@ -442,34 +456,80 @@ function renderReading() {
   });
 }
 
-function beginEdit(span, cell, lineIndex) {
-  // A gap is a marker, not editable text: route any stray edit to the critical
-  // chooser (which offers removal) instead of splicing its empty content.
-  if (cell.gap) { beginCritic(span, cell); return; }
+/**
+ * Complete an index-initiated link: the index panel armed a target entity and
+ * the next text click wraps that cell's mention. Shared mutation path, so the
+ * engine's SAME-doc no-op contract holds (no false dirty flag).
+ */
+function completeLink(cell) {
+  const target = app.linkTarget;
+  applyDocFn(
+    (doc) => standoff.linkMention(doc, cell.node, target.id),
+    `Linked "${cell.text.trim()}" to ${target.name}`,
+    "Link",
+    `Already linked to ${target.name}`,
+  );
+  app.linkTarget = null;
+  render();
+  renderIndex();
+}
 
-  // Link mode: a "link" was started from the index panel, so the next click on a
-  // word/line wraps that mention in <name ref="#id"> instead of editing it. This
-  // precedence is kept OUTSIDE the action chooser, so an index-initiated link
-  // still completes on the next text click without an extra step (M2.6 contract).
-  if (app.linkTarget) {
-    const target = app.linkTarget;
-    // Same shared mutation path as the picker, so both link entries honour the
-    // engine's SAME-doc no-op contract (no false dirty flag, truthful status).
-    applyDocFn(
-      (doc) => standoff.linkMention(doc, cell.node, target.id),
-      `Linked "${cell.text.trim()}" to ${target.name}`,
-      "Link",
-      `Already linked to ${target.name}`,
-    );
-    app.linkTarget = null;
+/**
+ * Editable XML source view (the Oxygen text-mode counterpart to the reading
+ * view). The textarea holds the canonical raw string; Apply re-parses it as
+ * the new document state (well-formedness gated; the integrity chip then shows
+ * any drift against the load baseline). The caret starts at the current page.
+ */
+function renderSourceView(host) {
+  const hint = $("ed-edit-hint");
+  if (hint) hint.textContent = "XML source; Apply re-parses, Cancel discards the source edits";
+
+  const bar = el("div", { class: "ed-src-bar" });
+  const ta = el("textarea", { class: "ed-src", spellcheck: "false" });
+  ta.value = serialize(app.state);
+
+  const leave = () => {
+    app.sourceMode = false;
+    const b = $("btn-xml");
+    if (b) b.classList.remove("active");
     render();
     renderIndex();
-    return;
-  }
+  };
+  const applyBtn = el("button", { class: "ed-btn ed-btn-primary", text: "Apply", title: "re-parse the edited XML as the document" });
+  applyBtn.addEventListener("click", () => {
+    const text = ta.value;
+    const wf = isWellFormed(text);
+    if (!wf.ok) { setStatus(`Not applied, not well-formed: ${wf.message}`); return; }
+    try {
+      const changed = text !== app.state.raw;
+      app.state = parseEdition(text);
+      app.noteByWord = indexNotes(text);
+      app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
+      if (changed) setDirty(true);
+      setStatus(changed ? "XML source applied" : "XML source unchanged");
+      leave();
+    } catch (err) {
+      setStatus(`Not applied, parse failed: ${err.message}`);
+    }
+  });
+  const cancelBtn = el("button", { class: "ed-btn", text: "Cancel", title: "back to the reading view, discarding source edits" });
+  cancelBtn.addEventListener("click", () => { setStatus("Source edits discarded"); leave(); });
+  bar.appendChild(el("span", { class: "ed-hint", text: "editing the raw TEI directly; the live checks gate on Apply" }));
+  bar.appendChild(applyBtn);
+  bar.appendChild(cancelBtn);
+  host.appendChild(bar);
+  host.appendChild(ta);
 
-  // M2.6: the default click opens the inline action chooser; nothing hides
-  // behind a pre-toggled mode anymore.
-  beginActions(span, cell, lineIndex);
+  // Put the caret at the current page's first reading cell.
+  const folio = app.state.folios[app.folio];
+  const firstCell = folio && folio.lines[0] && folio.lines[0].cells[0];
+  if (firstCell && Number.isInteger(firstCell.start)) {
+    ta.focus();
+    ta.setSelectionRange(firstCell.start, firstCell.start);
+    const before = ta.value.slice(0, firstCell.start).split("\n").length;
+    const total = ta.value.split("\n").length;
+    ta.scrollTop = Math.max(0, (before / total) * ta.scrollHeight - ta.clientHeight / 2);
+  }
 }
 
 /** The plain text-correction input, extracted from beginEdit (M2.6 refactor). */
@@ -538,170 +598,145 @@ function applyDocFn(fn, label, failPrefix = "Edit", noopLabel = null) {
   }
 }
 
-// ---- inline action chooser (M2.6) -------------------------------------------
+// ---- context menu (editor paradigm, 2026-06-10) ------------------------------
+
+function removeMenu() {
+  const old = document.getElementById("ed-menu");
+  if (old) old.remove();
+}
 
 /**
- * M2.6: clicking a cell offers every operation at the text itself: Edit / note /
- * mark / link (with an in-place entity picker) / entity (jump to the linked index
- * entry) / cancel. Follows the proven beginCritic pattern (box replaces the span,
- * Escape closes, orphan guard). The toolbar toggles stay as shortcuts; the second
- * click of a double-click triggers "edit" (quick edit), because non-edit buttons
- * ignore the second click (e.detail > 1) and the box handles dblclick.
+ * Oxygen-style right-click menu on the reading text. Contextual: a live
+ * selection offers annotation; an annotated element offers its editor; every
+ * cell offers edit / note / mark. Closes on click elsewhere or Escape.
  */
-function beginActions(span, cell) {
-  const host = $("ed-reading");
-  // Only one inline chooser at a time: rebuild the view first so we never leave
-  // an orphaned one behind, then re-acquire this cell's freshly rendered span.
-  if (host.querySelector(".ed-crit-pick, .ed-act-pick")) {
-    render();
-    span = host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
-    if (!span) return;
-  }
-  const box = el("span", { class: "ed-act-pick" });
-  let acted = false; // every action runs at most once per chooser instance
-
-  // Pure close: put the original span back without re-rendering, so a
-  // look-and-cancel never resets the reading-pane scroll or the facsimile zoom.
-  // Returns false when the box was already destroyed by an external render.
-  const restore = () => {
-    document.removeEventListener("keydown", onKey);
-    if (!box.isConnected) return false;
-    box.replaceWith(span);
-    return true;
+function openContextMenu(x, y, span, cell) {
+  removeMenu();
+  removeSelPopover();
+  const menu = el("div", { class: "ed-menu", id: "ed-menu" });
+  const item = (label, fn) => {
+    const b = el("button", { class: "ed-menu-item", text: label });
+    b.addEventListener("click", (e) => { e.stopPropagation(); removeMenu(); fn(); });
+    menu.appendChild(b);
   };
-  // Mutating close: the document changed, so rebuild the view.
-  const closeRender = () => {
-    document.removeEventListener("keydown", onKey);
+
+  const target = selectionTarget();
+  if (target) {
+    const shortText = target.text.length > 28 ? target.text.slice(0, 28) + "..." : target.text;
+    item(`Annotate "${shortText}"...`, () => openSelPopover());
+  }
+  if (cell) {
+    const c = () => app.state.cellById.get(cell.id);
+    if (cell.mention) item("Edit annotation...", () => { if (c()) openAnnotationEditor(span, c()); });
+    if (!cell.gap) {
+      item(app.state.profile === "word" ? "Edit word" : "Edit line", () => { if (c()) beginTextInput(span, c()); });
+      item("Add note...", () => { if (c()) beginNote(span, c()); });
+      item("Mark: unclear / deleted / added / gap...", () => { if (c()) beginCritic(span, c()); });
+      if (app.state.profile === "word") {
+        item("Link this word to an entity...", () => { if (c()) openEntityPickerFor(span, c()); });
+      }
+    } else {
+      item("Remove gap...", () => { if (c()) beginCritic(span, c()); });
+    }
+  }
+  if (!menu.childElementCount) return;
+
+  document.body.appendChild(menu);
+  menu.style.left = Math.min(x, window.innerWidth - menu.offsetWidth - 8) + "px";
+  menu.style.top = Math.min(y, window.innerHeight - menu.offsetHeight - 8) + "px";
+  const onAway = (e) => {
+    if (!(e.target instanceof Element && e.target.closest("#ed-menu"))) {
+      removeMenu();
+      document.removeEventListener("mousedown", onAway, true);
+    }
+  };
+  document.addEventListener("mousedown", onAway, true);
+  const onKey = (e) => {
+    if (e.key === "Escape") { removeMenu(); document.removeEventListener("keydown", onKey); }
+    if (!document.getElementById("ed-menu")) document.removeEventListener("keydown", onKey);
+  };
+  document.addEventListener("keydown", onKey);
+}
+
+/** Word-profile whole-cell link via a small anchored entity picker. */
+function openEntityPickerFor(span, cell) {
+  const host = $("ed-reading");
+  removeSelPopover();
+  const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
+  pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `link "${cell.text.trim()}"` }));
+  buildEntityChoiceRows(pop, cell.text.trim(), (entId) => {
+    removeSelPopover();
+    applyDocFn(
+      (doc) => standoff.linkMention(doc, cell.node, entId),
+      `Linked "${cell.text.trim()}" to ${entId}`,
+      "Link",
+      "Already linked to this entity",
+    );
     render();
     renderIndex();
-  };
-  // Self-healing: if an external render destroyed the box, the next keydown
-  // removes this stale listener instead of acting on a dead chooser.
-  const onKey = (e) => {
-    if (!box.isConnected) { document.removeEventListener("keydown", onKey); return; }
-    if (e.key === "Escape") { e.preventDefault(); acted = true; restore(); }
-  };
-  const once = (handler) => () => {
-    if (acted) return;
-    acted = true;
-    handler();
-  };
-  const addBtn = (text, title, handler, opts = {}) => {
-    const b = el("button", { class: "ed-act-btn" + (opts.class ? " " + opts.class : ""), text, title });
-    b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      // The second click of a double-click (e.detail > 1) belongs to quick edit
-      // (the box's dblclick handler), not to whichever button it happens to hit.
-      if (e.detail > 1 && !opts.acceptDouble) return;
-      handler();
-    });
-    box.appendChild(b);
-    return b;
-  };
+    revealEntity(entId);
+  }, null);
+  const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
+  xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+  pop.appendChild(xBtn);
+  anchorPopAt(pop, span.getBoundingClientRect(), host);
+}
 
-  // Handoffs restore the original span in place (state cannot have changed while
-  // the chooser was open: every external mutation destroys it), then continue on
-  // the freshly resolved cell. No render in between, so the handed-off UI opens
-  // exactly where the user clicked, never off-screen.
-  const doEdit = once(() => {
-    if (!restore()) return;
-    const c = app.state.cellById.get(cell.id);
-    if (c) beginTextInput(span, c);
+// ---- annotation editor (click an annotated element) --------------------------
+
+/**
+ * Clicking an annotated element edits the annotation: shows what it is linked
+ * to, jumps to the index entry (authority ids live there), relinks to another
+ * entity, or removes the link (lossless unwrap of the enclosing <name>).
+ */
+function openAnnotationEditor(span, cell) {
+  removeSelPopover();
+  const host = $("ed-reading");
+  const meta = entityMetaMap().get(cell.mention) || null;
+  const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
+  pop.appendChild(el("span", {
+    class: "ed-sel-pop-title",
+    text: meta
+      ? `linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unverified" : ""}`
+      : `linked to a missing entity (${cell.mention})`,
+  }));
+  const row = el("div", { class: "ed-sel-pop-row" });
+  const btn = (text, title, fn) => {
+    const b = el("button", { class: "ed-act-btn", text, title });
+    b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+    row.appendChild(b);
+  };
+  btn("open in index", "show this entity in the index (authority ids live there)", () => {
+    removeSelPopover();
+    revealEntity(cell.mention);
   });
-  const handOff = (fn) => once(() => {
-    if (!restore()) return;
-    const c = app.state.cellById.get(cell.id);
-    if (c) fn(span, c);
+  btn("relink...", "point this text at a different entity", () => {
+    clear(row);
+    buildEntityChoiceRows(row, cell.text.trim(), (entId) => {
+      removeSelPopover();
+      applyDocFn(
+        (doc) => standoff.linkMention(doc, cell.node, entId),
+        `Relinked "${cell.text.trim()}" to ${entId}`,
+        "Relink",
+        "Already linked to this entity",
+      );
+      render();
+      renderIndex();
+    }, cell.mention);
   });
-
-  // Context label so the chooser says what it operates on (the whole word/line).
-  box.appendChild(el("span", { class: "ed-act-ctx", text: app.state.profile === "word" ? "this word:" : "this line:" }));
-  const editBtn = addBtn("edit",
-    app.state.profile === "word" ? "correct this word" : "correct this line",
-    doEdit, { acceptDouble: true });
-  addBtn("note", "attach an editorial note", handOff(beginNote));
-  addBtn("mark", "mark as unclear / deleted / added / gap", handOff(beginCritic));
-  // "link" wraps the WHOLE cell in <name ref>, which only makes sense at word
-  // granularity. In line-level editions, entities are annotated by selecting
-  // the exact words with the mouse (the annotate popover), not by linking a
-  // whole prose line.
-  if (app.state.profile === "word") {
-    addBtn("link", "link this word to an index entity", () => openLinkPicker());
-  }
-  if (cell.mention) {
-    addBtn("entity", "show the linked entity in the index", once(() => {
-      const id = cell.mention;
-      restore();
-      revealEntity(id);
-    }));
-  }
-  addBtn("x", "cancel", once(() => restore()));
-
-  // The in-place entity picker (second box state): groups and labels identical
-  // with the index panel, so the same entity reads the same everywhere.
-  const openLinkPicker = () => {
-    if (acted) return;
-    clear(box);
-    box.classList.add("ed-act-pick-entities");
-    const all = standoff.readEntities(app.state.doc);
-    const groups = [
-      ["Persons", all.persons], ["Places", all.places], ["Organisations", all.orgs],
-      ["Works", all.works], ["Events", all.events],
-    ];
-    let any = false;
-    for (const [label, items] of groups) {
-      if (!items || !items.length) continue;
-      any = true;
-      box.appendChild(el("span", { class: "ed-act-group", text: label }));
-      for (const ent of items) {
-        const b = el("button", {
-          class: "ed-act-btn",
-          text: `${ent.name || "(unnamed)"} (${ent.id})`,
-          title: `link this text to ${ent.name || ent.id}`,
-        });
-        b.addEventListener("click", (e) => {
-          e.stopPropagation();
-          // Same double-click discipline as the first box state: the stray
-          // second click of a double-click must never link to an arbitrary
-          // entity that happened to reflow under the cursor.
-          if (e.detail > 1) return;
-          once(() => {
-            applyDocFn(
-              (doc) => standoff.linkMention(doc, cell.node, ent.id),
-              `Linked "${cell.text.trim()}" to ${ent.name}`,
-              "Link",
-              `Already linked to ${ent.name}`,
-            );
-            closeRender();
-          })();
-        });
-        box.appendChild(b);
-      }
-    }
-    if (!any) {
-      box.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet; add one in the Index first" }));
-    }
-    const cancelBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
-    cancelBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (e.detail > 1) return;
-      if (!acted) { acted = true; restore(); }
-    });
-    box.appendChild(cancelBtn);
-  };
-
-  span.replaceWith(box);
-  box.addEventListener("dblclick", (e) => {
-    e.stopPropagation();
-    // Quick edit belongs to the first box state only: in the entity picker a
-    // double-click on a group label must not abandon the pick into a text edit.
-    if (box.classList.contains("ed-act-pick-entities")) return;
-    doEdit();
+  btn("remove link", "unwrap the <name> around this text (the text itself survives)", () => {
+    removeSelPopover();
+    applyDocFn(
+      (doc) => standoff.unwrapMention(doc, cell.node),
+      `Removed the link on "${cell.text.trim()}" (index entry kept)`,
+      "Unlink",
+    );
+    render();
+    renderIndex();
   });
-  // Focus "edit" so plain Enter triggers quick edit (and the focus ring shows
-  // where the chooser sits in the text).
-  editBtn.focus();
-  document.addEventListener("keydown", onKey);
+  btn("x", "close", () => removeSelPopover());
+  pop.appendChild(row);
+  anchorPopAt(pop, span.getBoundingClientRect(), host);
 }
 
 /** Jump to an entity's row in the index panel and flash it (M2.6 "entity"). */
@@ -800,24 +835,202 @@ function allEntityIds(doc) {
     .flatMap((k) => (all[k] || []).map((e) => e.id));
 }
 
-/** Show the annotate popover anchored at the selection. */
+/** Anchor a popover at a viewport rect, inside the scrolling reading pane. */
+function anchorPopAt(pop, rect, host) {
+  const hostRect = host.getBoundingClientRect();
+  host.appendChild(pop);
+  pop.style.left = Math.max(0, Math.min(rect.left - hostRect.left, host.clientWidth - pop.offsetWidth - 8)) + "px";
+  pop.style.top = (rect.bottom - hostRect.top + host.scrollTop + 6) + "px";
+}
+
+/**
+ * Where has each entity been used? id -> { count, onPage } over all mention
+ * cells, so the popovers can say WHERE an entry comes from (this page / this
+ * document / index only) instead of listing the raw standOff.
+ */
+function entityUsage() {
+  const usage = new Map();
+  app.state.folios.forEach((folio, fi) => {
+    for (const line of folio.lines) {
+      for (const c of line.cells) {
+        if (!c.mention) continue;
+        const rec = usage.get(c.mention) || { count: 0, onPage: false };
+        rec.count += 1;
+        if (fi === app.folio) rec.onPage = true;
+        usage.set(c.mention, rec);
+      }
+    }
+  });
+  return usage;
+}
+
+const TYPE_LABEL = { pers: "person", plc: "place", org: "organisation", wrk: "work", evt: "event" };
+
+/**
+ * Shared entity-choice list with provenance: suggestions first (same name as
+ * the selection, or the same text already annotated), then groups "annotated
+ * on this page" / "annotated in this document" / "in the index (not yet
+ * linked)", with a filter once the list grows. onPick(entityId) applies;
+ * excludeId hides the entity the text is currently linked to.
+ */
+function buildEntityChoiceRows(container, selText, onPick, excludeId) {
+  const meta = entityMetaMap();
+  const usage = entityUsage();
+  const all = standoff.readEntities(app.state.doc);
+  const entities = ["persons", "places", "orgs", "works", "events"]
+    .flatMap((k) => all[k] || [])
+    .filter((ent) => ent.id !== excludeId);
+  if (!entities.length) {
+    container.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet" }));
+    return;
+  }
+  const norm = (s) => (s || "").trim().toLowerCase();
+  const want = norm(selText);
+
+  const entBtn = (ent, why) => {
+    const m = meta.get(ent.id);
+    const u = usage.get(ent.id);
+    const kindLabel = m ? TYPE_LABEL[m.kind] : "entity";
+    const b = el("button", {
+      class: "ed-act-btn" + (m && m.ai ? " ed-btn-ai" : ""),
+      text: `${ent.name || "(unnamed)"} (${kindLabel})`,
+      title: `${ent.id}${why ? "; " + why : ""}${u ? `; ${u.count} mention(s) in this document` : "; no mentions yet"}`,
+    });
+    b.addEventListener("click", (e) => { e.stopPropagation(); if (e.detail > 1) return; onPick(ent.id); });
+    return b;
+  };
+
+  // Suggestions: hard evidence only (name equals the selection, or the exact
+  // selected text is already annotated with this entity somewhere).
+  const suggested = new Set();
+  const sugRow = el("div", { class: "ed-sel-pop-row" });
+  for (const ent of entities) {
+    if (norm(ent.name) === want && want) { suggested.add(ent.id); sugRow.appendChild(entBtn(ent, "index entry with exactly this name")); }
+  }
+  for (const folio of app.state.folios) {
+    for (const line of folio.lines) {
+      for (const c of line.cells) {
+        if (!c.mention || suggested.has(c.mention)) continue;
+        if (norm(c.text) !== want || !want) continue;
+        const ent = entities.find((x) => x.id === c.mention);
+        if (ent) { suggested.add(ent.id); sugRow.appendChild(entBtn(ent, "this exact text is already annotated with it")); }
+      }
+    }
+  }
+  if (sugRow.childElementCount) {
+    container.appendChild(el("span", { class: "ed-act-group", text: "suggested (matches this text)" }));
+    container.appendChild(sugRow);
+  }
+
+  // Provenance groups for the rest, filterable when long.
+  const rest = entities.filter((ent) => !suggested.has(ent.id));
+  const groups = [
+    ["annotated on this page", (ent) => { const u = usage.get(ent.id); return u && u.onPage; }],
+    ["annotated in this document", (ent) => { const u = usage.get(ent.id); return u && !u.onPage; }],
+    ["in the index, not yet linked", (ent) => !usage.get(ent.id)],
+  ];
+  const listHost = el("div", {});
+  const renderGroups = (filter) => {
+    clear(listHost);
+    const f = norm(filter);
+    for (const [label, match] of groups) {
+      const items = rest.filter((ent) => match(ent) && (!f || norm(ent.name).includes(f) || ent.id.toLowerCase().includes(f)));
+      if (!items.length) continue;
+      listHost.appendChild(el("span", { class: "ed-act-group", text: label }));
+      const row = el("div", { class: "ed-sel-pop-row" });
+      for (const ent of items) row.appendChild(entBtn(ent, label));
+      listHost.appendChild(row);
+    }
+    if (!listHost.childElementCount && f) {
+      listHost.appendChild(el("span", { class: "ed-act-empty", text: "no entity matches the filter" }));
+    }
+  };
+  if (rest.length > 8) {
+    const filter = el("input", { class: "ed-sel-filter", type: "text", placeholder: `filter ${rest.length} entities...` });
+    filter.addEventListener("input", () => renderGroups(filter.value));
+    filter.addEventListener("mouseup", (e) => e.stopPropagation());
+    container.appendChild(filter);
+  }
+  renderGroups("");
+  container.appendChild(listHost);
+}
+
+// Full-TEI markup wraps (no standOff entity): the scholarly elements first,
+// then any element by name. Each build keeps the reading text byte-identical
+// (enforced by standoff.wrapRange).
+const MARKUP_WRAPS = [
+  ["persName", (inner) => `<persName>${inner}</persName>`],
+  ["persName + forename/surname", (inner) => {
+    const m = inner.match(/^(\s*)([\s\S]*\S)(\s+)(\S+)(\s*)$/);
+    if (!m) return `<persName>${inner}</persName>`;
+    return `${m[1]}<persName><forename>${m[2]}</forename>${m[3]}<surname>${m[4]}</surname></persName>${m[5]}`;
+  }],
+  ["placeName", (inner) => `<placeName>${inner}</placeName>`],
+  ["orgName", (inner) => `<orgName>${inner}</orgName>`],
+  ["date", (inner) => `<date>${inner}</date>`],
+  ["term", (inner) => `<term>${inner}</term>`],
+  ["foreign", (inner) => `<foreign>${inner}</foreign>`],
+  ["hi", (inner) => `<hi>${inner}</hi>`],
+  ["title", (inner) => `<title>${inner}</title>`],
+];
+
+function applyMarkupWrap(target, build, label) {
+  applyDocFn(
+    (doc) => standoff.wrapRange(doc, target.cell.node, target.relFrom, target.relTo, build),
+    `Marked "${target.text}" as ${label}`,
+    "Annotate",
+    "Nothing changed (invalid range or text would be lost)",
+  );
+  render();
+  renderIndex();
+}
+
+/**
+ * The annotate popover on a finished selection. Evidence first (suggestions
+ * with provenance), then collapsed sections: link an existing entity, create a
+ * new index entity, or apply plain TEI markup (full flexibility, no entity).
+ */
 function openSelPopover() {
   removeSelPopover();
+  removeMenu();
   const target = selectionTarget();
   if (!target) return;
   if (target.cell.mention) {
-    setStatus("This text already sits inside a link; use the word's chooser to relink.");
+    setStatus("This text already sits inside a link; click it to edit the annotation.");
     return;
   }
   const host = $("ed-reading");
   const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
-
   pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
-  const newRow = el("div", { class: "ed-sel-pop-row" }, [
-    el("span", { class: "ed-act-group", text: "as a new entity" }),
-  ]);
+
+  // Collapsible section helper: header toggles the body.
+  const section = (label, open) => {
+    const body = el("div", { class: "ed-sel-sec-body" });
+    body.hidden = !open;
+    const head = el("button", { class: "ed-sel-sec-head", text: label, type: "button" });
+    head.addEventListener("click", (e) => { e.stopPropagation(); body.hidden = !body.hidden; });
+    pop.appendChild(head);
+    pop.appendChild(body);
+    return body;
+  };
+
+  // 1. Entities: suggestions (always visible inside) + provenance groups.
+  const all = standoff.readEntities(app.state.doc);
+  const haveEntities = ["persons", "places", "orgs", "works", "events"].some((k) => (all[k] || []).length);
+  if (haveEntities) {
+    const entBody = section("link to an index entity", true);
+    buildEntityChoiceRows(entBody, target.text, (entId) => {
+      removeSelPopover();
+      annotateSelection(target, entId, null);
+    }, null);
+  }
+
+  // 2. New index entity from the selection (collapsed when entities exist:
+  //    not every selection is an entity, so this must not be the loudest offer).
+  const newBody = section("new index entity from this text", !haveEntities);
+  const newRow = el("div", { class: "ed-sel-pop-row" });
   for (const [type, label] of ENTITY_TYPE_LABELS) {
-    const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}" and link this text to it` });
+    const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}", link this text, then add authority ids in the Index` });
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       removeSelPopover();
@@ -825,44 +1038,52 @@ function openSelPopover() {
     });
     newRow.appendChild(b);
   }
-  pop.appendChild(newRow);
+  newBody.appendChild(newRow);
 
-  const all = standoff.readEntities(app.state.doc);
-  const existing = ["persons", "places", "orgs", "works", "events"].flatMap((k) => all[k] || []);
-  if (existing.length) {
-    const exRow = el("div", { class: "ed-sel-pop-row" }, [
-      el("span", { class: "ed-act-group", text: "or link an existing one" }),
-    ]);
-    for (const ent of existing) {
-      const b = el("button", { class: "ed-act-btn", text: `${ent.name || "(unnamed)"} (${ent.id})`, title: `link "${target.text}" to ${ent.name || ent.id}` });
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        removeSelPopover();
-        annotateSelection(target, ent.id, null);
-      });
-      exRow.appendChild(b);
-    }
-    pop.appendChild(exRow);
+  // 3. Plain TEI markup (full flexibility, no index entry).
+  const muBody = section("TEI markup (no index entry)", false);
+  const muRow = el("div", { class: "ed-sel-pop-row" });
+  for (const [label, build] of MARKUP_WRAPS) {
+    const b = el("button", { class: "ed-act-btn", text: label, title: `wrap the selection in <${label.split(" ")[0]}>` });
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeSelPopover();
+      applyMarkupWrap(target, build, label);
+    });
+    muRow.appendChild(b);
   }
+  // Any element by name (the full-TEI escape hatch).
+  const freeWrap = el("div", { class: "ed-sel-pop-row" });
+  const freeInput = el("input", { class: "ed-sel-filter", type: "text", placeholder: "any element name..." });
+  freeInput.addEventListener("mouseup", (e) => e.stopPropagation());
+  const freeBtn = el("button", { class: "ed-act-btn", text: "wrap", title: "wrap the selection in the named element" });
+  freeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const tag = freeInput.value.trim();
+    if (!/^[A-Za-z_][\w.-]*$/.test(tag)) { setStatus("Not a valid element name"); return; }
+    removeSelPopover();
+    applyMarkupWrap(target, (inner) => `<${tag}>${inner}</${tag}>`, `<${tag}>`);
+  });
+  freeWrap.appendChild(freeInput);
+  freeWrap.appendChild(freeBtn);
+  muBody.appendChild(muRow);
+  muBody.appendChild(freeWrap);
 
   const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
   xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
   pop.appendChild(xBtn);
 
-  // Anchor under the selection, relative to the scrolling reading pane.
-  const rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
-  const hostRect = host.getBoundingClientRect();
-  host.appendChild(pop);
-  pop.style.left = Math.max(0, Math.min(rect.left - hostRect.left, host.clientWidth - pop.offsetWidth - 8)) + "px";
-  pop.style.top = (rect.bottom - hostRect.top + host.scrollTop + 6) + "px";
+  anchorPopAt(pop, window.getSelection().getRangeAt(0).getBoundingClientRect(), host);
 }
 
-// Selection handling: a finished mouse selection inside the reading pane opens
-// the popover; Escape or a click elsewhere closes it.
+// Selection handling: a finished mouse DRAG selection inside the reading pane
+// opens the annotate popover; Escape or a click elsewhere closes it. A
+// double-click (e.detail > 1) belongs to direct text editing, not annotation.
 document.addEventListener("mouseup", (e) => {
-  if (!app.state) return;
+  if (!app.state || app.sourceMode) return;
+  if (e.detail > 1) return;
   const inReading = e.target instanceof Element && e.target.closest("#ed-reading");
-  const inPop = e.target instanceof Element && e.target.closest("#ed-sel-pop");
+  const inPop = e.target instanceof Element && (e.target.closest("#ed-sel-pop") || e.target.closest("#ed-menu"));
   if (inPop) return;
   setTimeout(() => {
     if (!inReading) { removeSelPopover(); return; }
@@ -873,6 +1094,14 @@ document.addEventListener("mouseup", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.getElementById("ed-sel-pop")) removeSelPopover();
+});
+// Right-click: the Oxygen-style context menu, on words and on selections.
+$("ed-reading").addEventListener("contextmenu", (e) => {
+  if (!app.state || app.sourceMode) return;
+  e.preventDefault();
+  const span = e.target instanceof Element ? e.target.closest(".ed-w") : null;
+  const cell = span ? app.state.cellById.get(span.dataset.id) : null;
+  openContextMenu(e.clientX, e.clientY, span, cell || null);
 });
 
 // ---- editorial notes (M3.5) ------------------------------------------------
@@ -939,7 +1168,9 @@ function critHint() {
   if (app.critMode) return "click a line to mark it (unclear / deleted / added / gap)";
   if (app.noteMode) return "click a line to attach a note";
   if (app.linkTarget) return `click a line to link it to ${app.linkTarget.name}`;
-  return app.state && app.state.profile === "word" ? "click a word for actions" : "click a line for actions";
+  return app.state && app.state.profile === "word"
+    ? "select text to annotate; double-click a word to edit; right-click for actions"
+    : "select text to annotate; double-click a line to edit; right-click for actions";
 }
 
 /** Tooltip for a reading cell, composed from its link / note / critical state. */
@@ -965,7 +1196,8 @@ function critTitle(cell, note, linking, meta) {
   if (note) parts.push(`note: ${note}`);
   parts.push(app.critMode ? "click to mark this text"
     : app.noteMode ? "click to attach a note"
-    : "click for actions");
+    : cell.mention ? "click to edit the annotation"
+    : "double-click to edit; right-click for actions");
   return parts.join("; ");
 }
 
@@ -987,10 +1219,9 @@ function setCritMode(on) {
  */
 function beginCritic(span, cell) {
   const host = $("ed-reading");
-  // If an inline chooser (critical or action) is already open, rebuild the reading
-  // view first so we never leave an orphaned one behind, then re-acquire this
-  // cell's freshly rendered span.
-  if (host.querySelector(".ed-crit-pick, .ed-act-pick")) {
+  // If a critical chooser is already open, rebuild the reading view first so we
+  // never leave an orphaned one behind, then re-acquire this cell's span.
+  if (host.querySelector(".ed-crit-pick")) {
     render();
     span = host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
     if (!span) return;
@@ -1598,6 +1829,13 @@ $("btn-facs").addEventListener("click", () => {
   app.facsHidden = !app.facsHidden;
   renderFacsimile(); // re-applies visibility and repopulates the viewer on show
 });
+$("btn-xml").addEventListener("click", () => {
+  app.sourceMode = !app.sourceMode;
+  $("btn-xml").classList.toggle("active", app.sourceMode);
+  removeSelPopover();
+  removeMenu();
+  render();
+});
 $("btn-generate").addEventListener("click", openGenModal);
 $("gen-close").addEventListener("click", closeGenModal);
 $("gen-cancel").addEventListener("click", closeGenModal);
@@ -1614,7 +1852,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
-  if (document.querySelector("#ed-reading .ed-crit-pick, #ed-reading .ed-act-pick")) return;
+  if (document.querySelector("#ed-reading .ed-crit-pick, #ed-sel-pop, #ed-menu")) return;
   if (!$("gen-modal").hidden) return;
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });

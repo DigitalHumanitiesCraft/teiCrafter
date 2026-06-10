@@ -466,6 +466,50 @@ export function linkMentionRange(doc, textNode, relFrom, relTo, entityId) {
 }
 
 /**
+ * Wrap a sub-range of a text node in arbitrary TEI markup. `build(inner)`
+ * returns the replacement XML for the selected raw slice; the only invariant
+ * enforced is that NO reading text is lost: the replacement stripped of tags
+ * must equal the original slice byte-for-byte. This is the engine side of the
+ * "full TEI flexibility" annotation path (persName with forename/surname,
+ * date, term, foreign, hi, any element). Returns the SAME doc on an invalid
+ * range, a whitespace-only slice, or a text-losing build.
+ */
+export function wrapRange(doc, textNode, relFrom, relTo, build) {
+  if (!textNode || textNode.type !== "text" || typeof build !== "function") return doc;
+  const len = textNode.end - textNode.start;
+  if (!Number.isInteger(relFrom) || !Number.isInteger(relTo)) return doc;
+  if (relFrom < 0 || relTo > len || relFrom >= relTo) return doc;
+  const from = textNode.start + relFrom;
+  const to = textNode.start + relTo;
+  const inner = doc.raw.slice(from, to);
+  if (!inner.trim()) return doc;
+  const replacement = build(inner);
+  if (typeof replacement !== "string") return doc;
+  if (replacement.replace(/<[^>]*>/g, "") !== inner) return doc; // text must survive
+  return spliceDocument(doc, from, to, replacement);
+}
+
+/**
+ * Remove the <name> wrapper around a text node (the inverse of linkMention),
+ * found with the same bounded ancestor walk. The content survives verbatim;
+ * link -> unwrap is byte-identical to never having linked. SAME doc when the
+ * node sits in no <name>.
+ */
+export function unwrapMention(doc, textNode) {
+  if (!textNode || textNode.type !== "text") return doc;
+  let nameEl = null;
+  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
+    if (p.localName === "name") { nameEl = p; break; }
+    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
+  }
+  if (!nameEl) return doc;
+  if (nameEl.outerStart == null || nameEl.outerEnd == null) return doc;
+  if (nameEl.contentStart == null || nameEl.contentEnd == null) return doc;
+  const inner = doc.raw.slice(nameEl.contentStart, nameEl.contentEnd);
+  return spliceDocument(doc, nameEl.outerStart, nameEl.outerEnd, inner);
+}
+
+/**
  * Every element carrying @ref === '#'+entityId. Returns [{ node }] in doc order.
  */
 export function findMentions(doc, entityId) {

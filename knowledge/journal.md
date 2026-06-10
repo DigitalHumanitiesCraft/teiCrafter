@@ -22,6 +22,17 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (night): The click-chooser dies, the editor paradigm lands (M2.10)
+
+Third operator feedback round, the sharpest: "dieser Modus, wo ich wo drauf klicke und dann dieses Edit und Note reinkommt, das macht überhaupt keinen Sinn" -- the reference point is Oxygen. Three more requirements arrived with it: person names need substructure (forename/surname), clicking an already-annotated element must edit that annotation, and the XML source view should be editable. Decisions taken in a question round (context menu + direct edit over full contentEditable; evidence + full TEI in the suggestions, no LLM; source view now), then built:
+
+- **Interaction model.** A plain click sets the cursor, nothing else. Clicking an annotated element opens the annotation editor (linked-to header; open in index / relink with the provenance list / remove link). Double-click edits the line/word directly. Right-click opens a context menu (annotate selection / edit annotation / edit / note / mark / remove gap; whole-word link at word profile). The M2.6 chooser (`beginActions`) is deleted; `beginCritic` survives as the mark chooser behind the menu and on gap clicks.
+- **Evidence-first annotate popover.** Suggestions with provenance reasons come first (index entry with exactly this name; this exact text already annotated with an entity), then collapsible sections: link an existing entity grouped by "annotated on this page" / "in this document" / "in the index, not yet linked" with a filter beyond 8 entries (the operator's third complaint: the old flat list had invisible provenance); a collapsed "new index entity" (the old popover pushed entity creation at every selection, "manière" is not an entity); and "TEI markup (no index entry)" with persName / structured persName (forename + surname split on the last token) / placeName / orgName / date / term / foreign / hi / title / any element by name.
+- **Engine.** Two new lossless ops in standoff.js: `wrapRange` (arbitrary markup around a sub-range; the guard strips tags from the replacement and requires the reading text byte-identical, so no build can lose text) and `unwrapMention` (inverse of linkMention via the same bounded walk; link -> unwrap restores the exact pre-link bytes). Proofs in `mention_projection_check.mjs`, now 30/30; full regression green.
+- **Editable XML source view.** Toolbar "XML" swaps the reading pane for the canonical raw string (monospace, caret at the current page); Apply is gated on well-formedness, re-parses, and the integrity chip reports drift; Cancel discards. The raw string is canonical, so this is a first-class editing path.
+
+Registered earlier the same day and still open: M2.9 internal storage, M5.7 source-project edition guidelines.
+
 ## 2026-06-10 (evening): Selection annotation (M2.8) and validation resolved into the footer (M2.7 completed)
 
 Second operator feedback round, on the reworked shell. The core point: clicking a prose line and being offered edit/note/mark/link is not how a scholar annotates; the gesture is selecting the exact words ("KARL JASPERS") and annotating that. Also: the "Validation and structure" tab should dissolve into the UI. Built the same evening:
