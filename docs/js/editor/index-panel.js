@@ -2,11 +2,12 @@
  * teiCrafter Editor -- Index-management panel
  * (Persons / Places / Organisations / Works / Events).
  *
- * Pure DOM module. It imports nothing from the project: it receives entity data
- * via render() and reports every user intent through the hooks passed at
- * construction. The data model (slugifying ids, mutating the TEI standOff, the
- * lossless splice) lives entirely on the integrator's side; this module only
- * draws the index sections and routes clicks.
+ * Pure DOM module. It receives entity data via render() and reports every user
+ * intent through the hooks passed at construction; its only project imports are
+ * the shared DOM helpers and the shared authority form (one source for the
+ * authority UI here and in the annotation editor). The data model (slugifying
+ * ids, mutating the TEI standOff, the lossless splice) lives entirely on the
+ * integrator's side; this module only draws the index sections and routes clicks.
  *
  * Contract:
  *   createIndexPanel(hostEl, hooks = {}) -> { render(entities), setActive(id), clear() }
@@ -28,31 +29,8 @@
  * integrator). No inline colors.
  */
 
-// Authority registers offered in the add-id selector, in display order. Kept in
-// sync with standoff.js AUTHORITIES (this module imports nothing, so it is a copy).
-const AUTHORITIES = ["GND", "GeoNames", "Wikidata"];
-
-// ---- tiny DOM helpers (self-contained; mirrors el() in editor-app.js) ------
-
-function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === "class") node.className = v;
-    else if (k === "text") node.textContent = v;
-    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if (k === "dataset") for (const [dk, dv] of Object.entries(v)) node.dataset[dk] = dv;
-    else if (v != null) node.setAttribute(k, v);
-  }
-  for (const c of [].concat(children)) {
-    if (c == null) continue;
-    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-  }
-  return node;
-}
-
-function clearNode(node) {
-  while (node.firstChild) node.removeChild(node.firstChild);
-}
+import { el, clear as clearNode } from "./dom.js";
+import { buildAuthorityForm } from "./authority-form.js";
 
 // The three sections, in render order. label is the section heading; type is the
 // value handed back to onAdd; key is the property read off the entities object.
@@ -142,6 +120,36 @@ export function createIndexPanel(hostEl, hooks = {}) {
       input.addEventListener("blur", () => finish(true));
     };
 
+    // Delete is two-step when the entity still has in-text mentions: deleting
+    // the entry would leave them as dangling refs ("missing entity"), so the
+    // first click arms the button with the count and only the second commits.
+    // Disarms after a short pause or when the pointer leaves the row.
+    const mentioned = typeof entity.count === "number" && entity.count > 0;
+    const delBtn = el("button", {
+      class: "ed-idx-btn ed-idx-delete", type: "button",
+      title: mentioned
+        ? `Delete this entry; its ${entity.count} mention(s) in the text would point at a missing entity`
+        : "Delete this entry",
+      "aria-label": "Delete", text: "delete",
+    });
+    let disarmTimer = null;
+    const disarm = () => {
+      if (disarmTimer) { clearTimeout(disarmTimer); disarmTimer = null; }
+      delBtn.classList.remove("ed-idx-delete-armed");
+      delBtn.textContent = "delete";
+    };
+    delBtn.addEventListener("click", () => {
+      if (!mentioned || delBtn.classList.contains("ed-idx-delete-armed")) {
+        disarm();
+        onDelete(entity.id);
+        return;
+      }
+      delBtn.classList.add("ed-idx-delete-armed");
+      delBtn.textContent = `sure? ${entity.count} mention(s) dangle`;
+      disarmTimer = setTimeout(disarm, 4000);
+    });
+    row.addEventListener("mouseleave", disarm);
+
     const actions = el("div", { class: "ed-idx-actions" }, [
       entity.ai ? el("button", {
         class: "ed-idx-btn ed-idx-confirm", type: "button", title: "Confirm this AI suggestion",
@@ -153,74 +161,21 @@ export function createIndexPanel(hostEl, hooks = {}) {
         "aria-label": "Rename", text: "edit",
         onclick: beginRename,
       }),
-      el("button", {
-        class: "ed-idx-btn ed-idx-delete", type: "button", title: "Delete",
-        "aria-label": "Delete", text: "delete",
-        onclick: () => onDelete(entity.id),
-      }),
+      delBtn,
     ]);
 
     const main = el("div", { class: "ed-idx-rowmain" });
     main.appendChild(body);
     main.appendChild(actions);
     row.appendChild(main);
-    row.appendChild(buildAuthorities(entity));
+    // Authority ids: the shared form (same UI as in the annotation editor),
+    // routed into this panel's hooks.
+    row.appendChild(buildAuthorityForm(entity, {
+      onSet: (authority, value) => onSetAuthority(entity.id, { authority, value }),
+      onLookup: (authority, query, anchor, onPick) =>
+        onLookup(entity.id, { authority, query, anchor, onPick }),
+    }));
     return row;
-  }
-
-  // ---- authority ids (idno) for one entity ---------------------------------
-
-  function buildAuthorities(entity) {
-    const list = el("div", { class: "ed-idx-authlist" });
-    const auths = Array.isArray(entity.authorities) ? entity.authorities : [];
-    for (const a of auths) {
-      list.appendChild(el("span", { class: "ed-idx-authid", title: `${a.type || "id"}: ${a.value}` }, [
-        el("span", { class: "ed-idx-authtype", text: a.type || "id" }),
-        el("span", { class: "ed-idx-authval", text: a.value }),
-        el("button", {
-          class: "ed-idx-btn ed-idx-authdel", type: "button",
-          title: "Remove this id", "aria-label": "Remove id", text: "x",
-          onclick: () => onSetAuthority(entity.id, { authority: a.type, value: "" }),
-        }),
-      ]));
-    }
-
-    const typeSel = el("select", { class: "ed-idx-authtypesel", title: "Authority register" },
-      AUTHORITIES.map((name) => el("option", { value: name, text: name })));
-    const valInput = el("input", {
-      class: "ed-idx-authinput", type: "text", placeholder: "authority id or URI",
-    });
-    const submit = () => {
-      const value = valInput.value.trim();
-      if (!value) return;
-      onSetAuthority(entity.id, { authority: typeSel.value, value });
-      valInput.value = "";
-    };
-    valInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); submit(); }
-    });
-    const addForm = el("div", { class: "ed-idx-authadd" }, [
-      typeSel,
-      valInput,
-      el("button", {
-        class: "ed-idx-btn ed-idx-authaddbtn", type: "button",
-        title: "Add authority id", "aria-label": "Add id", text: "+id",
-        onclick: submit,
-      }),
-      el("button", {
-        class: "ed-idx-btn ed-idx-lookup", type: "button",
-        title: "Search this register for an id (uses the typed text, else the name)",
-        "aria-label": "Look up id", text: "find",
-        onclick: () => onLookup(entity.id, {
-          authority: typeSel.value,
-          query: valInput.value.trim() || entity.name,
-          anchor: addForm,
-          onPick: (id) => { valInput.value = id; submit(); },
-        }),
-      }),
-    ]);
-
-    return el("div", { class: "ed-idx-auth" }, [list, addForm]);
   }
 
   // ---- the "+ add" row -----------------------------------------------------

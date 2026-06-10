@@ -258,6 +258,11 @@
 }
 .ed-idx-btn:hover { border-color: var(--color-gold); color: var(--color-text); }
 .ed-idx-delete:hover { border-color: var(--color-problem); color: var(--color-problem); }
+/* Armed two-step delete (entity still has mentions): problem family, not hover-only. */
+.ed-idx-delete-armed, .ed-idx-delete-armed:hover {
+  border-color: var(--color-problem); color: var(--color-problem);
+  background: var(--color-problem-tint);
+}
 .ed-idx-addrow { display: flex; gap: var(--space-xs); align-items: center; }
 .ed-idx-add-input {
   flex: 1; min-width: 0; font-family: var(--font-ui); font-size: var(--font-size-sm);
@@ -402,14 +407,13 @@
   color: var(--color-text); background: var(--color-surface);
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
 .ed-sel-filter:focus { outline: none; border-color: var(--color-gold); }
-/* Authority ids inside the annotation editor (moved here from the index pane):
-   existing idno chips plus the add/lookup form, on a quiet separator. */
-.ed-sel-auth {
-  display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center;
+/* The shared authority form (.ed-idx-auth) inside the annotation editor:
+   no index-row indent, quiet separators, roomier input. */
+.ed-sel-auth.ed-idx-auth {
   padding: var(--space-xs) 0; border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
 }
-.ed-sel-auth .ed-idx-authadd { flex: 1; min-width: 220px; }
+.ed-sel-auth .ed-idx-authadd { min-width: 220px; }
 .ed-sel-auth .ed-idx-authinput { flex: 1; min-width: 100px; }
 
 /* Oxygen-style right-click context menu on the reading text. */

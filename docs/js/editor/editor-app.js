@@ -38,6 +38,7 @@ import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createIndexPanel } from "./index-panel.js";
+import { buildAuthorityForm } from "./authority-form.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
@@ -737,74 +738,23 @@ function openAnnotationEditor(span, cell) {
 }
 
 /**
- * Authority ids (GND / GeoNames / Wikidata) of the linked entity, editable in
- * place: existing ids with remove buttons, an add form, and the live lookup.
- * Every change commits losslessly and reopens the editor on the same cell.
+ * Authority ids (GND / GeoNames / Wikidata) of the linked entity, editable at
+ * the mention: the shared form (authority-form.js, same UI as in the index
+ * overlay), committing losslessly and reopening the editor on the same cell.
  */
 function buildAuthorityEditor(entity, cell) {
-  const box = el("div", { class: "ed-sel-auth" });
-  const auths = Array.isArray(entity.authorities) ? entity.authorities : [];
-  for (const a of auths) {
-    box.appendChild(el("span", { class: "ed-idx-authid", title: `${a.type || "id"}: ${a.value}` }, [
-      el("span", { class: "ed-idx-authtype", text: a.type || "id" }),
-      el("span", { class: "ed-idx-authval", text: a.value }),
-      el("button", {
-        class: "ed-idx-btn ed-idx-authdel", type: "button",
-        title: "Remove this id", "aria-label": "Remove id", text: "x",
-        onclick: (e) => {
-          e.stopPropagation();
-          commitAndReopen(
-            (doc) => standoff.setAuthority(doc, entity.id, a.type, ""),
-            `Removed ${a.type} id from ${entity.name || entity.id}`,
-            cell.id,
-          );
-        },
-      }),
-    ]));
-  }
-
-  const typeSel = el("select", { class: "ed-idx-authtypesel", title: "Authority register" },
-    standoff.AUTHORITIES.map((name) => el("option", { value: name, text: name })));
-  const valInput = el("input", {
-    class: "ed-idx-authinput", type: "text", placeholder: "authority id or URI",
-    title: "Paste an id or URI, or use find to search the register by name",
-  });
-  valInput.addEventListener("mouseup", (e) => e.stopPropagation());
-  const submit = () => {
-    const value = valInput.value.trim();
-    if (!value) return;
-    commitAndReopen(
-      (doc) => standoff.setAuthority(doc, entity.id, typeSel.value, value),
-      `Set ${typeSel.value} id on ${entity.name || entity.id}`,
+  const form = buildAuthorityForm(entity, {
+    onSet: (authority, value) => commitAndReopen(
+      (doc) => standoff.setAuthority(doc, entity.id, authority, value),
+      value
+        ? `Set ${authority} id on ${entity.name || entity.id}`
+        : `Removed ${authority} id from ${entity.name || entity.id}`,
       cell.id,
-    );
-  };
-  valInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); submit(); }
+    ),
+    onLookup: runLookup,
   });
-  const addForm = el("div", { class: "ed-idx-authadd" }, [
-    typeSel,
-    valInput,
-    el("button", {
-      class: "ed-idx-btn", type: "button",
-      title: "Add this authority id", "aria-label": "Add id", text: "+id",
-      onclick: (e) => { e.stopPropagation(); submit(); },
-    }),
-    el("button", {
-      class: "ed-idx-btn", type: "button",
-      title: "Search this register (uses the typed text, else the entity name); pick a hit to attach its id",
-      "aria-label": "Look up id", text: "find",
-      onclick: (e) => {
-        e.stopPropagation();
-        runLookup(typeSel.value, valInput.value.trim() || entity.name, addForm, (id) => {
-          valInput.value = id;
-          submit();
-        });
-      },
-    }),
-  ]);
-  box.appendChild(addForm);
-  return box;
+  form.classList.add("ed-sel-auth");
+  return form;
 }
 
 /** Open the index overlay scrolled to an entity's row and flash it. */
