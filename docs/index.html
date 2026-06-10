@@ -10,18 +10,33 @@
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* Landing styles, tokens only (no raw hex). The editor is the workbench;
-           this page is just the front door with two ways in. */
+           this page is the front door: value proposition, one primary action,
+           the three example editions, and the core properties in one line each. */
         .lp-header { justify-content: space-between; }
         .lp-tag {
             font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: .08em;
             color: var(--color-gold-light); border: 1px solid var(--color-gold);
             border-radius: var(--radius-sm); padding: 2px var(--space-sm);
         }
-        .lp-main { max-width: 880px; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
-        .lp-main h2 { font-size: 1.6rem; color: var(--color-text); margin: 0 0 var(--space-sm); }
-        .lp-lede { font-size: var(--font-size-lg); color: var(--color-text-secondary); line-height: 1.6; margin: 0 0 var(--space-xl); }
-        .lp-cards { display: grid; grid-template-columns: minmax(0, 520px); justify-content: center; gap: var(--space-md); }
-        @media (max-width: 640px) { .lp-cards { grid-template-columns: 1fr; } }
+        .lp-main { max-width: 1080px; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
+        .lp-hero h2 { font-family: var(--font-serif); font-size: 2rem; font-weight: 600;
+            color: var(--color-text); margin: 0 0 var(--space-sm); }
+        .lp-lede { font-size: var(--font-size-lg); color: var(--color-text-secondary);
+            line-height: 1.6; margin: 0 0 var(--space-lg); max-width: 760px; }
+        .lp-open {
+            display: inline-block; font-family: var(--font-ui); font-weight: 600;
+            font-size: var(--font-size-base); color: var(--color-text); text-decoration: none;
+            background: var(--color-gold); border: 1px solid var(--color-gold);
+            border-radius: var(--radius-sm); padding: var(--space-sm) var(--space-lg);
+        }
+        .lp-open:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
+        .lp-section-title {
+            font-size: var(--font-size-sm); font-weight: 600; text-transform: uppercase;
+            letter-spacing: .08em; color: var(--color-text-muted);
+            margin: var(--space-xl) 0 var(--space-sm);
+        }
+        .lp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); }
+        @media (max-width: 900px) { .lp-cards, .lp-features { grid-template-columns: 1fr; } }
         .lp-card {
             display: flex; flex-direction: column; gap: var(--space-sm);
             padding: var(--space-lg); text-decoration: none;
@@ -33,8 +48,16 @@
         .lp-card h3 { margin: 0; font-size: 1.1rem; color: var(--color-text); }
         .lp-card p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-secondary); line-height: 1.6; }
         .lp-card .lp-cta { margin-top: auto; font-size: var(--font-size-sm); font-weight: 600; color: var(--color-gold-hover); }
-        .lp-card-ai:hover { border-color: var(--color-ai); }
-        .lp-card-ai .lp-card-tag, .lp-card-ai .lp-cta { color: var(--color-ai); }
+        .lp-features {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg);
+            margin-top: var(--space-xl); padding-top: var(--space-lg);
+            border-top: 1px solid var(--color-border);
+        }
+        .lp-feature h3 { font-size: var(--font-size-sm); font-weight: 600;
+            color: var(--color-text); margin: 0 0 var(--space-xs); }
+        .lp-feature p { margin: 0; font-size: var(--font-size-sm);
+            color: var(--color-text-secondary); line-height: 1.6; }
+        .lp-feature a { color: var(--color-gold-hover); }
         .lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
         .lp-foot { margin-top: var(--space-xl); padding-top: var(--space-md); }
     </style>
@@ -49,17 +72,50 @@
     </header>
 
     <main class="lp-main">
-        <h2>A browser TEI working environment</h2>
-        <p class="lp-lede">Edit any TEI edition directly, losslessly, and without an LLM in the loop. Open an edition, correct it folio by folio at its natural granularity, and save it back byte for byte.</p>
+        <section class="lp-hero">
+            <h2>Edit any TEI edition, losslessly.</h2>
+            <p class="lp-lede">A browser working environment for TEI-XML: open an edition, correct it folio by folio at its natural granularity (words or lines), annotate entities with authority data, and save it back byte for byte. No server, no account, no LLM in the loop.</p>
+            <a class="lp-open" href="editor.html" title="Open the editor and load your own TEI file">Open the editor</a>
+        </section>
 
+        <p class="lp-section-title">Or start from an example edition</p>
         <div class="lp-cards">
-            <a class="lp-card" href="editor.html">
-                <span class="lp-card-tag">[ editor ]</span>
-                <h3>Open and edit existing TEI</h3>
-                <p>Open a local edition, word-level like the Wenzelsbibel or line-level like a Jeanne Hersch edition. Folio reading text, facsimile zones linked by @facs, live integrity checks, lossless save. No LLM in the loop.</p>
-                <span class="lp-cta">Open the editor</span>
+            <!-- The same three examples as in the editor's welcome state; the
+                 #example deep link loads them directly. The LLM card returns
+                 here with FEATURES.llmOnRamp. -->
+            <a class="lp-card" href="editor.html#example=wb">
+                <span class="lp-card-tag">[ word-level ]</span>
+                <h3>Wenzelsbibel</h3>
+                <p>Codex 2759, the real codex where present, else its synthetic twin. Word-by-word editing, IIIF facsimile on the real codex.</p>
+                <span class="lp-cta">Load example</span>
             </a>
-            <!-- "New from text (LLM)" card removed while FEATURES.llmOnRamp is off. -->
+            <a class="lp-card" href="editor.html#example=zbz">
+                <span class="lp-card-tag">[ line-level ]</span>
+                <h3>ZBZ Jeanne Hersch</h3>
+                <p>A real letter from the Zentralbibliothek Z&uuml;rich pipeline, page scans linked to the text line by line.</p>
+                <span class="lp-cta">Load example</span>
+            </a>
+            <a class="lp-card" href="editor.html#example=szd">
+                <span class="lp-card-tag">[ line-level ]</span>
+                <h3>Stefan Zweig Digital</h3>
+                <p>An 1901 Zweig letter with its facsimile served live by the GAMS repository.</p>
+                <span class="lp-cta">Load example</span>
+            </a>
+        </div>
+
+        <div class="lp-features">
+            <div class="lp-feature">
+                <h3>Lossless by construction</h3>
+                <p>Every edit is a precise splice into the raw XML; everything you did not touch is preserved byte for byte, verified by live checks and an offline proof harness.</p>
+            </div>
+            <div class="lp-feature">
+                <h3>Natural granularity</h3>
+                <p>The editable unit emerges from the document: word-level when the TEI encodes words, line-level otherwise. The page image travels along, linked both ways.</p>
+            </div>
+            <div class="lp-feature">
+                <h3>The human decides</h3>
+                <p>Annotation is deterministic and human-driven; machine proposals, where enabled, are marked violet until verified. <a href="about.html">More in About.</a></p>
+            </div>
         </div>
 
         <div class="lp-foot site-foot">

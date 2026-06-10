@@ -128,10 +128,11 @@ re-runnable): `test/tools/roundtrip_sweep.mjs` (295/295 byte-identical: 285 Hers
 5 synthetic), `test/tools/hersch_loadability.mjs` (285/285 usable editor view), plus
 generic/editor/edit-fidelity/selftest harnesses.
 
-**Corpus.** Hersch line-level (reads directly), Wenzelsbibel synthetic word-level (reads
-directly), SZD catalog + Page-JSON (needs the converter). The committed Wenzelsbibel is a
-synthetic structural twin; the real ONB codex is absent (unresolved licence). Real third-
-party proof files live only under gitignored `test/fixtures/`.
+**Corpus.** Hersch line-level (reads directly), Wenzelsbibel word-level (reads directly),
+SZD catalog + Page-JSON (needs the converter). The committed Wenzelsbibel is a synthetic
+structural twin; the real ONB codex (unresolved redistribution licence) lives locally under
+the gitignored `docs/data/editor/wb-codex/` and is the editor example's first choice, with
+the twin as public fallback. Real third-party proof files live only under gitignored paths.
 
 ## 4. ZBZ Pipeline (zbz-ocr-tei), verified
 

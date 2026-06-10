@@ -65,7 +65,7 @@ Annotation happens at the text: select words to annotate them, click a mention t
 ## Quick Start
 
 1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/).
-2. Choose **Open and edit existing TEI**, then open a local edition or load the bundled synthetic Wenzelsbibel demo.
+2. Open a local edition, or load one of the three example editions (from the landing page cards, the welcome cards, or the Load menu).
 3. Navigate folio by folio. Click a word (word-level editions) or a line (line-level editions) to correct its text.
 4. Use the facsimile pane to inspect the page image; zone overlays highlight in sync with the reading text.
 5. Switch the right pane to **Index** to add or link persons, organisations, and events.
@@ -152,7 +152,7 @@ The sweep reads source repositories directly; no third-party TEI is committed. R
 
 | Case | Source | Shape | Granularity | Editable now? |
 |------|--------|-------|-------------|---------------|
-| Wenzelsbibel | synthetic twin (Codex 2759) | `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | yes, directly |
+| Wenzelsbibel | Codex 2759 (real codex local-only, licence-restricted; synthetic twin in the public preview) | `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | yes, directly |
 | Jeanne Hersch | zbz-ocr-tei | `<p>` + `<lb facs>`, real zones, no `<w>` | line | yes, directly |
 | Stefan Zweig | szd-htr | catalog TEI + Page-JSON (no transcription TEI) | line | yes, via the deterministic converter (`pipeline/export_tei.py`, byte-faithful to its reference prototype) |
 

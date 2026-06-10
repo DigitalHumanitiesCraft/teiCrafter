@@ -26,11 +26,12 @@ How teiCrafter is built. Client-only, no backend, native ES6 modules without a b
 ## Two Entry Points, One Editor
 
 ```
-index.html   (landing: one card while the on-ramp flag is off)
+index.html   (landing: hero + three example cards + feature strip)
   |
-  +-- editor.html ........ open existing TEI, edit, save        (deterministic)
-  +-- editor.html#generate New from text (LLM) -> same editor   (LLM on-ramp,
-                           hidden behind FEATURES.llmOnRamp since 2026-06-10)
+  +-- editor.html ............. open existing TEI, edit, save   (deterministic)
+  +-- editor.html#example=KEY . loads that example directly     (landing cards)
+  +-- editor.html#generate .... New from text (LLM) -> same editor  (LLM on-ramp,
+                                hidden behind FEATURES.llmOnRamp since 2026-06-10)
 ```
 
 Both entries land in the same editor. There is no multi-step stepper; the prior LLM Generator workflow (a five-step Import/Mapping/Transform/Validate/Export app) was removed in the 2026-05-30 consolidation (recoverable from git history).
@@ -112,7 +113,8 @@ docs/
     utils/
       constants.js        Providers, source labels, default mappings
   data/editor/
-    wenzelsbibel-synthetic-codex.xml   Served synthetic word-level demo edition
+    wenzelsbibel-synthetic-codex.xml   Served synthetic word-level demo edition (public fallback)
+    wb-codex/                          Real Codex 2759 (gitignored, local-only; tried first)
     zbz-100/              Real Jeanne Hersch example (TEI + page PNGs); gitignored, local-only (rights)
     zbz-1000/             ZBZ worked-example object (doc 1000 + graphic urls, M7.2); gitignored, local-only (rights); regenerate via test/tools/make_zbz1000_demo.mjs
 pipeline/

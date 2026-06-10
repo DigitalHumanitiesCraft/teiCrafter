@@ -51,6 +51,12 @@ Branch `session/2026-06-07-place-graphic`, clean working tree, **56 commits over
   fixture-generation artifact (page 5 is empty in szd-htr groundtruth.json);
   removed. Order for the szd-htr lane: guard the converter against copying the
   previous page when a transcription is empty.
+- **Landing rebuilt as a front door** (hero, three example cards deep-linking
+  `editor.html#example=KEY`, feature strip) and **the WB example now loads the
+  real Codex 2759** from gitignored `docs/data/editor/wb-codex/` (copy of
+  `GitHub/Wenzelsbibel/data/codex-2759.xml`), falling back to the synthetic
+  twin where absent (public deployment). Known pre-existing: the ZBZ example
+  is local-only (rights) and fails with a status message on Pages.
 - **LLM on-ramp hidden** behind `FEATURES.llmOnRamp` (off; operator order,
   code stays in place), **journal rewritten to decision style** (trigger,
   decision, reason; no proof counts), **comment-style rule** in CLAUDE.md, and

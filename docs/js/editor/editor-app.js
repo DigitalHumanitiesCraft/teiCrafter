@@ -42,6 +42,7 @@ import { detectProject, projectTileSource } from "./project-profiles.js";
 import * as recents from "./recent-files.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
+const WB_CODEX_URL = "data/editor/wb-codex/codex-2759.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
 const ZBZ_IMAGE_BASE = "data/editor/zbz-100/";
 const SZD_URL = "data/editor/szd/o_szd.1079.tei.xml";
@@ -267,11 +268,21 @@ function fileInput() {
   return _fileInput;
 }
 
-// Example registry: the toolbar menu and the welcome cards load the same way.
-// imageBase: local page images next to the XML; without it the facsimile uses
-// each surface's own <graphic url>.
+// Example registry: the toolbar menu, the welcome cards and the landing-page
+// deep links (#example=KEY) load the same way. imageBase: local page images
+// next to the XML; without it the facsimile uses each surface's <graphic url>.
+// fallback: tried when the primary URL is absent (the real Wenzelsbibel codex
+// is licence-restricted, lives only on machines that materialized it, and the
+// public deployment serves the synthetic twin instead).
 const EXAMPLES = {
-  wb: { label: "synthetic Wenzelsbibel", url: DEMO_URL, file: "wenzelsbibel-synthetic-codex.xml" },
+  wb: {
+    label: "Wenzelsbibel", url: WB_CODEX_URL, file: "codex-2759.xml",
+    done: "Loaded the real Wenzelsbibel codex (facsimile via IIIF).",
+    fallback: {
+      label: "synthetic Wenzelsbibel", url: DEMO_URL, file: "wenzelsbibel-synthetic-codex.xml",
+      done: "Loaded the synthetic Wenzelsbibel twin (the real codex is not present here).",
+    },
+  },
   zbz: {
     label: "ZBZ Jeanne Hersch example", url: ZBZ_URL, file: "zbz-hersch-100.xml",
     imageBase: ZBZ_IMAGE_BASE, done: "Loaded the ZBZ Jeanne Hersch example with real page images.",
@@ -288,11 +299,16 @@ function confirmDiscard() {
 }
 
 async function loadExample(key) {
-  const ex = EXAMPLES[key];
+  let ex = EXAMPLES[key];
   if (!ex || !confirmDiscard()) return;
   setStatus(`Loading ${ex.label}...`);
   try {
-    const res = await fetch(ex.url, { cache: "no-store" });
+    let res = await fetch(ex.url, { cache: "no-store" });
+    if (!res.ok && ex.fallback) {
+      ex = ex.fallback;
+      setStatus(`Loading ${ex.label}...`);
+      res = await fetch(ex.url, { cache: "no-store" });
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     load(await res.text(), ex.file, null);
     if (ex.imageBase) {
@@ -1276,3 +1292,7 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 updatePanels(); // start state: no document, panel tabs built but disabled
+
+// Deep link from the landing page: editor.html#example=KEY loads that example.
+const exampleLink = location.hash.match(/^#example=([a-z]+)$/);
+if (exampleLink) loadExample(exampleLink[1]);
