@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/user-stories
 status: active
 created: 2026-02-05
-updated: 2026-06-08
+updated: 2026-06-10
 language: en
 version: 0.9
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
@@ -25,7 +25,7 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 
 ## Editing Any TEI
 
-- **E.1** As an editor I want to open a TEI edition from my local disk so that I can work without a server. *Built* (File System Access API, file-input fallback, drag-and-drop, recent files, three served examples).
+- **E.1** As an editor I want to open a TEI edition from my local disk so that I can work without a server. *Built* (File System Access API, file-input fallback, drag-and-drop, recent files, the served registry examples).
 - **E.2** As an editor I want the edition split into folios I can page through so that I navigate a long document. *Built* (`<pb>` segmentation, prev/next).
 - **E.3** As an editor I want the reading text rendered cell by cell, word-level when the TEI has `<w>` and line-level otherwise, so that I edit at the document's natural granularity. *Built* (the unit is read from the document; proven on Wenzelsbibel word-level and Hersch line-level).
 - **E.4** As an editor I want to click a word or line and correct it in place so that fixing OCR or transcription errors is direct; nothing else in the file changes. *Built* (lossless offset splice; surgical-edit proof).

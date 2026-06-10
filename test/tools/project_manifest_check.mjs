@@ -59,6 +59,20 @@ check(wb.views.map((v) => v.key).join(",") === "diplomatic,bible-verse,image-ann
   "WB manifest: the three authoring views declared");
 check(wb.schema === null, "WB manifest: no schema URL claimed (none exists yet)");
 
+// --- 1b. Every example loads as a project: the other two shipped manifests -----
+
+for (const [dir, file, projName] of [
+  ["szd", "o_szd.1079.tei.xml", "Stefan Zweig Digital"],
+  ["zbz-100", "zbz-hersch-100.xml", "Jeanne Hersch (Zentralbibliothek Zürich)"],
+]) {
+  const p = parseManifest(readFileSync(join(ROOT, "docs", "data", "editor", dir, MANIFEST_FILENAME), "utf8"));
+  const t = typeForFile(p, file);
+  check(p.name === projName && t && t.key === "letter",
+    `${dir} example manifest: parses, names the project, types ${file} as a letter`);
+  check(markupForFile(p, file) === null,
+    `${dir} example manifest: no markup claimed (built-in wraps apply; no invented guidelines)`);
+}
+
 // --- 2. Image resolver: manifest and built-in PID profile agree ---------------
 
 const HEADER =

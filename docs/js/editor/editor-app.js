@@ -297,10 +297,12 @@ const EXAMPLES = {
   },
   zbz: {
     label: "ZBZ Jeanne Hersch example", url: ZBZ_URL, file: "zbz-hersch-100.xml",
+    manifest: "data/editor/zbz-100/teicrafter.project.json",
     imageBase: ZBZ_IMAGE_BASE, done: "Loaded the ZBZ Jeanne Hersch example with real page images.",
   },
   szd: {
     label: "Stefan Zweig Digital example", url: SZD_URL, file: "o_szd.1079.tei.xml",
+    manifest: "data/editor/szd/teicrafter.project.json",
     done: "Loaded the Stefan Zweig Digital example (facsimile via GAMS).",
   },
 };

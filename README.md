@@ -69,7 +69,7 @@ Annotation happens at the text: select words to annotate them, click a mention t
 ## Quick Start
 
 1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/).
-2. Open a local edition, or load one of the three example editions (from the landing page cards, the welcome cards, or the Load menu).
+2. Open a local edition, or load one of the three example projects (from the landing page cards, the welcome cards, or the Load menu); each loads with its project manifest, so the status line names the project and the document's type.
 3. To work on a whole project, use **Load... > Open project folder...** (Chromium browsers): the folder's TEI and plaintext files appear in the Project panel, and clicking a file opens it.
 4. Navigate folio by folio. Click a word (word-level editions) or a line (line-level editions) to correct its text.
 5. Use the facsimile pane to inspect the page image; zone overlays highlight in sync with the reading text.

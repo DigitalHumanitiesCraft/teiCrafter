@@ -1,0 +1,10 @@
+{
+  "teicrafter": 1,
+  "name": "Stefan Zweig Digital",
+  "documentTypes": [
+    { "key": "letter", "label": "Letter" }
+  ],
+  "files": {
+    "o_szd.1079.tei.xml": "letter"
+  }
+}

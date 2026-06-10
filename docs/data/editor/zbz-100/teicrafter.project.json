@@ -1,0 +1,10 @@
+{
+  "teicrafter": 1,
+  "name": "Jeanne Hersch (Zentralbibliothek Zürich)",
+  "documentTypes": [
+    { "key": "letter", "label": "Letter" }
+  ],
+  "files": {
+    "zbz-hersch-100.xml": "letter"
+  }
+}

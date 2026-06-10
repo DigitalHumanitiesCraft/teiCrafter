@@ -105,8 +105,9 @@ browser-verified (2026-06-08), see [goals.md](goals.md).
 **Design system (`docs/css/style.css`).** Tokens are the single source of truth
 (`--color-*`, `--space-*`, `--font-*`, `--radius-*`; no raw hex in components). AI marking:
 `--color-ai: #6D4AB6` (violet), `--color-ai-tint: #F1ECFA`. Confidence is categorical:
-`--color-confident` green, `--color-review` gold, `--color-problem` red. Three-pane layout:
-reading text, facsimile, right pane (validation/structure tab and entity index tab).
+`--color-confident` green, `--color-review` gold, `--color-problem` red. Dual-view layout
+(M2.14): left the text work surface (reading text or XML source), right a context panel
+switched from an open registry (facsimile, entity index, project files).
 
 **LLM on-ramp.** Modal captures text + provider/model/key; `complete(prompt)` calls the
 provider; XML is extracted; `load(...)` then `markGenerated(true)` shows the violet

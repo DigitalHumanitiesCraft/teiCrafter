@@ -4,8 +4,10 @@ output/
 __pycache__/
 *.pyc
 
-# Real ZBZ Hersch example (rights: not redistributable) -- local-only demo data
-docs/data/editor/zbz-100/
+# Real ZBZ Hersch example (rights: not redistributable) -- local-only demo data.
+# Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
+docs/data/editor/zbz-100/*
+!docs/data/editor/zbz-100/teicrafter.project.json
 
 # Real ZBZ Hersch worked-example object (rights stance as zbz-100; regenerate via test/tools/make_zbz1000_demo.mjs)
 docs/data/editor/zbz-1000/
