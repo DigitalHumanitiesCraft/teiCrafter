@@ -32,6 +32,7 @@ import {
   xmlIdSet,
   countTags,
   unescapeXmlText,
+  rawRangeForDisplay,
 } from "./edition.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
@@ -111,7 +112,7 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-validate", "btn-download", "btn-suggest"]) $(id).disabled = !on;
+  for (const id of ["btn-download", "btn-suggest"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) { setNoteMode(false); setCritMode(false); }
   // M2.5 legend strip (hint + chips): visible while a document is loaded;
@@ -425,6 +426,10 @@ function renderReading() {
         // here means the first click's UI vanished and the words reflowed under
         // the cursor: ignore it instead of opening something unintended.
         if (e.detail > 1) return;
+        // A mouse text-selection ends in a click on the same span; that click
+        // belongs to the selection (the annotate popover), not to the chooser.
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) return;
         if (app.critMode || cell.gap) beginCritic(span, cell);
         else if (app.noteMode) beginNote(span, cell);
         else beginEdit(span, cell, lineIndex);
@@ -609,12 +614,20 @@ function beginActions(span, cell) {
     if (c) fn(span, c);
   });
 
+  // Context label so the chooser says what it operates on (the whole word/line).
+  box.appendChild(el("span", { class: "ed-act-ctx", text: app.state.profile === "word" ? "this word:" : "this line:" }));
   const editBtn = addBtn("edit",
     app.state.profile === "word" ? "correct this word" : "correct this line",
     doEdit, { acceptDouble: true });
   addBtn("note", "attach an editorial note", handOff(beginNote));
   addBtn("mark", "mark as unclear / deleted / added / gap", handOff(beginCritic));
-  addBtn("link", "link this text to an index entity", () => openLinkPicker());
+  // "link" wraps the WHOLE cell in <name ref>, which only makes sense at word
+  // granularity. In line-level editions, entities are annotated by selecting
+  // the exact words with the mouse (the annotate popover), not by linking a
+  // whole prose line.
+  if (app.state.profile === "word") {
+    addBtn("link", "link this word to an index entity", () => openLinkPicker());
+  }
   if (cell.mention) {
     addBtn("entity", "show the linked entity in the index", once(() => {
       const id = cell.mention;
@@ -693,7 +706,6 @@ function beginActions(span, cell) {
 
 /** Jump to an entity's row in the index panel and flash it (M2.6 "entity"). */
 function revealEntity(id) {
-  selectTab("index");
   if (indexPanel) indexPanel.setActive(id);
   const row = document.querySelector(`#ed-index .ed-idx-row[data-id="${CSS.escape(id)}"]`);
   if (!row) { setStatus(`No index entry for ${id}`); return; }
@@ -701,6 +713,167 @@ function revealEntity(id) {
   row.classList.add("ed-idx-row-flash");
   setTimeout(() => row.classList.remove("ed-idx-row-flash"), 1200);
 }
+
+// ---- selection annotation (M2.8) --------------------------------------------
+// Select any words inside a line with the mouse and annotate exactly that text:
+// a popover offers "new entity from selection" per type, or linking an existing
+// entity. The wrap is a lossless sub-range splice (standoff.linkMentionRange);
+// afterwards the index entry is revealed so authority ids (GND, Wikidata,
+// GeoNames) are one click away via the existing live lookup.
+
+const ENTITY_TYPE_LABELS = [
+  ["person", "person"], ["place", "place"], ["org", "organisation"],
+  ["work", "work"], ["event", "event"],
+];
+
+function removeSelPopover() {
+  const old = document.getElementById("ed-sel-pop");
+  if (old) old.remove();
+}
+
+/** Resolve the current selection to { cell, relFrom, relTo, text } or null. */
+function selectionTarget() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !app.state) return null;
+  const range = sel.getRangeAt(0);
+  const spanOf = (node) => {
+    const elNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    return elNode ? elNode.closest("#ed-reading .ed-w") : null;
+  };
+  const startSpan = spanOf(range.startContainer);
+  const endSpan = spanOf(range.endContainer);
+  if (!startSpan || startSpan !== endSpan) return null; // one segment at a time
+  const cell = app.state.cellById.get(startSpan.dataset.id);
+  if (!cell || cell.gap) return null;
+  // Display offsets inside the span's single text node, trimmed to the words.
+  let dFrom = Math.min(range.startOffset, range.endOffset);
+  let dTo = Math.max(range.startOffset, range.endOffset);
+  const shown = startSpan.textContent;
+  while (dFrom < dTo && /\s/.test(shown[dFrom])) dFrom++;
+  while (dTo > dFrom && /\s/.test(shown[dTo - 1])) dTo--;
+  if (dFrom >= dTo) return null;
+  const rel = rawRangeForDisplay(cell.rawText, dFrom, dTo);
+  if (!rel) return null;
+  const text = shown.slice(dFrom, dTo);
+  // Safety: the mapped raw slice must decode to exactly the selected text,
+  // otherwise refuse rather than wrap the wrong bytes.
+  if (unescapeXmlText(cell.rawText.slice(rel[0], rel[1])) !== text) return null;
+  return { cell, span: startSpan, relFrom: rel[0], relTo: rel[1], text };
+}
+
+/** Apply: optionally create the entity, then wrap the selected sub-range. */
+function annotateSelection(target, entityId, createType) {
+  try {
+    let doc = app.state.doc;
+    let id = entityId;
+    if (createType) {
+      const before = new Set(allEntityIds(doc));
+      doc = standoff.addEntity(doc, createType, { name: target.text });
+      id = allEntityIds(doc).find((x) => !before.has(x));
+      if (!id) throw new Error("could not resolve the new entity's id");
+    }
+    // Re-locate the cell: addEntity shifted offsets, but the cell id is stable
+    // and the relative offsets address the unchanged node content.
+    const st = parseEdition(doc.raw);
+    const c = st.cellById.get(target.cell.id);
+    if (!c) throw new Error("the selected line is no longer addressable");
+    const next = standoff.linkMentionRange(doc, c.node, target.relFrom, target.relTo, id);
+    if (next === doc && !createType) {
+      setStatus("Nothing annotated (the text may already sit inside a link)");
+      return;
+    }
+    app.state = parseEdition(next.raw);
+    app.noteByWord = indexNotes(app.state.raw);
+    setDirty(true);
+    setStatus(`Annotated "${target.text}" (${id}). Add authority ids in the Index.`);
+    render();
+    renderIndex();
+    revealEntity(id);
+  } catch (err) {
+    setStatus(`Annotate failed: ${err.message}`);
+  }
+}
+
+function allEntityIds(doc) {
+  const all = standoff.readEntities(doc);
+  return ["persons", "places", "orgs", "works", "events"]
+    .flatMap((k) => (all[k] || []).map((e) => e.id));
+}
+
+/** Show the annotate popover anchored at the selection. */
+function openSelPopover() {
+  removeSelPopover();
+  const target = selectionTarget();
+  if (!target) return;
+  if (target.cell.mention) {
+    setStatus("This text already sits inside a link; use the word's chooser to relink.");
+    return;
+  }
+  const host = $("ed-reading");
+  const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
+
+  pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
+  const newRow = el("div", { class: "ed-sel-pop-row" }, [
+    el("span", { class: "ed-act-group", text: "as a new entity" }),
+  ]);
+  for (const [type, label] of ENTITY_TYPE_LABELS) {
+    const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}" and link this text to it` });
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeSelPopover();
+      annotateSelection(target, null, type);
+    });
+    newRow.appendChild(b);
+  }
+  pop.appendChild(newRow);
+
+  const all = standoff.readEntities(app.state.doc);
+  const existing = ["persons", "places", "orgs", "works", "events"].flatMap((k) => all[k] || []);
+  if (existing.length) {
+    const exRow = el("div", { class: "ed-sel-pop-row" }, [
+      el("span", { class: "ed-act-group", text: "or link an existing one" }),
+    ]);
+    for (const ent of existing) {
+      const b = el("button", { class: "ed-act-btn", text: `${ent.name || "(unnamed)"} (${ent.id})`, title: `link "${target.text}" to ${ent.name || ent.id}` });
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeSelPopover();
+        annotateSelection(target, ent.id, null);
+      });
+      exRow.appendChild(b);
+    }
+    pop.appendChild(exRow);
+  }
+
+  const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
+  xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+  pop.appendChild(xBtn);
+
+  // Anchor under the selection, relative to the scrolling reading pane.
+  const rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
+  const hostRect = host.getBoundingClientRect();
+  host.appendChild(pop);
+  pop.style.left = Math.max(0, Math.min(rect.left - hostRect.left, host.clientWidth - pop.offsetWidth - 8)) + "px";
+  pop.style.top = (rect.bottom - hostRect.top + host.scrollTop + 6) + "px";
+}
+
+// Selection handling: a finished mouse selection inside the reading pane opens
+// the popover; Escape or a click elsewhere closes it.
+document.addEventListener("mouseup", (e) => {
+  if (!app.state) return;
+  const inReading = e.target instanceof Element && e.target.closest("#ed-reading");
+  const inPop = e.target instanceof Element && e.target.closest("#ed-sel-pop");
+  if (inPop) return;
+  setTimeout(() => {
+    if (!inReading) { removeSelPopover(); return; }
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) { removeSelPopover(); return; }
+    openSelPopover();
+  }, 0);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.getElementById("ed-sel-pop")) removeSelPopover();
+});
 
 // ---- editorial notes (M3.5) ------------------------------------------------
 
@@ -1112,7 +1285,6 @@ async function suggestEntities() {
       app.state = parseEdition(doc.raw);
       setDirty(true);
       refreshAfterStandoffEdit();
-      selectTab("index");
     }
     setStatus(`${added} AI suggestion(s) added in violet. Confirm or delete each.`);
   } catch (err) {
@@ -1177,16 +1349,25 @@ function isWellFormed(raw) {
   return { ok: !err, message: err ? err.textContent.replace(/\s+/g, " ").trim().slice(0, 200) : "" };
 }
 
+/**
+ * Live checks resolved into the footer: a status chip (ok / warning / error)
+ * that updates on every render, with the detail rows in a click popover. The
+ * checks themselves are unchanged (well-formedness, xml:id integrity vs the
+ * loaded baseline, tag-count drift); only their surface moved out of the way.
+ */
 function renderValidation() {
-  const host = $("ed-side");
-  clear(host);
+  const chip = $("ed-val-chip");
+  const pop = $("ed-val-pop");
+  if (!chip || !pop) return;
+  if (!app.state) { chip.hidden = true; pop.hidden = true; return; }
+
   const raw = serialize(app.state);
   const summary = structuralSummary(app.state);
+  const rows = [];
 
   // Well-formedness
   const wf = isWellFormed(raw);
-  const sec1 = el("div", { class: "ed-section" }, [el("h4", { text: "Live checks" })]);
-  sec1.appendChild(valRow(wf.ok ? "ok" : "err", wf.ok ? "Well-formed XML" : `Not well-formed: ${wf.message}`));
+  rows.push([wf.ok ? "ok" : "err", wf.ok ? "Well-formed XML" : `Not well-formed: ${wf.message}`]);
 
   // Structural integrity vs the loaded baseline (lossless round-trip evidence).
   // Compares real @xml:id values, so a lossless edit that drops a synthetic cell
@@ -1196,12 +1377,12 @@ function renderValidation() {
   const missing = [...base.xmlIds].filter((id) => !curIds.has(id));
   const added = [...curIds].filter((id) => !base.xmlIds.has(id)).length;
   if (!missing.length && added === 0) {
-    sec1.appendChild(valRow("ok", base.xmlIds.size
+    rows.push(["ok", base.xmlIds.size
       ? `All ${base.xmlIds.size} xml:id(s) preserved (no structural loss)`
-      : `All ${base.wordCount} reading unit(s) preserved (no xml:id to lose)`));
+      : `All ${base.wordCount} reading unit(s) preserved (no xml:id to lose)`]);
   } else {
-    if (missing.length) sec1.appendChild(valRow("err", `${missing.length} xml:id(s) lost: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""}`));
-    if (added) sec1.appendChild(valRow("warn", `${added} new xml:id(s) added`));
+    if (missing.length) rows.push(["err", `${missing.length} xml:id(s) lost: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""}`]);
+    if (added) rows.push(["warn", `${added} new xml:id(s) added`]);
   }
 
   // Tag-count drift vs baseline
@@ -1209,12 +1390,24 @@ function renderValidation() {
   for (const t of Object.keys(base.counts)) {
     if (summary.counts[t] !== base.counts[t]) drift.push(`${t}: ${base.counts[t]} -> ${summary.counts[t]}`);
   }
-  sec1.appendChild(drift.length
-    ? valRow("warn", `Tag counts changed: ${drift.join("; ")}`)
-    : valRow("ok", "Element counts unchanged"));
-  host.appendChild(sec1);
+  rows.push(drift.length
+    ? ["warn", `Tag counts changed: ${drift.join("; ")}`]
+    : ["ok", "Element counts unchanged"]);
 
-  // Structure overview
+  // Chip: worst level wins; the label stays short and truthful.
+  const errs = rows.filter((r) => r[0] === "err").length;
+  const warns = rows.filter((r) => r[0] === "warn").length;
+  const level = errs ? "err" : warns ? "warn" : "ok";
+  chip.hidden = false;
+  chip.className = "ed-val-chip " + level;
+  chip.textContent = errs ? "checks failing" : warns ? `checks: ${warns} warning(s)` : "well-formed, lossless";
+
+  // Detail popover
+  clear(pop);
+  const sec1 = el("div", { class: "ed-section" }, [el("h4", { text: "Live checks" })]);
+  for (const [kind, text] of rows) sec1.appendChild(valRow(kind, text));
+  pop.appendChild(sec1);
+
   const sec2 = el("div", { class: "ed-section" }, [el("h4", { text: "Structure" })]);
   sec2.appendChild(kv("Folios", summary.folios));
   sec2.appendChild(kv("Words", summary.words));
@@ -1222,15 +1415,12 @@ function renderValidation() {
   for (const t of ["surface", "zone", "l", "lb", "pb", "note", "standOff"]) {
     if (summary.counts[t]) sec2.appendChild(kv(`<${t}>`, summary.counts[t]));
   }
-  host.appendChild(sec2);
+  pop.appendChild(sec2);
 
-  // Honest scope note: heavy validation is the offline harness, not the browser.
-  const sec3 = el("div", { class: "ed-section" }, [el("h4", { text: "Full validation" })]);
-  sec3.appendChild(el("div", {
+  pop.appendChild(el("div", { class: "ed-section" }, [el("div", {
     class: "ed-hint",
     text: "RelaxNG (tei_all.rng) and Schematron run in the offline harness (test/harness). The browser checks well-formedness and structural integrity only.",
-  }));
-  host.appendChild(sec3);
+  })]));
 }
 
 function valRow(kind, text) {
@@ -1429,20 +1619,22 @@ document.addEventListener("keydown", (e) => {
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });
 $("btn-suggest").addEventListener("click", suggestEntities);
-$("btn-validate").addEventListener("click", () => { renderValidation(); setStatus("Live checks refreshed"); });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
 
-// Right-pane tabs: validation (default) <-> entity index.
-function selectTab(which) {
-  const onIndex = which === "index";
-  $("ed-side").hidden = onIndex;
-  $("ed-index").hidden = !onIndex;
-  $("tab-validation").classList.toggle("active", !onIndex);
-  $("tab-index").classList.toggle("active", onIndex);
-}
-$("tab-validation").addEventListener("click", () => selectTab("validation"));
-$("tab-index").addEventListener("click", () => selectTab("index"));
+// Validation chip: the live checks run on every render; the chip opens the
+// detail popover, a click elsewhere or Escape closes it.
+$("ed-val-chip").addEventListener("click", (e) => {
+  e.stopPropagation();
+  $("ed-val-pop").hidden = !$("ed-val-pop").hidden;
+});
+document.addEventListener("click", (e) => {
+  const pop = $("ed-val-pop");
+  if (!pop.hidden && !(e.target instanceof Element && e.target.closest("#ed-val-pop"))) pop.hidden = true;
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("ed-val-pop").hidden) $("ed-val-pop").hidden = true;
+});
 
 window.addEventListener("beforeunload", (e) => {
   if (app.dirty) { e.preventDefault(); e.returnValue = ""; }

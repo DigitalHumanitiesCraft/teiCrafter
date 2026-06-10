@@ -47,6 +47,37 @@ function stripHash(v) {
   return v ? v.replace(/^#/, "") : v;
 }
 
+// Entity tokens decodeEntities resolves, for the display->raw offset scanner.
+const RE_ENTITY_TOKEN = /&(?:lt|gt|quot|apos|amp|#x[0-9a-fA-F]+|#\d+);/y;
+
+/**
+ * Map a DISPLAY range (offsets into the decoded text the renderer shows, i.e.
+ * textOf()/cell.text) back to RAW offsets relative to the text node's slice.
+ * Scans the raw slice once; an entity reference counts as its decoded length
+ * in display units (UTF-16). Returns [relFrom, relTo] or null when the range
+ * does not land on scannable positions. The caller should verify the decoded
+ * raw slice equals the selected text before splicing.
+ */
+export function rawRangeForDisplay(rawSlice, dFrom, dTo) {
+  if (!(Number.isInteger(dFrom) && Number.isInteger(dTo)) || dFrom < 0 || dFrom >= dTo) return null;
+  let rawPos = 0, dispPos = 0, relFrom = -1, relTo = -1;
+  while (rawPos <= rawSlice.length) {
+    if (dispPos === dFrom && relFrom < 0) relFrom = rawPos;
+    if (dispPos === dTo) { relTo = rawPos; break; }
+    if (rawPos === rawSlice.length) break;
+    RE_ENTITY_TOKEN.lastIndex = rawPos;
+    const m = RE_ENTITY_TOKEN.exec(rawSlice);
+    if (m) {
+      dispPos += decodeEntities(m[0]).length;
+      rawPos += m[0].length;
+    } else {
+      dispPos += 1;
+      rawPos += 1;
+    }
+  }
+  return relFrom >= 0 && relTo > relFrom ? [relFrom, relTo] : null;
+}
+
 /** Count tracked element tags in a raw TEI string (namespace-agnostic, regex).
  *  Kept string-based because the harness calls it on a serialized candidate. */
 export function countTags(raw) {

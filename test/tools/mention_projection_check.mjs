@@ -7,9 +7,9 @@
  * Run: node test/tools/mention_projection_check.mjs   (exit 0 = all pass)
  */
 
-import { parseEdition, serialize } from "../../docs/js/editor/edition.js";
+import { parseEdition, serialize, rawRangeForDisplay, unescapeXmlText } from "../../docs/js/editor/edition.js";
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
-import { addEntity, linkMention, readEntities } from "../../docs/js/editor/standoff.js";
+import { addEntity, linkMention, linkMentionRange, readEntities } from "../../docs/js/editor/standoff.js";
 import { markCritical } from "../../docs/js/editor/criticism.js";
 
 let passed = 0, failed = 0;
@@ -130,6 +130,46 @@ check(parseDocument(rdoc.raw).serialize() === rdoc.raw,
   "retargeted document round-trips byte-identically");
 check(linkMention(rstate.doc, cellByText(rstate, "Zweig").node, persB) === rstate.doc,
   "relinking to the same entity through the wrapper is a no-op (SAME doc)");
+
+// --- 8. selection annotation: wrap a SUB-RANGE of a line (M2.8) ---------------
+// The Hersch flow: select "Komotau" inside a prose line, annotate it as a
+// place. The wrap is a lossless splice of exactly the selected bytes; the
+// re-parsed line splits and the selected words project the mention.
+
+let sdoc = parseEdition(LRAW).doc;
+sdoc = addEntity(sdoc, "place", { name: "Komotau" });
+let sstate = parseEdition(sdoc.raw);
+const splc = readEntities(sstate.doc).places[0].id;
+const lineCell = sstate.cells.find((c) => c.text.includes("Komotau liegt"));
+const beforeRaw = sdoc.raw;
+const dFrom = lineCell.text.indexOf("Komotau");
+const dTo = dFrom + "Komotau".length;
+const rel = rawRangeForDisplay(lineCell.rawText, dFrom, dTo);
+check(rel !== null && lineCell.rawText.slice(rel[0], rel[1]) === "Komotau",
+  "display range maps to the exact raw bytes of the selection");
+
+sdoc = linkMentionRange(sstate.doc, lineCell.node, rel[0], rel[1], splc);
+sstate = parseEdition(sdoc.raw);
+const expected = beforeRaw.slice(0, lineCell.node.start + rel[0])
+  + `<name ref="#${splc}">Komotau</name>`
+  + beforeRaw.slice(lineCell.node.start + rel[1]);
+check(sdoc.raw === expected,
+  "sub-range wrap is a pure insertion around the selected bytes (full reconstruction)");
+check(cellByText(sstate, "Komotau").mention === splc,
+  "the selected words project the mention after the line splits");
+check(cellByText(sstate, "liegt in Boehmen").mention === null,
+  "the rest of the line stays unlinked");
+check(parseDocument(sdoc.raw).serialize() === sdoc.raw,
+  "sub-range annotated document round-trips byte-identically");
+check(linkMentionRange(sstate.doc, cellByText(sstate, "Komotau").node, 0, 3, splc) === sstate.doc,
+  "a sub-range inside an existing <name> is refused (SAME doc, no nesting)");
+
+// Display->raw mapping across entity references: "&amp;" shows as 1 char.
+const eraw = "vor &amp; nach";
+const erel = rawRangeForDisplay(eraw, 6, 10); // display "nach" in "vor & nach"
+check(erel !== null && eraw.slice(erel[0], erel[1]) === "nach"
+  && unescapeXmlText(eraw).slice(6, 10) === "nach",
+  "display offsets map correctly across entity references");
 
 // --- summary -----------------------------------------------------------------
 

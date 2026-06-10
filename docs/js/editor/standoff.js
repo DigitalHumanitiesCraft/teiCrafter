@@ -439,6 +439,33 @@ export function linkMention(doc, textNode, entityId) {
 }
 
 /**
+ * Wrap a SUB-RANGE of a text node's content in <name ref="#entityId">...</name>.
+ * relFrom/relTo are raw offsets RELATIVE to the text node's [start, end] (the
+ * caller maps display offsets through the entity decoding). Lossless splice.
+ * Returns the SAME doc when the range is invalid, whitespace-only, or the node
+ * already sits inside a <name> (a sub-range of a linked mention must be
+ * retargeted at the existing <name>, never nested).
+ */
+export function linkMentionRange(doc, textNode, relFrom, relTo, entityId) {
+  if (!textNode || textNode.type !== "text") return doc;
+  // Same bounded ancestor walk as linkMention/mentionRef: inside a <name>,
+  // refuse (SAME doc) instead of producing nested conflicting refs.
+  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
+    if (p.localName === "name") return doc;
+    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
+  }
+  const len = textNode.end - textNode.start;
+  if (!Number.isInteger(relFrom) || !Number.isInteger(relTo)) return doc;
+  if (relFrom < 0 || relTo > len || relFrom >= relTo) return doc;
+  const from = textNode.start + relFrom;
+  const to = textNode.start + relTo;
+  const inner = doc.raw.slice(from, to);
+  if (!inner.trim()) return doc;
+  const wrapped = '<name ref="' + escapeAttr("#" + entityId) + '">' + inner + "</name>";
+  return spliceDocument(doc, from, to, wrapped);
+}
+
+/**
  * Every element carrying @ref === '#'+entityId. Returns [{ node }] in doc order.
  */
 export function findMentions(doc, entityId) {

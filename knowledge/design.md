@@ -61,10 +61,10 @@ A three-pane editor workspace:
 Reading text (cells)  |  Facsimile (OpenSeadragon)  |  Validation and structure / Index
 ```
 
-- Click a cell to edit it inline; the input matches the reading typography.
+- **Selecting words annotates them (M2.8).** The primary annotation gesture is the scholarly one: select the exact words with the mouse ("KARL JASPERS" inside a prose line), and a popover offers "annotate as a new person / place / organisation / work / event" or linking an existing entity; afterwards the index entry is revealed so the authority lookup (GND, Wikidata, GeoNames) is one click away. Clicking a cell still opens the inline action chooser for cell-level operations (edit / note / mark; whole-cell link only at word granularity, since linking a whole prose line is not a meaningful mention).
 - The facsimile pane is a real OpenSeadragon deep-zoom viewer; hovering a line highlights its `<zone>` overlay and vice versa (real `@facs` link, or positional). When a document carries no page images at all, the pane auto-collapses to a two-pane layout (a permanently empty viewer is noise); a toolbar toggle shows or hides it for documents that have images.
 - Page turning lives in the reading-pane header (previous / `page i/n` / next), where one expects it, plus ArrowLeft/ArrowRight; not in the global toolbar.
-- The right pane carries two tabs: "Validation and structure" (live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness) and "Index" (the editable `<standOff>` index of persons, places, organisations, works and events). The AI entity-suggest action sits at the top of the Index tab, where the entities live, labelled and explained, in the violet family.
+- The right pane is the Index (the editable `<standOff>` index of persons, places, organisations, works and events), with the AI entity-suggest action at its top, labelled and explained, in the violet family. The live checks (well-formedness, lossless integrity, structure counts) run automatically and surface as a status chip in the footer (triple-coded ok/warning/error) with the detail rows in a click popover; full RelaxNG/Schematron stays in the offline harness. Validation is ambient state, not a destination pane.
 
 Loading (decided by the operator, 2026-06-10): one "Open TEI..." button plus an examples dropdown with the three demo sources (Wenzelsbibel synthetic, ZBZ Jeanne Hersch with real scans, Stefan Zweig Digital o_szd.1079 with GAMS facsimile), and the violet "New from text (LLM)" entry. Before a document is loaded, the reading pane shows a start screen with the same three examples as cards plus the open button. The former toolbar mode toggles ("Add note", "Mark text") were removed: every cell operation is reachable through the inline action chooser (M2.6), so pre-toggled modes are no longer part of the surface.
 
@@ -98,8 +98,10 @@ A six-lens adversarial review of the built state (2026-06-10) hardened the layer
 | Component | Status |
 |-----------|--------|
 | Reading-text pane with inline cell edit | Built |
-| Facsimile pane: real images, deep zoom (OpenSeadragon 5.0.1), `<zone>` overlays bidirectionally linked to the reading text | Built |
-| Validation/structure pane (browser-light) | Built |
+| Facsimile pane: real images, deep zoom (OpenSeadragon 5.0.1), `<zone>` overlays bidirectionally linked to the reading text; auto-collapsed without images, toggleable | Built |
+| Live checks as a footer status chip with detail popover (formerly a right-pane tab) | Built (2026-06-10) |
+| Selection annotation: select words in a line, annotate as a new or existing entity, lossless sub-range wrap (M2.8) | Built (2026-06-10) |
+| Loading surface: Open TEI, examples dropdown (Wenzelsbibel / ZBZ / SZD), start screen with example cards | Built (2026-06-10) |
 | LLM on-ramp modal (violet) | Built |
 | Index panel: editable `<standOff>` index of persons, places, organisations, works and events (add, rename, delete) with in-text `<name ref>` linking | Built |
 | Authority lookup (M3.3): hand-entry plus live external lookup of authority records for index entries | Built |
@@ -109,6 +111,7 @@ A six-lens adversarial review of the built state (2026-06-10) hardened the layer
 | Inline cell action chooser replacing hidden mode toggles (M2.6) | Built (2026-06-10) |
 | Authoring-view forms for teiHeader and apparatus `<note>` bodies | Future |
 | standOff critical-apparatus / note-body authoring layer | Future |
+| teiCrafter-internal storage for edited TEIs (operator announcement 2026-06-10; design open) | Future (M2.9) |
 
 ## Related
 
