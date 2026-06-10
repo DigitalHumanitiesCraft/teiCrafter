@@ -111,7 +111,36 @@ function enableControls(on) {
   for (const id of ["btn-validate", "btn-download", "btn-note", "btn-suggest", "btn-critic"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) { setNoteMode(false); setCritMode(false); }
+  // M2.5 legend: visible only while a document is loaded (overview first).
+  const legend = $("ed-legend");
+  if (legend) {
+    if (on) buildLegend();
+    legend.hidden = !on;
+  }
   updateFolioButtons();
+}
+
+/**
+ * M2.5 legend strip: one chip per visual code in the reading text. Built once;
+ * chip labels reuse the index-panel section terms (singular) and the
+ * CRITICAL_KINDS labels, so every code reads the same everywhere.
+ */
+function buildLegend() {
+  const host = $("ed-legend");
+  if (!host || host.childElementCount) return;
+  const chip = (cls, label) => el("span", { class: "ed-legend-chip " + cls, text: label });
+  host.appendChild(el("span", { class: "ed-legend-title", text: "legend" }));
+  host.appendChild(chip("mention mention-pers", "person"));
+  host.appendChild(chip("mention mention-plc", "place"));
+  host.appendChild(chip("mention mention-org", "organisation"));
+  host.appendChild(chip("mention mention-wrk", "work"));
+  host.appendChild(chip("mention mention-evt", "event"));
+  host.appendChild(chip("mention mention-ai", "AI-proposed"));
+  host.appendChild(chip("has-note", "note"));
+  host.appendChild(chip("crit-unclear", CRITICAL_KINDS.unclear.label));
+  host.appendChild(chip("crit-del", CRITICAL_KINDS.del.label));
+  host.appendChild(chip("crit-add", CRITICAL_KINDS.add.label));
+  host.appendChild(chip("crit-gap", CRITICAL_KINDS.gap.label));
 }
 
 // ---- note index (for has-note markers) -------------------------------------
@@ -281,6 +310,29 @@ function render() {
   renderValidation();
 }
 
+// M2.5: one id -> { name, kind, ai } map per render, so every linked mention can
+// carry its entity-type colour and a tooltip naming the entity. The kind comes
+// from the entity TYPE readEntities reports (not from the id prefix), so
+// hand-authored ids without a pers_/plc_ prefix still colour correctly.
+const MENTION_KIND = Object.freeze({
+  person: "pers", place: "plc", org: "org", work: "wrk", event: "evt",
+});
+
+function entityMetaMap() {
+  const meta = new Map();
+  if (!app.state) return meta;
+  const all = standoff.readEntities(app.state.doc);
+  for (const [key, type] of [
+    ["persons", "person"], ["places", "place"], ["orgs", "org"],
+    ["works", "work"], ["events", "event"],
+  ]) {
+    for (const e of all[key] || []) {
+      if (e.id) meta.set(e.id, { name: e.name, kind: MENTION_KIND[type], ai: !!e.ai });
+    }
+  }
+  return meta;
+}
+
 function renderReading() {
   const host = $("ed-reading");
   clear(host);
@@ -294,6 +346,7 @@ function renderReading() {
     host.appendChild(el("div", { class: "ed-empty", text: "This folio has no transcribed text." }));
     return;
   }
+  const mentions = entityMetaMap();
   folio.lines.forEach((line, lineIndex) => {
     const row = el("div", { class: "ed-line", dataset: { line: String(lineIndex) } });
     row.appendChild(el("span", { class: "ed-line-n", text: line.n != null ? line.n : "" }));
@@ -304,11 +357,19 @@ function renderReading() {
       // A gap is a read-only marker (no text); other critical kinds add a class so
       // the wrapped reading text shows its editorial status (dotted / struck / added).
       const critClass = cell.crit ? " crit-" + cell.crit : "";
+      // M2.5 visibility layer: a linked mention renders in its entity-type colour;
+      // a mention of an AI-proposed (unconfirmed) entity renders in the violet AI
+      // family, so machine output stays separable (design.md). A mention whose
+      // target id is missing keeps the generic fallback style.
+      const meta = !cell.gap && cell.mention ? mentions.get(cell.mention) || null : null;
+      const mentionClass = !cell.gap && cell.mention
+        ? " mention" + (meta ? ` mention-${meta.kind}${meta.ai ? " mention-ai" : ""}` : "")
+        : "";
       const span = el("span", {
-        class: "ed-w" + (note ? " has-note" : "") + critClass,
+        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass,
         dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
         text: cell.gap ? "[...]" : cell.text,
-        title: critTitle(cell, note, linking),
+        title: critTitle(cell, note, linking, meta),
       });
       span.addEventListener("click", () => {
         if (app.critMode || cell.gap) beginCritic(span, cell);
@@ -329,13 +390,15 @@ function beginEdit(span, cell, lineIndex) {
   if (cell.gap) { beginCritic(span, cell); return; }
 
   // Link mode: a "link" was started from the index panel, so the next click on a
-  // word/line wraps that mention in <name ref="#id"> instead of editing it.
+  // word/line wraps that mention in <name ref="#id"> instead of editing it. This
+  // precedence is kept OUTSIDE the action chooser, so an index-initiated link
+  // still completes on the next text click without an extra step (M2.6 contract).
   if (app.linkTarget) {
     const target = app.linkTarget;
     try {
       app.state = parseEdition(standoff.linkMention(app.state.doc, cell.node, target.id).raw);
       setDirty(true);
-      setStatus(`Linked "${cell.text}" to ${target.name}`);
+      setStatus(`Linked "${cell.text.trim()}" to ${target.name}`);
     } catch (err) {
       setStatus(`Link failed: ${err.message}`);
     }
@@ -345,6 +408,13 @@ function beginEdit(span, cell, lineIndex) {
     return;
   }
 
+  // M2.6: the default click opens the inline action chooser; nothing hides
+  // behind a pre-toggled mode anymore.
+  beginActions(span, cell, lineIndex);
+}
+
+/** The plain text-correction input, extracted from beginEdit (M2.6 refactor). */
+function beginTextInput(span, cell) {
   // Edit only the trimmed core; the node's edge whitespace (indentation/newlines)
   // is re-attached on commit, so a line edit never collapses the surrounding
   // formatting. Word-level <w> nodes have no edge whitespace (core === cell.text).
@@ -382,6 +452,164 @@ function beginEdit(span, cell, lineIndex) {
     else if (e.key === "Escape") { e.preventDefault(); cancel(); }
   });
   inp.addEventListener("blur", commit);
+}
+
+// ---- shared document-mutation helper (M2.6 refactor) ------------------------
+
+/**
+ * Apply a doc -> doc function to the current document, then refresh state, the
+ * note index, the dirty flag, and the status line. A no-op (SAME doc) changes
+ * nothing. Shared by the critical chooser and the inline link picker, so every
+ * inline mutation runs through one code path.
+ */
+function applyDocFn(fn, label, failPrefix = "Edit") {
+  try {
+    const next = fn(app.state.doc);
+    if (next !== app.state.doc) {
+      app.state = parseEdition(next.raw);
+      app.noteByWord = indexNotes(app.state.raw);
+      setDirty(true);
+      setStatus(label);
+    }
+  } catch (err) {
+    setStatus(`${failPrefix} failed: ${err.message}`);
+  }
+}
+
+// ---- inline action chooser (M2.6) -------------------------------------------
+
+/**
+ * M2.6: clicking a cell offers every operation at the text itself: Edit / note /
+ * mark / link (with an in-place entity picker) / entity (jump to the linked index
+ * entry) / cancel. Follows the proven beginCritic pattern (box replaces the span,
+ * Escape closes, orphan guard). The toolbar toggles stay as shortcuts; the second
+ * click of a double-click triggers "edit" (quick edit), because non-edit buttons
+ * ignore the second click (e.detail > 1) and the box handles dblclick.
+ */
+function beginActions(span, cell) {
+  const host = $("ed-reading");
+  // Only one inline chooser at a time: rebuild the view first so we never leave
+  // an orphaned one behind, then re-acquire this cell's freshly rendered span.
+  if (host.querySelector(".ed-crit-pick, .ed-act-pick")) {
+    render();
+    span = host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
+    if (!span) return;
+  }
+  const box = el("span", { class: "ed-act-pick" });
+  let acted = false; // every action runs at most once per chooser instance
+
+  const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); close(); } };
+  const close = () => {
+    document.removeEventListener("keydown", onKey);
+    render();
+    renderIndex();
+  };
+  const reacquire = () => host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
+  const once = (handler) => () => {
+    if (acted) return;
+    acted = true;
+    handler();
+  };
+  const addBtn = (text, title, handler, opts = {}) => {
+    const b = el("button", { class: "ed-act-btn" + (opts.class ? " " + opts.class : ""), text, title });
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // The second click of a double-click (e.detail > 1) belongs to quick edit
+      // (the box's dblclick handler), not to whichever button it happens to hit.
+      if (e.detail > 1 && !opts.acceptDouble) return;
+      handler();
+    });
+    box.appendChild(b);
+    return b;
+  };
+
+  const doEdit = once(() => {
+    close();
+    const s = reacquire();
+    if (s) beginTextInput(s, app.state.cellById.get(cell.id) || cell);
+  });
+  const handOff = (fn) => once(() => {
+    close();
+    const s = reacquire();
+    if (s) fn(s, app.state.cellById.get(cell.id) || cell);
+  });
+
+  const editBtn = addBtn("edit",
+    app.state.profile === "word" ? "correct this word" : "correct this line",
+    doEdit, { acceptDouble: true });
+  addBtn("note", "attach an editorial note", handOff(beginNote));
+  addBtn("mark", "mark as unclear / deleted / added / gap", handOff(beginCritic));
+  addBtn("link", "link this text to an index entity", () => openLinkPicker());
+  if (cell.mention) {
+    addBtn("entity", "show the linked entity in the index", once(() => {
+      const id = cell.mention;
+      close();
+      revealEntity(id);
+    }));
+  }
+  addBtn("x", "cancel", once(() => close()));
+
+  // The in-place entity picker (second box state): groups and labels identical
+  // with the index panel, so the same entity reads the same everywhere.
+  const openLinkPicker = () => {
+    if (acted) return;
+    clear(box);
+    box.classList.add("ed-act-pick-entities");
+    const all = standoff.readEntities(app.state.doc);
+    const groups = [
+      ["Persons", all.persons], ["Places", all.places], ["Organisations", all.orgs],
+      ["Works", all.works], ["Events", all.events],
+    ];
+    let any = false;
+    for (const [label, items] of groups) {
+      if (!items || !items.length) continue;
+      any = true;
+      box.appendChild(el("span", { class: "ed-act-group", text: label }));
+      for (const ent of items) {
+        const b = el("button", {
+          class: "ed-act-btn",
+          text: `${ent.name || "(unnamed)"} (${ent.id})`,
+          title: `link this text to ${ent.name || ent.id}`,
+        });
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          once(() => {
+            applyDocFn(
+              (doc) => standoff.linkMention(doc, cell.node, ent.id),
+              `Linked "${cell.text.trim()}" to ${ent.name}`,
+              "Link",
+            );
+            close();
+          })();
+        });
+        box.appendChild(b);
+      }
+    }
+    if (!any) {
+      box.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet; add one in the Index first" }));
+    }
+    const cancelBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
+    cancelBtn.addEventListener("click", (e) => { e.stopPropagation(); if (!acted) { acted = true; close(); } });
+    box.appendChild(cancelBtn);
+  };
+
+  span.replaceWith(box);
+  box.addEventListener("dblclick", (e) => { e.stopPropagation(); doEdit(); });
+  // Focus "edit" so plain Enter triggers quick edit (and the focus ring shows
+  // where the chooser sits in the text).
+  editBtn.focus();
+  document.addEventListener("keydown", onKey);
+}
+
+/** Jump to an entity's row in the index panel and flash it (M2.6 "entity"). */
+function revealEntity(id) {
+  selectTab("index");
+  if (indexPanel) indexPanel.setActive(id);
+  const row = document.querySelector(`#ed-index .ed-idx-row[data-id="${CSS.escape(id)}"]`);
+  if (!row) { setStatus(`No index entry for ${id}`); return; }
+  row.scrollIntoView({ block: "center" });
+  row.classList.add("ed-idx-row-flash");
+  setTimeout(() => row.classList.remove("ed-idx-row-flash"), 1200);
 }
 
 // ---- editorial notes (M3.5) ------------------------------------------------
@@ -448,16 +676,23 @@ function critHint() {
   if (app.critMode) return "click a line to mark it (unclear / deleted / added / gap)";
   if (app.noteMode) return "click a line to attach a note";
   if (app.linkTarget) return `click a line to link it to ${app.linkTarget.name}`;
-  return app.state && app.state.profile === "word" ? "click a word to correct it" : "click a line to correct it";
+  return app.state && app.state.profile === "word" ? "click a word for actions" : "click a line for actions";
 }
 
-/** Tooltip for a reading cell, reflecting its link / note / critical state. */
-function critTitle(cell, note, linking) {
+/** Tooltip for a reading cell, composed from its link / note / critical state. */
+function critTitle(cell, note, linking, meta) {
   if (linking) return `click to link to ${app.linkTarget.name}`;
   if (cell.gap) return "gap: omitted or illegible text; click to remove";
-  if (cell.crit) return `${cell.crit}${cell.critSole ? "; click to change the markup" : " (shared markup)"}`;
-  if (note) return `note: ${note}`;
-  return app.critMode ? "click to mark this text" : "click to correct";
+  const parts = [];
+  if (cell.mention) {
+    parts.push(meta
+      ? `Linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unconfirmed" : ""}`
+      : `Linked to a missing entity (${cell.mention})`);
+  }
+  if (cell.crit) parts.push(cell.critSole ? cell.crit : `${cell.crit} (shared markup)`);
+  if (note) parts.push(`note: ${note}`);
+  parts.push(app.critMode ? "click to mark this text" : "click for actions");
+  return parts.join("; ");
 }
 
 /** Toggle "mark text" mode: the next cell click applies textual-critical markup. */
@@ -478,9 +713,10 @@ function setCritMode(on) {
  */
 function beginCritic(span, cell) {
   const host = $("ed-reading");
-  // If a chooser is already open, rebuild the reading view first so we never leave
-  // an orphaned one behind, then re-acquire this cell's freshly rendered span.
-  if (host.querySelector(".ed-crit-pick")) {
+  // If an inline chooser (critical or action) is already open, rebuild the reading
+  // view first so we never leave an orphaned one behind, then re-acquire this
+  // cell's freshly rendered span.
+  if (host.querySelector(".ed-crit-pick, .ed-act-pick")) {
     render();
     span = host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
     if (!span) return;
@@ -494,17 +730,7 @@ function beginCritic(span, cell) {
     if (rerender) { render(); renderIndex(); }
   };
   const apply = (fn, label) => {
-    try {
-      const next = fn(app.state.doc);
-      if (next !== app.state.doc) {
-        app.state = parseEdition(next.raw);
-        app.noteByWord = indexNotes(app.state.raw);
-        setDirty(true);
-        setStatus(label);
-      }
-    } catch (err) {
-      setStatus(`Markup failed: ${err.message}`);
-    }
+    applyDocFn(fn, label, "Markup");
     close();
   };
   const addBtn = (text, title, handler) => {
@@ -751,7 +977,9 @@ async function suggestEntities() {
  */
 function highlightMentions(entity) {
   clearLinks();
-  for (const w of document.querySelectorAll("#ed-reading .mention")) w.classList.remove("mention");
+  // Temporary selection highlight: its own class (mention-hit), so clearing it
+  // never strips the permanent M2.5 visibility classes (.mention.mention-*).
+  for (const w of document.querySelectorAll("#ed-reading .mention-hit")) w.classList.remove("mention-hit");
   const mentions = standoff.findMentions(app.state.doc, entity.id);
   if (!mentions.length) {
     setStatus(`${entity.name}: no in-text mentions on any folio`);
@@ -769,7 +997,7 @@ function highlightMentions(entity) {
     const start = Number(span.dataset.start);
     for (const r of ranges) {
       if (r.from != null && r.to != null && r.from <= start && start < r.to) {
-        span.classList.add("mention");
+        span.classList.add("mention-hit");
         hitsHere++;
         const li = Number(span.dataset.line);
         if (Number.isInteger(li)) linesToHighlight.add(li);

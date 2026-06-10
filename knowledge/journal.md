@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-09
+updated: 2026-06-10
 language: en
 version: 0.9
 related: [project, specification, architecture, testing]
@@ -21,6 +21,19 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
+
+## 2026-06-10: UI restructuring built (M2.5 + M2.6), both objects re-verified in the browser, lookup finding closed
+
+The restructuring decided on 2026-06-09 is implemented. Session frame: the operator re-allowed dynamic multi-agent workflows for this session (an explicit, dated exception to the 2026-06-09 solo rule; used only for an adversarial multi-lens review of the diff, not for authoring), and browser checks ran agent-driven with the proven picker-stub method on :8123.
+
+- **M2.5 annotation visibility layer.** `cell.mention` projection in edition.js (nearest `<name ref>` ancestor, stops at line/paragraph level; gap cells stay null), renderer classes `mention mention-pers/-plc/-org/-wrk/-evt` with tooltips ("Linked to Name (id)"), violet `mention-ai` for mentions of AI-proposed, unconfirmed entities (separability per design.md), a triple-coded note marker (degree sign, review colour, after the word), and a legend strip naming all eleven visual codes, visible only while a document is loaded. Two new token pairs `--color-workName(-bg)` (bibl hue) and `--color-eventName(-bg)` (date hue). Three as-built refinements over the plan, with reasons recorded in design.md: colour kind from the entity TYPE (not the id prefix), the temporary index-selection highlight moved to its own `mention-hit` class so clearing it cannot strip the permanent layer, and the AI-violet mention rule.
+- **M2.6 inline cell action chooser.** Default click on a cell opens Edit / Note / Mark / Link / entity / cancel in place (`.ed-act-pick`, extending the proven crit-pick pattern with an orphan guard across both chooser kinds); the link button opens an in-place entity picker grouped exactly like the index panel, with an "add one in the Index first" hint when empty; "entity" jumps to the linked index row and flashes it; toolbar toggles stay as shortcuts; the index-initiated link target still completes on the next text click without the chooser. Double-click is quick edit via `e.detail` (non-edit buttons ignore the second click of a double-click, the box handles `dblclick`, "edit" is focused so Enter triggers it). All inline mutations now run through one shared `applyDocFn`.
+- **Proofs.** New engine check `mention_projection_check.mjs` 12/12 (pure, byte-neutral projection; dangling refs project; header `<name>` never leaks). Full regression green after the change (roundtrip 294/294, both worked examples 38/38, criticism 47/47, harness selftest 14/14, full harness PASS).
+- **Browser verification (agent-driven), both objects.** SZD o_szd.1079: no-op save byte-identical (5,247 chars), all chooser paths exercised (edit, note with visible marker and composed tooltip, mark unclear, link "Komotau" via picker rendering `mention-plc` with the placeName background, entity jump with row flash, Escape close, empty-index hint). ZBZ doc 1000: loads (4 folios, 152 lines), no-op save byte-identical (29,935 chars), facsimile with five zone overlays renders, inline correction plus org annotation and link (`mention-org`), the dirty save is well-formed and contains exactly the intended additions. The previously unexercised browser paths from the 06-09 list (mention link in browser, note click, live fetch) are now covered; the formal operator sight-off remains a separate gate.
+- **Finding 1 from 06-09 closed.** The live authority lookup "Failed to fetch" does not reproduce: Wikidata returns Chomutov Q146356 and GND 4031955-6 for "Komotau" through the unchanged service module. Verdict: transient endpoint/network outage, not a code defect (URL building and parsing were already covered 15/15). Lesson kept: diagnose before fixing.
+- **Cosmetic fix.** The link status line now trims line-level cell text (no raw newlines in the status).
+
+An adversarial multi-lens review (six lenses, three refuters per finding, majority vote) of the diff and of the Lagebild board ran as a background workflow; confirmed findings, if any, are handled as their own follow-up package.
 
 ## 2026-06-09 (night): Agent-driven live browser run, UI restructuring decided (M2.5/M2.6)
 

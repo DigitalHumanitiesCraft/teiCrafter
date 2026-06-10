@@ -136,6 +136,21 @@ function buildState(doc) {
     return null;
   };
 
+  // M2.5: read-only mention projection. Walk the text node's parent chain to the
+  // nearest <name ref> wrapper (the shape linkMention writes) and surface the
+  // referenced entity id, so the renderer can make the link visible. The walk
+  // stops at the line/paragraph level: a mention never leaks across reading
+  // units. No offsets, splices, or serialize() behaviour change.
+  const mentionRef = (node) => {
+    let p = node.parent;
+    while (p && p.type === "element") {
+      if (p.localName === "name") return stripHash(getAttr(p, "ref"));
+      if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") return null;
+      p = p.parent;
+    }
+    return null;
+  };
+
   // A cell id is the nearest ancestor xml:id, made unique against ids already used
   // for cells (synthetic positional fallback otherwise). Shared by text and gap cells.
   const makeCellId = (node) => {
@@ -172,6 +187,7 @@ function buildState(doc) {
         gap: true,
         crit: "gap",
         critSole: false,
+        mention: null,
       });
       continue;
     }
@@ -194,6 +210,7 @@ function buildState(doc) {
       gap: false,
       crit: critParent ? critParent.localName : null,
       critSole: critParent ? (critParent.children.length === 1 && critParent.children[0] === e.node) : false,
+      mention: mentionRef(e.node),
     });
   }
 

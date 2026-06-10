@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-06-09
+updated: 2026-06-10
 language: en
 version: 0.9
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
@@ -77,14 +77,16 @@ The editor itself uses no violet: deterministic, human-driven work is shown in t
 - **Information-seeking pattern:** overview first, then zoom and filter, then details on demand.
 - **No raw hex in components:** tokens only.
 
-## Planned Restructuring: Annotation Visibility and Unified Cell Actions (operator decision 2026-06-09)
+## Restructuring: Annotation Visibility and Unified Cell Actions (decided 2026-06-09, built 2026-06-10)
 
-An agent-driven live review on the real SZD object found the central gap between this document's philosophy ("provenance and validation state shown, not hidden") and the built reading pane: annotations are invisible. Linked mentions carry no class (`.ed-w.mention` exists in `editor.css` but is never assigned by the renderer), the entity-type annotation tokens are unused in the editor, notes show only a thin underline, and the editing flow hides behind three pre-toggled toolbar modes. Two workstreams are decided (goals.md M2.5 and M2.6):
+An agent-driven live review on the real SZD object found the central gap between this document's philosophy ("provenance and validation state shown, not hidden") and the built reading pane: annotations were invisible. Linked mentions carried no class (`.ed-w.mention` existed in `editor.css` but was never assigned by the renderer), the entity-type annotation tokens were unused in the editor, notes showed only a thin underline, and the editing flow hid behind three pre-toggled toolbar modes. Two workstreams were decided (goals.md M2.5 and M2.6) and are now built:
 
 1. **Annotation visibility layer (M2.5).** Linked mentions render with the entity-type colour family and a tooltip naming the entity; notes get a triple-coded marker (colour, icon, position); the existing critical-markup styles stay; a legend strip in the reading-pane header names every visual code (overview first). Requires a read-only `cell.mention` projection in the engine model.
 2. **Inline cell action chooser (M2.6).** Clicking a cell opens an in-place chooser (Edit / Note / unclear / del / add / gap / Link via entity picker / cancel) following the proven `.ed-crit-pick` pattern, so every operation is reachable at the text without pre-toggling a mode; the toolbar toggles remain as shortcuts, double-click is quick edit.
 
 Both stay token-only and keep label consistency; the chooser must preserve the index-initiated link flow (an active link target still completes on the next text click, without the chooser).
+
+As built (2026-06-10), three implementation decisions refine the concept: (1) the mention colour kind comes from the entity TYPE that `readEntities` reports, not from the id prefix, so hand-authored ids without a `pers_`/`plc_` prefix still colour correctly; (2) the temporary "show this entity's mentions" highlight moved to its own class (`.ed-w.mention-hit`, gold family) so clearing it never strips the permanent visibility classes; (3) a mention pointing at an AI-proposed, unconfirmed entity renders in the violet AI family (and says so in its tooltip), keeping machine output separable in the reading text itself. Two token pairs were added for the remaining entity types: `--color-workName(-bg)` shares the bibl hue (a work is a bibliographic entity), `--color-eventName(-bg)` shares the date hue (an event is a datable occurrence); they are independent tokens so either family can diverge later. Double-click as quick edit works through the chooser: non-edit buttons ignore the second click of a double-click (`e.detail > 1`), the chooser box handles `dblclick`, and "edit" is focused so plain Enter also triggers it.
 
 ## Components Present vs Future
 
@@ -98,8 +100,8 @@ Both stay token-only and keep label consistency; the chooser must preserve the i
 | Authority lookup (M3.3): hand-entry plus live external lookup of authority records for index entries | Built |
 | Note creation (M3.5): adding `<note>` annotations to the document | Built |
 | Textual-critical markup (M3.6): a Mark-text mode wraps a line in `<unclear>`/`<del>`/`<add>` or marks a `<gap>`, in the editorial colour families (dotted gold / struck red / underlined blue / muted gap), never violet | Built |
-| Annotation visibility layer: mentions/notes/crit visible in the reading text, entity-type colours, legend (M2.5) | Planned (decided 2026-06-09) |
-| Inline cell action chooser replacing hidden mode toggles (M2.6) | Planned (decided 2026-06-09) |
+| Annotation visibility layer: mentions/notes/crit visible in the reading text, entity-type colours, legend (M2.5) | Built (2026-06-10) |
+| Inline cell action chooser replacing hidden mode toggles (M2.6) | Built (2026-06-10) |
 | Authoring-view forms for teiHeader and apparatus `<note>` bodies | Future |
 | standOff critical-apparatus / note-body authoring layer | Future |
 

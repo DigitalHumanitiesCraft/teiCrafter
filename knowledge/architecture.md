@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-06-09
+updated: 2026-06-10
 language: en
 version: 0.9
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
@@ -41,8 +41,8 @@ The engine is three pure-then-UI layers. The lower two are DOM-free, so the exac
 | Layer | File | Responsibility |
 |-------|------|----------------|
 | 1. Generic document core | `js/editor/tei-document.js` | A small XML tokenizer builds an offset-true tree: every element, attribute value and text node carries byte offsets into the raw string. Schema-free recognizers by local-name (`pb`, `lb`, `l`, `w`, `surface`, `zone`, `note`, `@facs`, entities, `CRITICAL_LOCALS` for textual criticism) plus shared helpers (`splitEdge`, `nearestAncestor`, `isReadingContext`). Lossless edit ops (`editTextNode`, `editAttrValue`, `spliceDocument`); escaping preserves existing character/entity references and a no-op edit (the user's text decodes to what is already there) returns the same document, so editing a node holding `&nbsp;`/`&#nn;`/`&quot;` never corrupts it. `serialize()` returns the raw string, so round-trip is byte-identical by construction. |
-| 2. Edition model | `js/editor/edition.js` | Projects any parsed TEI into the shape the UI consumes: folios (split by `<pb>`), lines (by `<lb>`/`<l>`), and editable cells (reading-text nodes). The profile (`word` if `<w>` present, else `line`) emerges from the document. `editWordText`/`editCell` apply a lossless splice and re-parse. Surfaces a `<gap/>` as its own read-only cell and tags every text cell with its immediate textual-critical wrapper (`crit`) and whether the cell is that wrapper's sole content (`critSole`, the gate for a safe "clear"). Preserves a back-compatible API used by the headless proofs. |
-| 3. UI controller | `js/editor/editor-app.js` | Three-pane shell wiring: open (File System Access API with a file-input fallback, plus the served synthetic demo), folio navigation, inline cell editing, the OpenSeadragon facsimile with zone linking, the browser-light validation panel, the tabbed index panel, save and download, and the LLM on-ramp modal. |
+| 2. Edition model | `js/editor/edition.js` | Projects any parsed TEI into the shape the UI consumes: folios (split by `<pb>`), lines (by `<lb>`/`<l>`), and editable cells (reading-text nodes). The profile (`word` if `<w>` present, else `line`) emerges from the document. `editWordText`/`editCell` apply a lossless splice and re-parse. Surfaces a `<gap/>` as its own read-only cell and tags every text cell with its immediate textual-critical wrapper (`crit`), whether the cell is that wrapper's sole content (`critSole`, the gate for a safe "clear"), and its linked entity id (`mention`, M2.5: the nearest `<name ref>` ancestor below the line/paragraph level; a pure read projection, no offset or serialization change). Preserves a back-compatible API used by the headless proofs. |
+| 3. UI controller | `js/editor/editor-app.js` | Three-pane shell wiring: open (File System Access API with a file-input fallback, plus the served synthetic demo), folio navigation, the inline cell action chooser (M2.6: click a cell for Edit / Note / Mark / Link-with-entity-picker / entity-jump / cancel in place; toolbar toggles remain shortcuts, double-click is quick edit, an index-initiated link target still completes on the next text click), the M2.5 visibility layer (per-entity-type mention colours with tooltips, violet for AI-proposed targets, a triple-coded note marker, a legend strip), the OpenSeadragon facsimile with zone linking, the browser-light validation panel, the tabbed index panel, save and download, and the LLM on-ramp modal. All inline mutations run through one shared `applyDocFn` path. |
 
 ### Supporting modules (around the engine)
 

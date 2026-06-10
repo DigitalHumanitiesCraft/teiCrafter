@@ -284,8 +284,64 @@
 .ed-idx-lookupid { font-family: var(--font-mono); color: var(--color-text-muted); }
 .ed-idx-lookupdesc { color: var(--color-text-muted); width: 100%; }
 
-/* Reading-text mention highlight (entity links) */
+/* M2.5 annotation visibility layer: every linked mention is visible in the
+   reading text, coloured by entity type (the annotation token family). The
+   generic .mention rule stays as the fallback for a mention whose target id has
+   no index entry (dangling ref). A mention of an AI-proposed, unconfirmed entity
+   uses the violet AI family so machine output stays separable (design.md). */
 .ed-w.mention { background: var(--color-blue-light); box-shadow: inset 0 -2px 0 var(--color-blue); }
+.ed-w.mention-pers { background: var(--color-persName-bg); box-shadow: inset 0 -2px 0 var(--color-persName); }
+.ed-w.mention-plc { background: var(--color-placeName-bg); box-shadow: inset 0 -2px 0 var(--color-placeName); }
+.ed-w.mention-org { background: var(--color-orgName-bg); box-shadow: inset 0 -2px 0 var(--color-orgName); }
+.ed-w.mention-wrk { background: var(--color-workName-bg); box-shadow: inset 0 -2px 0 var(--color-workName); }
+.ed-w.mention-evt { background: var(--color-eventName-bg); box-shadow: inset 0 -2px 0 var(--color-eventName); }
+.ed-w.mention-ai { background: var(--color-ai-tint); box-shadow: inset 0 -2px 0 var(--color-ai); }
+
+/* Temporary "show this entity's mentions" highlight (index-panel selection).
+   Its own class, so clearing it never strips the permanent visibility layer. */
+.ed-w.mention-hit { background: var(--color-gold-light); box-shadow: inset 0 -2px 0 var(--color-gold); }
+
+/* M2.5 note marker, triple-coded: colour (review family) + icon (degree sign
+   after the word) + position (the existing underline via .has-note). */
+.ed-w.has-note::after {
+  content: "\00B0";
+  color: var(--color-review);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  vertical-align: super;
+}
+
+/* M2.5 legend strip under the reading-pane header: names every visual code. */
+.ed-legend {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-secondary); border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-xs); color: var(--color-text-secondary);
+}
+.ed-legend[hidden] { display: none; }
+.ed-legend-title { text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); }
+.ed-legend-chip { font-family: var(--font-serif); padding: 0 3px; border-radius: 2px; white-space: nowrap; }
+
+/* M2.6 inline action chooser (and its entity-picker state), extending the proven
+   .ed-crit-pick pattern. The entity picker can grow with the index, so it wraps
+   and scrolls instead of pushing the line apart. */
+.ed-act-pick { display: inline-flex; gap: var(--space-xs); align-items: center; vertical-align: baseline; flex-wrap: wrap; }
+.ed-act-pick-entities {
+  max-width: 100%; max-height: 180px; overflow: auto;
+  padding: var(--space-xs); border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm); background: var(--color-panel);
+}
+.ed-act-btn { font-family: var(--font-ui); font-size: var(--font-size-xs); line-height: 1.4;
+  padding: 1px 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-panel); color: var(--color-text); cursor: pointer; }
+.ed-act-btn:hover, .ed-act-btn:focus-visible { border-color: var(--color-gold); color: var(--color-gold-hover); background: var(--color-gold-light); }
+.ed-act-group { width: 100%; font-family: var(--font-ui); font-size: var(--font-size-xs);
+  color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .08em; }
+.ed-act-empty { font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text-muted); }
+
+/* M2.6 "entity" jump: flash the index row the chooser navigated to. */
+.ed-idx-row-flash { background: var(--color-gold-light); transition: background .6s ease; }
 
 .ed-footer {
   display: flex; align-items: center; gap: var(--space-md);

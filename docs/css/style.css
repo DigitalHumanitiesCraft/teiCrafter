@@ -49,6 +49,13 @@
     --color-placeName-bg: #E6F5F3;
     --color-orgName: #7B68AE;
     --color-orgName-bg: #F0EDF6;
+    /* Works share the bibl hue (a work IS a bibliographic entity), events the date
+       hue (an event is a datable occurrence); own tokens so components stay
+       hex-free and either family can diverge later without touching components. */
+    --color-workName: #C47A8A;
+    --color-workName-bg: #FAF0F2;
+    --color-eventName: #B8860B;
+    --color-eventName-bg: #FDF6E3;
     --color-date: #B8860B;
     --color-date-bg: #FDF6E3;
     --color-bibl: #C47A8A;
