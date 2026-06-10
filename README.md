@@ -13,7 +13,9 @@
 
 ## Overview
 
-teiCrafter is a client-only, browser-based editor for arbitrary [TEI-XML](https://tei-c.org/). You open an existing edition, correct it folio by folio at its natural granularity, and save it back byte-faithfully. The editing core is a generic, offset-true reader: the raw TEI string is canonical, every edit is an absolute-offset splice, and `serialize()` is byte-identical for untouched content by construction. Granularity emerges from the document itself: word-level when `<w>` is present (for example the Wenzelsbibel), line-level otherwise (for example a Jeanne Hersch edition). There is no per-project profile and no build step.
+teiCrafter is a client-only, browser-based editor for arbitrary [TEI-XML](https://tei-c.org/). You open an existing edition, correct it folio by folio, and save it back with every byte outside your deliberate edits unchanged. Most XML tools parse a file into a tree and re-serialize it on save, silently normalising attribute order, entity notation and whitespace; teiCrafter never rebuilds the file. The opened string itself remains the document, an edit replaces exactly the edited passage inside it, and saving an untouched document reproduces the input byte for byte. The practical consequence: a file diff after saving shows precisely the human intervention and nothing else.
+
+TEI encodes its own structure, so the editor reads the editing unit from the document instead of asking for configuration: word-level where the TEI tokenizes words (`<w>`), line-level where it marks only line breaks (`<lb>`). Any TEI opens without setup; an optional project manifest (`teicrafter.project.json` next to the edition) adds project-specific settings such as an image resolver, allowed markup, indices and views. There is no build step.
 
 The landing page leads into the editor:
 
@@ -52,7 +54,8 @@ Annotation happens at the text: select words to annotate them, click a mention t
 | Feature | Description |
 |---------|-------------|
 | **Lossless editing core** | Raw TEI string is canonical; edits are absolute-offset splices; `serialize()` is byte-identical for untouched content. DOM-free. |
-| **Emergent granularity** | Word-level when `<w>` is present, line/cell-level otherwise. No per-project profile. |
+| **Editing unit from the document** | Word-level when `<w>` is present, line/cell-level otherwise; read from the encoding, no configuration needed to open a file. |
+| **Project manifests** | An optional `teicrafter.project.json` next to the edition configures name, IIIF image resolver, allowed markup, indices and views per project. |
 | **Real OpenSeadragon facsimile** | Deep-zoom page image with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook. |
 | **In-browser index management** | Editable `<standOff>` of persons, organisations, and events with mention linking via `<name ref>`. |
 | **Live validation and structure** | Integrity checks and a structural outline alongside the reading text. |
@@ -111,7 +114,7 @@ Import closure: `editor-app` -> `edition`, `facsimile`, `standoff`, `index-panel
 |----------|-----------|
 | No framework | Reduces complexity, maximizes longevity, avoids dependency churn |
 | ES6 modules (native) | No bundler needed, direct browser execution |
-| Raw string as canonical | Lossless by construction; edits are offset splices, serialize is byte-identical |
+| Raw string as canonical | Edits are offset splices into the opened string; serialize returns that string, so untouched content cannot change |
 | DOM-free editing core | Round-trip fidelity does not depend on a serializer's whitespace choices |
 | CSS custom properties | Design tokens are the single source of truth; no raw hex in components |
 | Fetch API only | No HTTP library dependencies |
@@ -275,6 +278,6 @@ You are free to share and adapt this material for any purpose, provided you give
 
 ## Disclaimer
 
-**Research Preview** -- teiCrafter was developed using Promptotyping methodology as part of the [Digital Humanities Craft](https://github.com/DigitalHumanitiesCraft) initiative. The deterministic editor preserves source bytes by construction; the optional LLM on-ramp produces drafts that require expert review before use in scholarly publications. The authors make no warranty regarding the correctness, completeness, or fitness for purpose of any generated output.
+**Research Preview** -- teiCrafter was developed using Promptotyping methodology as part of the [Digital Humanities Craft](https://github.com/DigitalHumanitiesCraft) initiative. The deterministic editor never rebuilds the file, so every byte outside deliberate edits is preserved; the optional LLM on-ramp produces drafts that require expert review before use in scholarly publications. The authors make no warranty regarding the correctness, completeness, or fitness for purpose of any generated output.
 
 API keys entered for the LLM on-ramp are held only in browser memory for the duration of the session and are never transmitted to any server other than the selected LLM provider.

@@ -46,25 +46,42 @@
             and is not uploaded anywhere.</p>
 
         <h2>What it is for, and what it is not</h2>
-        <p>teiCrafter is a correction and annotation surface for editions that already exist as
-            TEI, typically the output of OCR or HTR pipelines that a person now verifies and
-            refines. It does not replace modelling environments such as oXygen or ediarum
-            (its output imports into them), it does not perform text recognition (that is
-            upstream work), and it does not publish editions; it edits the file.</p>
+        <p>teiCrafter is a working environment for correcting and annotating TEI editions in
+            the browser. Most editions reach it as the output of OCR or HTR pipelines that a
+            person now verifies and refines; an optional entry that drafts TEI from plain text
+            exists and is currently switched off. It is not an XML development environment:
+            there is no schema design and no transformation toolchain. Because saving changes
+            nothing outside your deliberate edits, the same files can move between teiCrafter
+            and tools such as oXygen or ediarum without one disturbing the other's work. It
+            does not perform text recognition (that is upstream work) and does not publish
+            editions; publishing is a separate step with its own tools.</p>
 
         <h2>What saving does (lossless)</h2>
-        <p>Every edit replaces exactly the edited passage in the file text. Everything you did
-            not touch is preserved byte for byte, including whitespace, attribute order,
-            comments and entity notation. Saving an unchanged document reproduces the opened
-            file exactly. The editor checks this while you work and reports it next to the text
-            (the <code>well-formed, lossless</code> chip); in addition, a re-runnable test suite
-            in the repository round-trips several hundred real edition files and compares the
-            result to the input.</p>
+        <p>Most XML software opens a file by parsing it into an internal tree and saves by
+            writing that tree back out. The rewritten text is almost never the original:
+            attribute order, entity notation (<code>&amp;#xE4;</code> versus
+            <code>&auml;</code>), whitespace inside tags and line endings are silently
+            normalised, because the tree never recorded them. teiCrafter never rebuilds the
+            file. The opened text itself remains the document; an edit replaces exactly the
+            edited passage inside it, and everything else is preserved byte for byte. For
+            example, a file containing <code>&lt;w norm="sich" orig="&#383;ich"&gt;</code>
+            comes back with the attributes in exactly that order and spelling. The practical
+            consequence: a file comparison after saving shows precisely the human
+            intervention, and nothing else, which is what makes editorial changes reviewable
+            and provable. The editor checks this while you work and reports it next to the
+            text (the <code>well-formed, lossless</code> chip); in addition, a re-runnable
+            test suite in the repository round-trips several hundred real edition files and
+            compares the result to the input.</p>
 
         <h2>What the editing unit is</h2>
-        <p>Word-level when the TEI encodes words (<code>&lt;w&gt;</code>), line-level otherwise
-            (<code>&lt;lb&gt;</code>/<code>&lt;l&gt;</code>); the editor reads this from the
-            document, there is no per-project configuration. The facsimile pane reads
+        <p>TEI encodes its own structure, so the editor takes the editing unit from the
+            document instead of asking for configuration: word-level when the TEI tokenizes
+            words (<code>&lt;w&gt;</code>), line-level when it marks only line breaks
+            (<code>&lt;lb&gt;</code>/<code>&lt;l&gt;</code>). Any TEI file opens without
+            setup. A project can add settings on top through a manifest file
+            (<code>teicrafter.project.json</code> next to the edition): its name, an image
+            resolver for the facsimile, the markup its guidelines allow, its indices and
+            views. The facsimile pane reads
             <code>&lt;facsimile&gt;</code>/<code>&lt;zone&gt;</code> and links text and image
             in both directions via <code>@facs</code>.</p>
 

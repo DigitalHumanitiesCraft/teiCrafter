@@ -66,10 +66,10 @@ Everything below is on disk in this repository.
 Key load-bearing decisions (each recorded in the journal; not invented here):
 
 - Offset-splice core, not the DOM. The raw TEI string is canonical, edits are offset
-  splices, `serialize()` is byte-identical by construction. The 2026-05-30 consolidation
-  generalised the editor to one generic, offset-true reader (`tei-document.js`) rather than
-  per-project profiles; granularity (word vs line) emerges from the document. Proven by the
-  byte-identical round-trip sweep.
+  splices, `serialize()` returns that string verbatim, so untouched content cannot change.
+  The 2026-05-30 consolidation generalised the editor to one generic, offset-true reader
+  (`tei-document.js`) rather than per-project profiles; the editing unit (word vs line) is
+  read from the document. Proven by the byte-identical round-trip sweep.
 - Expert-in-the-loop, AI output always marked. The model assists, the human decides. AI-drafted
   content is marked machine-generated and unreviewed (violet, the `--color-ai` token family);
   AI-proposed entities are inserted as `resp="#ai"` (a TEI-valid, lossless responsibility

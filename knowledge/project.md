@@ -27,7 +27,7 @@ teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML. You open a
 
 The core is a **generic, offset-true TEI reader**. The raw TEI string is canonical; every edit is an offset splice on that string, so untouched markup is preserved exactly. This is proven, not aspirational: every TEI file tested round-trips byte-identically (Jeanne Hersch editions, Stefan Zweig objects, the synthetic Wenzelsbibel tiers; the current count of record is in [testing](testing.md)). The editor reads any TEI and lets the human correct it; it does not impose a project-specific schema or shape on the input.
 
-The granularity emerges from the document, it is not configured. If the TEI carries word tokens (`<w xml:id>`), editing is word by word (the Wenzelsbibel case). If it carries only line milestones (`<lb/>` inside `<p>`), editing is line by line (the Jeanne Hersch case). Same engine, same lossless splice.
+The editing unit is read from the document, not configured: TEI encodes its own structure, so a document that tokenizes words (`<w xml:id>`) is edited word by word, and one that marks only line breaks (`<lb/>` inside `<p>`) is edited line by line. Same engine, same lossless splice. On top of this document-driven default, a project manifest (`teicrafter.project.json` next to the edition's files) adds what a concrete editorial undertaking needs: its name, an image resolver, the markup its guidelines allow, its indices and views. A project corresponds to an edition type with its own rules (a correspondence edition, a manuscript codex, a dictionary, a language corpus); the manifest carries those rules while the reader stays generic.
 
 ## Why It Exists
 
@@ -37,7 +37,7 @@ The LLM on-ramp keeps the original FORGE 2023 idea (plaintext to TEI via a model
 
 ## What It Does Not Do
 
-It is not a replacement for oXygen or ediarum. Those assume modelling decisions are made; teiCrafter is a correction-and-refinement surface and a drafting on-ramp whose output imports into them. It does not perform character recognition (that is upstream, coOCR HTR and other HTR pipelines). It does not host or persist data on a server. It is an independent browser tool, not a module of any harness.
+It is not an XML development environment: no schema design, no XSLT/XQuery toolchain, no free restructuring of arbitrary XML; that remains oXygen's ground. For the editorial working role (open, correct, annotate, maintain indices, validate, save) teiCrafter is built to carry project workflows that today run in oXygen/ediarum, in the browser and without installation; the Wenzelsbibel mandate states this explicitly, and gates W1/W2 exist to prove it before it is claimed. Because saving is byte-faithful, the same files move between teiCrafter and oXygen/ediarum without one disturbing the other's work. It does not perform character recognition (that is upstream, coOCR HTR and other HTR pipelines). It does not host or persist data on a server, and it does not publish editions (EditionCrafter's line). It is an independent browser tool, not a module of any harness.
 
 ## Positioning
 
@@ -66,7 +66,7 @@ The Wenzelsbibel is the reference manuscript case. Because the real codex is thi
 | Criterion | Meaning | Operationalisation |
 |-----------|---------|--------------------|
 | Lossless | Save changes nothing the human did not edit | Byte-identical round-trip on every real file (proven in the harness) |
-| Universal | Reads arbitrary TEI without per-project code | One engine handles word-level and line-level editions; granularity emerges |
+| Universal | Reads arbitrary TEI without per-project code | One engine handles word-level and line-level editions; the unit is read from the document |
 | Self-explanatory | Usable without external instruction | Open a file, click a word or line, correct it, save |
 | Connective | Output usable downstream | Edited TEI imports into ediarum, oXygen, GAMS unchanged in structure |
 

@@ -65,7 +65,7 @@ layer engine plus services.
 **Layer 2 - `docs/js/editor/edition.js` (editor model).**
 - `parseEdition(raw)` projects the tree into `{ folios[], lines[], cells[], cellById,
   profile }`. Folios split on `<pb>`, lines on `<lb>`/`<l>`, cells are reading-text nodes.
-- **Emergent granularity:** `profile = elementsByLocal(root, "w").length > 0 ? "word" :
+- **Editing unit read from the document:** `profile = elementsByLocal(root, "w").length > 0 ? "word" :
   "line"`. Word-level for Wenzelsbibel, line-level for Hersch and (future) SZD. No branching.
 - API: `editWordText`, `serialize`, `countTags`, `structuralSummary`, `xmlIdSet`,
   `escapeXmlText`, `unescapeXmlText`.

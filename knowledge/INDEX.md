@@ -52,7 +52,7 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Concept | Definition | Document |
 |---------|------------|----------|
 | Generic lossless reader | The core: the raw TEI string is canonical, edits are offset splices, `serialize()` is byte-identical; reads arbitrary TEI without a per-project profile | architecture, specification |
-| Emergent granularity | The editable unit (word vs line) emerges from the document: word-level if `<w>` present (Wenzelsbibel), else line-level (Hersch); no branching | architecture, project |
+| Editing unit from the document | TEI encodes its own structure, so the editable unit is read from the encoding: word-level if `<w>` present, else line-level; no configuration, no branching (formerly "emergent granularity", renamed 2026-06-10) | architecture, project |
 | Cells / folios / lines | The model `edition.js` projects: folios split by `<pb>`, lines by `<lb>`/`<l>`, cells are editable reading-text nodes | architecture |
 | LLM on-ramp | The optional entry: a model drafts an initial TEI from plaintext that opens in the same editor, marked machine-generated and unreviewed. Hidden since 2026-06-10 behind `FEATURES.llmOnRamp`; code in place | specification, design |
 | Epistemic asymmetry | Models produce plausible TEI but cannot judge their own correctness; the human verifies in the deterministic editor | project, design |
