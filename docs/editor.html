@@ -39,6 +39,7 @@
         <div class="sep"></div>
         <div class="group">
             <button class="ed-btn" id="btn-facs" disabled title="Show or hide the facsimile pane">Facsimile</button>
+            <button class="ed-btn" id="btn-index" disabled title="All index entities (persons, places, organisations, works, events) with their authority ids and mention counts">Index</button>
             <button class="ed-btn" id="btn-xml" disabled title="Switch between the reading view and the editable XML source">XML</button>
             <button class="ed-btn" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
             <button class="ed-btn ed-btn-primary" id="btn-download" disabled title="Download the current TEI">Download</button>
@@ -88,20 +89,26 @@
             </div>
         </section>
 
-        <section class="ed-pane">
-            <div class="ed-pane-head"><span title="standOff entities (persons, places, organisations, works, events) with their authority ids and in-text mentions">Index</span></div>
-            <div class="ed-pane-body">
-                <div id="ed-index">
-                    <div class="ed-idx-ai">
-                        <button class="ed-btn ed-btn-ai" id="btn-suggest" disabled title="An LLM proposes index entries from this page's text; each proposal appears violet and unverified until you confirm or delete it">Suggest entities (AI)</button>
-                    </div>
-                    <div id="ed-index-host">
-                        <div class="ed-empty">Entity index appears after a document is loaded.</div>
-                    </div>
+    </main>
+
+    <!-- On-demand entity index (operator decision 2026-06-10): no permanent pane;
+         the toolbar Index button opens this overlay, day-to-day authority work
+         happens in the annotation popovers on the text itself. -->
+    <div class="ed-modal" id="ed-idx-overlay" hidden>
+        <div class="ed-modal-card ed-idx-card" role="dialog" aria-modal="true" aria-labelledby="idx-title">
+            <div class="ed-modal-head">
+                <span id="idx-title">Index</span>
+                <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter entities..."
+                       title="Filter by name or id; sections without a match collapse" />
+                <button class="ed-btn" id="idx-close" title="Close (Escape)">Close</button>
+            </div>
+            <div class="ed-modal-body">
+                <div id="ed-index-host">
+                    <div class="ed-empty">Entity index appears after a document is loaded.</div>
                 </div>
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
     <div class="ed-val-pop" id="ed-val-pop" hidden></div>
 

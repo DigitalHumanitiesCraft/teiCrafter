@@ -15,12 +15,12 @@
  *     onUpdate(id, { name }),                // inline rename committed
  *     onDelete(id),                          // delete button
  *     onSelect(entity),                      // row body clicked (also marks it active)
- *     onStartLink(entity),                   // small "link" button clicked
  *     onSetAuthority(id, { authority, value }), // add/replace (value set) or remove (value "") an idno
  *     onConfirm(id),                         // confirm an AI-proposed (entity.ai) entity
  *   }
  *   render(entities) with entities = { persons:[E], places:[E], orgs:[E], works:[E], events:[E] }
- *   E = { id, type, name, ai?, authorities:[{ type, value }] }
+ *   E = { id, type, name, ai?, count?, authorities:[{ type, value }] }
+ *   When E.count is a number the row shows it as a mention-count badge.
  *   When E.ai is true the row is drawn in the violet AI family with a "confirm"
  *   action (per design.md: AI assists, the human decides).
  *
@@ -69,7 +69,6 @@ export function createIndexPanel(hostEl, hooks = {}) {
   const onUpdate = typeof hooks.onUpdate === "function" ? hooks.onUpdate : () => {};
   const onDelete = typeof hooks.onDelete === "function" ? hooks.onDelete : () => {};
   const onSelect = typeof hooks.onSelect === "function" ? hooks.onSelect : () => {};
-  const onStartLink = typeof hooks.onStartLink === "function" ? hooks.onStartLink : () => {};
   const onSetAuthority = typeof hooks.onSetAuthority === "function" ? hooks.onSetAuthority : () => {};
   const onConfirm = typeof hooks.onConfirm === "function" ? hooks.onConfirm : () => {};
   const onLookup = typeof hooks.onLookup === "function" ? hooks.onLookup : () => {};
@@ -91,11 +90,14 @@ export function createIndexPanel(hostEl, hooks = {}) {
       dataset: { id: entity.id },
     });
 
-    // Body: name + faded id. Clicking it selects the entity.
+    // Body: name + faded id + mention count. Clicking it selects the entity
+    // (the integrator jumps to its first in-text mention).
     const body = el("button", {
       class: "ed-idx-rowbody",
       type: "button",
-      title: entity.ai ? "AI-proposed, unverified. Select, then confirm or delete." : "Select this entity",
+      title: entity.ai
+        ? "AI-proposed, unverified. Confirm or delete it; click to jump to its first mention."
+        : "Jump to this entity's first mention in the text",
       onclick: () => {
         setActive(entity.id);
         onSelect(entity);
@@ -103,6 +105,11 @@ export function createIndexPanel(hostEl, hooks = {}) {
     }, [
       el("span", { class: "ed-idx-name", text: entity.name || "(unnamed)" }),
       el("span", { class: "ed-idx-id", text: entity.id }),
+      typeof entity.count === "number" ? el("span", {
+        class: "ed-idx-occ",
+        text: `${entity.count}×`,
+        title: `${entity.count} mention(s) in this document`,
+      }) : null,
     ]);
 
     // Inline rename: swap the name span for an input bound to onUpdate.
@@ -145,11 +152,6 @@ export function createIndexPanel(hostEl, hooks = {}) {
         class: "ed-idx-btn ed-idx-edit", type: "button", title: "Rename",
         "aria-label": "Rename", text: "edit",
         onclick: beginRename,
-      }),
-      el("button", {
-        class: "ed-idx-btn ed-idx-link", type: "button", title: "Link this entity to the selected text",
-        "aria-label": "Link", text: "link",
-        onclick: () => onStartLink(entity),
       }),
       el("button", {
         class: "ed-idx-btn ed-idx-delete", type: "button", title: "Delete",

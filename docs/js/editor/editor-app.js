@@ -38,7 +38,6 @@ import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createIndexPanel } from "./index-panel.js";
-import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
@@ -61,7 +60,6 @@ const app = {
   currentLines: [],   // lines of the folio currently rendered (for zone <-> line linking)
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
-  linkTarget: null,   // entity selected for the next "link a mention" click, or null
   noteMode: false,    // true while waiting for a cell click to attach an editorial note
   critMode: false,    // true while waiting for a cell click to apply textual-critical markup
   facsHidden: false,  // user choice: hide the facsimile pane (auto-hidden when no images)
@@ -113,7 +111,7 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-download", "btn-suggest", "btn-xml"]) $(id).disabled = !on;
+  for (const id of ["btn-download", "btn-index", "btn-xml"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) {
     setNoteMode(false);
@@ -207,12 +205,11 @@ function load(raw, name, handle) {
   app.fileHandle = handle || null;
   app.docName = name;
   app.noteByWord = indexNotes(raw);
-  // Default: no known page images and no pending link target. loadZbz() sets the
-  // image base afterwards; every other entry (open, demo, generate) stays null.
+  // Default: no known page images. loadZbz() sets the image base afterwards;
+  // every other entry (open, demo, generate) stays null.
   app.imageBase = null;
-  app.linkTarget = null;
   // Reset the click-capture modes so a mode left on in the previous document does
-  // not silently apply to the freshly opened one (button/hint would disagree).
+  // not silently apply to the freshly opened one (button/tooltip would disagree).
   setNoteMode(false);
   setCritMode(false);
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
@@ -405,7 +402,6 @@ function renderReading() {
     line.cells.forEach((cell, k) => {
       if (k > 0) row.appendChild(document.createTextNode(" "));
       const note = app.noteByWord.get(cell.id);
-      const linking = app.linkTarget != null;
       // A gap is a read-only marker (no text); other critical kinds add a class so
       // the wrapped reading text shows its editorial status (dotted / struck / added).
       const critClass = cell.crit ? " crit-" + cell.crit : "";
@@ -421,7 +417,7 @@ function renderReading() {
         class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass,
         dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
         text: cell.gap ? "[...]" : cell.text,
-        title: critTitle(cell, note, linking, meta),
+        title: critTitle(cell, note, meta),
       });
       // Editor paradigm (operator decision 2026-06-10): a plain click only sets
       // the cursor. Clicking an ANNOTATED element opens its annotation editor;
@@ -431,7 +427,6 @@ function renderReading() {
         if (e.detail > 1) return; // second click of a double-click
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
-        if (app.linkTarget) { completeLink(cell); return; } // index-initiated link
         if (app.critMode) { beginCritic(span, cell); return; }
         if (app.noteMode) { beginNote(span, cell); return; }
         if (cell.gap) { beginCritic(span, cell); return; }
@@ -450,24 +445,6 @@ function renderReading() {
     });
     host.appendChild(row);
   });
-}
-
-/**
- * Complete an index-initiated link: the index panel armed a target entity and
- * the next text click wraps that cell's mention. Shared mutation path, so the
- * engine's SAME-doc no-op contract holds (no false dirty flag).
- */
-function completeLink(cell) {
-  const target = app.linkTarget;
-  applyDocFn(
-    (doc) => standoff.linkMention(doc, cell.node, target.id),
-    `Linked "${cell.text.trim()}" to ${target.name}`,
-    "Link",
-    `Already linked to ${target.name}`,
-  );
-  app.linkTarget = null;
-  render();
-  renderIndex();
 }
 
 /**
@@ -666,7 +643,6 @@ function openEntityPickerFor(span, cell) {
     );
     render();
     renderIndex();
-    revealEntity(entId);
   }, null);
   const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
   xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
@@ -676,15 +652,40 @@ function openEntityPickerFor(span, cell) {
 
 // ---- annotation editor (click an annotated element) --------------------------
 
+/** The full entity record for an id, or null. */
+function findEntity(id) {
+  const all = standoff.readEntities(app.state.doc);
+  return ["persons", "places", "orgs", "works", "events"]
+    .flatMap((k) => all[k] || [])
+    .find((e) => e.id === id) || null;
+}
+
 /**
- * Clicking an annotated element edits the annotation: shows what it is linked
- * to, jumps to the index entry (authority ids live there), relinks to another
- * entity, or removes the link (lossless unwrap of the enclosing <name>).
+ * Commit a standOff edit from inside the annotation editor, then reopen the
+ * editor on the same cell (render() rebuilds the reading pane, which removes
+ * the popover; the cell id is stable across standOff-region edits), so adding
+ * several authority ids in a row stays one uninterrupted gesture.
+ */
+function commitAndReopen(fn, label, cellId) {
+  applyDocFn(fn, label, "Edit");
+  render();
+  renderIndex();
+  const c = app.state.cellById.get(cellId);
+  const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
+  if (c && s && c.mention) openAnnotationEditor(s, c);
+}
+
+/**
+ * Clicking an annotated element edits the annotation in place: what it is
+ * linked to, the entity's authority ids (add / remove / live lookup, moved
+ * here from the index pane, operator decision 2026-06-10), its occurrences,
+ * confirm for AI proposals, relink, or remove the link (lossless unwrap).
  */
 function openAnnotationEditor(span, cell) {
   removeSelPopover();
   const host = $("ed-reading");
   const meta = entityMetaMap().get(cell.mention) || null;
+  const entity = findEntity(cell.mention);
   const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
   pop.appendChild(el("span", {
     class: "ed-sel-pop-title",
@@ -692,13 +693,33 @@ function openAnnotationEditor(span, cell) {
       ? `linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unverified" : ""}`
       : `linked to a missing entity (${cell.mention})`,
   }));
+
+  if (entity) pop.appendChild(buildAuthorityEditor(entity, cell));
+
   const row = el("div", { class: "ed-sel-pop-row" });
-  const btn = (text, title, fn) => {
-    const b = el("button", { class: "ed-act-btn", text, title });
+  const btn = (text, title, fn, cls) => {
+    const b = el("button", { class: "ed-act-btn" + (cls ? " " + cls : ""), text, title });
     b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
     row.appendChild(b);
   };
-  btn("open in index", "show this entity in the index (authority ids live there)", () => {
+  if (entity) {
+    const u = entityUsage().get(entity.id);
+    const n = u ? u.count : 0;
+    btn(`occurrences (${n})`, "highlight every mention of this entity; the first one on another page is reachable via the Index", () => {
+      removeSelPopover();
+      highlightMentions(entity);
+    });
+    if (meta && meta.ai) {
+      btn("confirm", "accept this AI proposal as verified (removes the violet marking)", () => {
+        commitAndReopen(
+          (doc) => standoff.confirmEntity(doc, entity.id),
+          `Confirmed ${entity.name || entity.id}`,
+          cell.id,
+        );
+      }, "ed-btn-ai");
+    }
+  }
+  btn("open in index", "show this entity in the full index overlay", () => {
     removeSelPopover();
     revealEntity(cell.mention);
   });
@@ -731,10 +752,82 @@ function openAnnotationEditor(span, cell) {
   anchorPopAt(pop, span.getBoundingClientRect(), host);
 }
 
-/** Jump to an entity's row in the index panel and flash it (M2.6 "entity"). */
+/**
+ * Authority ids (GND / GeoNames / Wikidata) of the linked entity, editable in
+ * place: existing ids with remove buttons, an add form, and the live lookup.
+ * Every change commits losslessly and reopens the editor on the same cell.
+ */
+function buildAuthorityEditor(entity, cell) {
+  const box = el("div", { class: "ed-sel-auth" });
+  const auths = Array.isArray(entity.authorities) ? entity.authorities : [];
+  for (const a of auths) {
+    box.appendChild(el("span", { class: "ed-idx-authid", title: `${a.type || "id"}: ${a.value}` }, [
+      el("span", { class: "ed-idx-authtype", text: a.type || "id" }),
+      el("span", { class: "ed-idx-authval", text: a.value }),
+      el("button", {
+        class: "ed-idx-btn ed-idx-authdel", type: "button",
+        title: "Remove this id", "aria-label": "Remove id", text: "x",
+        onclick: (e) => {
+          e.stopPropagation();
+          commitAndReopen(
+            (doc) => standoff.setAuthority(doc, entity.id, a.type, ""),
+            `Removed ${a.type} id from ${entity.name || entity.id}`,
+            cell.id,
+          );
+        },
+      }),
+    ]));
+  }
+
+  const typeSel = el("select", { class: "ed-idx-authtypesel", title: "Authority register" },
+    standoff.AUTHORITIES.map((name) => el("option", { value: name, text: name })));
+  const valInput = el("input", {
+    class: "ed-idx-authinput", type: "text", placeholder: "authority id or URI",
+    title: "Paste an id or URI, or use find to search the register by name",
+  });
+  valInput.addEventListener("mouseup", (e) => e.stopPropagation());
+  const submit = () => {
+    const value = valInput.value.trim();
+    if (!value) return;
+    commitAndReopen(
+      (doc) => standoff.setAuthority(doc, entity.id, typeSel.value, value),
+      `Set ${typeSel.value} id on ${entity.name || entity.id}`,
+      cell.id,
+    );
+  };
+  valInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); submit(); }
+  });
+  const addForm = el("div", { class: "ed-idx-authadd" }, [
+    typeSel,
+    valInput,
+    el("button", {
+      class: "ed-idx-btn", type: "button",
+      title: "Add this authority id", "aria-label": "Add id", text: "+id",
+      onclick: (e) => { e.stopPropagation(); submit(); },
+    }),
+    el("button", {
+      class: "ed-idx-btn", type: "button",
+      title: "Search this register (uses the typed text, else the entity name); pick a hit to attach its id",
+      "aria-label": "Look up id", text: "find",
+      onclick: (e) => {
+        e.stopPropagation();
+        runLookup(typeSel.value, valInput.value.trim() || entity.name, addForm, (id) => {
+          valInput.value = id;
+          submit();
+        });
+      },
+    }),
+  ]);
+  box.appendChild(addForm);
+  return box;
+}
+
+/** Open the index overlay scrolled to an entity's row and flash it. */
 function revealEntity(id) {
+  openIndexOverlay();
   if (indexPanel) indexPanel.setActive(id);
-  const row = document.querySelector(`#ed-index .ed-idx-row[data-id="${CSS.escape(id)}"]`);
+  const row = document.querySelector(`#ed-index-host .ed-idx-row[data-id="${CSS.escape(id)}"]`);
   if (!row) { setStatus(`No index entry for ${id}`); return; }
   row.scrollIntoView({ block: "center" });
   row.classList.add("ed-idx-row-flash");
@@ -812,12 +905,29 @@ function annotateSelection(target, entityId, createType) {
     app.state = parseEdition(next.raw);
     app.noteByWord = indexNotes(app.state.raw);
     setDirty(true);
-    setStatus(`Annotated "${target.text}" (${id}). Add authority ids in the Index.`);
+    setStatus(`Annotated "${target.text}" (${id})`);
     render();
     renderIndex();
-    revealEntity(id);
+    // Continue in place: open the annotation editor on the fresh mention so
+    // authority ids (GND, Wikidata, GeoNames) are attachable without leaving
+    // the text (the index logic lives where the annotating happens).
+    openAnnotationEditorFor(id);
   } catch (err) {
     setStatus(`Annotate failed: ${err.message}`);
+  }
+}
+
+/** Open the annotation editor on the current folio's first mention of an entity. */
+function openAnnotationEditorFor(id) {
+  const folio = app.state.folios[app.folio];
+  if (!folio) return;
+  for (const line of folio.lines) {
+    for (const c of line.cells) {
+      if (c.mention !== id) continue;
+      const span = document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
+      if (span) openAnnotationEditor(span, c);
+      return;
+    }
   }
 }
 
@@ -1022,7 +1132,7 @@ function openSelPopover() {
   const newBody = section("new index entity from this text", !haveEntities);
   const newRow = el("div", { class: "ed-sel-pop-row" });
   for (const [type, label] of ENTITY_TYPE_LABELS) {
-    const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}", link this text, then add authority ids in the Index` });
+    const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}", link this text, then add authority ids right here` });
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       removeSelPopover();
@@ -1101,8 +1211,8 @@ $("ed-reading").addEventListener("contextmenu", (e) => {
 /** Toggle "add note" mode: the next cell click attaches a note instead of editing. */
 function setNoteMode(on) {
   app.noteMode = on;
-  // The three click-capture modes (note, mark, link) are mutually exclusive.
-  if (on) { if (app.critMode) setCritMode(false); app.linkTarget = null; }
+  // The two click-capture modes (note, mark) are mutually exclusive.
+  if (on && app.critMode) setCritMode(false);
   const btn = $("btn-note");
   if (btn) btn.classList.toggle("active", on);
 }
@@ -1154,11 +1264,8 @@ function beginNote(span, cell) {
 // ---- textual-critical markup (M3.6) ----------------------------------------
 
 /** Tooltip for a reading cell, composed from its link / note / critical state. */
-function critTitle(cell, note, linking, meta) {
-  // A gap always routes to its remove chooser, even while a link is pending, so
-  // its tooltip must say so first (tooltip and click action never disagree).
+function critTitle(cell, note, meta) {
   if (cell.gap) return "gap: omitted or illegible text; click to remove";
-  if (linking) return `click to link to ${app.linkTarget.name}`;
   const parts = [];
   if (cell.mention) {
     // "unverified" is the one term for the unconfirmed-AI state everywhere
@@ -1184,8 +1291,8 @@ function critTitle(cell, note, linking, meta) {
 /** Toggle "mark text" mode: the next cell click applies textual-critical markup. */
 function setCritMode(on) {
   app.critMode = on;
-  // The three click-capture modes (mark, note, link) are mutually exclusive.
-  if (on) { if (app.noteMode) setNoteMode(false); app.linkTarget = null; }
+  // The two click-capture modes (mark, note) are mutually exclusive.
+  if (on && app.noteMode) setNoteMode(false);
   const btn = $("btn-critic");
   if (btn) btn.classList.toggle("active", on);
 }
@@ -1334,17 +1441,16 @@ function renderFacsimile() {
 }
 
 // ---- entity index / standOff ----------------------------------------------
-// The right pane's "Index" tab manages standOff entities (person/place/org/work/
-// event), their authority ids (<idno>), and the in-text mentions that link to them.
-// Every mutation goes through standoff.js (lossless offset splice) and re-parses the
-// edition so all offsets stay correct.
+// The on-demand Index overlay (toolbar button) manages standOff entities
+// (person/place/org/work/event); day-to-day authority work happens in the
+// annotation popover on the text itself (operator decision 2026-06-10).
+// Every mutation goes through standoff.js (lossless offset splice) and re-parses
+// the edition so all offsets stay correct.
 
-/** Lazily create the single index panel bound to #ed-index, with its hooks. */
+/** Lazily create the single index panel bound to the overlay host, with its hooks. */
 function ensureIndexPanel() {
   if (indexPanel) return indexPanel;
-  // The panel renders into its own host inside the Index tab, so the tab's
-  // AI-suggest block above it survives every panel re-render.
-  const host = $("ed-index-host") || $("ed-index");
+  const host = $("ed-index-host");
   if (!host) return null;
   indexPanel = createIndexPanel(host, {
     onAdd: (type, { name }) => {
@@ -1374,16 +1480,7 @@ function ensureIndexPanel() {
         setStatus(`Could not delete entity: ${err.message}`);
       }
     },
-    onSelect: (entity) => highlightMentions(entity),
-    onStartLink: (entity) => {
-      // Link is the third click-capture mode; clear the other two so a click is
-      // never claimed by mark/note mode while a link is pending.
-      setNoteMode(false);
-      setCritMode(false);
-      app.linkTarget = entity;
-      setStatus(`Click a line or word to link it to <name> -> ${entity.name}`);
-      render(); // refresh titles/affordances for link mode
-    },
+    onSelect: (entity) => jumpToEntity(entity),
     onSetAuthority: (id, { authority, value }) => {
       try {
         app.state = parseEdition(standoff.setAuthority(app.state.doc, id, authority, value).raw);
@@ -1451,56 +1548,76 @@ async function runLookup(authority, query, anchor, onPick) {
   }
 }
 
-/** Render the entity index from the current document. */
+/** Render the entity index from the current document, with mention counts. */
 function renderIndex() {
   const panel = ensureIndexPanel();
-  if (panel) panel.render(standoff.readEntities(app.state.doc));
+  if (!panel || !app.state) return;
+  const all = standoff.readEntities(app.state.doc);
+  const usage = entityUsage();
+  for (const k of ["persons", "places", "orgs", "works", "events"]) {
+    for (const e of all[k] || []) e.count = (usage.get(e.id) || {}).count || 0;
+  }
+  panel.render(all);
+}
+
+// ---- index overlay (M2.11) --------------------------------------------------
+
+function openIndexOverlay() {
+  if (!app.state) return;
+  renderIndex();
+  $("ed-idx-overlay").hidden = false;
+  $("btn-index").classList.add("active");
+  const f = $("idx-filter");
+  f.value = "";
+  applyIndexFilter("");
+  f.focus();
+}
+
+function closeIndexOverlay() {
+  $("ed-idx-overlay").hidden = true;
+  $("btn-index").classList.remove("active");
+}
+
+/** DOM-level filter over the rendered panel: rows by name/id, empty sections fold. */
+function applyIndexFilter(q) {
+  const f = q.trim().toLowerCase();
+  for (const row of document.querySelectorAll("#ed-index-host .ed-idx-row")) {
+    row.hidden = !!f && !row.textContent.toLowerCase().includes(f);
+  }
+  for (const sec of document.querySelectorAll("#ed-index-host .ed-idx-section")) {
+    sec.hidden = !!f && !sec.querySelector(".ed-idx-row:not([hidden])");
+  }
+}
+
+/**
+ * Index row clicked: close the overlay and jump to the entity's first in-text
+ * mention (switching the page when needed), then highlight all its mentions.
+ */
+function jumpToEntity(entity) {
+  closeIndexOverlay();
+  let targetFolio = -1;
+  let targetCellId = null;
+  outer: for (let fi = 0; fi < app.state.folios.length; fi++) {
+    for (const line of app.state.folios[fi].lines) {
+      for (const c of line.cells) {
+        if (c.mention === entity.id) { targetFolio = fi; targetCellId = c.id; break outer; }
+      }
+    }
+  }
+  if (targetFolio < 0) {
+    setStatus(`${entity.name}: no in-text mentions on any folio`);
+    return;
+  }
+  if (targetFolio !== app.folio) gotoFolio(targetFolio);
+  highlightMentions(entity);
+  const span = document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(targetCellId)}"]`);
+  if (span) span.scrollIntoView({ block: "center" });
 }
 
 /** After any standOff edit: re-render the whole view and the index panel. */
 function refreshAfterStandoffEdit() {
   render();
   renderIndex();
-}
-
-/**
- * M3.7: ask the configured LLM to propose entities for the current folio. Each is
- * inserted as an unverified resp="#ai" entity (rendered violet) for the human to
- * confirm or delete. The model assists; the human decides. Requires a provider key
- * configured via the "New from text (LLM)" dialog.
- */
-async function suggestEntities() {
-  if (!app.state) return;
-  const folio = app.state.folios[app.folio];
-  const lines = folio ? folio.lines : [];
-  const text = lines.map((l) => l.cells.map((c) => c.text.trim()).join(" ").trim())
-    .filter(Boolean).join("\n").trim();
-  if (!text) { setStatus("No text on this folio to analyse"); return; }
-
-  const btn = $("btn-suggest");
-  if (btn) btn.disabled = true;
-  setStatus("Asking the model for entity suggestions...");
-  try {
-    const reply = await complete(buildSuggestPrompt(text));
-    const items = parseSuggestions(reply);
-    if (!items.length) { setStatus("The model proposed no entities"); return; }
-    let doc = app.state.doc;
-    let added = 0;
-    for (const it of items) {
-      doc = standoff.addEntity(doc, it.type, { name: it.name, ai: true });
-      added++;
-    }
-    if (added) {
-      app.state = parseEdition(doc.raw);
-      setDirty(true);
-      refreshAfterStandoffEdit();
-    }
-    setStatus(`${added} AI suggestion(s) added in violet. Confirm or delete each.`);
-  } catch (err) {
-    setStatus(`Suggestion failed: ${err.message}`);
-  } finally {
-    if (btn) btn.disabled = false;
-  }
 }
 
 /**
@@ -1826,10 +1943,20 @@ document.addEventListener("keydown", (e) => {
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
   if (document.querySelector("#ed-reading .ed-crit-pick, #ed-sel-pop, #ed-menu")) return;
-  if (!$("gen-modal").hidden) return;
+  if (!$("gen-modal").hidden || !$("ed-idx-overlay").hidden) return;
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });
-$("btn-suggest").addEventListener("click", suggestEntities);
+// Index overlay: toolbar toggle, close button, backdrop click, Escape, filter.
+$("btn-index").addEventListener("click", () => {
+  if ($("ed-idx-overlay").hidden) openIndexOverlay();
+  else closeIndexOverlay();
+});
+$("idx-close").addEventListener("click", closeIndexOverlay);
+$("ed-idx-overlay").addEventListener("click", (e) => { if (e.target.id === "ed-idx-overlay") closeIndexOverlay(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("ed-idx-overlay").hidden) closeIndexOverlay();
+});
+$("idx-filter").addEventListener("input", (e) => applyIndexFilter(e.target.value));
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
 

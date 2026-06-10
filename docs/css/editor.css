@@ -3,7 +3,9 @@
    violet family appears exclusively on AI-origin content (generated banner, AI
    actions, unverified entities and their mentions), per design.md. */
 
-.ed-body { margin: 0; }
+/* Flex column so the main grid always fills the space between toolbar and
+   footer, with or without the generated-edition banner. */
+.ed-body { margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
 .ed-header {
   display: flex; align-items: center; gap: var(--space-md);
@@ -98,12 +100,13 @@
 .ed-modal-status.err { color: var(--color-problem); }
 .ed-modal-status.busy { color: var(--color-ai); }
 
+/* Two panes since M2.11 (the index is an on-demand overlay): reading + facsimile. */
 .ed-main {
-  display: grid; grid-template-columns: 1.1fr 1fr 320px;
-  height: calc(100vh - var(--header-height) - var(--footer-height) - 64px);
+  display: grid; grid-template-columns: 1.1fr 1fr;
+  flex: 1; min-height: 0;
 }
-/* No page images (or facsimile hidden): two panes, the reading text gets the space. */
-.ed-main.no-facs { grid-template-columns: 1.6fr 340px; }
+/* No page images (or facsimile hidden): one centered pane at reading width. */
+.ed-main.no-facs { grid-template-columns: minmax(0, 1100px); justify-content: center; }
 #ed-pane-facs[hidden] { display: none; }
 .ed-pane { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--color-border); }
 .ed-pane:last-child { border-right: none; }
@@ -198,22 +201,18 @@
 
 .ed-empty { color: var(--color-text-muted); font-size: var(--font-size-sm); text-align: center; padding: var(--space-xl); }
 
-/* Right-pane tabs (validation / index) */
-.ed-tabs { gap: 0; padding: 0; }
-.ed-tab {
-  font-family: var(--font-ui); font-size: var(--font-size-sm); font-weight: 600;
-  cursor: pointer; padding: var(--space-sm) var(--space-md);
-  border: none; background: none; color: var(--color-text-secondary);
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
+/* Index overlay (M2.11): the entity index opens on demand from the toolbar.
+   It reuses the modal frame; inputs focus gold here (violet is AI-only). */
+.ed-idx-card { width: min(720px, 92vw); }
+.ed-idx-card .ed-modal-body { max-height: 70vh; overflow: auto; }
+.ed-idx-card input:focus, .ed-idx-card select:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+.ed-idx-filter {
+  flex: 1; margin: 0 var(--space-md); max-width: 320px;
+  font-family: var(--font-ui); font-size: var(--font-size-sm); color: var(--color-text);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm); padding: var(--space-xs) var(--space-sm);
 }
-.ed-tab:hover { color: var(--color-text); }
-.ed-tab.active { color: var(--color-text); border-bottom-color: var(--color-gold); }
-
-/* AI block at the top of the Index tab: the suggest action lives where the
-   entities live, clearly marked as machine-assisted (violet family). */
-.ed-idx-ai { display: flex; flex-direction: column; gap: var(--space-xs);
-  padding-bottom: var(--space-sm); margin-bottom: var(--space-sm);
-  border-bottom: 1px solid var(--color-border); }
+.ed-idx-occ { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
 /* Entity index panel (persons / places / organisations / works / events) */
 .ed-idx { display: flex; flex-direction: column; gap: var(--space-md); }
@@ -402,6 +401,15 @@
   color: var(--color-text); background: var(--color-surface);
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
 .ed-sel-filter:focus { outline: none; border-color: var(--color-gold); }
+/* Authority ids inside the annotation editor (moved here from the index pane):
+   existing idno chips plus the add/lookup form, on a quiet separator. */
+.ed-sel-auth {
+  display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center;
+  padding: var(--space-xs) 0; border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.ed-sel-auth .ed-idx-authadd { flex: 1; min-width: 220px; }
+.ed-sel-auth .ed-idx-authinput { flex: 1; min-width: 100px; }
 
 /* Oxygen-style right-click context menu on the reading text. */
 .ed-menu {
