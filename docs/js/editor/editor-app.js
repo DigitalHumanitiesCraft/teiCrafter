@@ -37,9 +37,13 @@ import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { FEATURES } from "../utils/constants.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
-import { parseManifest, markupForFile, typeForFile } from "./project-manifest.js";
+import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile } from "./project-manifest.js";
 import { createProjectFolder } from "./project-folder.js";
 import { createValidationView } from "./validation-view.js";
+import {
+  parseGuidelines, elementsForScope,
+  VENDORED_GUIDELINES_PATH, VENDORED_GUIDELINES_VERSION,
+} from "./tei-guidelines.js";
 import * as recents from "./recent-files.js";
 import { getSetting, setSetting } from "../services/storage.js";
 
@@ -184,6 +188,81 @@ function buildLegend() {
   for (const c of chips) host.appendChild(c);
 }
 
+// ---- TEI Guidelines (lazy, never at boot) -----------------------------------
+// The vendored P5 compilation (docs/data/tei/, see its NOTICE.md) loads once on
+// demand: an idle prefetch fires when a loaded document's project declares a
+// TEI scope; any other consumer awaits ensureGuidelines() as the fallback.
+// Every failure resolves to null with one status line; the editor then keeps
+// working on the explicit markup alone (the degradation contract).
+
+let _guidelines = null;
+let _guidelinesPromise = null;
+let _guidelinesFailed = false;
+
+function ensureGuidelines() {
+  if (_guidelinesPromise) return _guidelinesPromise;
+  _guidelinesPromise = fetch(VENDORED_GUIDELINES_PATH, { cache: "force-cache" })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((json) => {
+      _guidelines = parseGuidelines(json, VENDORED_GUIDELINES_VERSION);
+      recomputeMarkup();
+      updatePanels();
+      return _guidelines;
+    })
+    .catch((err) => {
+      _guidelinesFailed = true;
+      setStatus(`TEI vocabulary not available (${err.message}); explicit markup stays in force`);
+      updatePanels();
+      return null;
+    });
+  return _guidelinesPromise;
+}
+
+const guidelinesNow = () => _guidelines;
+
+/** Re-derive the wrap list when the guidelines arrive after the document. */
+function recomputeMarkup() {
+  if (!app.state) return;
+  app.markup = resolveMarkup(app.project, app.docName, _guidelines);
+}
+
+/** Idle prefetch once a loaded document's project declares a TEI scope. */
+function maybePrefetchGuidelines(name) {
+  if (_guidelinesPromise) return;
+  const scope = teiScopeForFile(app.project, name);
+  if (!scope.modules.length && !scope.elements.length) return;
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 0));
+  idle(() => ensureGuidelines());
+}
+
+/**
+ * The project panel's TEI vocabulary line: which scope the project declares
+ * and whether the vendored data is loaded. Null when no scope is declared
+ * (detected profiles and pre-scope manifests show nothing).
+ */
+function teiVocabularyLine() {
+  const project = app.projectFolder ? app.projectFolder.project : app.project;
+  if (!project) return null;
+  const modules = new Set(project.teiScope ? project.teiScope.modules : []);
+  const elements = new Set(project.teiScope ? project.teiScope.elements : []);
+  for (const t of project.documentTypes || []) {
+    if (!t.teiScope) continue;
+    for (const m of t.teiScope.modules) modules.add(m);
+    for (const e of t.teiScope.elements) elements.add(e);
+  }
+  if (!modules.size && !elements.size) return null;
+  if (_guidelinesFailed) return "TEI vocabulary not available; explicit markup applies";
+  if (!_guidelines) return `TEI vocabulary (P5 ${VENDORED_GUIDELINES_VERSION}) loads on first use`;
+  const inScope = elementsForScope(_guidelines, { modules: [...modules], elements: [...elements] }).length;
+  const parts = [];
+  if (modules.size) parts.push(`modules ${[...modules].join(", ")}`);
+  if (elements.size) parts.push(`${elements.size} named element(s)`);
+  return `TEI P5 ${VENDORED_GUIDELINES_VERSION}: ${parts.join(", ")} (${inScope} elements in scope)`;
+}
+
 // ---- loading ---------------------------------------------------------------
 
 // Large documents (the Wenzelsbibel codex is tens of MB) parse synchronously on
@@ -226,7 +305,8 @@ function applyLoad(raw, name, handle, project) {
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
   app.project = project || detectProject(app.state.doc);
-  app.markup = markupForFile(app.project, name);
+  app.markup = resolveMarkup(app.project, name, guidelinesNow());
+  maybePrefetchGuidelines(name);
   app.saveTarget = null;
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
@@ -1259,7 +1339,7 @@ const annot = createAnnotationUi({
 });
 const projectFolderUi = createProjectFolder({
   app, setStatus, setDirty, confirmDiscard, load,
-  showPanel, updatePanels,
+  showPanel, updatePanels, teiVocabularyLine,
   getProjectPanelHost: () => panelHost(activePanels().find((p) => p.id === "project")),
 });
 const validationView = createValidationView({ app });

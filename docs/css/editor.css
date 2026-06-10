@@ -641,6 +641,7 @@
 
 /* Project panel (M2.9): the open project folder's file list. */
 .ed-proj-head { font-size: var(--font-size-sm); color: var(--color-text); font-weight: 600; margin-bottom: var(--space-xs); }
+.ed-proj-vocab { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: var(--space-sm); }
 .ed-proj-empty { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .ed-proj-list { display: flex; flex-direction: column; gap: 2px; }
 .ed-proj-file {

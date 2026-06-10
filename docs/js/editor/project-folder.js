@@ -18,6 +18,7 @@
  *     confirmDiscard() -> bool,  // guard before replacing a dirty document
  *     load(raw, name, handle, project) -> Promise,
  *     showPanel(id), updatePanels(),
+ *     teiVocabularyLine() -> string|null,  // the project's TEI scope and load state
  *     getProjectPanelHost() -> Element,  // the project panel's (possibly created) host
  *   }
  */
@@ -29,11 +30,12 @@ import { requireCtx } from "./ctx.js";
 
 export function createProjectFolder(ctx) {
   requireCtx("createProjectFolder", ctx,
-    ["setStatus", "setDirty", "confirmDiscard", "load", "showPanel", "updatePanels", "getProjectPanelHost"],
+    ["setStatus", "setDirty", "confirmDiscard", "load", "showPanel", "updatePanels",
+     "teiVocabularyLine", "getProjectPanelHost"],
     ["app"]);
   const {
     app, setStatus, setDirty, confirmDiscard, load,
-    showPanel, updatePanels, getProjectPanelHost,
+    showPanel, updatePanels, teiVocabularyLine, getProjectPanelHost,
   } = ctx;
 
   function renderProjectPanel() {
@@ -42,6 +44,8 @@ export function createProjectFolder(ctx) {
     const pf = app.projectFolder;
     if (!pf) return;
     host.appendChild(el("div", { class: "ed-proj-head", text: pf.name }));
+    const vocab = teiVocabularyLine();
+    if (vocab) host.appendChild(el("div", { class: "ed-proj-vocab", text: vocab }));
     if (!pf.files.length) {
       host.appendChild(el("p", { class: "ed-proj-empty", text: "No .xml or .txt files in this folder yet." }));
       return;
