@@ -15,7 +15,7 @@
 
 teiCrafter is a client-only, browser-based editor for arbitrary [TEI-XML](https://tei-c.org/). You open an existing edition, correct it folio by folio, and save it back with every byte outside your deliberate edits unchanged. Most XML tools parse a file into a tree and re-serialize it on save, silently normalising attribute order, entity notation and whitespace; teiCrafter never rebuilds the file. The opened string itself remains the document, an edit replaces exactly the edited passage inside it, and saving an untouched document reproduces the input byte for byte. The practical consequence: a file diff after saving shows precisely the human intervention and nothing else.
 
-TEI encodes its own structure, so the editor reads the editing unit from the document instead of asking for configuration: word-level where the TEI tokenizes words (`<w>`), line-level where it marks only line breaks (`<lb>`). Any TEI opens without setup; an optional project manifest (`teicrafter.project.json` next to the edition) adds project-specific settings such as an image resolver, allowed markup, indices and views. There is no build step.
+TEI encodes its own structure, so the editor reads the editing unit from the document instead of asking for configuration: word-level where the TEI tokenizes words (`<w>`), line-level where it marks only line breaks (`<lb>`). Any TEI opens without setup; an optional project manifest (`teicrafter.project.json` next to the edition) adds project-specific settings such as an image resolver, indices, views, and the allowed markup. A project is not a single edition type: one project can hold several document types (for Stefan Zweig Digital: letters, life documents, typescripts), so the manifest declares the allowed markup per document type and the markup offered in the editor follows the open document's type. You can also open a whole project folder: granting a folder once through the browser's File System Access directory handle (Chromium browsers) lists its files in the Project panel. A plaintext (`.txt`) file in such a folder opens as minimal line-level TEI produced by a fixed rule (paragraphs on blank lines, a line-break element per line, the text carried verbatim and XML-escaped); this is transport, not interpretation, and is deliberately not marked as machine-generated. There is no build step.
 
 The landing page leads into the editor:
 
@@ -43,7 +43,7 @@ The design rests on the principle of **epistemic asymmetry**: LLMs generate plau
 The editor is a dual-view workbench: two panes, always.
 
 1. **Left pane: the text surface.** View tabs switch between the diplomatic **Reading text** (folio by folio; editable units are words when `<w>` is present, lines otherwise; edits are offset splices into the canonical string) and the editable **XML source** (syntax-highlighted, line numbers, Check XML, Apply gated on well-formedness). Live integrity checks sit in the pane head as a chip with a detail popover.
-2. **Right pane: the context panel.** Panel tabs switch between the **Facsimile** (a real [OpenSeadragon](https://openseadragon.github.io/) 5.0.1 deep-zoom viewer over the page image, with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook) and the **Index** (an editable `<standOff>` of persons, places, organisations, works, and events with authority identifiers and mention counts). The panel registry is open for project-specific panels.
+2. **Right pane: the context panel.** Panel tabs switch between the **Facsimile** (a real [OpenSeadragon](https://openseadragon.github.io/) 5.0.1 deep-zoom viewer over the page image, with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook), the **Index** (an editable `<standOff>` of persons, places, organisations, works, and events with authority identifiers and mention counts), and, when a project folder is open, the **Project** panel (the folder's TEI and plaintext files; click a file to switch the open document). The panel registry is open for project-specific panels.
 
 Annotation happens at the text: select words to annotate them, click a mention to edit its annotation and authority ids in place, right-click for the context menu. All operations stay inside the lossless offset-splice model.
 
@@ -55,9 +55,10 @@ Annotation happens at the text: select words to annotate them, click a mention t
 |---------|-------------|
 | **Lossless editing core** | Raw TEI string is canonical; edits are absolute-offset splices; `serialize()` is byte-identical for untouched content. DOM-free. |
 | **Editing unit from the document** | Word-level when `<w>` is present, line/cell-level otherwise; read from the encoding, no configuration needed to open a file. |
-| **Project manifests** | An optional `teicrafter.project.json` next to the edition configures name, IIIF image resolver, allowed markup, indices and views per project. |
+| **Project manifests** | An optional `teicrafter.project.json` next to the edition configures name, IIIF image resolver, indices and views, and the allowed markup declared per document type (one project can hold several genres). |
+| **Project folders** | A folder granted once through a File System Access directory handle; the Project panel lists its TEI and plaintext files; a plaintext file opens as a deterministic line-level draft, and the first save creates the `.xml` next to the source. |
 | **Real OpenSeadragon facsimile** | Deep-zoom page image with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook. |
-| **In-browser index management** | Editable `<standOff>` of persons, organisations, and events with mention linking via `<name ref>`. |
+| **In-browser index management** | Editable `<standOff>` of persons, places, organisations, works, and events with mention linking via `<name ref>`. |
 | **Live validation and structure** | Integrity checks and a structural outline alongside the reading text. |
 | **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. Currently switched off (feature flag). |
 | **Runs in the browser** | No server and no build step; static files deployed from `/docs`. Editions are read from and saved to local files. |
@@ -69,10 +70,11 @@ Annotation happens at the text: select words to annotate them, click a mention t
 
 1. Open [teiCrafter on GitHub Pages](https://digitalhumanitiescraft.github.io/teiCrafter/).
 2. Open a local edition, or load one of the three example editions (from the landing page cards, the welcome cards, or the Load menu).
-3. Navigate folio by folio. Click a word (word-level editions) or a line (line-level editions) to correct its text.
-4. Use the facsimile pane to inspect the page image; zone overlays highlight in sync with the reading text.
-5. Switch the right pane to **Index** to add or link persons, organisations, and events.
-6. Save the edition back losslessly.
+3. To work on a whole project, use **Load... > Open project folder...** (Chromium browsers): the folder's TEI and plaintext files appear in the Project panel, and clicking a file opens it.
+4. Navigate folio by folio. Click a word (word-level editions) or a line (line-level editions) to correct its text.
+5. Use the facsimile pane to inspect the page image; zone overlays highlight in sync with the reading text.
+6. Switch the right pane to **Index** to add or link persons, places, organisations, works, and events.
+7. Save the edition back losslessly.
 
 The LLM on-ramp ("New from text (LLM)") is currently switched off in the preview. When enabled, it accepts plaintext and an API key, and the drafted TEI opens in the same editor, marked violet and unreviewed for you to verify.
 
@@ -80,33 +82,30 @@ The LLM on-ramp ("New from text (LLM)") is currently switched off in the preview
 
 ## Architecture
 
-teiCrafter is a client-only single-page application built from native ES6 modules, with no build step, no framework, and no NPM runtime dependencies. The live application is nine JavaScript files plus four static assets.
+teiCrafter is a client-only application built from native ES6 modules, with no build step, no framework, and no NPM runtime dependencies.
 
 ```
 teiCrafter/
 ├── docs/
-│   ├── index.html              Landing: entry card into the editor
+│   ├── index.html              Landing page (hero, example cards, feature strip)
 │   ├── editor.html             Editor: dual-view shell; loads OpenSeadragon 5.0.1 from CDN
+│   ├── about.html              What the tool is, what saving does, status and licence
 │   ├── css/
-│   │   ├── style.css           Design tokens (--color-*/--space-*/--font-*/--radius-*) + base
+│   │   ├── style.css           Design tokens (--color-*/--space-*/--font-*/--radius-*) + base + site chrome
 │   │   └── editor.css          Editor styles (token-only)
 │   └── js/
-│       ├── editor/
-│       │   ├── tei-document.js     Layer 1: generic offset-true core (DOM-free)
-│       │   ├── edition.js          Layer 2: folios/lines/cells model (DOM-free)
-│       │   ├── editor-app.js       Layer 3: UI controller + LLM on-ramp
-│       │   ├── facsimile.js        OpenSeadragon viewer: page image + zone overlays
-│       │   ├── standoff.js         Lossless <standOff> model + mention linking
-│       │   └── index-panel.js      Index-management UI (persons/orgs/events)
-│       ├── services/
-│       │   ├── llm.js              Multi-provider LLM client (keys in memory only)
-│       │   └── storage.js          Settings (LocalStorage)
-│       └── utils/
-│           └── constants.js        Providers, source labels, default mappings
+│       ├── editor/             The three engine layers (tei-document, edition, editor-app)
+│       │                       plus the feature modules: facsimile, standoff, criticism,
+│       │                       annotation-ui, entity-index, index-panel, source-view,
+│       │                       project-profiles, project-manifest, plaintext-import,
+│       │                       authority-form, recent-files, gen-modal, ai-suggest, dom
+│       ├── services/           llm, authority-lookup, storage
+│       └── utils/              constants
+├── pipeline/                   Deterministic SZD Page-JSON to TEI converter (Python)
 └── test/                       Headless harness and engine proofs
 ```
 
-Import closure: `editor-app` -> `edition`, `facsimile`, `standoff`, `index-panel`, `llm`, `constants`; `edition` -> `tei-document`; `standoff` -> `tei-document`; `facsimile` and `index-panel` are project-dependency-free (`facsimile` uses the global OpenSeadragon); `llm` -> `constants`, `storage`.
+The authoritative module map with per-file responsibilities and the import closure is [knowledge/architecture.md](knowledge/architecture.md).
 
 ### Technology Decisions
 

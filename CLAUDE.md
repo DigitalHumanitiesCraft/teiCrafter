@@ -10,6 +10,7 @@
 
 ## Project
 - A browser-based, lossless editor for arbitrary TEI-XML. Open an existing edition, correct it folio by folio at its natural granularity (word-level if `<w>` is present, else line-level), save it back byte-faithfully. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
+- Projects are folders with a declarative `teicrafter.project.json`. One project holds several document types, and the allowed markup binds to the type (`documentTypes` + the `files` map; project-level `markup` is the default, PID detection the fallback for bare files). "Open project folder" uses a once-granted File System Access directory handle (decision: not OPFS), Chromium-only; its `.xml`/`.txt` files appear in the Project panel. A `.txt` opens as a deterministic line-level draft (transport, never AI-marked); the first save creates the `.xml` next to the source. Separate from the LLM on-ramp.
 - An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides. Currently hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10); the code stays in place.
 - Real cases: Wenzelsbibel (word-level), Jeanne Hersch / zbz-ocr-tei (line-level), Stefan Zweig / szd-htr (catalog TEI + Page-JSON, needs conversion first).
 - Client-only, deployed via GitHub Pages from `/docs`. ES6 modules, no bundler, no build step.

@@ -20,7 +20,7 @@ related: [project, data, specification, user-stories, architecture, design, jour
 
 # teiCrafter Knowledge Base
 
-Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. An optional LLM on-ramp drafts an initial TEI from plaintext into the same editor (currently switched off behind a feature flag). Client-only, no backend, no build step.
+Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. Plaintext also enters the editor: a `.txt` in an open project folder opens as line-level TEI by a fixed, deterministic rule (switched on, never AI-marked). Separately, an optional LLM on-ramp drafts an initial TEI from plaintext into the same editor (currently switched off behind a feature flag). Client-only, no backend, no build step.
 
 This knowledge base follows the [Promptotyping Documents convention](https://dhcraft.org/Promptotyping/), function-separated as in the ancestor tool coOCR HTR.
 
@@ -61,7 +61,7 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Byte-identical round-trip | The proven property: every TEI file in the sweep serializes back unchanged (295/295) | testing |
 | Lossless / byte-identical / byte-faithful | One concept, three precisions. **Lossless** is the product promise: saving changes nothing the human did not edit. **Byte-identical** is the no-edit case: the saved file equals the opened file in every byte. **Byte-faithful** is the with-edits case: outside the deliberately edited spans every byte is unchanged (whitespace, attribute order, comments, entity spellings included); the only difference between input and output is exactly the edit. ("Byte-exact" in older passages means byte-faithful.) | testing, specification |
 | Editorial annotation layer | standOff entities + authority `<idno>` + mention linking + notes + AI proposal (`resp="#ai"`) + live lookup + inline textual criticism (`unclear`/`del`/`add`/`gap`), all lossless | architecture, specification |
-| Project manifest | A declarative `teicrafter.project.json` next to a project's TEI files (name, schema, image resolver, allowed markup, indices, views), the machine-readable derivation of its editorial guidelines; a manifest wins, PID detection is the fallback | specification, architecture |
+| Project manifest | A declarative `teicrafter.project.json` next to a project's TEI files (name, schema, image resolver, allowed markup, indices, views), the machine-readable derivation of its editorial guidelines; a manifest wins, PID detection is the fallback. A project is not an edition type: it carries `documentTypes` and a `files` map, so the markup inventory binds to the open document's type | specification, architecture |
 | File System Access API | Lets the editor read and write editions locally without a backend | architecture |
 
 ## Lineage

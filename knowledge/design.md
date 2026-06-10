@@ -60,7 +60,7 @@ Status is triple-coded (colour plus icon plus position), never colour alone, so 
 The dual view (M2.14, operator order 2026-06-10): two panes, always.
 
 ```
-Text surface (tabs: Reading text | XML source)  |  Context panel (tabs: Facsimile | Index | ...)
+Text surface (tabs: Reading text | XML source)  |  Context panel (tabs: Facsimile | Index | Project | ...)
 ```
 
 The left pane is always the text work surface; view tabs in its head switch between the diplomatic reading text and the editable XML source. The right pane is always a context view; panel tabs in its head switch between the facsimile and the entity index, and the registry behind them is open for project-specific panels (`project.panels`). There is no single-pane mode: the XML source works next to the page image (explicit operator requirement), and a document without page images opens on the Index panel with the Facsimile tab disabled and the reason in its tooltip (a permanently empty viewer is noise; a disabled tab that says why is information).
@@ -113,7 +113,7 @@ The M2.6 inline cell action chooser that accompanied this layer was superseded t
 | Component | Status |
 |-----------|--------|
 | Reading-text pane with inline cell edit | Built |
-| Dual view (M2.14): left text surface with Reading/XML view tabs, right context panel with tabs from an open registry (facsimile, index; `project.panels` extensible); Index fallback when a document has no images | Built (2026-06-10) |
+| Dual view (M2.14): left text surface with Reading/XML view tabs, right context panel with tabs from an open registry (facsimile, index, project; `project.panels` extensible); Index fallback when a document has no images | Built (2026-06-10) |
 | Facsimile panel: real images, deep zoom (OpenSeadragon 5.0.1), `<zone>` overlays bidirectionally linked to the reading text | Built |
 | Live checks as a status chip in the left pane head with detail popover (footer until round 7, right-pane tab before that); tooltip defines well-formed and lossless | Built (2026-06-10) |
 | About page (`about.html`): tool, lossless definition, examples, method, maker, imprint link; identity footer (DHCraft logo, About, Imprint, GitHub icon) on all pages | Built (2026-06-10) |
@@ -124,6 +124,7 @@ The M2.6 inline cell action chooser that accompanied this layer was superseded t
 | Editable XML source view: syntax highlighting, line numbers, Check XML with error jump, gated Apply (M2.12) | Built (2026-06-10) |
 | LLM on-ramp modal (violet) | Built; hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10) |
 | Entity index (M2.11, a right-pane context panel since M2.14): filterable `<standOff>` index with mention counts; row click jumps to the first mention while the index stays visible | Built (2026-06-10) |
+| Project panel (M2.9, right-pane context panel): the open project folder's `.xml`/`.txt` file list with document-type labels; a click opens the file (a plaintext draft marked as such), the active file highlighted | Built (2026-06-10) |
 | Annotation editor with in-place authority editing (idno add/remove + live lookup at the mention itself, M2.11) | Built (2026-06-10) |
 | Authority lookup (M3.3): hand-entry plus live external lookup of authority records | Built |
 | AI entity suggestion (M3.7) | Removed from the UI (operator decision 2026-06-10); `ai-suggest.js` retained for a text-anchored re-entry |
@@ -133,7 +134,7 @@ The M2.6 inline cell action chooser that accompanied this layer was superseded t
 | Inline cell action chooser replacing hidden mode toggles (M2.6) | Superseded by the M2.10 editor paradigm (context menu + gestures) |
 | Authoring-view forms for teiHeader and apparatus `<note>` bodies | Future |
 | standOff critical-apparatus / note-body authoring layer | Future |
-| teiCrafter-internal storage for edited TEIs (operator announcement 2026-06-10; design open) | Future (M2.9) |
+| teiCrafter-internal storage for edited TEIs (operator announcement 2026-06-10; design open) | Future (M2.9 itself, the project folder via directory handle, is built; an internal store remains undecided) |
 
 ## Related
 
