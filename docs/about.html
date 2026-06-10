@@ -45,6 +45,13 @@
             the browser; the edition is read from and saved to a local file on your computer
             and is not uploaded anywhere.</p>
 
+        <h2>What it is for, and what it is not</h2>
+        <p>teiCrafter is a correction and annotation surface for editions that already exist as
+            TEI, typically the output of OCR or HTR pipelines that a person now verifies and
+            refines. It does not replace modelling environments such as oXygen or ediarum
+            (its output imports into them), it does not perform text recognition (that is
+            upstream work), and it does not publish editions; it edits the file.</p>
+
         <h2>What saving does (lossless)</h2>
         <p>Every edit replaces exactly the edited passage in the file text. Everything you did
             not touch is preserved byte for byte, including whitespace, attribute order,
@@ -60,6 +67,32 @@
             document, there is no per-project configuration. The facsimile pane reads
             <code>&lt;facsimile&gt;</code>/<code>&lt;zone&gt;</code> and links text and image
             in both directions via <code>@facs</code>.</p>
+
+        <h2>What can be annotated</h2>
+        <p>Entities (persons, places, organisations, works, events) live in a
+            <code>&lt;standOff&gt;</code> index inside the document; selected text is linked to
+            them as <code>&lt;name ref&gt;</code> mentions, and authority identifiers attach to
+            an entity as <code>&lt;idno&gt;</code> elements (several registers per entity are
+            possible). Editorial notes are written as <code>&lt;note target&gt;</code> entries,
+            and textual-critical markup wraps a passage in <code>&lt;unclear&gt;</code>,
+            <code>&lt;del&gt;</code> or <code>&lt;add&gt;</code>, or marks a
+            <code>&lt;gap/&gt;</code>. All of this stays inside the saving behaviour described
+            above; nothing is stored outside the file.</p>
+
+        <h2>What leaves the browser</h2>
+        <p>The edition itself is never transmitted; it is read from and saved to a local file.
+            Network requests occur for three things: page images are fetched from the
+            repositories the edition points to (for the examples: GAMS and the IIIF service of
+            the Austrian National Library); an authority lookup sends the search term you typed
+            to the chosen register (lobid.org for the GND, wikidata.org, geonames.org); and the
+            page itself loads fonts and the OpenSeadragon viewer from public CDNs. When the
+            optional language-model entry is enabled, the text you paste there is sent to the
+            provider you select, and the API key is held in memory for the session only.</p>
+
+        <h2>Browser requirements</h2>
+        <p>A current browser with ES6-module support is required. Saving in place uses the File
+            System Access API and is available in Chromium-based browsers; everywhere else the
+            editor offers the edited file as a download instead. Nothing is installed.</p>
 
         <h2>Machine-generated content</h2>
         <p>Content that a machine produced is <span class="ab-ai">marked violet</span> and
@@ -82,6 +115,17 @@
             of the repository:
             <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank"
             rel="noopener">github.com/DigitalHumanitiesCraft/teiCrafter</a>.</p>
+
+        <h2>Status, citation, licence</h2>
+        <p>teiCrafter is a research preview: it is under active development, its behaviour and
+            interface change between versions, and it is not intended for production use. The
+            tool is referenced in Pollin, C., Fischer, F., Sahle, P., Scholger, M. &amp;
+            Vogeler, G. (2025): When it was 2024. Generative AI in the Field of Digital
+            Scholarly Editions. <i>Zeitschrift f&uuml;r digitale Geisteswissenschaften</i> 10,
+            <a href="https://doi.org/10.17175/2025_008" target="_blank"
+            rel="noopener">doi:10.17175/2025_008</a>. The repository is licensed under
+            <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank"
+            rel="noopener">CC BY 4.0</a>.</p>
 
         <h2>Who makes this</h2>
         <p>teiCrafter is a research tool by <a href="https://dhcraft.org" target="_blank"
