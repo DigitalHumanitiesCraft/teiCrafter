@@ -35,6 +35,7 @@ import { createIndexOverlay } from "./index-overlay.js";
 import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
+import * as recents from "./recent-files.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
@@ -82,6 +83,12 @@ function setDirty(d) {
 function enableControls(on) {
   for (const id of ["btn-download", "btn-index", "btn-xml"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
+  // The welcome surface and the editor chrome are mutually exclusive: the
+  // document toolbar group, pane heads, pager and legend only exist with a
+  // document; before that the full-width welcome screen owns the space.
+  $("ed-welcome").hidden = on;
+  $("ed-main").hidden = !on;
+  for (const n of document.querySelectorAll(".ed-tool-doc")) n.hidden = !on;
   if (!on) {
     app.sourceMode = false;
     $("btn-xml").classList.remove("active");
@@ -183,7 +190,9 @@ function load(raw, name, handle) {
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
   $("ed-doc-name").textContent = name;
+  $("ed-doc-name").hidden = false;
   enableControls(true);
+  if (handle) { recents.rememberRecent(handle, name).then(renderRecents); }
   setDirty(false);
   markGenerated(false); // opening a real file clears the AI-generated flag
   refreshAfterStandoffEdit();
@@ -200,6 +209,7 @@ function markGenerated(on) {
 }
 
 async function openLocal() {
+  if (!confirmDiscard()) return;
   // Preferred: File System Access API (lets us save in place later).
   if (window.showOpenFilePicker) {
     try {
@@ -272,8 +282,121 @@ async function loadSzd() {
   }
 }
 
-// Example registry: the dropdown and the start-screen cards load the same way.
+// Example registry: the toolbar menu and the welcome cards load the same way.
 const EXAMPLES = { wb: loadDemo, zbz: loadZbz, szd: loadSzd };
+
+/** Guard before any in-app document replacement (open, example, drop, recent). */
+function confirmDiscard() {
+  return !app.dirty || window.confirm(`Discard unsaved changes in ${app.docName}?`);
+}
+
+function loadExample(key) {
+  const loader = EXAMPLES[key];
+  if (loader && confirmDiscard()) loader();
+}
+
+// ---- drag and drop ----------------------------------------------------------
+// The whole window is a drop target; a fixed overlay signals the state. When the
+// browser can hand over a FileSystemFileHandle, save-in-place works for dropped
+// files exactly as for picked ones.
+
+function dragHasFile(e) {
+  return e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+}
+
+async function openDropped(dt) {
+  const item = dt.items && dt.items[0];
+  const file = dt.files && dt.files[0];
+  if (!file) return;
+  if (!/\.xml$/i.test(file.name)) {
+    setStatus(`Not opened: ${file.name} is not an .xml file.`);
+    return;
+  }
+  // Start the handle request synchronously: a DataTransferItem is only live
+  // during the drop event itself (the confirm dialog and any await end that).
+  const handlePromise = item && item.getAsFileSystemHandle
+    ? item.getAsFileSystemHandle().catch(() => null)
+    : Promise.resolve(null);
+  if (!confirmDiscard()) return;
+  const h = await handlePromise;
+  const handle = h && h.kind === "file" ? h : null;
+  try {
+    load(await file.text(), file.name, handle);
+  } catch (err) {
+    setStatus(`Could not open ${file.name}: ${err.message}`);
+  }
+}
+
+function setupDragDrop() {
+  const overlay = $("ed-drop");
+  let depth = 0;
+  const hide = () => { depth = 0; overlay.hidden = true; };
+  window.addEventListener("dragenter", (e) => {
+    if (!dragHasFile(e)) return;
+    e.preventDefault();
+    depth++;
+    overlay.hidden = false;
+  });
+  window.addEventListener("dragover", (e) => {
+    if (dragHasFile(e)) e.preventDefault();
+  });
+  window.addEventListener("dragleave", () => {
+    if (depth > 0 && --depth === 0) overlay.hidden = true;
+  });
+  window.addEventListener("drop", (e) => {
+    if (!dragHasFile(e)) return;
+    e.preventDefault();
+    const dt = e.dataTransfer;
+    hide();
+    openDropped(dt);
+  });
+}
+
+// ---- recent files (welcome screen) ------------------------------------------
+
+async function reopenRecent(rec) {
+  if (!confirmDiscard()) return;
+  try {
+    let perm = await rec.handle.queryPermission({ mode: "readwrite" });
+    if (perm !== "granted") perm = await rec.handle.requestPermission({ mode: "readwrite" });
+    if (perm !== "granted") {
+      setStatus(`Permission to reopen ${rec.name} was not granted.`);
+      return;
+    }
+    const file = await rec.handle.getFile();
+    load(await file.text(), file.name, rec.handle);
+  } catch (err) {
+    // The file moved or the handle died: drop the stale row instead of failing again.
+    await recents.forgetRecent(rec.name);
+    renderRecents();
+    setStatus(`Could not reopen ${rec.name} (${err.message}); removed it from the recent list.`);
+  }
+}
+
+async function renderRecents() {
+  const sec = $("ed-recent");
+  const host = $("ed-recent-list");
+  if (!sec || !host || !recents.supported) return;
+  const list = await recents.listRecents();
+  clear(host);
+  sec.hidden = !list.length;
+  for (const rec of list) {
+    const row = el("button", { class: "ed-recent-row", type: "button",
+      title: `Reopen ${rec.name} (asks for file permission again)` });
+    row.appendChild(el("span", { class: "ed-recent-name", text: rec.name }));
+    row.appendChild(el("span", { class: "ed-recent-when", text: new Date(rec.when).toLocaleDateString() }));
+    const forget = el("span", { class: "ed-recent-forget", text: "remove", role: "button",
+      title: "Remove this entry from the recent list (the file itself is untouched)" });
+    forget.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      await recents.forgetRecent(rec.name);
+      renderRecents();
+    });
+    row.appendChild(forget);
+    row.addEventListener("click", () => reopenRecent(rec));
+    host.appendChild(row);
+  }
+}
 
 // ---- folio navigation ------------------------------------------------------
 
@@ -974,17 +1097,40 @@ const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
 // ---- wire-up ---------------------------------------------------------------
 
 $("btn-open").addEventListener("click", openLocal);
-// Examples: the toolbar dropdown and the start-screen cards share one registry.
-$("ed-examples").addEventListener("change", (e) => {
-  const loader = EXAMPLES[e.target.value];
-  e.target.value = ""; // reset to the placeholder so the same example can reload
-  if (loader) loader();
-});
-for (const [id, key] of [["start-wb", "wb"], ["start-zbz", "zbz"], ["start-szd", "szd"]]) {
-  const b = $(id);
-  if (b) b.addEventListener("click", () => EXAMPLES[key]());
+$("start-open").addEventListener("click", openLocal);
+
+// Examples: the toolbar menu and the welcome cards share one registry.
+// The menu is a real button menu (not a select-as-action): toggle on the
+// button, close on item click, outside click, or Escape.
+const examplesBtn = $("btn-examples");
+const examplesMenu = $("ed-examples-menu");
+function closeExamplesMenu() {
+  examplesMenu.hidden = true;
+  examplesBtn.setAttribute("aria-expanded", "false");
 }
-if ($("start-open")) $("start-open").addEventListener("click", openLocal);
+examplesBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  examplesMenu.hidden = !examplesMenu.hidden;
+  examplesBtn.setAttribute("aria-expanded", String(!examplesMenu.hidden));
+});
+document.addEventListener("click", (e) => {
+  if (!examplesMenu.hidden && !(e.target instanceof Element && e.target.closest(".ed-dd-wrap"))) {
+    closeExamplesMenu();
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !examplesMenu.hidden) closeExamplesMenu();
+});
+for (const item of document.querySelectorAll("[data-example]")) {
+  item.addEventListener("click", () => {
+    closeExamplesMenu();
+    loadExample(item.dataset.example);
+  });
+}
+$("card-generate").addEventListener("click", () => genModal.open());
+
+setupDragDrop();
+renderRecents();
 $("btn-facs").addEventListener("click", () => {
   app.facsHidden = !app.facsHidden;
   renderFacsimile(); // re-applies visibility and repopulates the viewer on show

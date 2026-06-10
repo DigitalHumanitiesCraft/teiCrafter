@@ -22,6 +22,19 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (evening): Welcome state and loading discipline (operator feedback round 6)
+
+The operator showed the start screen and asked for a critical review ("Ist das wirklich perfekt?"). The review against design.md and the built HTML/CSS found the start state to be the weakest surface: it lived inside dead editor chrome (pane head, pager with a hyphen placeholder, an empty facsimile strip despite the documented "a permanently empty viewer is noise" rule), the page's strongest visual element was a gold DISABLED Download button, the same command carried two labels ("Open TEI..." vs "Open local TEI...", violating the label-consistency rule), the examples existed twice with diverging descriptions (select-as-action dropdown plus cards), the LLM on-ramp was missing from the start surface although the landing page treats it as one of two equal entries, no control had a visible keyboard focus, and the warm scholarly identity (serif, paper surfaces) did not appear at all on first contact. All points were approved for implementation in one round.
+
+Built (all proven by a 16-check Playwright smoke run plus screenshots, full regression 295/295 green):
+
+- **Full-width welcome surface** (`#ed-welcome`) shown until a document loads; the editor chrome (`#ed-main`, pane heads, pager, legend, document toolbar group) does not exist before that. Serif headline "Edit any TEI edition, losslessly." plus a one-sentence value proposition.
+- **Every way in, once.** Gold primary "Open TEI..." (one label everywhere), drag-and-drop of an .xml file anywhere on the page (full-page drop indicator; the `DataTransferItem` handle is requested synchronously inside the drop event because it dies at the first await, so dropped files keep save-in-place), a Recent-files section over persisted File System Access handles (new `recent-files.js`, IndexedDB, max 5, permission re-requested in the click gesture, dead handles remove their own row), and four uniform cards: the three examples (one metadata schema; internal ids moved to tooltips) plus the violet LLM card.
+- **Toolbar discipline.** The examples select became a real button menu; the document group (Facsimile, Index, XML | Save, Download) is hidden until load (an explicit `.ed-tool-doc[hidden]` rule, because the group's `display:flex` would beat the user-agent hidden rule, the same trap the gen-banner already documented); Save is now the gold primary (the lossless core gesture), Download neutral; `.ed-btn-primary:disabled` drops the accent.
+- **Header cleanup.** The "EDITOR" badge (naming the only mode), the duplicate Home button, and the "no document" placeholder are gone; the logo is the home link and the document name appears only with a document.
+- **Focus visibility.** `:focus-visible` outlines (gold, violet for AI controls) on all interactive controls, recorded as a UI convention.
+- **Discard guard.** Open, example, drop and recent all confirm before replacing a document with unsaved changes (previously only the page-close path was guarded).
+
 ## 2026-06-10 (continued): The real Wenzelsbibel codex loads with IIIF facsimile (WB-AP1, WB-AP2)
 
 First work package after the ratified decisions. Three findings drove the implementation, all from the real data, none visible in the synthetic codex:

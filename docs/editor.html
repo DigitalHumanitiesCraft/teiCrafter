@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>teiCrafter Editor - any TEI edition (Editor path)</title>
+    <title>teiCrafter Editor</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -14,11 +14,9 @@
 </head>
 <body class="ed-body">
     <header class="ed-header">
-        <a class="ed-logo" href="index.html" title="teiCrafter start page">[ tei <span class="accent">Crafter</span> ]</a>
-        <span class="ed-mode">Editor</span>
+        <a class="ed-logo" href="index.html" title="Back to the teiCrafter start page">[ tei <span class="accent">Crafter</span> ]</a>
         <span class="spacer"></span>
-        <span class="ed-doc-name" id="ed-doc-name">no document</span>
-        <a class="ed-btn" href="index.html" title="Back to the start page">Home</a>
+        <span class="ed-doc-name" id="ed-doc-name" hidden></span>
     </header>
 
     <div class="ed-genbanner" id="ed-genbanner" hidden role="status">
@@ -28,25 +26,82 @@
     <div class="ed-toolbar">
         <div class="group">
             <button class="ed-btn" id="btn-open" title="Open a TEI edition from your computer">Open TEI...</button>
-            <select class="ed-select" id="ed-examples" title="Load one of the bundled example editions">
-                <option value="" selected>Load example...</option>
-                <option value="wb">Wenzelsbibel (synthetic, word-level)</option>
-                <option value="zbz">ZBZ Jeanne Hersch (real scans)</option>
-                <option value="szd">Stefan Zweig Digital (GAMS facsimile)</option>
-            </select>
+            <span class="ed-dd-wrap">
+                <button class="ed-btn" id="btn-examples" aria-haspopup="true" aria-expanded="false"
+                        title="Load one of the bundled example editions">Examples</button>
+                <span class="ed-dd" id="ed-examples-menu" hidden role="menu">
+                    <button class="ed-dd-item" data-example="wb" role="menuitem">Wenzelsbibel (synthetic codex, word-level)</button>
+                    <button class="ed-dd-item" data-example="zbz" role="menuitem">ZBZ Jeanne Hersch (letter with page scans, line-level)</button>
+                    <button class="ed-dd-item" data-example="szd" role="menuitem">Stefan Zweig Digital (letter with GAMS facsimile, line-level)</button>
+                </span>
+            </span>
             <button class="ed-btn ed-btn-ai" id="btn-generate" title="Generate an initial TEI from plaintext with an LLM, then edit it here">New from text (LLM)</button>
         </div>
-        <div class="sep"></div>
-        <div class="group">
+        <div class="sep ed-tool-doc" hidden></div>
+        <div class="group ed-tool-doc" hidden>
             <button class="ed-btn" id="btn-facs" disabled title="Show or hide the facsimile pane">Facsimile</button>
             <button class="ed-btn" id="btn-index" disabled title="All index entities (persons, places, organisations, works, events) with their authority ids and mention counts">Index</button>
             <button class="ed-btn" id="btn-xml" disabled title="Switch between the reading view and the editable XML source">XML</button>
-            <button class="ed-btn" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
-            <button class="ed-btn ed-btn-primary" id="btn-download" disabled title="Download the current TEI">Download</button>
+        </div>
+        <div class="sep ed-tool-doc" hidden></div>
+        <div class="group ed-tool-doc" hidden>
+            <button class="ed-btn ed-btn-primary" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
+            <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
         </div>
     </div>
 
-    <main class="ed-main" id="ed-main">
+    <!-- Welcome state: shown until a document is loaded; the editor chrome
+         (pane heads, pager, legend, facsimile) only appears with a document. -->
+    <section class="ed-welcome" id="ed-welcome">
+        <div class="ed-welcome-inner">
+            <h1>Edit any TEI edition, losslessly.</h1>
+            <p class="ed-welcome-lede">Open an edition, correct it folio by folio at its natural
+                granularity (words or lines), annotate entities with authority data, and save it
+                back byte for byte. AI contributions are marked violet until a human verifies them.</p>
+            <div class="ed-welcome-actions">
+                <button class="ed-btn ed-btn-primary" id="start-open" type="button"
+                        title="Open a TEI edition from your computer">Open TEI...</button>
+                <span class="ed-welcome-drophint">or drop a .xml file anywhere on this page</span>
+            </div>
+            <div class="ed-recent" id="ed-recent" hidden>
+                <h2>Recent files</h2>
+                <div class="ed-recent-list" id="ed-recent-list"></div>
+            </div>
+            <h2>Examples</h2>
+            <div class="ed-cards">
+                <button class="ed-card" data-example="wb" type="button"
+                        title="wenzelsbibel-synthetic-codex.xml">
+                    <b>Wenzelsbibel</b>
+                    <span class="ed-card-desc">synthetic codex in the word-level profile</span>
+                    <span class="ed-card-meta">word-level, no page images</span>
+                    <span class="ed-card-cta">Load example</span>
+                </button>
+                <button class="ed-card" data-example="zbz" type="button"
+                        title="zbz-hersch-100.xml">
+                    <b>ZBZ Jeanne Hersch</b>
+                    <span class="ed-card-desc">real letter with page scans</span>
+                    <span class="ed-card-meta">line-level, local page images</span>
+                    <span class="ed-card-cta">Load example</span>
+                </button>
+                <button class="ed-card" data-example="szd" type="button"
+                        title="o_szd.1079.tei.xml">
+                    <b>Stefan Zweig Digital</b>
+                    <span class="ed-card-desc">real letter with GAMS facsimile</span>
+                    <span class="ed-card-meta">line-level, facsimile via GAMS</span>
+                    <span class="ed-card-cta">Load example</span>
+                </button>
+                <button class="ed-card ed-card-ai" id="card-generate" type="button"
+                        title="Generate an initial TEI from plaintext with an LLM, then edit it here">
+                    <b>New from text (LLM)</b>
+                    <span class="ed-card-desc">paste plaintext, a model drafts an initial TEI</span>
+                    <span class="ed-card-meta">opens unreviewed, marked violet</span>
+                    <span class="ed-card-cta">Generate and edit</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <main class="ed-main" id="ed-main" hidden>
         <section class="ed-pane">
             <div class="ed-pane-head">
                 <span>Reading text (diplomatic)</span>
@@ -60,26 +115,7 @@
                  title="Colour legend. Select text to annotate; double-click to edit; right-click for all actions.">
                 <span class="ed-legend-chips" id="ed-legend-chips"></span>
             </div>
-            <div class="ed-pane-body ed-reading" id="ed-reading">
-                <div class="ed-start" id="ed-start">
-                    <p>Open a TEI edition from your computer, or start with an example:</p>
-                    <div class="ed-start-cards">
-                        <button class="ed-start-card" id="start-wb" type="button">
-                            <b>Wenzelsbibel</b>
-                            <span>synthetic codex, word-level, no page images</span>
-                        </button>
-                        <button class="ed-start-card" id="start-zbz" type="button">
-                            <b>ZBZ Jeanne Hersch</b>
-                            <span>real letter with page scans, line-level</span>
-                        </button>
-                        <button class="ed-start-card" id="start-szd" type="button">
-                            <b>Stefan Zweig Digital</b>
-                            <span>o_szd.1079 with GAMS facsimile, line-level</span>
-                        </button>
-                    </div>
-                    <button class="ed-btn" id="start-open" type="button">Open local TEI...</button>
-                </div>
-            </div>
+            <div class="ed-pane-body ed-reading" id="ed-reading"></div>
         </section>
 
         <section class="ed-pane" id="ed-pane-facs">
@@ -111,6 +147,8 @@
     </div>
 
     <div class="ed-val-pop" id="ed-val-pop" hidden></div>
+
+    <div class="ed-drop" id="ed-drop" hidden><span>Drop the TEI file to open it</span></div>
 
     <footer class="ed-footer">
         <span><span class="ed-status-dot" id="ed-status-dot">&#9679;</span> <span id="ed-status">Ready</span></span>

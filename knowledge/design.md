@@ -70,9 +70,11 @@ Reading text (cells)  |  Facsimile (OpenSeadragon)
 - **Help is tooltip-only.** No explainer banner, no ambient hint lines; every control explains itself in its `title`. The one banner that remains is the generated-and-unreviewed provenance warning (violet), which is state, not help.
 - The live checks (well-formedness, lossless integrity, structure counts) run automatically and surface as a status chip in the footer (triple-coded ok/warning/error) with the detail rows in a click popover; full RelaxNG/Schematron stays in the offline harness. Validation is ambient state, not a destination pane.
 
-Loading (decided by the operator, 2026-06-10): one "Open TEI..." button plus an examples dropdown with the three demo sources (Wenzelsbibel synthetic, ZBZ Jeanne Hersch with real scans, Stefan Zweig Digital o_szd.1079 with GAMS facsimile), and the violet "New from text (LLM)" entry. Before a document is loaded, the reading pane shows a start screen with the same three examples as cards plus the open button. The former toolbar mode toggles ("Add note", "Mark text") were removed: every cell operation is reachable through the right-click context menu and the direct gestures (M2.10), so pre-toggled modes are no longer part of the surface.
+**Loading and the welcome state (reworked on operator feedback, 2026-06-10 evening; supersedes the in-pane start screen and the examples select from the same morning).** Before a document is loaded the editor shows a full-width welcome surface and no editor chrome at all: no pane heads, no pager, no legend, no facsimile strip, and no document toolbar group (a start state must not carry dead controls; the earlier screen had a gold disabled Download as the page's strongest element). The welcome surface carries the visual identity from the first screen on (warm reading surface, serif headline) and offers every way in: a one-sentence value proposition ("Edit any TEI edition, losslessly."), the gold primary "Open TEI..." button, drag-and-drop of an .xml file anywhere on the page (full-page drop indicator; a dropped file yields a FileSystemFileHandle where the browser supports it, so save-in-place works for dropped files too), a Recent-files list (persisted File System Access handles via `recent-files.js`, reopening re-requests permission inside the click), and four cards: the three examples with one uniform metadata schema (description line, then granularity and image source in mono; internal file names like o_szd.1079 live in the tooltip, not on the card) plus the violet "New from text (LLM)" card, so the LLM on-ramp is a first-class entry here exactly as on the landing page.
 
-The landing page (`index.html`) is two cards: open and edit existing TEI (gold), and New from text (LLM) (violet). The editor header's logo and a Home button both lead back to it (M2.12); the stale "Generator path" label is gone.
+Toolbar discipline follows from the same round: the always-available group is "Open TEI...", an "Examples" button menu (a real menu, not a select-as-action), and the violet LLM entry; the document group (Facsimile, Index, XML, then Save, Download behind separators) is hidden, not disabled, until a document is loaded. Save is the gold primary action (save-in-place is the lossless core gesture); Download is a neutral copy action; a disabled button never carries the primary accent. Labels are unified to one term per command ("Open TEI..." everywhere). Any in-app document replacement (open, example, drop, recent) asks before discarding unsaved changes. The former toolbar mode toggles ("Add note", "Mark text") stay removed (M2.10).
+
+The landing page (`index.html`) is two cards: open and edit existing TEI (gold), and New from text (LLM) (violet). The editor header's logo leads back to it; the separate Home button and the "EDITOR" mode badge were removed in the welcome round (the logo is the home link, and a badge naming the only mode carries no information). The header shows the document name only while a document is loaded.
 
 ## Determinism vs AI, Visually
 
@@ -83,6 +85,8 @@ Violet appears exclusively on AI-origin content: the generated-and-unreviewed ba
 - **Label consistency is a rule, not a freedom.** The same field or term carries the same label everywhere; inconsistency is a bug.
 - **Information-seeking pattern:** overview first, then zoom and filter, then details on demand.
 - **No raw hex in components:** tokens only.
+- **Keyboard focus is always visible.** Every interactive control has a `:focus-visible` outline (gold; violet on AI-origin controls), the keyboard counterpart of the triple-coding stance: state never hangs on hover alone.
+- **Disabled controls are quiet.** A disabled button never carries the primary accent, and chrome that cannot be used yet is hidden rather than shown disabled.
 
 ## Restructuring: Annotation Visibility and Unified Cell Actions (decided 2026-06-09, built 2026-06-10)
 
@@ -105,7 +109,7 @@ A six-lens adversarial review of the built state (2026-06-10) hardened the layer
 | Facsimile pane: real images, deep zoom (OpenSeadragon 5.0.1), `<zone>` overlays bidirectionally linked to the reading text; auto-collapsed without images, toggleable | Built |
 | Live checks as a footer status chip with detail popover (formerly a right-pane tab) | Built (2026-06-10) |
 | Selection annotation: select words in a line, annotate as a new or existing entity, lossless sub-range wrap (M2.8) | Built (2026-06-10) |
-| Loading surface: Open TEI, examples dropdown (Wenzelsbibel / ZBZ / SZD), start screen with example cards | Built (2026-06-10) |
+| Welcome state: full-width start surface (value proposition, gold open button, drag-and-drop with drop indicator, recent files via persisted handles, three example cards + violet LLM card); editor chrome hidden until load; Examples button menu in the toolbar | Built (2026-06-10, supersedes the in-pane start screen and examples select of the same morning) |
 | Editor paradigm: cursor click, click-to-edit on annotated elements, double-click direct edit, right-click context menu (M2.10) | Built (2026-06-10) |
 | Evidence-first annotate popover with provenance groups, filter, and plain-TEI markup wraps incl. structured persName | Built (2026-06-10) |
 | Editable XML source view: syntax highlighting, line numbers, Check XML with error jump, gated Apply (M2.12) | Built (2026-06-10) |
