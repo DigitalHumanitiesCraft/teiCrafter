@@ -1,0 +1,3 @@
+# The vendored TEI Guidelines compilation is stored byte-verbatim; its SHA-256
+# is recorded in docs/data/tei/NOTICE.md. No line-ending conversion, ever.
+docs/data/tei/p5subset_en.json -text
