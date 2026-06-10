@@ -45,6 +45,7 @@ import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
 const ZBZ_IMAGE_BASE = "data/editor/zbz-100/";
+const SZD_URL = "data/editor/szd/o_szd.1079.tei.xml";
 
 // ---- state -----------------------------------------------------------------
 
@@ -62,6 +63,7 @@ const app = {
   linkTarget: null,   // entity selected for the next "link a mention" click, or null
   noteMode: false,    // true while waiting for a cell click to attach an editorial note
   critMode: false,    // true while waiting for a cell click to apply textual-critical markup
+  facsHidden: false,  // user choice: hide the facsimile pane (auto-hidden when no images)
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios) and the
@@ -109,32 +111,34 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-validate", "btn-download", "btn-note", "btn-suggest", "btn-critic"]) $(id).disabled = !on;
+  for (const id of ["btn-validate", "btn-download", "btn-suggest"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) { setNoteMode(false); setCritMode(false); }
-  // M2.5 legend: rebuilt from the loaded document (overview first); hidden when
-  // no document is loaded. render() keeps it current after every mutation.
+  // M2.5 legend strip (hint + chips): visible while a document is loaded;
+  // render() keeps the chips current after every mutation.
   const legend = $("ed-legend");
   if (legend) {
     if (on) buildLegend();
-    else legend.hidden = true;
+    legend.hidden = !on;
   }
   updateFolioButtons();
+  updateFacsState();
 }
 
 /**
- * M2.5 legend strip: one chip per visual code PRESENT in the current document,
+ * M2.5 legend chips: one chip per visual code PRESENT in the current document,
  * rebuilt on every render, so the legend names exactly what the reading text can
  * show (no violet chip in a purely human edition, no chip for an absent code).
  * Chip labels reuse the index-panel section terms (singular) and the
  * CRITICAL_KINDS labels, so every code reads the same everywhere. The temporary
  * selection highlight (mention-hit) is announced by the status line instead.
+ * The strip itself also hosts the mode hint (#ed-edit-hint), which stays put.
  */
 function buildLegend() {
-  const host = $("ed-legend");
+  const host = $("ed-legend-chips");
   if (!host) return;
   clear(host);
-  if (!app.state) { host.hidden = true; return; }
+  if (!app.state) return;
 
   // Collect the codes the loaded document actually renders.
   const meta = entityMetaMap();
@@ -160,13 +164,12 @@ function buildLegend() {
   if (kinds.has("evt")) chip("mention mention-evt", "event");
   if (ai) chip("mention mention-ai", "AI-proposed");
   if (dangling) chip("mention", "missing entity");
-  if (hasNote) chip("has-note", "note");
   for (const kind of Object.keys(CRITICAL_KINDS)) {
     if (crits.has(kind)) chip("crit-" + kind, CRITICAL_KINDS[kind].label);
   }
+  if (hasNote) chip("has-note", "note");
 
-  if (!chips.length) { host.hidden = true; return; }
-  host.hidden = false;
+  if (!chips.length) return;
   host.appendChild(el("span", { class: "ed-legend-title", text: "legend" }));
   for (const c of chips) host.appendChild(c);
 }
@@ -284,6 +287,22 @@ async function loadZbz() {
   }
 }
 
+async function loadSzd() {
+  setStatus("Loading Stefan Zweig Digital example...");
+  try {
+    const res = await fetch(SZD_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    load(await res.text(), "o_szd.1079.tei.xml", null);
+    // Facsimile comes from the <graphic url> on each surface (GAMS), no image base.
+    setStatus("Loaded the Stefan Zweig Digital example (facsimile via GAMS).");
+  } catch (err) {
+    setStatus(`Could not load the SZD example: ${err.message}`);
+  }
+}
+
+// Example registry: the dropdown and the start-screen cards load the same way.
+const EXAMPLES = { wb: loadDemo, zbz: loadZbz, szd: loadSzd };
+
 // ---- folio navigation ------------------------------------------------------
 
 function updateFolioButtons() {
@@ -292,7 +311,7 @@ function updateFolioButtons() {
   $("btn-next").disabled = !app.state || app.folio >= n - 1;
   const f = app.state ? app.state.folios[app.folio] : null;
   $("ed-folio-label").textContent = f
-    ? `folio ${app.folio + 1}/${n}${f.n ? ` (${f.n})` : ""}`
+    ? `page ${app.folio + 1}/${n}${f.n ? ` (${f.n})` : ""}`
     : "-";
 }
 
@@ -882,7 +901,40 @@ function imageUrlForFolio(i) {
   return app.imageBase + "p" + String(i + 1).padStart(3, "0") + ".png";
 }
 
+/** True when the loaded document can show any page image (image base or <graphic url>). */
+function docHasImages() {
+  if (!app.state) return false;
+  if (app.imageBase) return true;
+  return app.state.folios.some((f) => f.surface && f.surface.graphic);
+}
+
+/**
+ * Facsimile pane visibility: hidden on the user's toggle, and auto-hidden when
+ * the document carries no page images at all (a facsimile pane with a permanent
+ * empty state is noise). The grid collapses to two panes so the reading text
+ * gets the space.
+ */
+function updateFacsState() {
+  const main = $("ed-main");
+  const pane = $("ed-pane-facs");
+  const btn = $("btn-facs");
+  if (!main || !pane) return;
+  const has = docHasImages();
+  const hidden = !app.state || app.facsHidden || !has;
+  pane.hidden = hidden;
+  main.classList.toggle("no-facs", hidden);
+  if (btn) {
+    btn.disabled = !app.state || !has;
+    btn.classList.toggle("active", !hidden);
+    btn.title = !app.state ? "Show or hide the facsimile pane"
+      : !has ? "This document carries no page images"
+      : hidden ? "Show the facsimile pane" : "Hide the facsimile pane";
+  }
+}
+
 function renderFacsimile() {
+  updateFacsState();
+  if ($("ed-pane-facs") && $("ed-pane-facs").hidden) return;
   const ctrl = ensureFacsimile();
   if (!ctrl) return;
   const folio = app.state.folios[app.folio];
@@ -908,7 +960,9 @@ function renderFacsimile() {
 /** Lazily create the single index panel bound to #ed-index, with its hooks. */
 function ensureIndexPanel() {
   if (indexPanel) return indexPanel;
-  const host = $("ed-index");
+  // The panel renders into its own host inside the Index tab, so the tab's
+  // AI-suggest block above it survives every panel re-render.
+  const host = $("ed-index-host") || $("ed-index");
   if (!host) return null;
   indexPanel = createIndexPanel(host, {
     onAdd: (type, { name }) => {
@@ -1339,8 +1393,21 @@ async function runGenerate() {
 // ---- wire-up ---------------------------------------------------------------
 
 $("btn-open").addEventListener("click", openLocal);
-$("btn-demo").addEventListener("click", loadDemo);
-$("btn-zbz").addEventListener("click", loadZbz);
+// Examples: the toolbar dropdown and the start-screen cards share one registry.
+$("ed-examples").addEventListener("change", (e) => {
+  const loader = EXAMPLES[e.target.value];
+  e.target.value = ""; // reset to the placeholder so the same example can reload
+  if (loader) loader();
+});
+for (const [id, key] of [["start-wb", "wb"], ["start-zbz", "zbz"], ["start-szd", "szd"]]) {
+  const b = $(id);
+  if (b) b.addEventListener("click", () => EXAMPLES[key]());
+}
+if ($("start-open")) $("start-open").addEventListener("click", openLocal);
+$("btn-facs").addEventListener("click", () => {
+  app.facsHidden = !app.facsHidden;
+  renderFacsimile(); // re-applies visibility and repopulates the viewer on show
+});
 $("btn-generate").addEventListener("click", openGenModal);
 $("gen-close").addEventListener("click", closeGenModal);
 $("gen-cancel").addEventListener("click", closeGenModal);
@@ -1350,8 +1417,17 @@ $("gen-modal").addEventListener("click", (e) => { if (e.target.id === "gen-modal
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("gen-modal").hidden) closeGenModal(); });
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
-$("btn-note").addEventListener("click", () => setNoteMode(!app.noteMode));
-$("btn-critic").addEventListener("click", () => setCritMode(!app.critMode));
+// Page turning where one expects it: arrow keys, unless typing in an input or
+// an inline chooser is open.
+document.addEventListener("keydown", (e) => {
+  if (!app.state) return;
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  const t = e.target;
+  if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+  if (document.querySelector("#ed-reading .ed-crit-pick, #ed-reading .ed-act-pick")) return;
+  if (!$("gen-modal").hidden) return;
+  gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
+});
 $("btn-suggest").addEventListener("click", suggestEntities);
 $("btn-validate").addEventListener("click", () => { renderValidation(); setStatus("Live checks refreshed"); });
 $("btn-save").addEventListener("click", save);
@@ -1372,7 +1448,8 @@ window.addEventListener("beforeunload", (e) => {
   if (app.dirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
-setStatus("Ready. Open a local TEI edition, load the synthetic Wenzelsbibel, or generate from text.");
+setStatus("Ready. Open a TEI edition, pick an example, or generate from text.");
+updateFacsState(); // start state: no document, facsimile pane collapsed
 
 // Deep link from the landing page: editor.html#generate opens the LLM entry.
 if (location.hash === "#generate") openGenModal();

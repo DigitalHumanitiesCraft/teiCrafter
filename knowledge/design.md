@@ -62,8 +62,11 @@ Reading text (cells)  |  Facsimile (OpenSeadragon)  |  Validation and structure 
 ```
 
 - Click a cell to edit it inline; the input matches the reading typography.
-- The facsimile pane is a real OpenSeadragon deep-zoom viewer; hovering a line highlights its `<zone>` overlay and vice versa (real `@facs` link, or positional).
-- The right pane carries two tabs: "Validation and structure" (live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness) and "Index" (the editable `<standOff>` index of persons, places, organisations, works and events).
+- The facsimile pane is a real OpenSeadragon deep-zoom viewer; hovering a line highlights its `<zone>` overlay and vice versa (real `@facs` link, or positional). When a document carries no page images at all, the pane auto-collapses to a two-pane layout (a permanently empty viewer is noise); a toolbar toggle shows or hides it for documents that have images.
+- Page turning lives in the reading-pane header (previous / `page i/n` / next), where one expects it, plus ArrowLeft/ArrowRight; not in the global toolbar.
+- The right pane carries two tabs: "Validation and structure" (live well-formedness, lossless-integrity, structure counts, and a note that full RelaxNG/Schematron is the offline harness) and "Index" (the editable `<standOff>` index of persons, places, organisations, works and events). The AI entity-suggest action sits at the top of the Index tab, where the entities live, labelled and explained, in the violet family.
+
+Loading (decided by the operator, 2026-06-10): one "Open TEI..." button plus an examples dropdown with the three demo sources (Wenzelsbibel synthetic, ZBZ Jeanne Hersch with real scans, Stefan Zweig Digital o_szd.1079 with GAMS facsimile), and the violet "New from text (LLM)" entry. Before a document is loaded, the reading pane shows a start screen with the same three examples as cards plus the open button. The former toolbar mode toggles ("Add note", "Mark text") were removed: every cell operation is reachable through the inline action chooser (M2.6), so pre-toggled modes are no longer part of the surface.
 
 The landing page (`index.html`) is two cards: open and edit existing TEI (gold), and New from text (LLM) (violet). The editor header carries a mode badge and a link back.
 

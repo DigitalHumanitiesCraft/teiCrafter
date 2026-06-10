@@ -44,8 +44,16 @@
 .ed-btn-primary { background: var(--color-gold); border-color: var(--color-gold); color: var(--color-text-inverse); }
 .ed-btn-primary:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
 .ed-btn:disabled { opacity: .5; cursor: not-allowed; }
-/* Active toggle (e.g. note mode), in the editorial review family */
+/* Active toggle (e.g. the facsimile pane), in the editorial review family */
 .ed-btn.active { border-color: var(--color-review); color: var(--color-review); background: var(--color-review-tint); }
+
+/* Example dropdown in the toolbar: same visual weight as the buttons. */
+.ed-select {
+  font-family: var(--font-ui); font-size: var(--font-size-sm); cursor: pointer;
+  padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text);
+}
+.ed-select:hover { border-color: var(--color-gold); }
 /* AI-assisted action (violet family, per design.md) */
 .ed-btn-ai { border-color: var(--color-ai); color: var(--color-ai); }
 .ed-btn-ai:hover { background: var(--color-ai-tint); border-color: var(--color-ai); }
@@ -102,6 +110,9 @@
   display: grid; grid-template-columns: 1.1fr 1fr 320px;
   height: calc(100vh - var(--header-height) - var(--footer-height) - 64px);
 }
+/* No page images (or facsimile hidden): two panes, the reading text gets the space. */
+.ed-main.no-facs { grid-template-columns: 1.6fr 340px; }
+#ed-pane-facs[hidden] { display: none; }
 .ed-pane { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--color-border); }
 .ed-pane:last-child { border-right: none; }
 .ed-pane-head {
@@ -111,6 +122,25 @@
   font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text);
 }
 .ed-pane-body { flex: 1; overflow: auto; padding: var(--space-md); }
+
+/* Page turning lives in the reading-pane header, where one expects it. */
+.ed-pager { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.ed-pager-btn { font-size: var(--font-size-sm); line-height: 1; padding: 2px 10px; }
+
+/* Start screen: the empty reading pane offers the loading paths directly. */
+.ed-start { display: flex; flex-direction: column; align-items: center; gap: var(--space-md);
+  padding: var(--space-xl) var(--space-md); color: var(--color-text-secondary);
+  font-family: var(--font-ui); font-size: var(--font-size-sm); }
+.ed-start p { margin: 0; }
+.ed-start-cards { display: flex; flex-wrap: wrap; gap: var(--space-sm); justify-content: center; }
+.ed-start-card {
+  display: flex; flex-direction: column; gap: 2px; width: 200px; text-align: left;
+  font-family: var(--font-ui); font-size: var(--font-size-sm); cursor: pointer;
+  padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text);
+}
+.ed-start-card:hover { border-color: var(--color-gold); }
+.ed-start-card span { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
 /* Reading text (diplomatic) */
 .ed-reading { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.9; color: var(--color-text);
@@ -186,6 +216,12 @@
 }
 .ed-tab:hover { color: var(--color-text); }
 .ed-tab.active { color: var(--color-text); border-bottom-color: var(--color-gold); }
+
+/* AI block at the top of the Index tab: the suggest action lives where the
+   entities live, clearly marked as machine-assisted (violet family). */
+.ed-idx-ai { display: flex; flex-direction: column; gap: var(--space-xs);
+  padding-bottom: var(--space-sm); margin-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border); }
 
 /* Entity index panel (persons / places / organisations / works / events) */
 .ed-idx { display: flex; flex-direction: column; gap: var(--space-md); }
@@ -331,6 +367,7 @@
   font-size: var(--font-size-xs); color: var(--color-text-secondary);
 }
 .ed-legend[hidden] { display: none; }
+.ed-legend-chips { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-sm); }
 .ed-legend-title { text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); }
 .ed-legend-chip { font-family: var(--font-serif); padding: 0 3px; border-radius: 2px; white-space: nowrap; }
 /* Chips are labels, not affordances: neutralise interactive cursors inherited

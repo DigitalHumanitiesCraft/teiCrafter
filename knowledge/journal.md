@@ -22,6 +22,19 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (later): Editor shell reworked on operator feedback (loading, paging, modes)
+
+First operator review of the live M2.5/M2.6 state. The feedback: the loading entries (open / two demo buttons) read as developer plumbing, page turning was not where one expects it, the "Add note" / "Mark text" toggles and "AI: suggest entities" were not understandable, and documents without facsimile information showed a permanently empty viewer pane. Decisions (operator, via question round): remove the mode toggles (the inline chooser covers note/mark at the cell), move the AI suggest action into the Index tab with a clear label, start empty with an instruction screen. Built:
+
+- Loading: "Open TEI..." plus an examples dropdown with exactly the three demo sources the operator named: Wenzelsbibel (synthetic), ZBZ Jeanne Hersch (real local scans), Stefan Zweig Digital (o_szd.1079, CC-BY, copied from the test fixture into `docs/data/editor/szd/`, facsimile via its GAMS `<graphic url>`s). The empty reading pane is now a start screen offering the same three examples as cards plus the open button.
+- Page turning moved into the reading-pane header (previous / `page i/n` / next) with ArrowLeft/ArrowRight support (guarded against inputs, open choosers and the modal); the toolbar no longer carries it.
+- Toolbar slimmed to: load entries, facsimile toggle, validate, save, download. "Add note" and "Mark text" are gone; the mode functions remain in the code but have no UI entry.
+- "Suggest entities (AI)" sits at the top of the Index tab with an explanatory hint; the index panel renders into its own host so the block survives panel re-renders.
+- Facsimile pane auto-collapses (two-pane grid) when the document has no page images and can be toggled for documents that have them; the start state also collapses it.
+- The legend strip now also hosts the mode hint, so the reading-pane header has room for the pager.
+
+Verification: module smoke test (imports and syntax clean), all three examples served over :8123, engine untouched (no regression run needed beyond the standing green state). Browser sight-check is the operator's, per their instruction to verify via URLs rather than agent-driven this round.
+
 ## 2026-06-10 (continued): Adversarial-review follow-up package on M2.5/M2.6
 
 The six-lens review workflow's finder phase completed (its verification phase hit a session limit, so the findings were triaged manually against the code); the confirmed findings are fixed as one package on top of the milestone commit:
