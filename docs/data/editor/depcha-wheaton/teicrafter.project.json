@@ -1,0 +1,29 @@
+{
+  "teicrafter": 1,
+  "name": "DEPCHA: Laban Morey Wheaton Day Book",
+  "documentTypes": [
+    { "key": "account", "label": "Account book" }
+  ],
+  "files": {
+    "wheaton.1.xml": "account",
+    "wheaton.2.xml": "account"
+  },
+  "markup": [
+    { "element": "name", "label": "name (person receiving, bk:to)", "attributes": { "type": "person", "ana": "bk:to" } },
+    { "element": "name", "label": "name (person giving, bk:from)", "attributes": { "type": "person", "ana": "bk:from" } },
+    { "element": "measure", "label": "measure (money, bk:money)", "attributes": { "ana": "bk:money" } },
+    { "element": "measure", "label": "measure (commodity, bk:commodity)", "attributes": { "ana": "bk:commodity" } },
+    { "element": "date", "label": "date (entry date, bk:when)", "attributes": { "ana": "bk:when" } },
+    { "element": "num", "label": "num (number)" },
+    { "element": "abbr", "label": "abbr (abbreviation)" },
+    { "element": "unclear", "label": "unclear (uncertain reading)" },
+    { "element": "supplied", "label": "supplied (editor added)" }
+  ],
+  "indices": [
+    { "key": "persons", "label": "Persons (account parties)", "listType": "listPerson", "registers": ["Wikidata", "GND"] }
+  ],
+  "views": [
+    { "key": "diplomatic", "label": "Diplomatic transcription" },
+    { "key": "transactions", "label": "Transaction mapping (DEPCHA bookkeeping ontology)" }
+  ]
+}

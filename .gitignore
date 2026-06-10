@@ -16,3 +16,8 @@ docs/data/editor/zbz-1000/
 # Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
 docs/data/editor/wb-codex/*
 !docs/data/editor/wb-codex/teicrafter.project.json
+
+# Real DEPCHA Wheaton day book (third-party data, no redistribution licence; materialize via test/tools/make_depcha_demo.mjs).
+# Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
+docs/data/editor/depcha-wheaton/*
+!docs/data/editor/depcha-wheaton/teicrafter.project.json
