@@ -29,7 +29,7 @@ The promise is "read arbitrary TEI and save it byte-losslessly". These prove it 
 
 | Proof | What it asserts | Result |
 |-------|-----------------|--------|
-| `test/tools/roundtrip_sweep.mjs` | Every real TEI file tokenizes contiguously and `serialize()` is byte-identical to the input | 294/294 byte-identical (285 Hersch, 4 SZD, 5 synthetic) |
+| `test/tools/roundtrip_sweep.mjs` | Every real TEI file tokenizes contiguously and `serialize()` is byte-identical to the input | 295/295 byte-identical (285 Hersch, 5 SZD, 5 synthetic) |
 | `test/tools/generic_roundtrip.mjs` | One engine reads Hersch (line-level), Wenzelsbibel (word-level) and SZD (catalog); recognizers find pb/lb/zones; a cell edit is a surgical splice; the editor model shape is correct | all checks pass |
 | `test/tools/editor_roundtrip.mjs` | The editor edition-core API: identity round-trip is byte-identical; a word edit is surgical; the harness localizes exactly that change | 13/13 |
 | `test/tools/edit_fidelity.mjs` | Edits stay byte-faithful over character/entity references (a no-op edit of a cell or attribute holding `&nbsp;`/`&#233;`/`&quot;`/`&apos;` is byte-identical, a real edit preserves a neighbouring entity); `addEntity` degrades gracefully on header-less or element-free TEI; relinking a mention retargets `@ref` without nesting `<name>`; the integrity baseline tracks real `@xml:id`, stable across a lossless line-emptying edit | 21/21 |
@@ -93,13 +93,13 @@ The verification methods are complementary, not alternatives: each answers a dif
 
 | Question | Method | Level | Proof |
 |----------|--------|-------|-------|
-| Was everything processed? | Coverage sweep: counts over the whole corpus | automatic | 285/285 Hersch load, 294/294 round-trip, every SZD demo file converts |
+| Was everything processed? | Coverage sweep: counts over the whole corpus | automatic | 285/285 Hersch load, 295/295 round-trip, every SZD demo file converts |
 | Is the output valid TEI? | Well-formedness + schema (TEI All RNG + Schematron; ZBZ also `zbz_hersch.rng`) | automatic | L2, green/red |
 | Is nothing lost, and is the only change the intended one? | Round-trip byte-identity + L1 text + L3 counts + diff-is-exactly-intent | contextual | byte-identical (`roundtrip_sweep.mjs`, `edit_fidelity.mjs`) |
 | Does the intended use actually work for a human? | Walk each demo-critical user story as a concrete path in the browser on a real object | visual | observed; the part headless tests cannot cover (the user-stories.md "Browser-check" status) |
 | Is it correct as an edition? | Domain-expert review of the content | professional | expert sign-off (both corpora are currently unreviewed) |
 
-The visual level is the centerpiece for "did we reach the goal in our sense". The success criterion (open, correct line by line, annotate person/place/work with authority ids, save byte-faithfully) is the chain of user stories E.1, E.2, E.3, E.4, E.5, F.1, F.2, I.1, I.2 plus the ones being built (FU.1 note, FU.2 authority ids from the UI, FU.4 SZD Page-JSON to TEI, and the AI-proposal step M3.7). Each demo-critical feature is verified twice: a headless proof added to the engine harness above, and a browser path walked on the real demo object (o_szd.1079 for SZD; one of docs 1000 / 1330 / 1540 / 2310 for ZBZ).
+The visual level is the centerpiece for "did we reach the goal in our sense". The success criterion (open, correct line by line, annotate person/place/work with authority ids, save byte-faithfully) is the chain of user stories E.1 to E.5, F.1, F.2 and I.1 to I.4 (all built), plus FU.4 (the in-editor pre-open Page-JSON conversion) and a future text-anchored re-entry of the AI-proposal step (M3.7, UI removed in M2.11). Each demo-critical feature is verified twice: a headless proof added to the engine harness above, and a browser path walked on the real demo object (o_szd.1079 for SZD; one of docs 1000 / 1330 / 1540 / 2310 for ZBZ).
 
 Documentation is itself part of acceptance: the per-fixture JSON reports and the knowledge vaults let a reviewer trace every claim, which is the paper's reproducibility requirement. The acceptance table (goal to proof to green/red) is kept in [PLAN.md](../PLAN.md) (acceptance section).
 
@@ -124,7 +124,7 @@ Real third-party files (Hersch, SZD, any ONB codex slice) live only under the gi
 ## How to Run
 
 ```
-node test/tools/roundtrip_sweep.mjs        # 294/294 byte-identical (reads source repos)
+node test/tools/roundtrip_sweep.mjs        # 295/295 byte-identical (reads source repos)
 node test/tools/generic_roundtrip.mjs      # one engine over Hersch / WB / SZD
 node test/tools/editor_roundtrip.mjs       # editor core vs harness, 13/13
 node test/tools/edit_fidelity.mjs          # entity-faithful edits + standOff guard, 21/21

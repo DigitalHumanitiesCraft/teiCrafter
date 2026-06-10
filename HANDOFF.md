@@ -1,12 +1,12 @@
 # teiCrafter Handoff and Working State
 
 Action-layer summary so work can resume without re-deriving anything. Snapshot:
-2026-06-09, end of the Editopia execution round (milestones MS-A to MS-D of that
-round). Conceptual detail lives in `knowledge/` (version 0.9, start at
-`INDEX.md`); per-milestone evaluation reports live in `reports/`. This file
-replaces the earlier 2026-06-09 snapshot; the tool description, code map, and
-constraints still hold and are not repeated where unchanged (see
-`knowledge/architecture.md`).
+2026-06-10, end of the UI feedback rounds 6 to 8 (M2.5 through M2.14 and
+WB-AP1/AP2 all landed since the previous snapshot). Conceptual detail lives in
+`knowledge/` (version 0.9, start at `INDEX.md`); per-milestone evaluation
+reports live in `reports/`. This file replaces the 2026-06-09 snapshot; the
+tool description, code map, and constraints still hold and are not repeated
+where unchanged (see `knowledge/architecture.md`).
 
 ## Frame: what this lane is working on
 
@@ -31,38 +31,32 @@ the ZBZ.
 
 ## State at handoff (all engine-proven, nothing pushed)
 
-Branch `session/2026-06-07-place-graphic`, clean working tree, **13 commits ahead
-of origin** counting the commit that carries this handoff update (in order):
-10eae74 ZBZ worked-example engine proof + local-only object, 8ec4a11 paper evidence
-sheet, a3488cd ZBZ worked-example document, f744a77 knowledge sync 0.8, 83651e6
-milestones M7.4/M7.5, 934c3d4 handoff, c2a2827 M7.4 curated set (generator +
-curated-set.md + knowledge 0.9), 2c20fdc TP5 chapter record, 90d4512 TP7 Rohfassung
-record, a2c7b0b MS-D sync (README, HANDOFF, promptotyping-case), 80f83a5 live
-browser run + M2.5/M2.6 decision, 545cd33 implementation-plan pointer, plus this
-session-close update.
+Branch `session/2026-06-07-place-graphic`, clean working tree, **53 commits over
+`origin/main`**, nothing pushed (push requires the operator's word). Since the
+2026-06-09 snapshot:
 
-- **M7.4 done for the two proven objects:** `node test/tools/make_curated_set.mjs`
-  (exit 0) persists before/after/diff/summary per object under gitignored
-  `output/curated-set/` (zbz-1000: 8 steps, 11 splices, +17/-5; o_szd.1079: 9
-  steps, 12 splices, +18/-5; diff counts cross-checked against
-  `git diff --no-index --stat`). Extension (zbz-1540, SZD prompt-group objects)
-  awaits operator object sign-off; per-object browser approval is the operator's.
-- **TP5 chapter draft** in the vault (all five sharpening points, adversarially
-  reviewed, 22 findings worked in), with a three-point update proposal for the
-  concept note; operator approval pending.
-- **TP7 nine-section Rohfassung** in the vault, produced by a 24-agent workflow
-  (drafter, adversarial verifier, reviser per section; 49 findings worked in;
-  every number mapped to `knowledge/paper-evidence.md`); consolidated open points
-  at the end of the note; co-author approval pending. NOTE: the operator has since
-  restricted this lane to solo work (no dynamic workflows), 2026-06-09 night.
-- **M7.1 vault provenance page** drafted, approval pending. **M7.5** runs as
-  standing practice (journal per session, milestone commits with proof,
-  per-milestone evaluation reports in `reports/`).
-- Knowledge set at 0.9; README extended (full knowledge table, worked-example and
-  curated-set proofs, SZD case editable via the converter); promptotyping-case.md
-  de-staled (2,069 post-dedup, ZBZ half engine-proven, vault side drafted).
-- Full regression green 2026-06-09: roundtrip 294/294, both worked examples 38/38,
-  curated set PASS.
+- **The UI rebuild through eight operator feedback rounds is landed and proven:**
+  M2.5 annotation visibility + M2.6 chooser (superseded), M2.7 shell rework,
+  M2.8 selection annotation, M2.10 editor paradigm ("wie Oxygen"), M2.11 index
+  into the annotation environment, M2.12 real XML source editor, M2.13 module
+  split, and M2.14 dual view (commit ddd66ae: left pane Reading/XML view tabs,
+  right pane an open panel registry with Facsimile and Index; XML works next to
+  the facsimile; `index-overlay.js` became `entity-index.js`). Welcome state,
+  one "Load..." entry, About page, TEI brand colors and `<teiCrafter>` wordmark,
+  identity footer, validation chip at the text (rounds 6/7).
+- **WB-AP1/AP2:** the real 78 MB Wenzelsbibel codex loads (validation cached by
+  doc identity, `@points`-only zones get derived bboxes) with the ÖNB IIIF
+  resolver via `project-profiles.js`; proof `wb_codex_check.mjs` 16/16.
+- **SZD fixture fix:** the duplicated page-5 text in `o_szd.1079.tei.xml` was a
+  fixture-generation artifact (page 5 is empty in szd-htr groundtruth.json);
+  removed. Order for the szd-htr lane: guard the converter against copying the
+  previous page when a transcription is empty.
+- **Earlier round (2026-06-09, unchanged):** M7.4 curated set done for the two
+  proven objects (extension awaits operator object sign-off); TP5 chapter draft,
+  TP7 Rohfassung, M7.1 provenance page in the vault, approvals pending.
+- Full regression green 2026-06-10: roundtrip 295/295 (285 Hersch + 5 SZD + 5
+  synthetic), szd_demo_check PASS, ai_suggest_parse 8/8; UI smoke test (dual
+  view) 36/36 with screenshots.
 
 ## Decisions this session (dated, with reasons)
 
@@ -94,33 +88,30 @@ session-close update.
 
 ## Open threads (none lost, all registered)
 
-- Operator gates: browser sight-check of ZBZ doc 1000 and the five unexercised
-  paths (Mark-text, mention link, live lookup, note click, AI proposal); push
-  approval for the 10 local commits; object sign-off and per-object browser
-  approval for M7.4; approval of chapter draft, Rohfassung, provenance page;
-  CfP deadline and full-text format; Kreyenbuehl package (rights of the four demo
-  documents, institutional-context placeholder, pipeline stage-count confirmation,
-  workflow comparison data); EditionCrafter role in the talk.
+- Operator gates: browser sight-check of the UI rounds 6 to 8 (welcome state,
+  load menu, About, dual view, panel switching, XML next to facsimile) at his
+  window size, including the facsimile-toggle report from round 7 that did not
+  reproduce headless; push approval for the 53 local commits; object sign-off
+  and per-object browser approval for M7.4; approval of chapter draft,
+  Rohfassung, provenance page; Kreyenbuehl package; EditionCrafter role in the
+  talk.
+- Operator decision pending: the TEI Guidelines reference feature (proposed
+  Stage 1 link-out vs Stage 2 `p5subset.json` reference panel; both CORS-open,
+  journal 2026-06-10 evening). The M2.14 panel registry is the natural host.
+- szd-htr lane order: converter guard against duplicating the previous page
+  when a page's transcription is empty (the o_szd.1079 fixture artifact).
 - zbz lane (written order in the vault, four points): schema extension
   standOff/name (E68 precedent), graphic emission, oekosystem correction,
-  warnings-figure reconciliation (29/14 vs verified 121).
-- Consolidated paper open points: end of the Rohfassung note (references to
-  verify, ZBZ deliveries, operator decisions, pre-submission updates).
+  warnings-figure reconciliation.
+- Wenzelsbibel work packages WB-AP3 ff. (manifest v1, dual reading, standOff
+  apparatus, ED stories + gate W1) per the ratified definition decisions.
+- Consolidated paper open points: end of the Rohfassung note.
 
 ## The one next step
 
-Implement **M2.5 + M2.6** (the UI restructuring, operator priority 2026-06-09
-night; concept in design.md, milestones in goals.md): the `cell.mention`
-projection in `edition.js`, the renderer visibility layer with entity-type
-colours and legend, and the inline cell action chooser. Then re-run the full
-regression (the edition.js change touches the engine model) and re-verify both
-real objects in the browser with the proven picker-stub method (SZD already
-half-verified this run; the ZBZ leg and the unexercised paths are still open).
-Open finding to re-test along the way: the live authority lookup returned
-"Failed to fetch" (Wikidata, query Komotau) despite working 2026-06-08; the
-diagnosis was interrupted. After that: reference verification and the
-genre-distribution evidence rows (see consolidated open points in the vault
-Rohfassung note).
+The operator reviews the rebuilt UI in his browser (rounds 6 to 8) and decides
+on the TEI Guidelines feature; implementation continues per his next feedback
+round or with the Wenzelsbibel packages (WB-AP3 ff.).
 
 ## Shared and held files
 

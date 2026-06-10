@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-06-09
+updated: 2026-06-10
 language: en
 version: 0.9
 related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference, worked-example-szd, worked-example-zbz, promptotyping-case, paper-evidence, curated-set]
@@ -33,7 +33,7 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | [specification](specification.md) | What should the system do and why? (generic reader, editor, LLM on-ramp, validation, decisions) | A requirement or decision is at stake | project, data |
 | [user-stories](user-stories.md) | Who uses it, in which scenarios, and what is built? | A usage scenario or status is unclear | specification |
 | [architecture](architecture.md) | How is it built? (three-layer engine, services, status) | Wrong assumptions about components or data flow | specification |
-| [design](design.md) | How does it look and behave? (tokens, three-pane layout, AI marking) | UI or design-system work | specification |
+| [design](design.md) | How does it look and behave? (tokens, dual-view layout, AI marking) | UI or design-system work | specification |
 | [testing](testing.md) | How is it proven and validated? (engine proofs, harness levels) | Coverage or eval method in question | architecture |
 | [journal](journal.md) | How did we get here? (decision log) | Decision logic unclear | - |
 | [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
@@ -58,7 +58,8 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Epistemic asymmetry | Models produce plausible TEI but cannot judge their own correctness; the human verifies in the deterministic editor | project, design |
 | Hybrid validation | Browser-light live (well-formed + structural integrity) plus harness-heavy offline (RelaxNG + Schematron) | specification, testing |
 | MVP gate | Well-formed AND L1 word fidelity AND L3 counts preserved; L2 reported as new-errors-vs-input, non-gating | testing |
-| Byte-identical round-trip | The proven property: every real TEI file serializes back unchanged (294/294) | testing |
+| Byte-identical round-trip | The proven property: every TEI file in the sweep serializes back unchanged (295/295) | testing |
+| Lossless / byte-identical / byte-faithful | One concept, three precisions. **Lossless** is the product promise: saving changes nothing the human did not edit. **Byte-identical** is the no-edit case: the saved file equals the opened file in every byte. **Byte-faithful** is the with-edits case: outside the deliberately edited spans every byte is unchanged (whitespace, attribute order, comments, entity spellings included); the only difference between input and output is exactly the edit. ("Byte-exact" in older passages means byte-faithful.) | testing, specification |
 | Editorial annotation layer | standOff entities + authority `<idno>` + mention linking + notes + AI proposal (`resp="#ai"`) + live lookup + inline textual criticism (`unclear`/`del`/`add`/`gap`), all lossless | architecture, specification |
 | File System Access API | Lets the editor read and write editions locally without a backend | architecture |
 
@@ -68,4 +69,4 @@ teiCrafter shares architecture principles, UI patterns and the design system wit
 
 ## History Note
 
-Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor) and a CodeMirror/DocumentModel architecture. The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. The 0.4-to-0.6 set documents the as-built reality, the 0.6 set adding the full editorial annotation layer (notes, AI proposal, live authority lookup, inline textual criticism); the 0.7 set adds the SZD worked example and the Promptotyping case ([worked-example-szd](worked-example-szd.md), [promptotyping-case](promptotyping-case.md)) and unifies the repo-wide version at 0.7; the 0.8 set adds the ZBZ worked example and the Editopia evidence sheet ([worked-example-zbz](worked-example-zbz.md), [paper-evidence](paper-evidence.md)), closing both halves of the M7.2 demo gate at engine level, and records the sharpened paper success criterion (demonstrable added value for the Hersch project; converter-reference keeps its own version, owned by the SZD lane); the 0.9 set adds the curated example set ([curated-set](curated-set.md), M7.4 done for the two proven objects); see [journal](journal.md).
+Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor). The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Versions 0.4 to 0.9 then track the as-built growth: the editorial annotation layer (0.6), the SZD worked example and the Promptotyping case (0.7), the ZBZ worked example and the Editopia evidence sheet (0.8), the curated example set (0.9). The full narrative is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.

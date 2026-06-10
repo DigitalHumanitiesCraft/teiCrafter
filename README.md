@@ -38,13 +38,12 @@ The design rests on the principle of **epistemic asymmetry**: LLMs generate plau
 
 ## The Editor
 
-The editor is a three-pane workbench:
+The editor is a dual-view workbench: two panes, always.
 
-1. **Reading text** -- the diplomatic transcription, folio by folio. Editable units are words (when `<w>` is present) or lines/cells (otherwise). Edits are offset splices into the canonical string.
-2. **Facsimile** -- a real [OpenSeadragon](https://openseadragon.github.io/) 5.0.1 deep-zoom viewer (loaded from CDN) over the page image, with `<zone>` overlays bidirectionally linked to the reading text. The tileSource hook is IIIF-ready.
-3. **Right pane** -- tabbed between **Validation and structure** (live integrity checks and the structural outline) and **Index**.
+1. **Left pane: the text surface.** View tabs switch between the diplomatic **Reading text** (folio by folio; editable units are words when `<w>` is present, lines otherwise; edits are offset splices into the canonical string) and the editable **XML source** (syntax-highlighted, line numbers, Check XML, Apply gated on well-formedness). Live integrity checks sit in the pane head as a chip with a detail popover.
+2. **Right pane: the context panel.** Panel tabs switch between the **Facsimile** (a real [OpenSeadragon](https://openseadragon.github.io/) 5.0.1 deep-zoom viewer over the page image, with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook) and the **Index** (an editable `<standOff>` of persons, places, organisations, works, and events with authority identifiers and mention counts). The panel registry is open for project-specific panels.
 
-The **Index** tab manages an editable `<standOff>` of persons, organisations, and events: add, rename, and delete entities in-browser, and link in-text mentions via `<name ref="#id">`. All index operations stay inside the lossless offset-splice model.
+Annotation happens at the text: select words to annotate them, click a mention to edit its annotation and authority ids in place, right-click for the context menu. All operations stay inside the lossless offset-splice model.
 
 ---
 
@@ -84,7 +83,7 @@ teiCrafter is a client-only single-page application built from native ES6 module
 teiCrafter/
 ├── docs/
 │   ├── index.html              Landing: two cards (editor, LLM on-ramp)
-│   ├── editor.html             Editor: three-pane shell; loads OpenSeadragon 5.0.1 from CDN
+│   ├── editor.html             Editor: dual-view shell; loads OpenSeadragon 5.0.1 from CDN
 │   ├── css/
 │   │   ├── style.css           Design tokens (--color-*/--space-*/--font-*/--radius-*) + base
 │   │   └── editor.css          Editor styles (token-only)
@@ -136,7 +135,7 @@ The editing core is proven headlessly by exit code:
 
 | Proof | Asserts | Result |
 |-------|---------|--------|
-| `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 294/294 |
+| `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 295/295 |
 | `test/tools/generic_roundtrip.mjs` | one engine reads Hersch/WB/SZD; surgical cell edit; model shape | all pass |
 | `test/tools/editor_roundtrip.mjs` | editor core identity + surgical word edit | 13/13 |
 | `test/tools/szd_worked_example.mjs` | real SZD object end-to-end (open, correct, annotate, criticize, save), every step a surgical splice | 38/38 |

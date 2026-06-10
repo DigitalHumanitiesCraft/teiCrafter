@@ -101,7 +101,7 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
 ### Erledigt (mit Proof)
 
 - **Verlustfreie Engine.** Round-Trip-Sweep byte-identisch: `node test/tools/roundtrip_sweep.mjs` ->
-  **294/294** (285 Hersch + 4 SZD + 5 synthetisch). [proof] (M1.1, M2.1, M4.1)
+  **295/295** (285 Hersch + 5 SZD + 5 synthetisch; Lauf 2026-06-10). [proof] (M1.1, M2.1, M4.1)
 - **ZBZ direkt ladbar.** Editor-Ladbarkeit: `node test/tools/hersch_loadability.mjs` ->
   **285/285** nutzbare Editor-Ansicht, 0 Parse-Fehler; gesamt 4.115 Folios, 49.324 Zellen,
   23.421 Zonen, 266 Notes. [proof] (M1.1, M4.2)
@@ -298,7 +298,7 @@ Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
   criticism_check.mjs 47/47), commit 119a1a2.
 
 **H4 - Verlustfreiheit als Invariante**
-- ★ M4.1 Engine-Round-Trip-Sweep. **erledigt** (roundtrip_sweep.mjs, 294/294).
+- ★ M4.1 Engine-Round-Trip-Sweep. **erledigt** (roundtrip_sweep.mjs, 295/295, Lauf 2026-06-10).
 - ★ M4.2 Editor-Ladbarkeits-Sweep. **erledigt** (hersch_loadability.mjs, 285/285).
 - ★ M4.3 Jedes Feature byte-clean (Regressionstest). laufend (szd_demo_check.mjs, 32/32).
 - ★ M4.4 SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`. **erledigt** (szd_loadability_sweep.mjs 2.103/2.103 Round-Trip; standoff.js via szd_demo_check.mjs).

@@ -73,7 +73,7 @@ which matches the physical definition.
 
 | Claim | Value | Source of record | Verification | Caveat |
 |---|---|---|---|---|
-| Byte-identical round-trip | 294/294 (285 Hersch + 4 SZD + 5 synthetic) | `knowledge/testing.md` (Engine Proofs) | `node test/tools/roundtrip_sweep.mjs` (re-run 2026-06-09: PASSED 294/294) | reads the sibling source repos directly |
+| Byte-identical round-trip | 295/295 (285 Hersch + 5 SZD + 5 synthetic) | `knowledge/testing.md` (Engine Proofs) | `node test/tools/roundtrip_sweep.mjs` (re-run 2026-06-10: PASSED 295/295; the 2026-06-09 run reported 294/294 before the fifth SZD file entered the sweep) | reads the sibling source repos directly |
 | Hersch loadability | 285/285 usable editor view (folios, cells, reading text) | `knowledge/testing.md` | `node test/tools/hersch_loadability.mjs` (re-run 2026-06-09: PASS) | layer-2 projection check, not semantic correctness |
 | Feature regressions | szd_demo_check 32/32, note_create_check 15/15, ai_proposal_check 17/17, criticism_check 47/47, whitespace_edit_check 14/14 | `knowledge/testing.md` (Feature Proofs) | `node test/tools/<name>.mjs` (all re-run 2026-06-09) | each feature ships its own byte-clean regression test (M4.3) |
 | SZD worked example | o_szd.1079 end-to-end, 38 checks, 12 surgical edits | `knowledge/worked-example-szd.md` (M7.2 SZD half) | `node test/tools/szd_worked_example.mjs` (re-run 2026-06-09: PASS) | one object; corpus claims are carried by the 2,069 sweep |

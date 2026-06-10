@@ -25,7 +25,7 @@ teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML. You open a
 
 ## What It Is
 
-The core is a **generic, offset-true TEI reader**. The raw TEI string is canonical; every edit is an offset splice on that string, so untouched markup is preserved exactly. This is proven, not aspirational: every real TEI file tested round-trips byte-identically (285 Jeanne Hersch editions, 4 Stefan Zweig catalog files, the synthetic Wenzelsbibel tiers). The editor reads any TEI and lets the human correct it; it does not impose a project-specific schema or shape on the input.
+The core is a **generic, offset-true TEI reader**. The raw TEI string is canonical; every edit is an offset splice on that string, so untouched markup is preserved exactly. This is proven, not aspirational: every TEI file tested round-trips byte-identically (Jeanne Hersch editions, Stefan Zweig objects, the synthetic Wenzelsbibel tiers; the current count of record is in [testing](testing.md)). The editor reads any TEI and lets the human correct it; it does not impose a project-specific schema or shape on the input.
 
 The granularity emerges from the document, it is not configured. If the TEI carries word tokens (`<w xml:id>`), editing is word by word (the Wenzelsbibel case). If it carries only line milestones (`<lb/>` inside `<p>`), editing is line by line (the Jeanne Hersch case). Same engine, same lossless splice.
 
