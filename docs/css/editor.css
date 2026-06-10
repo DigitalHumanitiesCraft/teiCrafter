@@ -18,14 +18,6 @@
 .ed-header .spacer { flex: 1; }
 .ed-doc-name { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-gold-light); }
 
-.ed-banner {
-  display: flex; align-items: center; gap: var(--space-sm);
-  padding: var(--space-xs) var(--space-md);
-  background: var(--color-review-tint); border-bottom: 1px solid var(--color-gold-light);
-  font-size: var(--font-size-xs); color: var(--color-text-secondary);
-}
-.ed-banner b { color: var(--color-text); }
-
 .ed-toolbar {
   display: flex; align-items: center; gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
@@ -202,7 +194,6 @@
 .ed-val-warn { background: var(--color-review-tint); color: var(--color-review); }
 .ed-val-err { background: var(--color-problem-tint); color: var(--color-problem); }
 .ed-val-icon { font-family: var(--font-mono); }
-.ed-hint { font-size: var(--font-size-xs); color: var(--color-text-muted); line-height: 1.5; }
 .ed-mono { font-family: var(--font-mono); font-size: var(--font-size-xs); }
 
 .ed-empty { color: var(--color-text-muted); font-size: var(--font-size-sm); text-align: center; padding: var(--space-xl); }
@@ -426,8 +417,7 @@
 .ed-menu-item:hover { background: var(--color-gold-light); }
 
 /* Editable XML source view (text mode). */
-.ed-src-bar { display: flex; align-items: center; gap: var(--space-sm); padding-bottom: var(--space-sm); }
-.ed-src-bar .ed-hint { flex: 1; }
+.ed-src-bar { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); padding-bottom: var(--space-sm); }
 .ed-src { width: 100%; height: calc(100% - 44px); resize: none; box-sizing: border-box;
   font-family: var(--font-mono); font-size: var(--font-size-sm); line-height: 1.5;
   color: var(--color-text); background: var(--color-panel);

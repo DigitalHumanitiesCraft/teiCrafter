@@ -139,7 +139,7 @@ function enableControls(on) {
  * Chip labels reuse the index-panel section terms (singular) and the
  * CRITICAL_KINDS labels, so every code reads the same everywhere. The temporary
  * selection highlight (mention-hit) is announced by the status line instead.
- * The strip itself also hosts the mode hint (#ed-edit-hint), which stays put.
+ * Help is tooltip-only (operator decision 2026-06-10): no ambient hint text.
  */
 function buildLegend() {
   const host = $("ed-legend-chips");
@@ -394,10 +394,6 @@ function renderReading() {
   if (app.sourceMode) { renderSourceView(host); return; }
   const folio = app.state.folios[app.folio];
   app.currentLines = folio ? folio.lines : [];
-  // hint reflects the active click-capture mode, else the detected granularity, so
-  // the hint and the toolbar mode buttons never disagree after a re-render.
-  const hint = $("ed-edit-hint");
-  if (hint) hint.textContent = critHint();
   if (!folio || !folio.lines.length) {
     host.appendChild(el("div", { class: "ed-empty", text: "This folio has no transcribed text." }));
     return;
@@ -481,9 +477,6 @@ function completeLink(cell) {
  * any drift against the load baseline). The caret starts at the current page.
  */
 function renderSourceView(host) {
-  const hint = $("ed-edit-hint");
-  if (hint) hint.textContent = "XML source; Apply re-parses, Cancel discards the source edits";
-
   const bar = el("div", { class: "ed-src-bar" });
   const ta = el("textarea", { class: "ed-src", spellcheck: "false" });
   ta.value = serialize(app.state);
@@ -514,7 +507,6 @@ function renderSourceView(host) {
   });
   const cancelBtn = el("button", { class: "ed-btn", text: "Cancel", title: "back to the reading view, discarding source edits" });
   cancelBtn.addEventListener("click", () => { setStatus("Source edits discarded"); leave(); });
-  bar.appendChild(el("span", { class: "ed-hint", text: "editing the raw TEI directly; the live checks gate on Apply" }));
   bar.appendChild(applyBtn);
   bar.appendChild(cancelBtn);
   host.appendChild(bar);
@@ -1113,8 +1105,6 @@ function setNoteMode(on) {
   if (on) { if (app.critMode) setCritMode(false); app.linkTarget = null; }
   const btn = $("btn-note");
   if (btn) btn.classList.toggle("active", on);
-  const hint = $("ed-edit-hint");
-  if (hint && app.state) hint.textContent = critHint();
 }
 
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
@@ -1163,16 +1153,6 @@ function beginNote(span, cell) {
 
 // ---- textual-critical markup (M3.6) ----------------------------------------
 
-/** The reading-pane hint, reflecting the active click-capture mode. */
-function critHint() {
-  if (app.critMode) return "click a line to mark it (unclear / deleted / added / gap)";
-  if (app.noteMode) return "click a line to attach a note";
-  if (app.linkTarget) return `click a line to link it to ${app.linkTarget.name}`;
-  return app.state && app.state.profile === "word"
-    ? "select text to annotate; double-click a word to edit; right-click for actions"
-    : "select text to annotate; double-click a line to edit; right-click for actions";
-}
-
 /** Tooltip for a reading cell, composed from its link / note / critical state. */
 function critTitle(cell, note, linking, meta) {
   // A gap always routes to its remove chooser, even while a link is pending, so
@@ -1208,8 +1188,6 @@ function setCritMode(on) {
   if (on) { if (app.noteMode) setNoteMode(false); app.linkTarget = null; }
   const btn = $("btn-critic");
   if (btn) btn.classList.toggle("active", on);
-  const hint = $("ed-edit-hint");
-  if (hint && app.state) hint.textContent = critHint();
 }
 
 /**
@@ -1647,11 +1625,6 @@ function renderValidation() {
     if (summary.counts[t]) sec2.appendChild(kv(`<${t}>`, summary.counts[t]));
   }
   pop.appendChild(sec2);
-
-  pop.appendChild(el("div", { class: "ed-section" }, [el("div", {
-    class: "ed-hint",
-    text: "RelaxNG (tei_all.rng) and Schematron run in the offline harness (test/harness). The browser checks well-formedness and structural integrity only.",
-  })]));
 }
 
 function valRow(kind, text) {
