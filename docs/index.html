@@ -66,7 +66,7 @@
         .lp-shot img {
             display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
             border: 1px solid var(--color-border); border-radius: var(--radius-md);
-            box-shadow: 0 6px 24px rgba(26, 26, 26, .08);
+            box-shadow: var(--shadow-card);
         }
 
         .lp-section-title {
@@ -82,7 +82,7 @@
             background: var(--color-panel); border: 1px solid var(--color-border);
             border-radius: var(--radius-sm); transition: border-color .15s, box-shadow .15s, transform .15s;
         }
-        .lp-card:hover { border-color: var(--color-gold); box-shadow: 0 4px 16px rgba(26, 26, 26, .08); transform: translateY(-2px); }
+        .lp-card:hover { border-color: var(--color-gold); box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
         /* The badge states a detected fact, not a fixed category: the editor
            reads the editing unit from the document, so any TEI unit (entries,
            sentences, ...) fits this same pattern later. */

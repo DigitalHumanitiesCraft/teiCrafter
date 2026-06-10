@@ -67,6 +67,15 @@
     --color-eventName: #B8860B;
     --color-eventName-bg: #FDF6E3;
 
+    /* Elevation: one shadow language for pop-ups, modals and cards. Scrims are
+       the translucent near-black fills behind modal and drop overlays. */
+    --shadow-pop: 0 6px 24px rgba(26, 26, 26, .18);
+    --shadow-modal: 0 10px 40px rgba(26, 26, 26, .25);
+    --shadow-card: 0 6px 24px rgba(26, 26, 26, .08);
+    --shadow-card-hover: 0 4px 16px rgba(26, 26, 26, .08);
+    --scrim-modal: rgba(26, 26, 26, .45);
+    --scrim-drop: rgba(26, 26, 26, .35);
+
     /* Typography */
     --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', Consolas, Monaco, monospace;
