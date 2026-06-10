@@ -103,7 +103,8 @@ docs/
       gen-modal.js        LLM on-ramp modal ("New from text") (M2.13 split)
       authority-form.js   Shared authority-id form (idno chips + add + lookup), used by panel and annotation editor
       source-view.js      Editable XML source view: highlight overlay, line numbers, Check XML, gated Apply
-      project-profiles.js Built-in project profiles: PID detection + IIIF image resolver (WB)
+      project-profiles.js Built-in project profiles: PID detection + IIIF image resolver (WB); the fallback when no manifest is present
+      project-manifest.js Declarative project manifest (teicrafter.project.json): entry-agnostic parse/validate, normalizes to the same runtime project shape
       recent-files.js     Recent files: persisted File System Access handles in IndexedDB
       dom.js              Shared DOM helpers (el, clear)
     services/
@@ -114,7 +115,7 @@ docs/
       constants.js        Providers, source labels, default mappings
   data/editor/
     wenzelsbibel-synthetic-codex.xml   Served synthetic word-level demo edition (public fallback)
-    wb-codex/                          Real Codex 2759 (gitignored, local-only; tried first)
+    wb-codex/                          Real Codex 2759 (gitignored, local-only; tried first) + committed teicrafter.project.json (the WB project manifest, no licensed content)
     zbz-100/              Real Jeanne Hersch example (TEI + page PNGs); gitignored, local-only (rights)
     zbz-1000/             ZBZ worked-example object (doc 1000 + graphic urls, M7.2); gitignored, local-only (rights); regenerate via test/tools/make_zbz1000_demo.mjs
 pipeline/
@@ -123,7 +124,7 @@ pipeline/
 
 ## State
 
-The editor holds a single `app` state object: the current edition model, the current folio index, an optional File System file handle (for save-in-place), the document name, a dirty flag, a load-time baseline (word ids and tag counts, for the integrity check), a generated flag, the detected project profile, and the two view choices of the M2.14 dual view (`sourceMode` for the left pane, `panel` for the right). Edits return a new immutable model from `edition.js` and replace `app.state`; offsets stay correct because the model is re-parsed from the spliced raw string.
+The editor holds a single `app` state object: the current edition model, the current folio index, an optional File System file handle (for save-in-place), the document name, a dirty flag, a load-time baseline (word ids and tag counts, for the integrity check), a generated flag, the active project (manifest-parsed, else PID-detected, else null), and the two view choices of the M2.14 dual view (`sourceMode` for the left pane, `panel` for the right). Edits return a new immutable model from `edition.js` and replace `app.state`; offsets stay correct because the model is re-parsed from the spliced raw string.
 
 ## Validation (hybrid)
 
@@ -134,7 +135,9 @@ The editor holds a single `app` state object: the current edition model, the cur
 
 Built and verified: the three-layer editor engine, open/navigate/edit/save, the real OpenSeadragon facsimile with `@facs` zone linking, `<standOff>` index management (person/place/org/work/event) with in-text mention linking via `<name ref>`, editorial note creation in `standoff.js` (`addNote`/`addNoteForNode`, anchored to a stable `@target` xml:id), the AI entity-proposal path with a human verify gate (`resp="#ai"`), live authority lookup (GND/Wikidata/GeoNames), inline textual-critical markup (`<unclear>`/`<del>`/`<add>`/`<gap>`), browser-light validation, the LLM on-ramp, and the offline harness. Outside the browser editor, the deterministic SZD converter `pipeline/export_tei.py` (a rule, never an LLM) turns szd-htr Page-JSON v0.2 into teiCrafter-target TEI whose output the engine round-trips byte-identically; its frozen contract is [converter-reference](converter-reference.md). The byte-identical round-trip and surgical-edit behaviour are proven headlessly on real data (the annotation and textual-critical layers each carry a dedicated proof under `test/tools/`); the editor click-through (load demo, word edit, navigation, live validation, add/link/delete an index entity) was confirmed in-app on 2026-06-04, and the newer browser-only paths (facsimile image load, AI proposal with a provider key, live lookup, the Mark-text chooser) await an operator sight-check.
 
-Not yet built (see [specification](specification.md) "Future"): a true IIIF tiles/manifest source (the viewer currently uses a plain-image tileSource), a full `<standOff>` critical-apparatus / note-body authoring layer (the inline markers above are built; the apparatus editor is the future part), project modules, a CodeMirror source view, and a streaming/segmented load for very large (tens of MB) editions. Live OpenSeadragon rendering over a real page image is verifiable only via the rights-encumbered local ZBZ example, so it remains the one path the committed demo cannot show.
+The project layer (WB-AP3): a project is configured by a declarative manifest, `teicrafter.project.json` next to the TEI files, parsed and validated by `project-manifest.js` into the same runtime shape the built-in PID profiles produce (`app.project`). Consumers built in v1: the IIIF image resolver (a `<graphic url>` filename becomes an info.json tile source for OpenSeadragon) and the markup wrap list (a manifest's `markup` replaces the built-in wraps project-wide in the annotate popover); `indices` and `views` are parsed and held for the index and view work. The example registry fetches a manifest next to an example's TEI; PID detection stays the fallback. The Wenzelsbibel manifest is the first profile, derived from the project's editorial guidelines.
+
+Not yet built (see [specification](specification.md) "Future"): a generic IIIF source without a project (the viewer falls back to a plain-image tileSource; with a manifest/profile the IIIF path is built), a full `<standOff>` critical-apparatus / note-body authoring layer (the inline markers above are built; the apparatus editor is the future part), the manifest's index/view consumers and "Open project folder" (M2.9), a CodeMirror source view, and a streaming/segmented load for very large (tens of MB) editions. Live OpenSeadragon rendering over a real page image is verifiable only via the rights-encumbered local ZBZ example, so it remains the one path the committed demo cannot show.
 
 ## Related
 

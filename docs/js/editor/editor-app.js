@@ -39,6 +39,7 @@ import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { FEATURES } from "../utils/constants.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
+import { parseManifest } from "./project-manifest.js";
 import * as recents from "./recent-files.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
@@ -195,7 +196,7 @@ function indexNotes(raw) {
 
 // ---- loading ---------------------------------------------------------------
 
-function load(raw, name, handle) {
+function load(raw, name, handle, project) {
   const t0 = performance.now();
   app.state = parseEdition(raw);
   app.folio = 0;
@@ -205,9 +206,9 @@ function load(raw, name, handle) {
   // Default: no known page images. An example with an imageBase (loadExample)
   // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
-  // Project profile (e.g. Wenzelsbibel): detected from the document's PID,
-  // currently contributes the IIIF image resolver for the facsimile.
-  app.project = detectProject(app.state.doc);
+  // Project: an explicit manifest (teicrafter.project.json, parsed by the
+  // caller) wins; PID detection stays the fallback for bare files.
+  app.project = project || detectProject(app.state.doc);
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
@@ -224,7 +225,8 @@ function load(raw, name, handle) {
   const unit = app.state.profile === "word" ? "word" : "line";
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
   setStatus(`Loaded ${app.state.folios.length} folio(s), ${app.state.cells.length} ${unit}(s) [${app.state.profile}-level]`
-    + (app.project ? `, project: ${app.project.name}` : "") + ` in ${secs}s`);
+    + (app.project ? `, project: ${app.project.name} (${app.project.source === "manifest" ? "manifest" : "detected"})` : "")
+    + ` in ${secs}s`);
 }
 
 function markGenerated(on) {
@@ -277,6 +279,7 @@ function fileInput() {
 const EXAMPLES = {
   wb: {
     label: "Wenzelsbibel", url: WB_CODEX_URL, file: "codex-2759.xml",
+    manifest: "data/editor/wb-codex/teicrafter.project.json",
     done: "Loaded the real Wenzelsbibel codex (facsimile via IIIF).",
     fallback: {
       label: "synthetic Wenzelsbibel", url: DEMO_URL, file: "wenzelsbibel-synthetic-codex.xml",
@@ -310,7 +313,20 @@ async function loadExample(key) {
       res = await fetch(ex.url, { cache: "no-store" });
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    load(await res.text(), ex.file, null);
+    // Project manifest next to the example's TEI: a 404 is the normal public
+    // deployment (PID detection takes over); a malformed manifest is reported
+    // but never blocks the load.
+    let project = null, manifestNote = "";
+    if (ex.manifest) {
+      try {
+        const mres = await fetch(ex.manifest, { cache: "no-store" });
+        if (mres.ok) project = parseManifest(await mres.text());
+      } catch (err) {
+        manifestNote = ` ${err.message}; built-in detection used instead.`;
+      }
+    }
+    load(await res.text(), ex.file, null, project);
+    if (manifestNote && ex.done) ex = { ...ex, done: ex.done + manifestNote };
     if (ex.imageBase) {
       app.imageBase = ex.imageBase;
       app.panel = "facs"; // images exist now; load() chose before imageBase was set

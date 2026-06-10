@@ -1,0 +1,32 @@
+{
+  "teicrafter": 1,
+  "name": "Wenzelsbibel (Codex 2759)",
+  "imageResolver": {
+    "type": "iiif-image-template",
+    "template": "https://iiif.onb.ac.at/images/REPO/8977428/{stem}.jp2/info.json"
+  },
+  "markup": [
+    { "element": "hi", "label": "hi (emphasis)" },
+    { "element": "foreign", "label": "foreign (Latin insert)" },
+    { "element": "title", "label": "title (work title)" },
+    { "element": "num", "label": "num (number)" },
+    { "element": "supplied", "label": "supplied (editor added)" },
+    { "element": "surplus", "label": "surplus (editor removed)" },
+    { "element": "corr", "label": "corr (corrected form)" },
+    { "element": "sic", "label": "sic (erroneous form)" },
+    { "element": "del", "label": "del (scribal deletion)" },
+    { "element": "add", "label": "add (scribal addition)" },
+    { "element": "unclear", "label": "unclear (uncertain reading)" },
+    { "element": "damage", "label": "damage (source damaged)" }
+  ],
+  "indices": [
+    { "key": "persons", "label": "Persons", "listType": "listPerson", "registers": ["GND", "Wikidata"] },
+    { "key": "places", "label": "Places", "listType": "listPlace", "registers": ["GND", "GeoNames", "Wikidata"] },
+    { "key": "peoples", "label": "Peoples (Völker)", "registers": ["GND", "Wikidata"] }
+  ],
+  "views": [
+    { "key": "diplomatic", "label": "Diplomatic transcription" },
+    { "key": "bible-verse", "label": "Bible verse mapping" },
+    { "key": "image-annotation", "label": "Image annotation" }
+  ]
+}

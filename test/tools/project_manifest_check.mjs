@@ -1,0 +1,131 @@
+/**
+ * Proof: the declarative project manifest (WB-AP3, teicrafter.project.json) is
+ * parsed, validated and normalized into the same runtime project shape the
+ * built-in PID profiles produce:
+ *   - the shipped Wenzelsbibel manifest (the first profile) parses and carries
+ *     name, image resolver, markup, indices (incl. peoples/Voelker) and views;
+ *   - its image resolver yields byte-identical tile sources to the built-in
+ *     PID profile (manifest and fallback agree);
+ *   - manifest markup entries become wrap builders that splice losslessly
+ *     through standoff.wrapRange (attribute values XML-escaped);
+ *   - malformed manifests are rejected with precise messages, never half-read.
+ *
+ * Run: node test/tools/project_manifest_check.mjs   (exit 0 = all pass)
+ */
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { parseManifest, MANIFEST_FILENAME, MANIFEST_VERSION } from "../../docs/js/editor/project-manifest.js";
+import { detectProject, projectTileSource } from "../../docs/js/editor/project-profiles.js";
+import { parseEdition } from "../../docs/js/editor/edition.js";
+import { tokenize } from "../../docs/js/editor/tei-document.js";
+import * as standoff from "../../docs/js/editor/standoff.js";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+let passed = 0, failed = 0;
+function check(cond, label) {
+  if (cond) { passed++; console.log("  ok    " + label); }
+  else { failed++; console.log("  FAIL  " + label); }
+}
+function rejects(input, reLabel, label) {
+  try { parseManifest(input); check(false, label + " (no error thrown)"); }
+  catch (err) { check(reLabel.test(err.message), `${label} ("${err.message}")`); }
+}
+const reparses = (raw) => tokenize(raw).map((t) => raw.slice(t.start, t.end)).join("") === raw;
+
+console.log("\nProject manifest proof (WB-AP3)");
+console.log("=".repeat(60));
+
+// --- 1. The shipped Wenzelsbibel manifest (the first profile) -----------------
+
+const wbText = readFileSync(join(ROOT, "docs", "data", "editor", "wb-codex", MANIFEST_FILENAME), "utf8");
+const wb = parseManifest(wbText);
+
+check(wb.source === "manifest" && wb.name === "Wenzelsbibel (Codex 2759)",
+  "WB manifest: parses, source 'manifest', project name carried");
+check(wb.iiifImageTemplate && wb.iiifImageTemplate.includes("iiif.onb.ac.at") && wb.iiifImageTemplate.includes("{stem}"),
+  "WB manifest: OENB IIIF image template present");
+check(Array.isArray(wb.markup) && wb.markup.length === 12,
+  "WB manifest: 12 markup wraps (the guidelines' inline inventory)");
+check(wb.markup.every(([label, build]) => typeof label === "string" && typeof build === "function"),
+  "WB manifest: markup normalized to the [label, build] wrap shape");
+check(wb.indices.map((i) => i.key).join(",") === "persons,places,peoples",
+  "WB manifest: indices persons, places, peoples (Voelker) declared");
+check(wb.indices[2].listType === null,
+  "WB manifest: peoples index leaves listType open (schema undecided, not invented)");
+check(wb.views.map((v) => v.key).join(",") === "diplomatic,bible-verse,image-annotation",
+  "WB manifest: the three authoring views declared");
+check(wb.schema === null, "WB manifest: no schema URL claimed (none exists yet)");
+
+// --- 2. Image resolver: manifest and built-in PID profile agree ---------------
+
+const HEADER =
+  "<teiHeader><fileDesc><titleStmt><title>t</title></titleStmt>" +
+  '<publicationStmt><idno type="PID">o:wen.codex-2759</idno></publicationStmt></fileDesc></teiHeader>';
+const WRAPTEI = (body) => '<TEI xmlns="http://www.tei-c.org/ns/1.0">' + HEADER + "<text><body>" + body + "</body></text></TEI>";
+
+const state0 = parseEdition(WRAPTEI('<p><w xml:id="w1">Hallo</w> <w xml:id="w2">Welt</w></p>'));
+const detected = detectProject(state0.doc);
+check(detected !== null, "PID fallback: o:wen.* still detects the built-in profile");
+const viaManifest = projectTileSource(wb, "00000010.jpg");
+check(viaManifest === "https://iiif.onb.ac.at/images/REPO/8977428/00000010.jp2/info.json",
+  "manifest resolver: bare filename becomes the info.json tile source");
+check(viaManifest === projectTileSource(detected, "00000010.jpg"),
+  "manifest and built-in profile resolve byte-identically");
+check(projectTileSource(wb, "https://example.org/x.jpg") === null,
+  "absolute URLs are not rewritten (resolve themselves)");
+check(projectTileSource(wb, "page.svg") === null, "non-raster filenames are not rewritten");
+
+// --- 3. Markup wraps splice losslessly through wrapRange ----------------------
+
+const synth = parseManifest({
+  teicrafter: 1,
+  name: "Synthetic",
+  markup: [
+    { element: "hi" },
+    { element: "supplied", label: "supplied (editor)", attributes: { reason: 'add"itional<P>' } },
+  ],
+});
+const [hiLabel, hiBuild] = synth.markup[0];
+check(hiLabel === "hi", "markup label defaults to the element name");
+check(hiBuild("x") === "<hi>x</hi>", "plain wrap builds the bare element");
+const [, suppliedBuild] = synth.markup[1];
+check(suppliedBuild("x") === '<supplied reason="add&quot;itional&lt;P&gt;">x</supplied>',
+  "attribute values are XML-escaped in the opening tag");
+
+let state = parseEdition(WRAPTEI('<p><w xml:id="w1">Hallo</w> <w xml:id="w2">Welt</w></p>'));
+let cell = state.cellById.get("w1");
+let doc = standoff.wrapRange(state.doc, cell.node, 0, cell.node.end - cell.node.start, hiBuild);
+check(doc !== state.doc && doc.raw.includes('<w xml:id="w1"><hi>Hallo</hi></w>'),
+  "wrapRange + manifest wrap: the cell core is wrapped in place");
+check(doc.raw.includes('<w xml:id="w2">Welt</w>'), "sibling word is byte-identical");
+check(reparses(doc.raw), "the wrapped document still tokenizes byte-covering");
+
+// --- 4. Malformed manifests are rejected, never half-read ---------------------
+
+rejects("{not json", /not valid JSON/, "invalid JSON is rejected");
+rejects([], /not a JSON object/, "a JSON array is rejected");
+rejects({ teicrafter: 2, name: "x" }, /"teicrafter" must be 1/, `unknown format version is rejected (v${MANIFEST_VERSION} only)`);
+rejects({ teicrafter: 1 }, /"name" is missing/, "a manifest without a name is rejected");
+rejects({ teicrafter: 1, name: "x", imageResolver: { type: "magic" } }, /unknown imageResolver type/,
+  "an unknown imageResolver type is rejected");
+rejects({ teicrafter: 1, name: "x", imageResolver: { type: "iiif-image-template", template: "no-stem" } },
+  /must contain "\{stem\}"/, "a template without {stem} is rejected");
+rejects({ teicrafter: 1, name: "x", markup: [{ element: "foo bar" }] }, /not a valid XML element name/,
+  "an injected element name is rejected");
+rejects({ teicrafter: 1, name: "x", markup: [{ element: "hi", attributes: { "a b": "v" } }] },
+  /not a valid XML attribute name/, "an injected attribute name is rejected");
+rejects({ teicrafter: 1, name: "x", indices: [{ label: "no key" }] }, /indices\[0\]\.key is missing/,
+  "an index definition without a key is rejected");
+rejects({ teicrafter: 1, name: "x", views: [42] }, /views\[0\]/, "a non-string, non-object view is rejected");
+
+check(parseManifest({ teicrafter: 1, name: "x", views: ["diplomatic"] }).views[0].label === "diplomatic",
+  "string shorthand views normalize to {key, label}");
+
+// --- summary ------------------------------------------------------------------
+
+console.log("=".repeat(60));
+console.log(`${failed ? "FAILED" : "PASSED"}: ${passed}/${passed + failed} checks.`);
+process.exit(failed ? 1 : 0);

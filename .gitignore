@@ -10,5 +10,7 @@ docs/data/editor/zbz-100/
 # Real ZBZ Hersch worked-example object (rights stance as zbz-100; regenerate via test/tools/make_zbz1000_demo.mjs)
 docs/data/editor/zbz-1000/
 
-# Real Wenzelsbibel codex (licence-restricted OeNB data; copy from GitHub/Wenzelsbibel/data/codex-2759.xml)
-docs/data/editor/wb-codex/
+# Real Wenzelsbibel codex (licence-restricted OeNB data; copy from GitHub/Wenzelsbibel/data/codex-2759.xml).
+# Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
+docs/data/editor/wb-codex/*
+!docs/data/editor/wb-codex/teicrafter.project.json

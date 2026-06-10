@@ -76,6 +76,10 @@ export function createAnnotationUi(ctx) {
 
   const reading = () => document.getElementById("ed-reading");
 
+  // A project manifest's markup list replaces the built-in wraps project-wide
+  // (same [label, build] shape, produced by project-manifest.js).
+  const markupWraps = () => (app.project && app.project.markup) || MARKUP_WRAPS;
+
   function removeMenu() {
     const old = document.getElementById("ed-menu");
     if (old) old.remove();
@@ -528,7 +532,7 @@ export function createAnnotationUi(ctx) {
     // 3. Plain TEI markup (full flexibility, no index entry).
     const muBody = section("TEI markup (no index entry)", false);
     const muRow = el("div", { class: "ed-sel-pop-row" });
-    for (const [label, build] of MARKUP_WRAPS) {
+    for (const [label, build] of markupWraps()) {
       const b = el("button", { class: "ed-act-btn", text: label, title: `wrap the selection in <${label.split(" ")[0]}>` });
       b.addEventListener("click", (e) => {
         e.stopPropagation();

@@ -405,9 +405,13 @@ Round-Trip byte-identisch, 480 Folios, Wort-Profil):
    PID `o:wen.*`, Dateiname -> ÖNB-info.json als OSD-Tile-Source, live verifiziert; Zonen-Bboxen
    aus `@points` in readSurfaces, 34.363/34.363 innerhalb der Surface; keine Prozent-Umrechnung
    nötig, Koordinatenraum == IIIF-Maße). Gate "Projekt lädt, Faksimile steht": Operator-Sichtprüfung.
-4. **WB-AP3 Projekt-Modul** (= M5.7-Anschluss): entschieden als Manifest `teicrafter.project.json`
-   (name, schema, imageResolver, markup, indices inkl. Völker, views); Wenzelsbibel als erstes Profil,
-   Ableitung der Editionsrichtlinien (Vault), nicht als Codegabel.
+4. **WB-AP3 Projekt-Modul: engine-seitig erledigt 2026-06-10** (= M5.7-Anschluss): Manifest-Format v1
+   in `project-manifest.js` (eintrittsagnostisch, strikt validiert, normalisiert auf die Profil-Form),
+   WB-Manifest als erstes Profil committet (Ableitung der Editionsrichtlinien, offene Punkte bleiben
+   offen statt erfunden); Manifest vor PID-Fallback, `markup` ersetzt die eingebaute Wrap-Liste
+   projektweise; `indices`/`views` deklariert, Konsumenten folgen mit Index-Arbeit und F4.
+   `node test/tools/project_manifest_check.mjs` -> **30/30**. [proof] Offen: Operator-Sichtprüfung
+   (WB-Beispiel lädt mit "project: ... (manifest)" in der Statuszeile); M2.9 als nächster Anschluss.
 5. **WB-neu Doppellesung** (F4): Ansicht-Umschalter diplomatisch|normalisiert (Anzeige-Projektion)
    plus Zwei-Feld-Doppelklick-Edit für `<w orig norm>`; neuer attributgenauer Offset-Splice in der
    Engine mit Byte-Beweis.
