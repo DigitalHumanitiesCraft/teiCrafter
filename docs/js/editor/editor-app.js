@@ -6,12 +6,15 @@
  * human-driven, lossless offset splice on the raw TEI string.
  *
  * Since the M2.13 module split this file is the integrator: it owns the shared
- * app state, loading, rendering of the reading text, the facsimile, the live
- * checks, save/download, and the inline cell editing (text / note / critical
- * chooser). The feature surfaces live in their own modules and receive their
- * dependencies via a ctx object:
+ * app state, loading, rendering of the reading text, the live checks,
+ * save/download, the inline cell editing (text / note / critical chooser), and
+ * the dual-view shell (M2.14): the left pane is the text work surface (reading
+ * text or XML source), the right pane hosts a switchable context panel from an
+ * open registry (facsimile, entity index; a project profile can contribute
+ * more via project.panels). The feature surfaces live in their own modules and
+ * receive their dependencies via a ctx object:
  *   - annotation-ui.js   context menu, annotate popover, annotation editor
- *   - index-overlay.js   on-demand entity index + live authority lookup
+ *   - entity-index.js    entity index panel + live authority lookup
  *   - source-view.js     editable XML source view
  *   - gen-modal.js       LLM on-ramp ("New from text")
  */
@@ -31,7 +34,7 @@ import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createAnnotationUi } from "./annotation-ui.js";
-import { createIndexOverlay } from "./index-overlay.js";
+import { createEntityIndex } from "./entity-index.js";
 import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
@@ -55,8 +58,8 @@ const app = {
   currentLines: [],   // lines of the folio currently rendered (for zone <-> line linking)
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
-  facsHidden: false,  // user choice: hide the facsimile pane (auto-hidden when no images)
-  sourceMode: false,  // true while the reading pane shows the editable XML source
+  panel: "facs",      // id of the active right-pane context panel (see PANELS)
+  sourceMode: false,  // true while the left pane shows the editable XML source
   project: null,      // detected project profile (project-profiles.js), or null
 };
 
@@ -88,7 +91,7 @@ function setDirty(d) {
 }
 
 function enableControls(on) {
-  for (const id of ["btn-download", "btn-index", "btn-xml"]) $(id).disabled = !on;
+  $("btn-download").disabled = !on;
   $("btn-save").disabled = !on;
   // The welcome surface and the editor chrome are mutually exclusive: the
   // document toolbar group, pane heads, pager and legend only exist with a
@@ -98,13 +101,24 @@ function enableControls(on) {
   for (const n of document.querySelectorAll(".ed-tool-doc")) n.hidden = !on;
   if (!on) {
     app.sourceMode = false;
-    $("btn-xml").classList.remove("active");
+    syncViewTabs();
   }
   // M2.5 legend strip: visible while a document is loaded;
   // render() keeps the chips current after every mutation.
   if (on) buildLegend(); else $("ed-legend").hidden = true;
   updateFolioButtons();
-  updateFacsState();
+  updatePanels();
+}
+
+/** The left pane's view switcher reflects app.sourceMode (one source of truth). */
+function syncViewTabs() {
+  const reading = $("view-reading");
+  const xml = $("view-xml");
+  if (!reading || !xml) return;
+  reading.classList.toggle("active", !app.sourceMode);
+  reading.setAttribute("aria-selected", String(!app.sourceMode));
+  xml.classList.toggle("active", app.sourceMode);
+  xml.setAttribute("aria-selected", String(app.sourceMode));
 }
 
 /**
@@ -195,6 +209,9 @@ function load(raw, name, handle) {
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
+  // Default context panel: the facsimile when the document has page images,
+  // the entity index otherwise (updatePanels falls back the same way).
+  app.panel = docHasImages() ? "facs" : "index";
   $("ed-doc-name").textContent = name;
   $("ed-doc-name").hidden = false;
   enableControls(true);
@@ -268,6 +285,7 @@ async function loadZbz() {
     load(await res.text(), "zbz-hersch-100.xml", null);
     // The real example ships local page images p001.png..pNNN.png next to the XML.
     app.imageBase = ZBZ_IMAGE_BASE;
+    app.panel = "facs"; // images exist now; load() chose before imageBase was set
     render(); // re-render the facsimile now that the image base is known
     setStatus("Loaded the ZBZ Jeanne Hersch example with real page images.");
   } catch (err) {
@@ -455,7 +473,8 @@ function render() {
   updateFolioButtons();
   buildLegend();
   renderReading();
-  renderFacsimile();
+  updatePanels();
+  renderActivePanel();
   renderValidation();
 }
 
@@ -506,9 +525,9 @@ function entityUsage() {
 function renderReading() {
   const host = $("ed-reading");
   clear(host);
-  // The pane head names what the pane currently shows; the source view drops
+  // The view tabs name what the pane currently shows; the source view drops
   // the body padding (the editor frame brings its own) so nothing overflows.
-  $("ed-pane-title").textContent = app.sourceMode ? "XML source" : "Reading text (diplomatic)";
+  syncViewTabs();
   host.classList.toggle("src", app.sourceMode);
   if (app.sourceMode) { renderSourceView(host); return; }
   const folio = app.state.folios[app.folio];
@@ -581,8 +600,6 @@ const SOURCE_VIEW_LIMIT = 8_000_000;
 function renderSourceView(host) {
   const leave = () => {
     app.sourceMode = false;
-    const b = $("btn-xml");
-    if (b) b.classList.remove("active");
     refreshAfterStandoffEdit();
   };
   if (app.state.raw.length > SOURCE_VIEW_LIMIT) {
@@ -849,36 +866,95 @@ function docHasImages() {
   return app.state.folios.some((f) => f.surface && f.surface.graphic);
 }
 
+// ---- right-pane context panels (M2.14 dual view) -----------------------------
+// The right pane is always there; WHAT it shows is a panel from this registry.
+// Built-ins: facsimile and entity index. The registry is open: a project
+// profile may contribute panels via project.panels, each
+// { id, label, title, available()?, render()? | mount(hostEl)? }; a panel
+// without a static host element in editor.html gets one created on demand.
+
+const PANELS = [
+  {
+    id: "facs", label: "Facsimile", host: "ed-panel-facs",
+    title: "Page image with TEI zones; hovering a zone highlights the linked text and vice versa",
+    unavailableTitle: "This document carries no page images",
+    available: () => docHasImages(),
+    render: () => renderFacsimile(),
+  },
+  {
+    id: "index", label: "Index", host: "ed-panel-index",
+    title: "All index entities (persons, places, organisations, works, events) with their authority ids and mention counts",
+    available: () => true,
+    render: () => overlay.renderIndex(),
+  },
+];
+
+function activePanels() {
+  const extra = app.project && Array.isArray(app.project.panels) ? app.project.panels : [];
+  return PANELS.concat(extra);
+}
+
+function panelHost(p) {
+  let host = $(p.host || `ed-panel-${p.id}`);
+  if (!host) {
+    host = el("div", { class: "ed-panel", id: `ed-panel-${p.id}` });
+    host.hidden = true;
+    document.querySelector(".ed-panel-body").appendChild(host);
+  }
+  return host;
+}
+
 /**
- * Facsimile pane visibility: hidden on the user's toggle, and auto-hidden when
- * the document carries no page images at all (a facsimile pane with a permanent
- * empty state is noise). The grid collapses to two panes so the reading text
- * gets the space.
+ * Reconcile the right pane with the registry: rebuild the tabs (label, enabled
+ * state, tooltip), make sure the active panel is an available one (fall back to
+ * the first available, e.g. Index when a document has no page images), and show
+ * exactly the active panel's host.
  */
-function updateFacsState() {
-  const main = $("ed-main");
-  const pane = $("ed-pane-facs");
-  const btn = $("btn-facs");
-  if (!main || !pane) return;
-  const has = docHasImages();
-  // The XML source view takes the full width: side-by-side with the facsimile
-  // neither has room, and source work does not need the page image.
-  const hidden = !app.state || app.facsHidden || !has || app.sourceMode;
-  pane.hidden = hidden;
-  main.classList.toggle("no-facs", hidden);
-  if (btn) {
-    btn.disabled = !app.state || !has || app.sourceMode;
-    btn.classList.toggle("active", !hidden);
-    btn.title = !app.state ? "Show or hide the facsimile pane"
-      : !has ? "This document carries no page images"
-      : app.sourceMode ? "The facsimile returns when you leave the XML source view"
-      : hidden ? "Show the facsimile pane" : "Hide the facsimile pane";
+function updatePanels() {
+  const tabsHost = $("ed-panel-tabs");
+  if (!tabsHost) return;
+  const panels = activePanels();
+  if (app.state) {
+    const cur = panels.find((p) => p.id === app.panel);
+    if (!cur || (cur.available && !cur.available())) {
+      const fallback = panels.find((p) => !p.available || p.available());
+      app.panel = fallback ? fallback.id : null;
+    }
+  }
+  clear(tabsHost);
+  for (const p of panels) {
+    const avail = !!app.state && (!p.available || p.available());
+    const active = p.id === app.panel;
+    const tab = el("button", {
+      class: "ed-tab" + (active ? " active" : ""), type: "button", role: "tab",
+      "aria-selected": String(active),
+      title: avail ? p.title : (p.unavailableTitle || p.title),
+      text: p.label,
+    });
+    tab.disabled = !avail;
+    tab.addEventListener("click", () => showPanel(p.id));
+    tabsHost.appendChild(tab);
+    panelHost(p).hidden = !active;
   }
 }
 
+function showPanel(id) {
+  app.panel = id;
+  updatePanels();
+  renderActivePanel();
+}
+
+/** Render the active panel's content (called by render() and showPanel()). */
+function renderActivePanel() {
+  if (!app.state) return;
+  const p = activePanels().find((x) => x.id === app.panel);
+  if (!p) return;
+  if (p.render) p.render();
+  else if (p.mount) p.mount(panelHost(p));
+}
+
 function renderFacsimile() {
-  updateFacsState();
-  if ($("ed-pane-facs") && $("ed-pane-facs").hidden) return;
+  if (!app.state || app.panel !== "facs") return;
   const ctrl = ensureFacsimile();
   if (!ctrl) return;
   const folio = app.state.folios[app.folio];
@@ -895,10 +971,10 @@ function renderFacsimile() {
   });
 }
 
-/** After any standOff edit: re-render the whole view and the index panel. */
+/** After any standOff edit: re-render the whole view, including the active panel
+ * (an inactive index panel is re-rendered on its next showPanel). */
 function refreshAfterStandoffEdit() {
   render();
-  overlay.renderIndex();
 }
 
 /**
@@ -1096,10 +1172,11 @@ function download() {
 // Instantiated once at startup; dependencies flow in via a ctx object, the
 // surfaces (popovers, overlay, modal) flow back through the returned APIs.
 
-const overlay = createIndexOverlay({
+const overlay = createEntityIndex({
   app, setStatus, setDirty,
   refresh: refreshAfterStandoffEdit,
   gotoFolio, highlightMentions, entityUsage,
+  showPanel,
 });
 const annot = createAnnotationUi({
   app, setStatus, setDirty, applyDocFn,
@@ -1152,17 +1229,16 @@ $("card-generate").addEventListener("click", () => genModal.open());
 
 setupDragDrop();
 renderRecents();
-$("btn-facs").addEventListener("click", () => {
-  app.facsHidden = !app.facsHidden;
-  renderFacsimile(); // re-applies visibility and repopulates the viewer on show
-});
-$("btn-xml").addEventListener("click", () => {
-  app.sourceMode = !app.sourceMode;
-  $("btn-xml").classList.toggle("active", app.sourceMode);
+// Left pane view switcher: reading text or XML source, one always active.
+function setSourceMode(on) {
+  if (app.sourceMode === on) return;
+  app.sourceMode = on;
   annot.removeSelPopover();
   annot.removeMenu();
   render();
-});
+}
+$("view-reading").addEventListener("click", () => setSourceMode(false));
+$("view-xml").addEventListener("click", () => setSourceMode(true));
 $("btn-generate").addEventListener("click", genModal.open);
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
@@ -1174,7 +1250,7 @@ document.addEventListener("keydown", (e) => {
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
   if (document.querySelector("#ed-reading .ed-crit-pick, #ed-sel-pop, #ed-menu")) return;
-  if (!$("gen-modal").hidden || !$("ed-idx-overlay").hidden) return;
+  if (!$("gen-modal").hidden) return;
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });
 $("btn-save").addEventListener("click", save);
@@ -1205,7 +1281,7 @@ window.addEventListener("beforeunload", (e) => {
   if (app.dirty) { e.preventDefault(); e.returnValue = ""; }
 });
 
-updateFacsState(); // start state: no document, facsimile pane collapsed
+updatePanels(); // start state: no document, panel tabs built but disabled
 
 // Deep link from the landing page: editor.html#generate opens the LLM entry.
 if (location.hash === "#generate") genModal.open();

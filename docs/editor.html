@@ -42,12 +42,6 @@
         </div>
         <div class="sep ed-tool-doc" hidden></div>
         <div class="group ed-tool-doc" hidden>
-            <button class="ed-btn" id="btn-facs" disabled title="Show or hide the facsimile pane">Facsimile</button>
-            <button class="ed-btn" id="btn-index" disabled title="All index entities (persons, places, organisations, works, events) with their authority ids and mention counts">Index</button>
-            <button class="ed-btn" id="btn-xml" disabled title="Switch between the reading view and the editable XML source">XML</button>
-        </div>
-        <div class="sep ed-tool-doc" hidden></div>
-        <div class="group ed-tool-doc" hidden>
             <button class="ed-btn ed-btn-primary" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
             <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
         </div>
@@ -104,10 +98,19 @@
         </div>
     </section>
 
+    <!-- Dual view (operator decision 2026-06-10): two panes, always. The left
+         pane is the text work surface (reading text or XML source); the right
+         pane is a switchable context panel (facsimile, entity index; the panel
+         registry in editor-app.js is open for project-specific panels). -->
     <main class="ed-main" id="ed-main" hidden>
         <section class="ed-pane">
             <div class="ed-pane-head">
-                <span id="ed-pane-title">Reading text (diplomatic)</span>
+                <span class="ed-tabs" id="ed-view-tabs" role="tablist" aria-label="Text view">
+                    <button class="ed-tab active" id="view-reading" type="button" role="tab" aria-selected="true"
+                            title="The diplomatic reading text: edit, annotate, and mark it word by word or line by line">Reading text</button>
+                    <button class="ed-tab" id="view-xml" type="button" role="tab" aria-selected="false"
+                            title="The editable XML source of the whole document; Apply is gated on well-formedness">XML source</button>
+                </span>
                 <span class="ed-pane-head-right">
                     <button class="ed-val-chip" id="ed-val-chip" type="button" hidden></button>
                     <span class="ed-pager">
@@ -124,33 +127,24 @@
             <div class="ed-pane-body ed-reading" id="ed-reading"></div>
         </section>
 
-        <section class="ed-pane" id="ed-pane-facs">
-            <div class="ed-pane-head"><span title="Page image with TEI zones; hovering a zone highlights the linked text and vice versa">Facsimile</span></div>
-            <div class="ed-pane-body">
-                <div class="ed-osd" id="ed-osd"></div>
+        <section class="ed-pane" id="ed-pane-right">
+            <div class="ed-pane-head">
+                <span class="ed-tabs" id="ed-panel-tabs" role="tablist" aria-label="Context panel"></span>
             </div>
-        </section>
-
-    </main>
-
-    <!-- On-demand entity index (operator decision 2026-06-10): no permanent pane;
-         the toolbar Index button opens this overlay, day-to-day authority work
-         happens in the annotation popovers on the text itself. -->
-    <div class="ed-modal" id="ed-idx-overlay" hidden>
-        <div class="ed-modal-card ed-idx-card" role="dialog" aria-modal="true" aria-labelledby="idx-title">
-            <div class="ed-modal-head">
-                <span id="idx-title">Index</span>
-                <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter entities..."
-                       title="Filter by name or id; sections without a match collapse" />
-                <button class="ed-btn" id="idx-close" title="Close (Escape)">Close</button>
-            </div>
-            <div class="ed-modal-body">
-                <div id="ed-index-host">
-                    <div class="ed-empty">Entity index appears after a document is loaded.</div>
+            <div class="ed-pane-body ed-panel-body">
+                <div class="ed-panel" id="ed-panel-facs" hidden>
+                    <div class="ed-osd" id="ed-osd"></div>
+                </div>
+                <div class="ed-panel" id="ed-panel-index" hidden>
+                    <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter entities..."
+                           title="Filter by name or id; sections without a match collapse" />
+                    <div id="ed-index-host">
+                        <div class="ed-empty">Entity index appears after a document is loaded.</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <div class="ed-val-pop" id="ed-val-pop" hidden></div>
 

@@ -22,6 +22,18 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (night, continued): The dual view (operator feedback round 8, M2.14)
+
+The operator rejected the single-pane XML mode ("not nicely integrated": the round-7 layout collapsed to one centered 1100px column with dead space around it, and the facsimile was forced away) and set the layout concept: two panes, always. Left is the text work surface; right is always a context view (page image, or another surface such as the entity index), and the right side must be customizable per project. Implemented as M2.14:
+
+- **Left pane: view tabs.** "Reading text" and "XML source" switch the same pane; the validation chip and the pager stay in its head. The toolbar's Facsimile/Index/XML buttons are gone; switching lives where the content is.
+- **Right pane: an open panel registry.** `PANELS` in editor-app.js (id, label, tooltip, `available()`, `render()`/`mount()`); built-ins are the facsimile and the entity index. A project profile can contribute panels via `project.panels`; a panel without a static host gets one created. An unavailable panel's tab is disabled with the reason as tooltip (e.g. "This document carries no page images"), and the active panel falls back to the first available one, so a document without images opens on the Index instead of an empty viewer.
+- **The index left the modal.** `index-overlay.js` became `entity-index.js`: same standOff hooks, lookup popover and filter, but rendered in the right pane. Jumping to a mention no longer closes anything; text and index are visible together, which is the point of the dual view. `revealEntity` (from the annotation editor) switches the right pane to the index and flashes the row.
+- **XML source next to the facsimile.** The explicit operator request from the screenshot round; the source view now keeps the page image (or any panel) alongside, and `.ed-main.no-facs` plus the `facsHidden` toggle state are deleted.
+- **Duplicate text in the SZD example diagnosed and fixed.** The operator spotted the same closing passage under `pb n="4"` and `pb n="5"`. Source check against szd-htr `groundtruth.json`: page 5's transcription is EMPTY (0 chars); the duplication happened when the fixture TEI was generated from the Page-JSON, not in teiCrafter (the editor showed the file faithfully). The fixture now carries an empty page 5, true to the source; the upstream converter deserves a guard against copying the previous page when a transcription is empty (order for szd-htr, not this repo).
+
+Proof: rewritten smoke test 36/36 (dual view default, panel switching, XML+facsimile side by side, WB fallback to Index with a disabled Facsimile tab, viewport-constrained source view), screenshots `ui_dual_*.png`, regression 295/295 byte-identical plus szd_demo_check and ai_suggest_parse_check PASS.
+
 ## 2026-06-10 (night): Identity surfaces, one load entry, checks at the text (feedback round 7)
 
 Operator round 7 on the live tool, all points implemented and Playwright-proven (30/30 checks, regression 295/295):

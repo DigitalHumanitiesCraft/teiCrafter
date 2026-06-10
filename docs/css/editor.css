@@ -49,8 +49,6 @@
 /* A disabled button never carries the primary accent: the strongest visual
    weight on the page must not sit on an unusable control. */
 .ed-btn-primary:disabled { background: var(--color-panel); border-color: var(--color-border); color: var(--color-text); }
-/* Active toggle (e.g. the facsimile pane), in the editorial review family */
-.ed-btn.active { border-color: var(--color-review); color: var(--color-review); background: var(--color-review-tint); }
 
 /* Keyboard focus is always visible (triple-coding stance: never hover-only). */
 :is(.ed-btn, .ed-card, .ed-dd-item, .ed-crit-btn, .ed-act-btn, .ed-menu-item,
@@ -125,17 +123,14 @@
 .ed-modal-status.err { color: var(--color-problem); }
 .ed-modal-status.busy { color: var(--color-ai); }
 
-/* Two panes since M2.11 (the index is an on-demand overlay): reading + facsimile. */
+/* Dual view (M2.14): two panes, always. Left is the text work surface (reading
+   text or XML source, the view tabs switch it); right is the context panel
+   (facsimile, entity index, project panels; the panel tabs switch it). */
 .ed-main {
   display: grid; grid-template-columns: 1.1fr 1fr;
   flex: 1; min-height: 0;
 }
 .ed-main[hidden] { display: none; }
-/* No page images (or facsimile hidden): one centered pane at reading width,
-   without the pane divider (there is no second pane to divide from). */
-.ed-main.no-facs { grid-template-columns: minmax(0, 1100px); justify-content: center; }
-.ed-main.no-facs .ed-pane { border-right: none; }
-#ed-pane-facs[hidden] { display: none; }
 /* min-height: 0 on the pane AND its body breaks the min-height:auto chain, so
    tall content (the XML source gutter) scrolls INSIDE the pane instead of
    growing the pane past the viewport ("everything slides down"). */
@@ -148,6 +143,26 @@
   font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text);
 }
 .ed-pane-head-right { display: inline-flex; align-items: center; gap: var(--space-md); }
+
+/* View / panel tabs in the pane heads (M2.14): a small segmented switcher.
+   The active tab reads as the pane's title; exactly one is active per pane. */
+.ed-tabs { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.ed-tab {
+  font-family: var(--font-ui); font-size: var(--font-size-sm); font-weight: 500;
+  cursor: pointer; padding: 2px var(--space-sm); border-radius: var(--radius-sm);
+  border: 1px solid transparent; background: none; color: var(--color-text-secondary);
+}
+.ed-tab:hover { color: var(--color-text); border-color: var(--color-border); }
+.ed-tab.active {
+  background: var(--color-panel); border-color: var(--color-border);
+  color: var(--color-text); font-weight: 600;
+}
+.ed-tab:disabled { opacity: .5; cursor: not-allowed; }
+.ed-tab:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+
+/* Context panels in the right pane: exactly the active one is shown. */
+.ed-panel { height: 100%; min-height: 0; }
+.ed-panel[hidden] { display: none; }
 .ed-pane-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-md); }
 /* XML source view fills the pane exactly: the editor frame brings its own
    spacing, and height:100% plus the body padding would otherwise overflow
@@ -289,13 +304,12 @@
 
 .ed-empty { color: var(--color-text-muted); font-size: var(--font-size-sm); text-align: center; padding: var(--space-xl); }
 
-/* Index overlay (M2.11): the entity index opens on demand from the toolbar.
-   It reuses the modal frame; inputs focus gold here (violet is AI-only). */
-.ed-idx-card { width: min(720px, 92vw); }
-.ed-idx-card .ed-modal-body { max-height: 70vh; overflow: auto; }
-.ed-idx-card input:focus, .ed-idx-card select:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+/* Entity index panel (a right-pane context panel since the M2.14 dual view);
+   inputs focus gold here (violet is AI-only). */
+#ed-panel-index input:focus, #ed-panel-index select:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
 .ed-idx-filter {
-  flex: 1; margin: 0 var(--space-md); max-width: 320px;
+  display: block; box-sizing: border-box; width: 100%;
+  margin: 0 0 var(--space-sm);
   font-family: var(--font-ui); font-size: var(--font-size-sm); color: var(--color-text);
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: var(--radius-sm); padding: var(--space-xs) var(--space-sm);
@@ -303,7 +317,7 @@
 .ed-idx-occ { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
 /* Entity index list (persons / places / organisations / works / events),
-   rendered by index-panel.js inside the on-demand overlay since M2.11. */
+   rendered by index-panel.js inside the index panel. */
 .ed-idx { display: flex; flex-direction: column; gap: var(--space-md); }
 .ed-idx-section { display: flex; flex-direction: column; gap: var(--space-xs); }
 .ed-idx-heading {

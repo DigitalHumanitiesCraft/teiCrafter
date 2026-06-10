@@ -1,26 +1,27 @@
 /**
- * teiCrafter Editor -- on-demand index overlay (M2.11).
+ * teiCrafter Editor -- entity index panel (M2.11 overlay, a right-pane context
+ * panel since the M2.14 dual view).
  *
- * The toolbar "Index" button opens a filterable overlay over the text with
- * ALL standOff entities (mention-count badges, add/rename/delete, authority
- * forms); clicking an entry jumps to its first in-text mention. Day-to-day
- * authority work happens in the annotation popover on the text itself
- * (operator decision 2026-06-10). Every mutation goes through standoff.js
- * (lossless offset splice) and re-parses the edition so all offsets stay
- * correct. Extracted from editor-app.js in the M2.13 module split; the
- * behaviour is unchanged.
+ * Lives in the right pane's panel registry next to the facsimile: ALL standOff
+ * entities, filterable, with mention-count badges, add/rename/delete and
+ * authority forms; clicking an entry jumps to its first in-text mention while
+ * the index stays visible. Day-to-day authority work happens in the annotation
+ * popover on the text itself (operator decision 2026-06-10). Every mutation
+ * goes through standoff.js (lossless offset splice) and re-parses the edition
+ * so all offsets stay correct.
  *
  * Contract:
- *   createIndexOverlay(ctx) -> { renderIndex, open, close, revealEntity, runLookup }
+ *   createEntityIndex(ctx) -> { renderIndex, open, revealEntity, runLookup }
  *   ctx: {
  *     app,                       // shared mutable editor state (state, folio)
  *     setStatus(msg), setDirty(d),
- *     refresh(),                 // re-render reading view + index after a standOff edit
+ *     refresh(),                 // re-render reading view + active panel after a standOff edit
  *     gotoFolio(i),              // page switch (jump-to-mention)
  *     highlightMentions(entity), // mark all of an entity's mentions on the page
  *     entityUsage(),             // id -> { count, onPage } over all mention cells
+ *     showPanel(id),             // switch the right pane to a registry panel
  *   }
- *   Wires its own listeners (toolbar toggle, close, backdrop, Escape, filter).
+ *   Wires its own filter listener; the panel tab itself is the integrator's.
  */
 
 import { el, clear } from "./dom.js";
@@ -31,11 +32,11 @@ import { lookup as authorityLookup } from "../services/authority-lookup.js";
 
 const $ = (id) => document.getElementById(id);
 
-export function createIndexOverlay(ctx) {
-  const { app, setStatus, setDirty, refresh, gotoFolio, highlightMentions, entityUsage } = ctx;
+export function createEntityIndex(ctx) {
+  const { app, setStatus, setDirty, refresh, gotoFolio, highlightMentions, entityUsage, showPanel } = ctx;
   let indexPanel = null;
 
-  /** Lazily create the single index panel bound to the overlay host, with its hooks. */
+  /** Lazily create the single index panel bound to the panel host, with its hooks. */
   function ensureIndexPanel() {
     if (indexPanel) return indexPanel;
     const host = $("ed-index-host");
@@ -146,27 +147,18 @@ export function createIndexOverlay(ctx) {
       for (const e of all[k] || []) e.count = (usage.get(e.id) || {}).count || 0;
     }
     panel.render(all);
+    applyFilter($("idx-filter") ? $("idx-filter").value : "");
   }
 
+  /** Switch the right pane to the index panel (renders via the registry). */
   function open() {
     if (!app.state) return;
-    renderIndex();
-    $("ed-idx-overlay").hidden = false;
-    $("btn-index").classList.add("active");
-    const f = $("idx-filter");
-    f.value = "";
-    applyFilter("");
-    f.focus();
-  }
-
-  function close() {
-    $("ed-idx-overlay").hidden = true;
-    $("btn-index").classList.remove("active");
+    showPanel("index");
   }
 
   /** DOM-level filter over the rendered panel: rows by name/id, empty sections fold. */
   function applyFilter(q) {
-    const f = q.trim().toLowerCase();
+    const f = (q || "").trim().toLowerCase();
     for (const row of document.querySelectorAll("#ed-index-host .ed-idx-row")) {
       row.hidden = !!f && !row.textContent.toLowerCase().includes(f);
     }
@@ -176,11 +168,11 @@ export function createIndexOverlay(ctx) {
   }
 
   /**
-   * Index row clicked: close the overlay and jump to the entity's first in-text
-   * mention (switching the page when needed), then highlight all its mentions.
+   * Index row clicked: jump to the entity's first in-text mention (switching
+   * the page when needed), then highlight all its mentions. The index panel
+   * stays open; in the dual view the text and the index are visible together.
    */
   function jumpToEntity(entity) {
-    close();
     let targetFolio = -1;
     let targetCellId = null;
     outer: for (let fi = 0; fi < app.state.folios.length; fi++) {
@@ -200,7 +192,7 @@ export function createIndexOverlay(ctx) {
     if (span) span.scrollIntoView({ block: "center" });
   }
 
-  /** Open the overlay scrolled to an entity's row and flash it. */
+  /** Switch to the index panel scrolled to an entity's row and flash it. */
   function revealEntity(id) {
     open();
     if (indexPanel) indexPanel.setActive(id);
@@ -211,17 +203,7 @@ export function createIndexOverlay(ctx) {
     setTimeout(() => row.classList.remove("ed-idx-row-flash"), 1200);
   }
 
-  // Wiring: toolbar toggle, close button, backdrop click, Escape, filter.
-  $("btn-index").addEventListener("click", () => {
-    if ($("ed-idx-overlay").hidden) open();
-    else close();
-  });
-  $("idx-close").addEventListener("click", close);
-  $("ed-idx-overlay").addEventListener("click", (e) => { if (e.target.id === "ed-idx-overlay") close(); });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !$("ed-idx-overlay").hidden) close();
-  });
   $("idx-filter").addEventListener("input", (e) => applyFilter(e.target.value));
 
-  return { renderIndex, open, close, revealEntity, runLookup };
+  return { renderIndex, open, revealEntity, runLookup };
 }

@@ -23,7 +23,7 @@
  *     entityUsage(),              // id -> { count, onPage }
  *     indexNotes(raw),            // wordId -> note text (after a raw change)
  *     runLookup(authority, query, anchor, onPick),
- *     revealEntity(id),           // open the index overlay on an entry
+ *     revealEntity(id),           // switch the right pane to the index, scrolled to an entry
  *     highlightMentions(entity),
  *     beginTextInput(span, cell), beginNote(span, cell), beginCritic(span, cell),
  *   }

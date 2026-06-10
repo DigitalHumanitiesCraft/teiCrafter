@@ -85,6 +85,7 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - **LLM output is marked.** Generated TEI is violet and unreviewed; keys in memory only.
 - **Licence boundary.** Real third-party TEI never committed; synthetic twins only.
 - **Authority ids as `<idno>`, not `@ref`** (2026-06-08). Authority identifiers (GND / GeoNames / Wikidata) attach to an entity as `<idno type="...">value</idno>` children: this allows several registers per entity, matches what the SZD converter already emits for creators, and keeps `@ref` reserved for the in-text mention pointer (`<name ref="#id">`). Hand-entry is the foundation; a live lookup and an offline Gemini proposal layer build on the same mechanism.
+- **Dual view, always** (2026-06-10, M2.14, operator order). The editor is two panes at all times: the left pane is the text work surface (reading text or XML source, switched by view tabs in its head), the right pane is a context panel switched by tabs from an open registry (facsimile and entity index built in; project profiles can contribute panels via `project.panels`). There is no single-pane mode and no facsimile hide toggle; a document without page images falls back to the Index panel and the Facsimile tab is disabled with the reason as tooltip. The XML source is explicitly usable next to the facsimile.
 - **Inline textual criticism wraps, gap replaces** (2026-06-08, M3.6). `<unclear>`/`<del>`/`<add>` wrap a reading-text node's core; `<gap/>` is content-less per TEI, so it replaces the core rather than wrapping it. The wrapped core is the raw, already-escaped slice spliced as-is (no decode/re-encode, so entity spellings never churn), edge whitespace stays outside the tags, and a no-op returns the same document. The cell model tags a cell from its immediate wrapper only (so the visible state matches what the ops can act on), and "clear" is offered only when the cell is that wrapper's sole content, so removing markup can never silently strip a wrapper shared with sibling content. This is editorial, human markup: it uses the editorial colour family and never the violet AI family (see [design](design.md)).
 
 ## Future (specified, not built)
@@ -94,7 +95,7 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - Automatic authority-id reconciliation: an offline Gemini proposal layer that writes unreviewed `<idno>` suggestions shown violet, building on the live lookup and hand-entry that are already built (see Editor Capabilities). Only the automatic, unreviewed `<idno>` writing is the future part.
 - Project modules: a Markdown document configuring autocompletion, authoring views, indices and Schematron per edition.
 - Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.
-- A CodeMirror source view for raw-XML editing alongside the rendered view.
+- Replacing the hand-built XML source editor with CodeMirror, should it hit limits (the editable source view itself, including side-by-side with the facsimile, is built: M2.12 + M2.14).
 
 ## Open Questions
 
