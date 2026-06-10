@@ -10,8 +10,9 @@
  *     load the served synthetic Wenzelsbibel demo, or the real ZBZ Jeanne Hersch
  *     example (local XML plus page images).
  *   - Navigate folios (one <pb> to the next).
- *   - Render the diplomatic reading text word-by-word; click a word to correct it
- *     in place via editCellCore (surgical, lossless, edge-whitespace preserving).
+ *   - Render the diplomatic reading text word-by-word; click a word for the inline
+ *     action chooser (edit / note / mark / link / entity). Corrections run through
+ *     editCellCore (surgical, lossless, edge-whitespace preserving).
  *   - Show the folio's page image in an OpenSeadragon viewer (facsimile.js) with the
  *     <zone> rectangles overlaid and bidirectionally linked to the reading text
  *     (real @facs link when present, positional fallback otherwise).
@@ -111,36 +112,63 @@ function enableControls(on) {
   for (const id of ["btn-validate", "btn-download", "btn-note", "btn-suggest", "btn-critic"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) { setNoteMode(false); setCritMode(false); }
-  // M2.5 legend: visible only while a document is loaded (overview first).
+  // M2.5 legend: rebuilt from the loaded document (overview first); hidden when
+  // no document is loaded. render() keeps it current after every mutation.
   const legend = $("ed-legend");
   if (legend) {
     if (on) buildLegend();
-    legend.hidden = !on;
+    else legend.hidden = true;
   }
   updateFolioButtons();
 }
 
 /**
- * M2.5 legend strip: one chip per visual code in the reading text. Built once;
- * chip labels reuse the index-panel section terms (singular) and the
- * CRITICAL_KINDS labels, so every code reads the same everywhere.
+ * M2.5 legend strip: one chip per visual code PRESENT in the current document,
+ * rebuilt on every render, so the legend names exactly what the reading text can
+ * show (no violet chip in a purely human edition, no chip for an absent code).
+ * Chip labels reuse the index-panel section terms (singular) and the
+ * CRITICAL_KINDS labels, so every code reads the same everywhere. The temporary
+ * selection highlight (mention-hit) is announced by the status line instead.
  */
 function buildLegend() {
   const host = $("ed-legend");
-  if (!host || host.childElementCount) return;
-  const chip = (cls, label) => el("span", { class: "ed-legend-chip " + cls, text: label });
+  if (!host) return;
+  clear(host);
+  if (!app.state) { host.hidden = true; return; }
+
+  // Collect the codes the loaded document actually renders.
+  const meta = entityMetaMap();
+  const kinds = new Set();
+  const crits = new Set();
+  let ai = false, dangling = false;
+  for (const cell of app.state.cells) {
+    if (cell.crit) crits.add(cell.crit);
+    if (cell.gap || !cell.mention) continue;
+    const m = meta.get(cell.mention);
+    if (!m) { dangling = true; continue; }
+    kinds.add(m.kind);
+    if (m.ai) ai = true;
+  }
+  const hasNote = app.noteByWord.size > 0;
+
+  const chips = [];
+  const chip = (cls, label) => chips.push(el("span", { class: "ed-legend-chip " + cls, text: label }));
+  if (kinds.has("pers")) chip("mention mention-pers", "person");
+  if (kinds.has("plc")) chip("mention mention-plc", "place");
+  if (kinds.has("org")) chip("mention mention-org", "organisation");
+  if (kinds.has("wrk")) chip("mention mention-wrk", "work");
+  if (kinds.has("evt")) chip("mention mention-evt", "event");
+  if (ai) chip("mention mention-ai", "AI-proposed");
+  if (dangling) chip("mention", "missing entity");
+  if (hasNote) chip("has-note", "note");
+  for (const kind of Object.keys(CRITICAL_KINDS)) {
+    if (crits.has(kind)) chip("crit-" + kind, CRITICAL_KINDS[kind].label);
+  }
+
+  if (!chips.length) { host.hidden = true; return; }
+  host.hidden = false;
   host.appendChild(el("span", { class: "ed-legend-title", text: "legend" }));
-  host.appendChild(chip("mention mention-pers", "person"));
-  host.appendChild(chip("mention mention-plc", "place"));
-  host.appendChild(chip("mention mention-org", "organisation"));
-  host.appendChild(chip("mention mention-wrk", "work"));
-  host.appendChild(chip("mention mention-evt", "event"));
-  host.appendChild(chip("mention mention-ai", "AI-proposed"));
-  host.appendChild(chip("has-note", "note"));
-  host.appendChild(chip("crit-unclear", CRITICAL_KINDS.unclear.label));
-  host.appendChild(chip("crit-del", CRITICAL_KINDS.del.label));
-  host.appendChild(chip("crit-add", CRITICAL_KINDS.add.label));
-  host.appendChild(chip("crit-gap", CRITICAL_KINDS.gap.label));
+  for (const c of chips) host.appendChild(c);
 }
 
 // ---- note index (for has-note markers) -------------------------------------
@@ -305,6 +333,7 @@ function highlightZone(zoneId, zoneIndex) {
 
 function render() {
   updateFolioButtons();
+  buildLegend();
   renderReading();
   renderFacsimile();
   renderValidation();
@@ -371,7 +400,12 @@ function renderReading() {
         text: cell.gap ? "[...]" : cell.text,
         title: critTitle(cell, note, linking, meta),
       });
-      span.addEventListener("click", () => {
+      span.addEventListener("click", (e) => {
+        // A span can never legitimately receive the second click of a
+        // double-click (click 1 replaces it with a box or input), so e.detail > 1
+        // here means the first click's UI vanished and the words reflowed under
+        // the cursor: ignore it instead of opening something unintended.
+        if (e.detail > 1) return;
         if (app.critMode || cell.gap) beginCritic(span, cell);
         else if (app.noteMode) beginNote(span, cell);
         else beginEdit(span, cell, lineIndex);
@@ -395,13 +429,14 @@ function beginEdit(span, cell, lineIndex) {
   // still completes on the next text click without an extra step (M2.6 contract).
   if (app.linkTarget) {
     const target = app.linkTarget;
-    try {
-      app.state = parseEdition(standoff.linkMention(app.state.doc, cell.node, target.id).raw);
-      setDirty(true);
-      setStatus(`Linked "${cell.text.trim()}" to ${target.name}`);
-    } catch (err) {
-      setStatus(`Link failed: ${err.message}`);
-    }
+    // Same shared mutation path as the picker, so both link entries honour the
+    // engine's SAME-doc no-op contract (no false dirty flag, truthful status).
+    applyDocFn(
+      (doc) => standoff.linkMention(doc, cell.node, target.id),
+      `Linked "${cell.text.trim()}" to ${target.name}`,
+      "Link",
+      `Already linked to ${target.name}`,
+    );
     app.linkTarget = null;
     render();
     renderIndex();
@@ -459,10 +494,11 @@ function beginTextInput(span, cell) {
 /**
  * Apply a doc -> doc function to the current document, then refresh state, the
  * note index, the dirty flag, and the status line. A no-op (SAME doc) changes
- * nothing. Shared by the critical chooser and the inline link picker, so every
- * inline mutation runs through one code path.
+ * nothing; when noopLabel is given, the status line says so instead of staying
+ * silent. Shared by the critical chooser and both link entries, so every inline
+ * mutation runs through one code path.
  */
-function applyDocFn(fn, label, failPrefix = "Edit") {
+function applyDocFn(fn, label, failPrefix = "Edit", noopLabel = null) {
   try {
     const next = fn(app.state.doc);
     if (next !== app.state.doc) {
@@ -470,6 +506,8 @@ function applyDocFn(fn, label, failPrefix = "Edit") {
       app.noteByWord = indexNotes(app.state.raw);
       setDirty(true);
       setStatus(label);
+    } else if (noopLabel) {
+      setStatus(noopLabel);
     }
   } catch (err) {
     setStatus(`${failPrefix} failed: ${err.message}`);
@@ -498,13 +536,27 @@ function beginActions(span, cell) {
   const box = el("span", { class: "ed-act-pick" });
   let acted = false; // every action runs at most once per chooser instance
 
-  const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); close(); } };
-  const close = () => {
+  // Pure close: put the original span back without re-rendering, so a
+  // look-and-cancel never resets the reading-pane scroll or the facsimile zoom.
+  // Returns false when the box was already destroyed by an external render.
+  const restore = () => {
+    document.removeEventListener("keydown", onKey);
+    if (!box.isConnected) return false;
+    box.replaceWith(span);
+    return true;
+  };
+  // Mutating close: the document changed, so rebuild the view.
+  const closeRender = () => {
     document.removeEventListener("keydown", onKey);
     render();
     renderIndex();
   };
-  const reacquire = () => host.querySelector(`.ed-w[data-id="${CSS.escape(cell.id)}"]`);
+  // Self-healing: if an external render destroyed the box, the next keydown
+  // removes this stale listener instead of acting on a dead chooser.
+  const onKey = (e) => {
+    if (!box.isConnected) { document.removeEventListener("keydown", onKey); return; }
+    if (e.key === "Escape") { e.preventDefault(); acted = true; restore(); }
+  };
   const once = (handler) => () => {
     if (acted) return;
     acted = true;
@@ -523,15 +575,19 @@ function beginActions(span, cell) {
     return b;
   };
 
+  // Handoffs restore the original span in place (state cannot have changed while
+  // the chooser was open: every external mutation destroys it), then continue on
+  // the freshly resolved cell. No render in between, so the handed-off UI opens
+  // exactly where the user clicked, never off-screen.
   const doEdit = once(() => {
-    close();
-    const s = reacquire();
-    if (s) beginTextInput(s, app.state.cellById.get(cell.id) || cell);
+    if (!restore()) return;
+    const c = app.state.cellById.get(cell.id);
+    if (c) beginTextInput(span, c);
   });
   const handOff = (fn) => once(() => {
-    close();
-    const s = reacquire();
-    if (s) fn(s, app.state.cellById.get(cell.id) || cell);
+    if (!restore()) return;
+    const c = app.state.cellById.get(cell.id);
+    if (c) fn(span, c);
   });
 
   const editBtn = addBtn("edit",
@@ -543,11 +599,11 @@ function beginActions(span, cell) {
   if (cell.mention) {
     addBtn("entity", "show the linked entity in the index", once(() => {
       const id = cell.mention;
-      close();
+      restore();
       revealEntity(id);
     }));
   }
-  addBtn("x", "cancel", once(() => close()));
+  addBtn("x", "cancel", once(() => restore()));
 
   // The in-place entity picker (second box state): groups and labels identical
   // with the index panel, so the same entity reads the same everywhere.
@@ -573,13 +629,18 @@ function beginActions(span, cell) {
         });
         b.addEventListener("click", (e) => {
           e.stopPropagation();
+          // Same double-click discipline as the first box state: the stray
+          // second click of a double-click must never link to an arbitrary
+          // entity that happened to reflow under the cursor.
+          if (e.detail > 1) return;
           once(() => {
             applyDocFn(
               (doc) => standoff.linkMention(doc, cell.node, ent.id),
               `Linked "${cell.text.trim()}" to ${ent.name}`,
               "Link",
+              `Already linked to ${ent.name}`,
             );
-            close();
+            closeRender();
           })();
         });
         box.appendChild(b);
@@ -589,12 +650,22 @@ function beginActions(span, cell) {
       box.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet; add one in the Index first" }));
     }
     const cancelBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
-    cancelBtn.addEventListener("click", (e) => { e.stopPropagation(); if (!acted) { acted = true; close(); } });
+    cancelBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (e.detail > 1) return;
+      if (!acted) { acted = true; restore(); }
+    });
     box.appendChild(cancelBtn);
   };
 
   span.replaceWith(box);
-  box.addEventListener("dblclick", (e) => { e.stopPropagation(); doEdit(); });
+  box.addEventListener("dblclick", (e) => {
+    e.stopPropagation();
+    // Quick edit belongs to the first box state only: in the entity picker a
+    // double-click on a group label must not abandon the pick into a text edit.
+    if (box.classList.contains("ed-act-pick-entities")) return;
+    doEdit();
+  });
   // Focus "edit" so plain Enter triggers quick edit (and the focus ring shows
   // where the chooser sits in the text).
   editBtn.focus();
@@ -681,17 +752,28 @@ function critHint() {
 
 /** Tooltip for a reading cell, composed from its link / note / critical state. */
 function critTitle(cell, note, linking, meta) {
-  if (linking) return `click to link to ${app.linkTarget.name}`;
+  // A gap always routes to its remove chooser, even while a link is pending, so
+  // its tooltip must say so first (tooltip and click action never disagree).
   if (cell.gap) return "gap: omitted or illegible text; click to remove";
+  if (linking) return `click to link to ${app.linkTarget.name}`;
   const parts = [];
   if (cell.mention) {
+    // "unverified" is the one term for the unconfirmed-AI state everywhere
+    // (index panel, standOff contract); label consistency is a rule.
     parts.push(meta
-      ? `Linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unconfirmed" : ""}`
+      ? `Linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unverified" : ""}`
       : `Linked to a missing entity (${cell.mention})`);
   }
-  if (cell.crit) parts.push(cell.critSole ? cell.crit : `${cell.crit} (shared markup)`);
+  if (cell.crit) {
+    // The tooltip uses the same human label as the legend and the chooser
+    // buttons (CRITICAL_KINDS), never the raw TEI localName ("del"/"add").
+    const critLabel = (CRITICAL_KINDS[cell.crit] || {}).label || cell.crit;
+    parts.push(cell.critSole ? critLabel : `${critLabel} (shared markup)`);
+  }
   if (note) parts.push(`note: ${note}`);
-  parts.push(app.critMode ? "click to mark this text" : "click for actions");
+  parts.push(app.critMode ? "click to mark this text"
+    : app.noteMode ? "click to attach a note"
+    : "click for actions");
   return parts.join("; ");
 }
 
@@ -723,19 +805,37 @@ function beginCritic(span, cell) {
   }
   const box = el("span", { class: "ed-crit-pick" });
 
-  const onKey = (e) => { if (e.key === "Escape") { e.preventDefault(); close(); } };
-  const close = (rerender = true) => {
+  // Pure cancel: put the original span back without re-rendering (scroll and
+  // facsimile zoom survive a look-and-cancel). Mutations go through apply(),
+  // which re-renders. When the chooser was entered via the toolbar mark mode,
+  // cancelling ends that mode, which changes every cell's tooltip, so only then
+  // a re-render is needed. The keydown listener self-heals when an external
+  // render destroyed the box.
+  const wasCritMode = app.critMode;
+  const cancel = () => {
     document.removeEventListener("keydown", onKey);
     setCritMode(false);
-    if (rerender) { render(); renderIndex(); }
+    if (wasCritMode) { render(); renderIndex(); return; }
+    if (box.isConnected) box.replaceWith(span);
+  };
+  const onKey = (e) => {
+    if (!box.isConnected) { document.removeEventListener("keydown", onKey); return; }
+    if (e.key === "Escape") { e.preventDefault(); cancel(); }
   };
   const apply = (fn, label) => {
     applyDocFn(fn, label, "Markup");
-    close();
+    document.removeEventListener("keydown", onKey);
+    setCritMode(false);
+    render();
+    renderIndex();
   };
   const addBtn = (text, title, handler) => {
     const b = el("button", { class: "ed-crit-btn", text, title });
-    b.addEventListener("click", (e) => { e.stopPropagation(); handler(); });
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (e.detail > 1) return;
+      handler();
+    });
     box.appendChild(b);
   };
 
@@ -755,7 +855,7 @@ function beginCritic(span, cell) {
         () => apply((doc) => unwrapCritical(doc, cell.node), "Markup cleared"));
     }
   }
-  addBtn("x", "cancel", () => close());
+  addBtn("x", "cancel", () => cancel());
 
   span.replaceWith(box);
   document.addEventListener("keydown", onKey);

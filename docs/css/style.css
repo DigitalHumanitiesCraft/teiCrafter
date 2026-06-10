@@ -47,8 +47,11 @@
     --color-persName-bg: #EBF2FC;
     --color-placeName: #2A9D8F;
     --color-placeName-bg: #E6F5F3;
-    --color-orgName: #7B68AE;
-    --color-orgName-bg: #F0EDF6;
+    /* Organisations sit in the olive family: the violet hue range is reserved
+       for AI-origin content (--color-ai), so a human-confirmed organisation
+       mention can never be mistaken for machine output in the reading text. */
+    --color-orgName: #708238;
+    --color-orgName-bg: #F1F4E6;
     /* Works share the bibl hue (a work IS a bibliographic entity), events the date
        hue (an event is a datable occurrence); own tokens so components stay
        hex-free and either family can diverge later without touching components. */

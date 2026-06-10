@@ -413,15 +413,24 @@ export function setAuthority(doc, id, authority, value) {
 export function linkMention(doc, textNode, entityId) {
   if (!textNode || textNode.type !== "text") return doc;
   const want = "#" + entityId;
-  const parent = textNode.parent;
+  // Find the enclosing <name> with the SAME bounded ancestor walk the M2.5
+  // projection (edition.js mentionRef) uses: through intermediate wrappers
+  // (e.g. <unclear>, <hi>), stopping at the reading-unit level. Projection and
+  // mutation must agree on "already linked", or relinking a critically-wrapped
+  // mention would nest <name> inside <name> with conflicting refs.
+  let nameEl = null;
+  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
+    if (p.localName === "name") { nameEl = p; break; }
+    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
+  }
   // The mention text is already inside a <name>: retarget its @ref rather than
   // wrapping a second <name> (which would nest invalidly). A no-op if it already
   // points at this entity.
-  if (parent && parent.type === "element" && parent.localName === "name") {
-    const refAttr = getAttrObj(parent, "ref");
+  if (nameEl) {
+    const refAttr = getAttrObj(nameEl, "ref");
     if (refAttr) return refAttr.value === want ? doc : editAttrValue(doc, refAttr, want);
     // A <name> without @ref: insert one right after the element name.
-    const at = parent.stagStart + 1 + parent.qname.length;
+    const at = nameEl.stagStart + 1 + nameEl.qname.length;
     return spliceDocument(doc, at, at, ' ref="' + escapeAttr(want) + '"');
   }
   const inner = doc.raw.slice(textNode.start, textNode.end);

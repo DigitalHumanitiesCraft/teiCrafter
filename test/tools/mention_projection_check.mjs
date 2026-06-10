@@ -10,6 +10,7 @@
 import { parseEdition, serialize } from "../../docs/js/editor/edition.js";
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
 import { addEntity, linkMention, readEntities } from "../../docs/js/editor/standoff.js";
+import { markCritical } from "../../docs/js/editor/criticism.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -98,6 +99,37 @@ const NRAW =
 const nstate = parseEdition(NRAW);
 check(nstate.cells.length === 1 && nstate.cells[0].mention === null,
   "header <name> never reaches the reading cells");
+
+// --- 7. relinking a critically-wrapped mention retargets, never nests ---------
+// Projection (mentionRef) and mutation (linkMention) must agree on "already
+// linked": after link -> mark unclear -> relink, the document carries ONE
+// <name> whose @ref points at the new entity (no nested conflicting refs).
+
+let rdoc = parseEdition(WRAW).doc;
+rdoc = addEntity(rdoc, "person", { name: "Stefan Zweig" });
+rdoc = addEntity(rdoc, "person", { name: "Arnold Zweig" });
+let rstate = parseEdition(rdoc.raw);
+const [persA, persB] = readEntities(rstate.doc).persons.map((p) => p.id);
+rdoc = linkMention(rstate.doc, rstate.cellById.get("w1").node, persA);
+rstate = parseEdition(rdoc.raw);
+rdoc = markCritical(rstate.doc, cellByText(rstate, "Zweig").node, "unclear");
+rstate = parseEdition(rdoc.raw);
+check(cellByText(rstate, "Zweig").mention === persA,
+  "projection sees the link through the critical wrapper");
+
+rdoc = linkMention(rstate.doc, cellByText(rstate, "Zweig").node, persB);
+rstate = parseEdition(rdoc.raw);
+const bodyRaw = rdoc.raw.slice(rdoc.raw.indexOf("<body>"), rdoc.raw.indexOf("</body>"));
+check((bodyRaw.match(/<name\b/g) || []).length === 1,
+  "relink through the wrapper keeps exactly one <name> (no nesting)");
+check(bodyRaw.includes(`ref="#${persB}"`) && !bodyRaw.includes(`ref="#${persA}"`),
+  "the single <name> now points at the new entity only");
+check(cellByText(rstate, "Zweig").mention === persB,
+  "projection follows the retargeted ref");
+check(parseDocument(rdoc.raw).serialize() === rdoc.raw,
+  "retargeted document round-trips byte-identically");
+check(linkMention(rstate.doc, cellByText(rstate, "Zweig").node, persB) === rstate.doc,
+  "relinking to the same entity through the wrapper is a no-op (SAME doc)");
 
 // --- summary -----------------------------------------------------------------
 

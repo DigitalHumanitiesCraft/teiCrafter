@@ -1,6 +1,7 @@
 /* teiCrafter Editor (Editor path) -- styles built only on the shared design tokens
-   from style.css (--color-*, --space-*, --font-*, --radius-*). No raw hex, no LLM
-   violet here: the Editor path is deterministic, human-driven. */
+   from style.css (--color-*, --space-*, --font-*, --radius-*). Tokens only; the
+   violet family appears exclusively on AI-origin content (generated banner, AI
+   actions, unverified entities and their mentions), per design.md. */
 
 .ed-body { margin: 0; }
 
@@ -121,16 +122,18 @@
   user-select: none; text-align: right; }
 .ed-w { cursor: text; padding: 0 1px; border-radius: 2px; }
 .ed-w:hover { background: var(--color-blue-light); }
-.ed-w.has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
+:is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
 .ed-w.editing { outline: 2px solid var(--color-gold); background: var(--color-panel); }
 .ed-w.linked { background: var(--color-gold-light); }
 
 /* Textual-critical markup (M3.6): editorial (not AI), so it uses the human
-   editorial colour families, never the violet AI family. */
-.ed-w.crit-unclear { text-decoration: underline dotted var(--color-review); text-underline-offset: 3px; }
-.ed-w.crit-del { text-decoration: line-through; text-decoration-color: var(--color-problem); color: var(--color-problem); }
-.ed-w.crit-add { text-decoration: underline; text-decoration-color: var(--color-blue); color: var(--color-blue); }
-.ed-w.crit-gap { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary);
+   editorial colour families, never the violet AI family. The :is() selector
+   covers the reading text and the legend chips with one rule, so the legend
+   always shows exactly the code it names. */
+:is(.ed-w, .ed-legend-chip).crit-unclear { text-decoration: underline dotted var(--color-review); text-underline-offset: 3px; }
+:is(.ed-w, .ed-legend-chip).crit-del { text-decoration: line-through; text-decoration-color: var(--color-problem); color: var(--color-problem); }
+:is(.ed-w, .ed-legend-chip).crit-add { text-decoration: underline; text-decoration-color: var(--color-blue); color: var(--color-blue); }
+:is(.ed-w, .ed-legend-chip).crit-gap { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary);
   background: var(--color-secondary); border: 1px dashed var(--color-border); border-radius: var(--radius-sm);
   padding: 0 4px; cursor: pointer; }
 
@@ -289,21 +292,27 @@
    generic .mention rule stays as the fallback for a mention whose target id has
    no index entry (dangling ref). A mention of an AI-proposed, unconfirmed entity
    uses the violet AI family so machine output stays separable (design.md). */
-.ed-w.mention { background: var(--color-blue-light); box-shadow: inset 0 -2px 0 var(--color-blue); }
-.ed-w.mention-pers { background: var(--color-persName-bg); box-shadow: inset 0 -2px 0 var(--color-persName); }
-.ed-w.mention-plc { background: var(--color-placeName-bg); box-shadow: inset 0 -2px 0 var(--color-placeName); }
-.ed-w.mention-org { background: var(--color-orgName-bg); box-shadow: inset 0 -2px 0 var(--color-orgName); }
-.ed-w.mention-wrk { background: var(--color-workName-bg); box-shadow: inset 0 -2px 0 var(--color-workName); }
-.ed-w.mention-evt { background: var(--color-eventName-bg); box-shadow: inset 0 -2px 0 var(--color-eventName); }
-.ed-w.mention-ai { background: var(--color-ai-tint); box-shadow: inset 0 -2px 0 var(--color-ai); }
+:is(.ed-w, .ed-legend-chip).mention { background: var(--color-blue-light); box-shadow: inset 0 -2px 0 var(--color-blue); }
+:is(.ed-w, .ed-legend-chip).mention-pers { background: var(--color-persName-bg); box-shadow: inset 0 -2px 0 var(--color-persName); }
+:is(.ed-w, .ed-legend-chip).mention-plc { background: var(--color-placeName-bg); box-shadow: inset 0 -2px 0 var(--color-placeName); }
+:is(.ed-w, .ed-legend-chip).mention-org { background: var(--color-orgName-bg); box-shadow: inset 0 -2px 0 var(--color-orgName); }
+:is(.ed-w, .ed-legend-chip).mention-wrk { background: var(--color-workName-bg); box-shadow: inset 0 -2px 0 var(--color-workName); }
+:is(.ed-w, .ed-legend-chip).mention-evt { background: var(--color-eventName-bg); box-shadow: inset 0 -2px 0 var(--color-eventName); }
+/* AI-proposed mention: violet family plus a dashed outline as the second,
+   non-colour channel, so machine origin never hangs on hue alone (design.md
+   triple-coding rule; the tooltip is the third channel). */
+:is(.ed-w, .ed-legend-chip).mention-ai { background: var(--color-ai-tint); box-shadow: inset 0 -2px 0 var(--color-ai);
+  outline: 1px dashed var(--color-ai); outline-offset: -1px; }
 
 /* Temporary "show this entity's mentions" highlight (index-panel selection).
-   Its own class, so clearing it never strips the permanent visibility layer. */
-.ed-w.mention-hit { background: var(--color-gold-light); box-shadow: inset 0 -2px 0 var(--color-gold); }
+   Its own class, so clearing it never strips the permanent visibility layer.
+   An outline (not an underline), so the selection state and the annotation
+   codes use different positions and can never be confused. */
+.ed-w.mention-hit { background: var(--color-gold-light); outline: 1px solid var(--color-gold); outline-offset: 0; }
 
 /* M2.5 note marker, triple-coded: colour (review family) + icon (degree sign
    after the word) + position (the existing underline via .has-note). */
-.ed-w.has-note::after {
+:is(.ed-w, .ed-legend-chip).has-note::after {
   content: "\00B0";
   color: var(--color-review);
   font-family: var(--font-ui);
@@ -312,16 +321,21 @@
   vertical-align: super;
 }
 
-/* M2.5 legend strip under the reading-pane header: names every visual code. */
+/* M2.5 legend strip under the reading-pane header: names every visual code
+   present in the current document. Hosted on the reading surface (not the
+   secondary tone), so the chips' background tints stay clearly visible. */
 .ed-legend {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-sm);
   padding: var(--space-xs) var(--space-md);
-  background: var(--color-secondary); border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface); border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-xs); color: var(--color-text-secondary);
 }
 .ed-legend[hidden] { display: none; }
 .ed-legend-title { text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); }
 .ed-legend-chip { font-family: var(--font-serif); padding: 0 3px; border-radius: 2px; white-space: nowrap; }
+/* Chips are labels, not affordances: neutralise interactive cursors inherited
+   from the shared code rules (e.g. the gap marker's pointer). */
+.ed-legend .ed-legend-chip { cursor: default; }
 
 /* M2.6 inline action chooser (and its entity-picker state), extending the proven
    .ed-crit-pick pattern. The entity picker can grow with the index, so it wraps
@@ -335,13 +349,18 @@
 .ed-act-btn { font-family: var(--font-ui); font-size: var(--font-size-xs); line-height: 1.4;
   padding: 1px 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   background: var(--color-panel); color: var(--color-text); cursor: pointer; }
-.ed-act-btn:hover, .ed-act-btn:focus-visible { border-color: var(--color-gold); color: var(--color-gold-hover); background: var(--color-gold-light); }
+/* Hover/focus keep the text at full contrast (--color-text on gold-light passes
+   WCAG AA at this size; the gold accent carries the state via the border). */
+.ed-act-btn:hover, .ed-act-btn:focus-visible { border-color: var(--color-gold); color: var(--color-text); background: var(--color-gold-light); }
 .ed-act-group { width: 100%; font-family: var(--font-ui); font-size: var(--font-size-xs);
   color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .08em; }
 .ed-act-empty { font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
-/* M2.6 "entity" jump: flash the index row the chooser navigated to. */
-.ed-idx-row-flash { background: var(--color-gold-light); transition: background .6s ease; }
+/* M2.6 "entity" jump: flash the index row the chooser navigated to. A keyframe
+   from the full gold accent fading into the steady active gold-light, so the
+   flash reads even though setActive() highlights the same row simultaneously. */
+@keyframes ed-idx-flash { from { background: var(--color-gold); } to { background: var(--color-gold-light); } }
+.ed-idx-row-flash { animation: ed-idx-flash 1.2s ease; }
 
 .ed-footer {
   display: flex; align-items: center; gap: var(--space-md);
