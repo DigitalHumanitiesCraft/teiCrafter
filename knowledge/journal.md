@@ -22,6 +22,16 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first. A condensed narrative of how the tool and its decisions came about; commits live in Git history.
 
+## 2026-06-10 (late night, second package): Refactor sweep, real source editor, home navigation (M2.12)
+
+Operator asked "gibt es etwas zu refactoren?" and approved all four proposed packages; a fifth feedback round arrived mid-work (home button, "sehr schönes Highlighting" plus line numbers plus a check button for the XML view). Landed as separate commits:
+
+- **Dead code and one refresh path.** `app.noteMode`/`critMode` could never become true since M2.7 removed their toolbar toggles; the click-capture branches, tooltip branches and both setters were unreachable (~50 lines). All `render()+renderIndex()` pairs now route through `refreshAfterStandoffEdit()`. One lesson for the harness: a careless two-line `replace_all` briefly rewrote `refreshAfterStandoffEdit`'s own body into a self-call; caught by re-grepping the result before running anything.
+- **One authority form.** New `authority-form.js` is the single source for the idno UI (chips, add form, live lookup), used by the index overlay rows AND the annotation editor at the mention; the `AUTHORITIES` copy in index-panel.js is gone (imported from `standoff.js`), and new `dom.js` carries the shared `el`/`clear` helpers.
+- **Two-step delete.** Deleting an entity that still has in-text mentions arms the button with the count first ("sure? N mention(s) dangle"); only the second click commits. Dangling refs stay representable (the engine allows them), but never happen silently.
+- **Real source editor (M2.12).** `source-view.js`: a tolerant pure tokenizer (`highlightXml`) renders into a `<pre>` overlay under a transparent textarea in scroll lockstep, with a line-number gutter and an explicit "Check XML" that reports well-formedness inline and jumps the caret to the reported error line/column; Apply stays gated. The invariant has its own proof (`source_highlight_check.mjs`, 18/18): stripping the spans reproduces the input byte-for-byte, including mid-edit fragments and the real o_szd.1079. Palette in the deterministic token families only; violet stays AI-only. Above ~1.5 MB the view falls back to unhighlighted.
+- **Home.** The editor logo and a Home button link to the landing page; the stale "Generator path" header link (the generator no longer exists as a path) is gone.
+
 ## 2026-06-10 (late night): The index pane dissolves into the annotation environment (M2.11)
 
 Fourth operator feedback round, two orders and one architectural question. The orders: the explainer banner goes, and every ambient `ed-hint` line goes -- "Hilfe nur über sinnvolle Tooltips". Built first as its own commit: help is now tooltip-only (legend strip, pane heads, generator-modal fields carry `title`s; `critHint()` and the source-bar caption died as dead code). The question: the permanent Index pane shows one nice entry when you add a person, but with real documents it becomes a long second bookkeeping surface next to the text -- "können wir das auflösen und die Logik direkt in die Umgebung integrieren, wo das Annotieren stattfindet?" Decisions taken in a question round (full overview as an on-demand overlay; AI suggest removed entirely for now), then built:

@@ -39,6 +39,7 @@ import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createIndexPanel } from "./index-panel.js";
 import { buildAuthorityForm } from "./authority-form.js";
+import { mountSourceView } from "./source-view.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
@@ -439,55 +440,41 @@ function renderReading() {
 
 /**
  * Editable XML source view (the Oxygen text-mode counterpart to the reading
- * view). The textarea holds the canonical raw string; Apply re-parses it as
- * the new document state (well-formedness gated; the integrity chip then shows
- * any drift against the load baseline). The caret starts at the current page.
+ * view), mounted from source-view.js: syntax-highlighted overlay, line
+ * numbers, explicit Check XML, Apply gated on well-formedness (the integrity
+ * chip then shows any drift against the load baseline). The caret starts at
+ * the current page's first reading cell.
  */
 function renderSourceView(host) {
-  const bar = el("div", { class: "ed-src-bar" });
-  const ta = el("textarea", { class: "ed-src", spellcheck: "false" });
-  ta.value = serialize(app.state);
-
   const leave = () => {
     app.sourceMode = false;
     const b = $("btn-xml");
     if (b) b.classList.remove("active");
     refreshAfterStandoffEdit();
   };
-  const applyBtn = el("button", { class: "ed-btn ed-btn-primary", text: "Apply", title: "re-parse the edited XML as the document" });
-  applyBtn.addEventListener("click", () => {
-    const text = ta.value;
-    const wf = isWellFormed(text);
-    if (!wf.ok) { setStatus(`Not applied, not well-formed: ${wf.message}`); return; }
-    try {
-      const changed = text !== app.state.raw;
-      app.state = parseEdition(text);
-      app.noteByWord = indexNotes(text);
-      app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
-      if (changed) setDirty(true);
-      setStatus(changed ? "XML source applied" : "XML source unchanged");
-      leave();
-    } catch (err) {
-      setStatus(`Not applied, parse failed: ${err.message}`);
-    }
-  });
-  const cancelBtn = el("button", { class: "ed-btn", text: "Cancel", title: "back to the reading view, discarding source edits" });
-  cancelBtn.addEventListener("click", () => { setStatus("Source edits discarded"); leave(); });
-  bar.appendChild(applyBtn);
-  bar.appendChild(cancelBtn);
-  host.appendChild(bar);
-  host.appendChild(ta);
-
-  // Put the caret at the current page's first reading cell.
   const folio = app.state.folios[app.folio];
   const firstCell = folio && folio.lines[0] && folio.lines[0].cells[0];
-  if (firstCell && Number.isInteger(firstCell.start)) {
-    ta.focus();
-    ta.setSelectionRange(firstCell.start, firstCell.start);
-    const before = ta.value.slice(0, firstCell.start).split("\n").length;
-    const total = ta.value.split("\n").length;
-    ta.scrollTop = Math.max(0, (before / total) * ta.scrollHeight - ta.clientHeight / 2);
-  }
+  mountSourceView(host, {
+    value: serialize(app.state),
+    caret: firstCell && Number.isInteger(firstCell.start) ? firstCell.start : 0,
+    wellFormed: isWellFormed,
+    onApply: (text) => {
+      try {
+        const changed = text !== app.state.raw;
+        app.state = parseEdition(text);
+        app.noteByWord = indexNotes(text);
+        app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
+        if (changed) setDirty(true);
+        setStatus(changed ? "XML source applied" : "XML source unchanged");
+        leave();
+        return true;
+      } catch (err) {
+        setStatus(`Not applied, parse failed: ${err.message}`);
+        return false;
+      }
+    },
+    onCancel: () => { setStatus("Source edits discarded"); leave(); },
+  });
 }
 
 /** The plain text-correction input, extracted from beginEdit (M2.6 refactor). */
