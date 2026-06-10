@@ -22,6 +22,10 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
 
+## 2026-06-10 (night, continued): The approved refactor round
+
+The operator approved the refactor assessment ("was koennen wir jetzt noch alles konkret erledigen?"). style.css had carried the dead five-step-generator styling since the 2026-05-30 consolidation; it is now design tokens, base and shared site chrome only. The purge surfaced a real defect: a global `body { overflow: hidden }` (an editor need) had made the About page unscrollable; page-specific needs now live with the page. The triple header/footer duplication across landing, About and editor became one `.site-head`/`.site-foot` family in style.css, ending the divergence it had already produced (the About footer linked "GitHub" as text where every other page shows the icon). The three example loaders folded into the example registry as config entries, since they differed only in URL, file name and an optional image base. Unused storage exports and one dead class went with it. The smoke test grew to cover the ZBZ image-base path, the landing page and the About scroll; the engine is untouched.
+
 ## 2026-06-10 (night, continued): Journal style, LLM on-ramp hidden, comment rule
 
 Three operator decisions in one round:

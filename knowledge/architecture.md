@@ -85,7 +85,7 @@ docs/
   index.html              Landing: entry card into the editor (LLM card hidden, flag off)
   editor.html             The editor: dual-view shell (left text surface, right context panels) + LLM modal; loads OpenSeadragon 5.0.1 from CDN
   css/
-    style.css             Design tokens (--color-*, --space-*, --font-*, --radius-*) + base
+    style.css             Design tokens (--color-*, --space-*, --font-*, --radius-*) + base + shared site chrome (header bar, identity footer)
     editor.css            Editor-specific styles (token-only)
   js/
     editor/

@@ -34,35 +34,3 @@ export function setSetting(key, value) {
         console.warn('Storage write failed:', e);
     }
 }
-
-/**
- * Remove a persisted setting.
- * @param {string} key
- */
-export function removeSetting(key) {
-    try {
-        localStorage.removeItem(STORAGE_PREFIX + key);
-    } catch (e) {
-        // Ignore
-    }
-}
-
-/**
- * Get all teiCrafter settings as an object.
- * @returns {Object}
- */
-export function getAllSettings() {
-    const settings = {};
-    try {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith(STORAGE_PREFIX)) {
-                const shortKey = key.slice(STORAGE_PREFIX.length);
-                settings[shortKey] = JSON.parse(localStorage.getItem(key));
-            }
-        }
-    } catch (e) {
-        // Ignore
-    }
-    return settings;
-}

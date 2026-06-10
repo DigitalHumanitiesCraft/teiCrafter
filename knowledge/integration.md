@@ -72,8 +72,9 @@ layer engine plus services.
 
 **Layer 3 - `docs/js/editor/editor-app.js` (UI controller).** Open (File System Access
 API + file-input fallback), demo loads, folio navigation, inline cell editing, validation
-panel, index panel, LLM modal. `app.imageBase` is set only by `loadZbz()`; all other
-entries leave it null.
+panel, index panel, LLM modal. `app.imageBase` is set only by an example registry
+entry with an `imageBase` (the ZBZ example, via `loadExample`); all other entries
+leave it null.
 
 **Supporting modules.** `facsimile.js` (OpenSeadragon 5.0.1 from CDN, zone overlays,
 bidirectional zone/line highlight). `standoff.js` (DOM-free lossless `<standOff>`:
@@ -98,7 +99,7 @@ image URL. The engine reads `<graphic url>` from each `<surface>` via `readSurfa
 (surface && surface.graphic)`, so the `surface.graphic` value from the TEI is the
 fallback that lets any opened file with a `<graphic url>` show its page image. The
 hardcoded ZBZ demo path (`ZBZ_IMAGE_BASE = "data/editor/zbz-100/"`, used only by
-`loadZbz`) takes precedence for the ZBZ demo. This is no longer a gap: M2.2 is done and
+the ZBZ example registry entry) takes precedence for the ZBZ demo. This is no longer a gap: M2.2 is done and
 browser-verified (2026-06-08), see [goals.md](goals.md).
 
 **Design system (`docs/css/style.css`).** Tokens are the single source of truth

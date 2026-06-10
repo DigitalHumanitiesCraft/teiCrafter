@@ -11,13 +11,7 @@
     <style>
         /* Landing styles, tokens only (no raw hex). The editor is the workbench;
            this page is just the front door with two ways in. */
-        .lp-header {
-            display: flex; align-items: center; justify-content: space-between;
-            height: var(--header-height); padding: 0 var(--space-md);
-            background: var(--color-header); color: var(--color-text-inverse);
-        }
-        .lp-logo { font-family: var(--font-mono); font-size: var(--font-size-lg); font-weight: 600; }
-        .lp-logo .accent { color: var(--color-gold); }
+        .lp-header { justify-content: space-between; }
         .lp-tag {
             font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: .08em;
             color: var(--color-gold-light); border: 1px solid var(--color-gold);
@@ -42,25 +36,14 @@
         .lp-card-ai:hover { border-color: var(--color-ai); }
         .lp-card-ai .lp-card-tag, .lp-card-ai .lp-cta { color: var(--color-ai); }
         .lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
-        .lp-nav > a { font-family: var(--font-ui); font-size: var(--font-size-sm);
-            color: var(--color-text-inverse); text-decoration: none; opacity: .85; }
-        .lp-nav > a:hover { opacity: 1; text-decoration: underline; }
-        .lp-foot { display: flex; align-items: center; gap: var(--space-md);
-            margin-top: var(--space-xl); padding-top: var(--space-md);
-            border-top: 1px solid var(--color-border);
-            font-size: var(--font-size-xs); color: var(--color-text-secondary); }
-        .lp-foot a { color: var(--color-text-secondary); text-decoration: none;
-            display: inline-flex; align-items: center; gap: var(--space-xs); }
-        .lp-foot a:hover { color: var(--color-text); text-decoration: underline; }
-        .lp-foot img { height: 16px; width: auto; display: block; }
-        .lp-foot .spacer { flex: 1; }
+        .lp-foot { margin-top: var(--space-xl); padding-top: var(--space-md); }
     </style>
 </head>
 <body>
-    <header class="lp-header">
-        <span class="lp-logo"><span class="accent">&lt;</span>tei<span class="accent">Crafter</span><span class="accent">&gt;</span></span>
+    <header class="lp-header site-head">
+        <span class="site-logo"><span class="accent">&lt;</span>tei<span class="accent">Crafter</span><span class="accent">&gt;</span></span>
         <span class="lp-nav">
-            <a href="about.html" title="What teiCrafter is, who makes it, and how it works">About</a>
+            <a class="site-head-link" href="about.html" title="What teiCrafter is, who makes it, and how it works">About</a>
             <span class="lp-tag">Research Preview</span>
         </span>
     </header>
@@ -79,7 +62,7 @@
             <!-- "New from text (LLM)" card removed while FEATURES.llmOnRamp is off. -->
         </div>
 
-        <div class="lp-foot">
+        <div class="lp-foot site-foot">
             <a href="https://dhcraft.org" target="_blank" rel="noopener" title="Digital Humanities Craft OG">
                 <img src="assets/dhcraft-logo.svg" alt="DHCraft logo">
                 <span>Digital Humanities Craft</span>

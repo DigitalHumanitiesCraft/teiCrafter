@@ -31,7 +31,7 @@ the ZBZ.
 
 ## State at handoff (all engine-proven, nothing pushed)
 
-Branch `session/2026-06-07-place-graphic`, clean working tree, **53 commits over
+Branch `session/2026-06-07-place-graphic`, clean working tree, **56 commits over
 `origin/main`**, nothing pushed (push requires the operator's word). Since the
 2026-06-09 snapshot:
 
@@ -51,6 +51,14 @@ Branch `session/2026-06-07-place-graphic`, clean working tree, **53 commits over
   fixture-generation artifact (page 5 is empty in szd-htr groundtruth.json);
   removed. Order for the szd-htr lane: guard the converter against copying the
   previous page when a transcription is empty.
+- **LLM on-ramp hidden** behind `FEATURES.llmOnRamp` (off; operator order,
+  code stays in place), **journal rewritten to decision style** (trigger,
+  decision, reason; no proof counts), **comment-style rule** in CLAUDE.md, and
+  the **approved refactor round**: style.css purged to tokens + base + shared
+  site chrome (2,692 to ~230 lines; the dead generator styling is gone, the
+  About page can scroll again), one `.site-head`/`.site-foot` family for all
+  three pages, example loaders folded into the registry. Smoke test now 44
+  checks incl. landing and About.
 - **Earlier round (2026-06-09, unchanged):** M7.4 curated set done for the two
   proven objects (extension awaits operator object sign-off); TP5 chapter draft,
   TP7 Rohfassung, M7.1 provenance page in the vault, approvals pending.

@@ -201,8 +201,8 @@ function load(raw, name, handle) {
   app.fileHandle = handle || null;
   app.docName = name;
   app.noteByWord = indexNotes(raw);
-  // Default: no known page images. loadZbz() sets the image base afterwards;
-  // every other entry (open, demo, generate) stays null.
+  // Default: no known page images. An example with an imageBase (loadExample)
+  // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
   // Project profile (e.g. Wenzelsbibel): detected from the document's PID,
   // currently contributes the IIIF image resolver for the facsimile.
@@ -267,57 +267,43 @@ function fileInput() {
   return _fileInput;
 }
 
-async function loadDemo() {
-  setStatus("Loading synthetic Wenzelsbibel...");
-  try {
-    const res = await fetch(DEMO_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    load(await res.text(), "wenzelsbibel-synthetic-codex.xml", null);
-  } catch (err) {
-    setStatus(`Could not load the demo: ${err.message}`);
-  }
-}
-
-async function loadZbz() {
-  setStatus("Loading ZBZ Jeanne Hersch example...");
-  try {
-    const res = await fetch(ZBZ_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    load(await res.text(), "zbz-hersch-100.xml", null);
-    // The real example ships local page images p001.png..pNNN.png next to the XML.
-    app.imageBase = ZBZ_IMAGE_BASE;
-    app.panel = "facs"; // images exist now; load() chose before imageBase was set
-    render(); // re-render the facsimile now that the image base is known
-    setStatus("Loaded the ZBZ Jeanne Hersch example with real page images.");
-  } catch (err) {
-    setStatus(`Could not load the ZBZ example: ${err.message}`);
-  }
-}
-
-async function loadSzd() {
-  setStatus("Loading Stefan Zweig Digital example...");
-  try {
-    const res = await fetch(SZD_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    load(await res.text(), "o_szd.1079.tei.xml", null);
-    // Facsimile comes from the <graphic url> on each surface (GAMS), no image base.
-    setStatus("Loaded the Stefan Zweig Digital example (facsimile via GAMS).");
-  } catch (err) {
-    setStatus(`Could not load the SZD example: ${err.message}`);
-  }
-}
-
 // Example registry: the toolbar menu and the welcome cards load the same way.
-const EXAMPLES = { wb: loadDemo, zbz: loadZbz, szd: loadSzd };
+// imageBase: local page images next to the XML; without it the facsimile uses
+// each surface's own <graphic url>.
+const EXAMPLES = {
+  wb: { label: "synthetic Wenzelsbibel", url: DEMO_URL, file: "wenzelsbibel-synthetic-codex.xml" },
+  zbz: {
+    label: "ZBZ Jeanne Hersch example", url: ZBZ_URL, file: "zbz-hersch-100.xml",
+    imageBase: ZBZ_IMAGE_BASE, done: "Loaded the ZBZ Jeanne Hersch example with real page images.",
+  },
+  szd: {
+    label: "Stefan Zweig Digital example", url: SZD_URL, file: "o_szd.1079.tei.xml",
+    done: "Loaded the Stefan Zweig Digital example (facsimile via GAMS).",
+  },
+};
 
 /** Guard before any in-app document replacement (open, example, drop, recent). */
 function confirmDiscard() {
   return !app.dirty || window.confirm(`Discard unsaved changes in ${app.docName}?`);
 }
 
-function loadExample(key) {
-  const loader = EXAMPLES[key];
-  if (loader && confirmDiscard()) loader();
+async function loadExample(key) {
+  const ex = EXAMPLES[key];
+  if (!ex || !confirmDiscard()) return;
+  setStatus(`Loading ${ex.label}...`);
+  try {
+    const res = await fetch(ex.url, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    load(await res.text(), ex.file, null);
+    if (ex.imageBase) {
+      app.imageBase = ex.imageBase;
+      app.panel = "facs"; // images exist now; load() chose before imageBase was set
+      render();
+    }
+    if (ex.done) setStatus(ex.done);
+  } catch (err) {
+    setStatus(`Could not load the ${ex.label}: ${err.message}`);
+  }
 }
 
 // ---- drag and drop ----------------------------------------------------------

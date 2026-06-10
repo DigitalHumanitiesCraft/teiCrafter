@@ -7,21 +7,8 @@
    footer, with or without the generated-edition banner. */
 .ed-body { margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-.ed-header {
-  display: flex; align-items: center; gap: var(--space-md);
-  height: var(--header-height); padding: 0 var(--space-md);
-  background: var(--color-header); color: var(--color-text-inverse);
-}
-/* The logo is the home link (back to index.html). */
-.ed-logo { font-family: var(--font-mono); font-size: var(--font-size-lg); font-weight: 600;
-  color: inherit; text-decoration: none; }
-.ed-logo:hover .accent { color: var(--color-gold-light); }
-.ed-logo .accent { color: var(--color-gold); }
-.ed-header .spacer { flex: 1; }
+/* Header and logo conventions come from .site-head (style.css). */
 .ed-doc-name { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-gold-light); }
-.ed-header-link { font-family: var(--font-ui); font-size: var(--font-size-sm);
-  color: var(--color-text-inverse); text-decoration: none; opacity: .85; }
-.ed-header-link:hover { opacity: 1; text-decoration: underline; }
 
 .ed-toolbar {
   display: flex; align-items: center; gap: var(--space-sm);
@@ -301,7 +288,6 @@
 .ed-val-warn { background: var(--color-review-tint); color: var(--color-review); }
 .ed-val-err { background: var(--color-problem-tint); color: var(--color-problem); }
 .ed-val-icon { font-family: var(--font-mono); }
-.ed-mono { font-family: var(--font-mono); font-size: var(--font-size-xs); }
 
 .ed-empty { color: var(--color-text-muted); font-size: var(--font-size-sm); text-align: center; padding: var(--space-xl); }
 
@@ -575,18 +561,9 @@
 @keyframes ed-idx-flash { from { background: var(--color-gold); } to { background: var(--color-gold-light); } }
 .ed-idx-row-flash { animation: ed-idx-flash 1.2s ease; }
 
-.ed-footer {
-  display: flex; align-items: center; gap: var(--space-md);
-  height: var(--footer-height); padding: 0 var(--space-md);
-  background: var(--color-panel); border-top: 1px solid var(--color-border);
-  font-size: var(--font-size-xs); color: var(--color-text-secondary);
-}
-.ed-footer a { color: var(--color-text-secondary); text-decoration: none; }
-.ed-footer a:hover { color: var(--color-text); text-decoration: underline; }
-.ed-foot-brand { display: inline-flex; align-items: center; gap: var(--space-xs); }
-.ed-foot-logo { height: 16px; width: auto; display: block; }
-.ed-foot-gh { display: inline-flex; align-items: center; color: var(--color-text-secondary); }
-.ed-foot-gh:hover { color: var(--color-text); }
+/* Footer content conventions come from .site-foot (style.css); the editor
+   adds only its strip geometry and the status line. */
+.ed-footer { height: var(--footer-height); padding: 0 var(--space-md); background: var(--color-panel); }
 .ed-status-wrap[hidden] { display: none; }
 .ed-status-dot { color: var(--color-confident); }
 .ed-status-dot.dirty { color: var(--color-review); }
