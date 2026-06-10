@@ -214,7 +214,8 @@
 }
 .ed-idx-occ { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
-/* Entity index panel (persons / places / organisations / works / events) */
+/* Entity index list (persons / places / organisations / works / events),
+   rendered by index-panel.js inside the on-demand overlay since M2.11. */
 .ed-idx { display: flex; flex-direction: column; gap: var(--space-md); }
 .ed-idx-section { display: flex; flex-direction: column; gap: var(--space-xs); }
 .ed-idx-heading {
@@ -432,8 +433,8 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-sm); }
 .ed-src:focus { outline: 2px solid var(--color-gold); }
 
-/* M2.6 "entity" jump: flash the index row the chooser navigated to. A keyframe
-   from the full gold accent fading into the steady active gold-light, so the
+/* "Open in index": flash the row the overlay was opened on. A keyframe from
+   the full gold accent fading into the steady active gold-light, so the
    flash reads even though setActive() highlights the same row simultaneously. */
 @keyframes ed-idx-flash { from { background: var(--color-gold); } to { background: var(--color-gold-light); } }
 .ed-idx-row-flash { animation: ed-idx-flash 1.2s ease; }

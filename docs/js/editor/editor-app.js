@@ -60,8 +60,6 @@ const app = {
   currentLines: [],   // lines of the folio currently rendered (for zone <-> line linking)
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
-  noteMode: false,    // true while waiting for a cell click to attach an editorial note
-  critMode: false,    // true while waiting for a cell click to apply textual-critical markup
   facsHidden: false,  // user choice: hide the facsimile pane (auto-hidden when no images)
   sourceMode: false,  // true while the reading pane shows the editable XML source
 };
@@ -114,12 +112,10 @@ function enableControls(on) {
   for (const id of ["btn-download", "btn-index", "btn-xml"]) $(id).disabled = !on;
   $("btn-save").disabled = !on;
   if (!on) {
-    setNoteMode(false);
-    setCritMode(false);
     app.sourceMode = false;
     $("btn-xml").classList.remove("active");
   }
-  // M2.5 legend strip (hint + chips): visible while a document is loaded;
+  // M2.5 legend strip: visible while a document is loaded;
   // render() keeps the chips current after every mutation.
   const legend = $("ed-legend");
   if (legend) {
@@ -208,10 +204,6 @@ function load(raw, name, handle) {
   // Default: no known page images. loadZbz() sets the image base afterwards;
   // every other entry (open, demo, generate) stays null.
   app.imageBase = null;
-  // Reset the click-capture modes so a mode left on in the previous document does
-  // not silently apply to the freshly opened one (button/tooltip would disagree).
-  setNoteMode(false);
-  setCritMode(false);
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
@@ -219,8 +211,7 @@ function load(raw, name, handle) {
   enableControls(true);
   setDirty(false);
   markGenerated(false); // opening a real file clears the AI-generated flag
-  render();
-  renderIndex();
+  refreshAfterStandoffEdit();
   const unit = app.state.profile === "word" ? "word" : "line";
   setStatus(`Loaded ${app.state.folios.length} folio(s), ${app.state.cells.length} ${unit}(s) [${app.state.profile}-level]`);
 }
@@ -427,8 +418,6 @@ function renderReading() {
         if (e.detail > 1) return; // second click of a double-click
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
-        if (app.critMode) { beginCritic(span, cell); return; }
-        if (app.noteMode) { beginNote(span, cell); return; }
         if (cell.gap) { beginCritic(span, cell); return; }
         if (cell.mention) { openAnnotationEditor(span, cell); return; }
         // plain reading text: the click is just a cursor, not a command
@@ -462,8 +451,7 @@ function renderSourceView(host) {
     app.sourceMode = false;
     const b = $("btn-xml");
     if (b) b.classList.remove("active");
-    render();
-    renderIndex();
+    refreshAfterStandoffEdit();
   };
   const applyBtn = el("button", { class: "ed-btn ed-btn-primary", text: "Apply", title: "re-parse the edited XML as the document" });
   applyBtn.addEventListener("click", () => {
@@ -641,8 +629,7 @@ function openEntityPickerFor(span, cell) {
       "Link",
       "Already linked to this entity",
     );
-    render();
-    renderIndex();
+    refreshAfterStandoffEdit();
   }, null);
   const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
   xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
@@ -668,8 +655,7 @@ function findEntity(id) {
  */
 function commitAndReopen(fn, label, cellId) {
   applyDocFn(fn, label, "Edit");
-  render();
-  renderIndex();
+  refreshAfterStandoffEdit();
   const c = app.state.cellById.get(cellId);
   const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
   if (c && s && c.mention) openAnnotationEditor(s, c);
@@ -733,8 +719,7 @@ function openAnnotationEditor(span, cell) {
         "Relink",
         "Already linked to this entity",
       );
-      render();
-      renderIndex();
+      refreshAfterStandoffEdit();
     }, cell.mention);
   });
   btn("remove link", "unwrap the <name> around this text (the text itself survives)", () => {
@@ -744,8 +729,7 @@ function openAnnotationEditor(span, cell) {
       `Removed the link on "${cell.text.trim()}" (index entry kept)`,
       "Unlink",
     );
-    render();
-    renderIndex();
+    refreshAfterStandoffEdit();
   });
   btn("x", "close", () => removeSelPopover());
   pop.appendChild(row);
@@ -906,8 +890,7 @@ function annotateSelection(target, entityId, createType) {
     app.noteByWord = indexNotes(app.state.raw);
     setDirty(true);
     setStatus(`Annotated "${target.text}" (${id})`);
-    render();
-    renderIndex();
+    refreshAfterStandoffEdit();
     // Continue in place: open the annotation editor on the fresh mention so
     // authority ids (GND, Wikidata, GeoNames) are attachable without leaving
     // the text (the index logic lives where the annotating happens).
@@ -1083,8 +1066,7 @@ function applyMarkupWrap(target, build, label) {
     "Annotate",
     "Nothing changed (invalid range or text would be lost)",
   );
-  render();
-  renderIndex();
+  refreshAfterStandoffEdit();
 }
 
 /**
@@ -1208,15 +1190,6 @@ $("ed-reading").addEventListener("contextmenu", (e) => {
 
 // ---- editorial notes (M3.5) ------------------------------------------------
 
-/** Toggle "add note" mode: the next cell click attaches a note instead of editing. */
-function setNoteMode(on) {
-  app.noteMode = on;
-  // The two click-capture modes (note, mark) are mutually exclusive.
-  if (on && app.critMode) setCritMode(false);
-  const btn = $("btn-note");
-  if (btn) btn.classList.toggle("active", on);
-}
-
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
 function beginNote(span, cell) {
   const existing = app.noteByWord.get(cell.id) || "";
@@ -1250,9 +1223,7 @@ function beginNote(span, cell) {
         setStatus(`Note failed: ${err.message}`);
       }
     }
-    setNoteMode(false);
-    render();
-    renderIndex();
+    refreshAfterStandoffEdit();
   };
   inp.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); finish(true); }
@@ -1281,20 +1252,9 @@ function critTitle(cell, note, meta) {
     parts.push(cell.critSole ? critLabel : `${critLabel} (shared markup)`);
   }
   if (note) parts.push(`note: ${note}`);
-  parts.push(app.critMode ? "click to mark this text"
-    : app.noteMode ? "click to attach a note"
-    : cell.mention ? "click to edit the annotation"
+  parts.push(cell.mention ? "click to edit the annotation"
     : "double-click to edit; right-click for actions");
   return parts.join("; ");
-}
-
-/** Toggle "mark text" mode: the next cell click applies textual-critical markup. */
-function setCritMode(on) {
-  app.critMode = on;
-  // The two click-capture modes (mark, note) are mutually exclusive.
-  if (on && app.noteMode) setNoteMode(false);
-  const btn = $("btn-critic");
-  if (btn) btn.classList.toggle("active", on);
 }
 
 /**
@@ -1315,15 +1275,10 @@ function beginCritic(span, cell) {
 
   // Pure cancel: put the original span back without re-rendering (scroll and
   // facsimile zoom survive a look-and-cancel). Mutations go through apply(),
-  // which re-renders. When the chooser was entered via the toolbar mark mode,
-  // cancelling ends that mode, which changes every cell's tooltip, so only then
-  // a re-render is needed. The keydown listener self-heals when an external
-  // render destroyed the box.
-  const wasCritMode = app.critMode;
+  // which re-renders. The keydown listener self-heals when an external render
+  // destroyed the box.
   const cancel = () => {
     document.removeEventListener("keydown", onKey);
-    setCritMode(false);
-    if (wasCritMode) { render(); renderIndex(); return; }
     if (box.isConnected) box.replaceWith(span);
   };
   const onKey = (e) => {
@@ -1333,9 +1288,7 @@ function beginCritic(span, cell) {
   const apply = (fn, label) => {
     applyDocFn(fn, label, "Markup");
     document.removeEventListener("keydown", onKey);
-    setCritMode(false);
-    render();
-    renderIndex();
+    refreshAfterStandoffEdit();
   };
   const addBtn = (text, title, handler) => {
     const b = el("button", { class: "ed-crit-btn", text, title });
