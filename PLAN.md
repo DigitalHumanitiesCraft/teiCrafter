@@ -393,12 +393,14 @@ Gates zuerst (Operator):
 Wenzelsbibel (Auftrag `Wenzelsbibel/knowledge/auftrag-teicrafter-wenzelsbibel.md`, Daten lokal,
 NICHT committen; Machbarkeit am 10.06. headless bewiesen: codex-2759.xml 78 MB parst in 1,3 s,
 Round-Trip byte-identisch, 480 Folios, Wort-Profil):
-2. **WB-AP1 Lade-Pfad im Browser**: codex-2759.xml via Open TEI laden; prüfen, ob Folio-Rendering
-   und die ~1,3 s Re-Parse nach jedem Edit akzeptabel sind; No-Op-Save byte-identisch als
-   Regressionskriterium von Anfang an.
-3. **WB-AP2 IIIF-Resolver**: `graphic/@url` -> ÖNB-Image-API-Template (jpg->jp2) als
-   Projekt-Konfiguration; Zonen-Overlay mit px->Prozent-Umrechnung gegen Surface-Maße.
-   Gate: "Projekt lädt, Faksimile steht".
+2. **WB-AP1 Lade-Pfad im Browser: engine-seitig erledigt 2026-06-10** (Validierungs-Cache je
+   Doc-Identität statt DOMParser pro Render; Source-View-Guard über 8 MB; Ladezeit im Status;
+   wb_codex_check.mjs 16/16: 82 MB parsen 1,8 s, No-Op-Save byte-identisch, Wort-Edit 2,0 s
+   Voll-Re-Parse). Offen: Operator öffnet codex-2759.xml via "Open TEI..." im Browser.
+3. **WB-AP2 IIIF-Resolver: engine-seitig erledigt 2026-06-10** (project-profiles.js: Profil via
+   PID `o:wen.*`, Dateiname -> ÖNB-info.json als OSD-Tile-Source, live verifiziert; Zonen-Bboxen
+   aus `@points` in readSurfaces, 34.363/34.363 innerhalb der Surface; keine Prozent-Umrechnung
+   nötig, Koordinatenraum == IIIF-Maße). Gate "Projekt lädt, Faksimile steht": Operator-Sichtprüfung.
 4. **WB-AP3 Projekt-Modul** (= M5.7-Anschluss): entschieden als Manifest `teicrafter.project.json`
    (name, schema, imageResolver, markup, indices inkl. Völker, views); Wenzelsbibel als erstes Profil,
    Ableitung der Editionsrichtlinien (Vault), nicht als Codegabel.

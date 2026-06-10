@@ -34,6 +34,7 @@ import { createAnnotationUi } from "./annotation-ui.js";
 import { createIndexOverlay } from "./index-overlay.js";
 import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
+import { detectProject, projectTileSource } from "./project-profiles.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
@@ -55,6 +56,7 @@ const app = {
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
   facsHidden: false,  // user choice: hide the facsimile pane (auto-hidden when no images)
   sourceMode: false,  // true while the reading pane shows the editable XML source
+  project: null,      // detected project profile (project-profiles.js), or null
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios),
@@ -165,6 +167,7 @@ function indexNotes(raw) {
 // ---- loading ---------------------------------------------------------------
 
 function load(raw, name, handle) {
+  const t0 = performance.now();
   app.state = parseEdition(raw);
   app.folio = 0;
   app.fileHandle = handle || null;
@@ -173,6 +176,9 @@ function load(raw, name, handle) {
   // Default: no known page images. loadZbz() sets the image base afterwards;
   // every other entry (open, demo, generate) stays null.
   app.imageBase = null;
+  // Project profile (e.g. Wenzelsbibel): detected from the document's PID,
+  // currently contributes the IIIF image resolver for the facsimile.
+  app.project = detectProject(app.state.doc);
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
@@ -182,7 +188,9 @@ function load(raw, name, handle) {
   markGenerated(false); // opening a real file clears the AI-generated flag
   refreshAfterStandoffEdit();
   const unit = app.state.profile === "word" ? "word" : "line";
-  setStatus(`Loaded ${app.state.folios.length} folio(s), ${app.state.cells.length} ${unit}(s) [${app.state.profile}-level]`);
+  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+  setStatus(`Loaded ${app.state.folios.length} folio(s), ${app.state.cells.length} ${unit}(s) [${app.state.profile}-level]`
+    + (app.project ? `, project: ${app.project.name}` : "") + ` in ${secs}s`);
 }
 
 function markGenerated(on) {
@@ -433,6 +441,10 @@ function renderReading() {
  * chip then shows any drift against the load baseline). The caret starts at
  * the current page's first reading cell.
  */
+// Above this size the source view would freeze the tab (the gutter alone would
+// hold millions of line numbers); the reading view and Download stay available.
+const SOURCE_VIEW_LIMIT = 8_000_000;
+
 function renderSourceView(host) {
   const leave = () => {
     app.sourceMode = false;
@@ -440,6 +452,13 @@ function renderSourceView(host) {
     if (b) b.classList.remove("active");
     refreshAfterStandoffEdit();
   };
+  if (app.state.raw.length > SOURCE_VIEW_LIMIT) {
+    const mb = (app.state.raw.length / 1_000_000).toFixed(0);
+    host.appendChild(el("div", { class: "ed-empty", text:
+      `This document is too large for the in-browser source editor (${mb} MB). `
+      + "Edit it in the reading view, or use Download and a desktop editor for raw XML work." }));
+    return;
+  }
   const folio = app.state.folios[app.folio];
   const firstCell = folio && folio.lines[0] && folio.lines[0].cells[0];
   mountSourceView(host, {
@@ -672,7 +691,11 @@ function ensureFacsimile() {
   if (facsimile) return facsimile;
   const host = $("ed-osd");
   if (!host) return null;
-  facsimile = createFacsimile(host, { tileSourceFor: plainImageTileSource });
+  // A project profile may rewrite a bare <graphic url> filename to a IIIF
+  // info.json tile source (deep zoom); otherwise the plain image loads as-is.
+  facsimile = createFacsimile(host, {
+    tileSourceFor: (url) => projectTileSource(app.project, url) || plainImageTileSource(url),
+  });
   return facsimile;
 }
 
@@ -802,12 +825,16 @@ function isWellFormed(raw) {
  * that updates on every render, with the detail rows in a click popover. The
  * checks themselves are unchanged (well-formedness, xml:id integrity vs the
  * loaded baseline, tag-count drift); only their surface moved out of the way.
+ *
+ * The expensive half (DOMParser well-formedness, two full tree walks) runs
+ * only when the document actually changed: results are cached by doc identity,
+ * so turning pages in a large edition (the 78 MB Wenzelsbibel codex) re-renders
+ * the chip from the cache instead of re-validating per folio.
  */
-function renderValidation() {
-  const chip = $("ed-val-chip");
-  const pop = $("ed-val-pop");
-  if (!chip || !pop) return;
-  if (!app.state) { chip.hidden = true; pop.hidden = true; return; }
+let _valCache = null; // { doc, rows, summary }
+
+function computeValidation() {
+  if (_valCache && _valCache.doc === app.state.doc) return _valCache;
 
   const raw = serialize(app.state);
   const summary = structuralSummary(app.state);
@@ -841,6 +868,18 @@ function renderValidation() {
   rows.push(drift.length
     ? ["warn", `Tag counts changed: ${drift.join("; ")}`]
     : ["ok", "Element counts unchanged"]);
+
+  _valCache = { doc: app.state.doc, rows, summary };
+  return _valCache;
+}
+
+function renderValidation() {
+  const chip = $("ed-val-chip");
+  const pop = $("ed-val-pop");
+  if (!chip || !pop) return;
+  if (!app.state) { chip.hidden = true; pop.hidden = true; _valCache = null; return; }
+
+  const { rows, summary } = computeValidation();
 
   // Chip: worst level wins; the label stays short and truthful.
   const errs = rows.filter((r) => r[0] === "err").length;

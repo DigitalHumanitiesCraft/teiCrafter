@@ -421,17 +421,40 @@ export function readSurfaces(doc) {
       zones: [],
     };
     for (const z of elementsByLocal(s, "zone")) {
-      surf.zones.push({
+      const zone = {
         id: getAttr(z, "id"),
         ulx: num(getAttr(z, "ulx")), uly: num(getAttr(z, "uly")),
         lrx: num(getAttr(z, "lrx")), lry: num(getAttr(z, "lry")),
         points: getAttr(z, "points"),
-      });
+      };
+      // Transkribus-style zones (Wenzelsbibel) carry only a @points polygon,
+      // no ulx/uly/lrx/lry; derive the bounding box so overlays can place them.
+      if (zone.ulx == null && zone.lrx == null && zone.points) applyPointsBbox(zone);
+      surf.zones.push(zone);
     }
     surfaces.push(surf);
     if (id) byId.set(id, surf);
   }
   return { surfaces, byId };
+}
+
+/** Fill zone.ulx/uly/lrx/lry from its @points polygon ("x,y x,y ..."), in place. */
+function applyPointsBbox(zone) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const pair of zone.points.trim().split(/\s+/)) {
+    const comma = pair.indexOf(",");
+    if (comma < 0) return;
+    const x = Number(pair.slice(0, comma));
+    const y = Number(pair.slice(comma + 1));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  if (maxX > minX && maxY > minY) {
+    zone.ulx = minX; zone.uly = minY; zone.lrx = maxX; zone.lry = maxY;
+  }
 }
 
 /** Zones indexed by their own xml:id (for direct @facs -> zone resolution). */
