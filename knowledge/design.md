@@ -35,7 +35,9 @@ It does not fix exact hex values, spacing scales or class names (those live in t
 
 ## Visual Identity
 
-Cream and warm-off-white surfaces evoke manuscript material and ease long sessions; pure white is avoided for reading and facsimile surfaces. Serif carries the reading text, sans-serif the UI and numbers, monospace technical identifiers and paths. A navy header, gold as the primary accent.
+Cream and warm-off-white surfaces evoke manuscript material and ease long sessions; pure white is avoided for reading and facsimile surfaces. Serif carries the reading text, sans-serif the UI and numbers, monospace technical identifiers and paths.
+
+The accent palette is the TEI brand itself (operator order 2026-06-10): TEI blue `#0059A8` for the header and the blue family, TEI yellow `#F7A824` as the primary accent (`--color-gold`), near-black text. The wordmark is `<teiCrafter>`, an element tag with the angle brackets and "Crafter" in TEI yellow, echoing the TEI logo's yellow brackets. Two legibility rules came with the brand yellow: the primary button is black on yellow (the contrast pair of the TEI logo itself, not white on yellow), and the bright brand yellow is a fill/border colour only; small text accents on white use the darker derived `--color-gold-hover`.
 
 ## Token System
 
@@ -44,7 +46,7 @@ Colour, typography and spacing are defined once as CSS custom properties in `doc
 | Family | Tokens (examples) | Purpose |
 |--------|-------------------|---------|
 | Surfaces | `--color-surface`, `--color-panel`, `--color-secondary` | Page, panels, warm paper for text and facsimile |
-| Header / accent | `--color-header` (navy), `--color-gold`, `--color-gold-hover` | Header, primary action, active state |
+| Header / accent | `--color-header` (TEI blue), `--color-gold` (TEI yellow), `--color-gold-hover` | Header, primary action, active state |
 | Text | `--color-text`, `--color-text-secondary`, `--color-text-muted`, `--color-text-inverse` | Reading and UI text |
 | Confidence | `--color-confident`, `--color-review`, `--color-problem` (+ `-tint`) | Categorical validation states, never numeric |
 | AI-generated | `--color-ai`, `--color-ai-tint` (violet) | Marks LLM on-ramp output and nothing else, so machine output is always separable |

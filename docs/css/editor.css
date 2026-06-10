@@ -39,7 +39,8 @@
   border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text);
 }
 .ed-btn:hover { border-color: var(--color-gold); }
-.ed-btn-primary { background: var(--color-gold); border-color: var(--color-gold); color: var(--color-text-inverse); }
+/* Primary action: black on TEI yellow, the contrast pair of the TEI logo itself. */
+.ed-btn-primary { background: var(--color-gold); border-color: var(--color-gold); color: var(--color-text); font-weight: 600; }
 .ed-btn-primary:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
 .ed-btn:disabled { opacity: .5; cursor: not-allowed; }
 /* A disabled button never carries the primary accent: the strongest visual
@@ -174,7 +175,9 @@
 .ed-card b { font-family: var(--font-serif); font-size: var(--font-size-lg); font-weight: 600; }
 .ed-card-desc { color: var(--color-text-secondary); line-height: 1.5; }
 .ed-card-meta { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
-.ed-card-cta { margin-top: var(--space-xs); font-size: var(--font-size-sm); font-weight: 600; color: var(--color-gold); }
+/* Small text accents use the darker yellow: the bright brand yellow is a
+   fill/border colour, not a small-text colour (legibility on white). */
+.ed-card-cta { margin-top: var(--space-xs); font-size: var(--font-size-sm); font-weight: 600; color: var(--color-gold-hover); }
 .ed-card-ai:hover { border-color: var(--color-ai); }
 .ed-card-ai .ed-card-cta { color: var(--color-ai); }
 .ed-card-ai b { color: var(--color-ai); }
@@ -534,7 +537,7 @@
 .xs-val { color: var(--color-confident); }
 .xs-comment { color: var(--color-text-muted); font-style: italic; }
 .xs-pi { color: var(--color-text-secondary); font-style: italic; }
-.xs-ent { color: var(--color-gold); }
+.xs-ent { color: var(--color-gold-hover); }
 
 /* "Open in index": flash the row the overlay was opened on. A keyframe from
    the full gold accent fading into the steady active gold-light, so the
@@ -548,7 +551,7 @@
   background: var(--color-panel); border-top: 1px solid var(--color-border);
   font-size: var(--font-size-xs); color: var(--color-text-secondary);
 }
-.ed-footer a { color: var(--color-gold); }
+.ed-footer a { color: var(--color-gold-hover); }
 .ed-status-dot { color: var(--color-confident); }
 .ed-status-dot.dirty { color: var(--color-review); }
 

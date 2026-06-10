@@ -1,7 +1,7 @@
 /* =============================================================================
-   teiCrafter UI Prototype v3 -- Stylesheet
-   TEI-derived Design System: Navy (#1E3A5F), Gold (#CC8A1E)
-   Three-column layout with epistemic asymmetry focus
+   teiCrafter -- Stylesheet
+   TEI brand colors (operator order 2026-06-10): TEI blue #0059A8,
+   TEI yellow #F7A824, near-black text. Derived tints/hovers computed from them.
    ============================================================================= */
 
 /* -----------------------------------------------------------------------------
@@ -12,17 +12,17 @@
     --color-surface: #FAFAF7;
     --color-panel: #FFFFFF;
     --color-secondary: #F2F4F8;
-    --color-header: #1E3A5F;
+    --color-header: #0059A8; /* TEI blue */
     --color-border: #D0D4DC;
     --color-border-light: #E8EAED;
     --color-gutter: #F8F9FB;
 
-    /* Accent colors */
-    --color-gold: #CC8A1E;
-    --color-gold-light: #F5DEB3;
-    --color-gold-hover: #B57A18;
-    --color-blue: #2B5EA7;
-    --color-blue-light: #E3EDF7;
+    /* Accent colors: the TEI brand yellow and blue; light/hover are derived */
+    --color-gold: #F7A824;       /* TEI yellow */
+    --color-gold-light: #FDE9C8;
+    --color-gold-hover: #DE9712;
+    --color-blue: #0059A8;       /* TEI blue */
+    --color-blue-light: #E0EBF5;
 
     /* AI on-ramp (violet): marks LLM-generated, unreviewed output and nothing else */
     --color-ai: #6D4AB6;
