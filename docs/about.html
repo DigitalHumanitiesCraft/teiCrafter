@@ -38,36 +38,38 @@
 
     <main class="ab-main">
         <h1>About teiCrafter</h1>
-        <p><b>teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML.</b> Open an
-            existing edition, correct it folio by folio, annotate persons, places, organisations and
-            works with authority data (GND, Wikidata, GeoNames), and save it back. It runs entirely
-            in your browser: no server, no upload, no account. Your edition never leaves your
-            computer.</p>
+        <p><b>teiCrafter is a browser editor for TEI-XML editions.</b> It opens an existing
+            edition, shows the text page by page next to its facsimile, and lets you correct
+            the text and annotate persons, places, organisations and works with authority
+            identifiers (GND, GeoNames, Wikidata). It is a static page that runs entirely in
+            the browser; the edition is read from and saved to a local file on your computer
+            and is not uploaded anywhere.</p>
 
-        <h2>Lossless, defined</h2>
-        <p>The opened XML file is the single source of truth. Every edit is a precise splice into
-            that raw text; everything you did not touch is preserved byte for byte, including
-            whitespace, attribute order, comments and entities. Saving an unchanged document
-            reproduces the input exactly. This property is verified continuously: live checks in the
-            editor (the <code>well-formed, lossless</code> chip) and an offline test harness that
-            round-trips hundreds of real edition files byte-identically.</p>
+        <h2>What saving does (lossless)</h2>
+        <p>Every edit replaces exactly the edited passage in the file text. Everything you did
+            not touch is preserved byte for byte, including whitespace, attribute order,
+            comments and entity notation. Saving an unchanged document reproduces the opened
+            file exactly. The editor checks this while you work and reports it next to the text
+            (the <code>well-formed, lossless</code> chip); in addition, a re-runnable test suite
+            in the repository round-trips several hundred real edition files and compares the
+            result to the input.</p>
 
-        <h2>Natural granularity</h2>
-        <p>The editable unit emerges from the document instead of a forced profile: word-level when
-            the TEI encodes words (<code>&lt;w&gt;</code>), line-level otherwise
-            (<code>&lt;lb&gt;</code>/<code>&lt;l&gt;</code>). Page images travel along: the
-            facsimile pane reads <code>&lt;facsimile&gt;</code>/<code>&lt;zone&gt;</code> and links
-            text and image both ways via <code>@facs</code>.</p>
+        <h2>What the editing unit is</h2>
+        <p>Word-level when the TEI encodes words (<code>&lt;w&gt;</code>), line-level otherwise
+            (<code>&lt;lb&gt;</code>/<code>&lt;l&gt;</code>); the editor reads this from the
+            document, there is no per-project configuration. The facsimile pane reads
+            <code>&lt;facsimile&gt;</code>/<code>&lt;zone&gt;</code> and links text and image
+            in both directions via <code>@facs</code>.</p>
 
-        <h2>AI assists, the human decides</h2>
-        <p>Machine proposals never blend into human work: AI-origin content is
-            <span class="ab-ai">marked violet</span> and counted as unreviewed until a human
-            verifies it; violet appears on AI-origin content and nothing else. An optional
-            on-ramp that lets a language model draft an initial TEI from plaintext exists in
-            the codebase and is switched off in this preview.</p>
+        <h2>Machine-generated content</h2>
+        <p>Content that a machine produced is <span class="ab-ai">marked violet</span> and
+            counted as unreviewed until a human verifies it; violet is used for
+            machine-generated content and for nothing else. An optional entry that lets a
+            language model draft an initial TEI from plaintext exists in the codebase and is
+            switched off in this preview.</p>
 
         <h2>The example editions</h2>
-        <p>Three real cases drive the tool: the <b>Wenzelsbibel</b> (word-level; the real
+        <p>The tool is developed against three real cases: the <b>Wenzelsbibel</b> (word-level; the real
             Codex 2759 with IIIF facsimile where present, a synthetic stand-in for the
             licence-restricted codex in the public preview), a <b>Jeanne Hersch</b> letter from the
             Zentralbibliothek Zürich pipeline (line-level, page scans), and a letter from
@@ -75,9 +77,9 @@
 
         <h2>Method and provenance</h2>
         <p>teiCrafter is developed with <a href="https://dhcraft.org/Promptotyping/" target="_blank"
-            rel="noopener">Promptotyping</a>: an AI-assisted, knowledge-document-driven development
-            method in which every capability is backed by a verifiable proof. The repository,
-            including the full knowledge base and test harness, is open:
+            rel="noopener">Promptotyping</a>, an AI-assisted, knowledge-document-driven development
+            method; the knowledge base, the recorded decisions and the re-runnable tests are part
+            of the repository:
             <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter" target="_blank"
             rel="noopener">github.com/DigitalHumanitiesCraft/teiCrafter</a>.</p>
 

@@ -9,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Landing styles, tokens only (no raw hex). The editor is the workbench;
-           this page is the front door: value proposition, one primary action,
-           the three example editions, and the core properties in one line each. */
+        /* Landing styles, tokens only (no raw hex). The page states what the
+           editor is, offers one primary action and the three example editions,
+           and describes the core behaviour in plain sentences. */
         .lp-header { justify-content: space-between; }
         .lp-tag {
             font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: .08em;
@@ -58,6 +58,8 @@
         .lp-feature p { margin: 0; font-size: var(--font-size-sm);
             color: var(--color-text-secondary); line-height: 1.6; }
         .lp-feature a { color: var(--color-gold-hover); }
+        .lp-feature code { font-family: var(--font-mono); font-size: var(--font-size-xs);
+            background: var(--color-secondary); border-radius: var(--radius-sm); padding: 0 3px; }
         .lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
         .lp-foot { margin-top: var(--space-xl); padding-top: var(--space-md); }
     </style>
@@ -73,12 +75,12 @@
 
     <main class="lp-main">
         <section class="lp-hero">
-            <h2>Edit any TEI edition, losslessly.</h2>
-            <p class="lp-lede">A browser working environment for TEI-XML: open an edition, correct it folio by folio at its natural granularity (words or lines), annotate entities with authority data, and save it back byte for byte. No server, no account, no LLM in the loop.</p>
+            <h2>A browser editor for TEI-XML editions</h2>
+            <p class="lp-lede">teiCrafter opens an existing TEI edition, shows it page by page next to its facsimile, and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). It runs in the browser; the edition stays a local file on your computer.</p>
             <a class="lp-open" href="editor.html" title="Open the editor and load your own TEI file">Open the editor</a>
         </section>
 
-        <p class="lp-section-title">Or start from an example edition</p>
+        <p class="lp-section-title">Example editions</p>
         <div class="lp-cards">
             <!-- The same three examples as in the editor's welcome state; the
                  #example deep link loads them directly. The LLM card returns
@@ -86,35 +88,35 @@
             <a class="lp-card" href="editor.html#example=wb">
                 <span class="lp-card-tag">[ word-level ]</span>
                 <h3>Wenzelsbibel</h3>
-                <p>Codex 2759, the real codex where present, else its synthetic twin. Word-by-word editing, IIIF facsimile on the real codex.</p>
+                <p>Codex 2759 of the Austrian National Library: word-level encoding with IIIF facsimile. Where the licence-restricted file is not present, a synthetic structural twin loads instead.</p>
                 <span class="lp-cta">Load example</span>
             </a>
             <a class="lp-card" href="editor.html#example=zbz">
                 <span class="lp-card-tag">[ line-level ]</span>
                 <h3>ZBZ Jeanne Hersch</h3>
-                <p>A real letter from the Zentralbibliothek Z&uuml;rich pipeline, page scans linked to the text line by line.</p>
+                <p>A letter from the Jeanne Hersch papers at the Zentralbibliothek Z&uuml;rich: line-level OCR-derived TEI with page scans.</p>
                 <span class="lp-cta">Load example</span>
             </a>
             <a class="lp-card" href="editor.html#example=szd">
                 <span class="lp-card-tag">[ line-level ]</span>
                 <h3>Stefan Zweig Digital</h3>
-                <p>An 1901 Zweig letter with its facsimile served live by the GAMS repository.</p>
+                <p>A letter by Stefan Zweig (1901): line-level transcription with the facsimile from the GAMS repository.</p>
                 <span class="lp-cta">Load example</span>
             </a>
         </div>
 
         <div class="lp-features">
             <div class="lp-feature">
-                <h3>Lossless by construction</h3>
-                <p>Every edit is a precise splice into the raw XML; everything you did not touch is preserved byte for byte, verified by live checks and an offline proof harness.</p>
+                <h3>What saving does</h3>
+                <p>Saving writes your edits into the original file text and changes nothing else: whitespace, attribute order, comments and entity notation outside the edited passages remain untouched. A document saved without edits is identical to the opened file.</p>
             </div>
             <div class="lp-feature">
-                <h3>Natural granularity</h3>
-                <p>The editable unit emerges from the document: word-level when the TEI encodes words, line-level otherwise. The page image travels along, linked both ways.</p>
+                <h3>What the editing unit is</h3>
+                <p>Words where the edition encodes <code>&lt;w&gt;</code>, lines otherwise; the editor reads this from the document, no configuration is needed. Image zones and text are linked through <code>@facs</code> in both directions.</p>
             </div>
             <div class="lp-feature">
-                <h3>The human decides</h3>
-                <p>Annotation is deterministic and human-driven; machine proposals, where enabled, are marked violet until verified. <a href="about.html">More in About.</a></p>
+                <h3>What is checked</h3>
+                <p>While you edit, the editor checks that the XML stays well-formed and that no text content is lost, and reports the result next to the text. How machine-generated content is handled is described in <a href="about.html">About</a>.</p>
             </div>
         </div>
 

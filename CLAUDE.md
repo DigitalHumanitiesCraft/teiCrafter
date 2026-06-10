@@ -5,6 +5,7 @@
 - No em dashes or en dashes as punctuation; use commas, colons, or parentheses.
 - All code, UI text, and documentation in English.
 - Code comments: compact, descriptive, plain English, only where the code cannot speak for itself. State the constraint or intent, not implementation history; no dates, decision references, or restoration instructions (that context belongs in knowledge/journal.md).
+- UI and public-facing text (landing, About, README, tooltips, status lines): descriptive and factual, written for researchers. Full sentences that state what the tool does and what a property concretely means; no slogans, no marketing claims, no metaphors, no undefined shorthand ("by construction", "proof harness"). A property that cannot be explained where it is claimed, or linked to its explanation, is left out. Do not present a current configuration as identity (e.g. "no LLM" while LLM features are planned).
 - Knowledge documents follow the Promptotyping Documents convention: standard Markdown with YAML frontmatter (title, project, method, template, status, created, updated; plus topics, language, version, related). This replaces the former "no frontmatter" rule.
 
 ## Project

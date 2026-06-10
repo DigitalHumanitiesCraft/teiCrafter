@@ -57,8 +57,8 @@ Annotation happens at the text: select words to annotate them, click a mention t
 | **In-browser index management** | Editable `<standOff>` of persons, organisations, and events with mention linking via `<name ref>`. |
 | **Live validation and structure** | Integrity checks and a structural outline alongside the reading text. |
 | **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. Currently switched off (feature flag). |
-| **Zero infrastructure** | No server, no account, no installation; runs entirely in the browser, deployed from `/docs`. |
-| **Bring Your Own API Key** | For the LLM on-ramp only; keys are held in memory for the session and never persisted. |
+| **Runs in the browser** | No server and no build step; static files deployed from `/docs`. Editions are read from and saved to local files. |
+| **API keys (on-ramp only)** | Keys are held in memory for the session and never persisted. |
 
 ---
 
