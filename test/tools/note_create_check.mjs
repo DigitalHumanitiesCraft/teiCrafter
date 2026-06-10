@@ -4,24 +4,15 @@
  *   1. the nearest ancestor xml:id (word-level <w xml:id>),
  *   2. the line's @facs zone id (line-level with <lb facs>),
  *   3. a freshly injected xml:id on the enclosing element (neither present).
- * Notes land inside <standOff>; the reader regex used by the editor finds them.
+ * Notes land inside <standOff>; standoff.noteIndex (the reader the editor
+ * uses) finds them.
  *
  * Run: node test/tools/note_create_check.mjs   (exit 0 = all pass)
  */
 
 import { parseEdition, serialize } from "../../docs/js/editor/edition.js";
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
-import { addNote, addNoteForNode, ensureXmlId } from "../../docs/js/editor/standoff.js";
-
-// The reader the editor uses to mark a cell with a note (editor-app.js indexNotes).
-const RE_NOTE = /<note\b[^>]*\btarget="([^"]*)"[^>]*>([\s\S]*?)<\/note>/g;
-function readNotes(raw) {
-  const out = [];
-  RE_NOTE.lastIndex = 0;
-  let m;
-  while ((m = RE_NOTE.exec(raw)) !== null) out.push({ target: m[1], text: m[2] });
-  return out;
-}
+import { addNote, addNoteForNode, ensureXmlId, noteIndex } from "../../docs/js/editor/standoff.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -44,9 +35,9 @@ const WRAW =
 const wstate = parseEdition(WRAW);
 const wdoc = addNoteForNode(wstate.doc, wstate.cellById.get("w1").node, null, "needs check");
 check(serialize({ raw: wdoc.raw }) === wdoc.raw && wdoc.raw !== WRAW, "word note: a new document is produced");
-let notes = readNotes(wdoc.raw);
-check(notes.length === 1 && notes[0].target === "#w1" && notes[0].text === "needs check",
-  "word note: target is the ancestor xml:id #w1, text preserved");
+let notes = noteIndex(wdoc);
+check(notes.size === 1 && notes.get("w1") === "needs check",
+  "word note: target is the ancestor xml:id w1, text preserved");
 check(wdoc.raw.includes("<standOff>") && wdoc.raw.indexOf("<note") > wdoc.raw.indexOf("<standOff>"),
   "word note: lives inside the scaffolded <standOff>");
 check(parseDocument(wdoc.raw).serialize() === wdoc.raw, "word note: re-parses byte-identically");
@@ -60,8 +51,9 @@ const lstate = parseEdition(LRAW);
 const lcell = cellByText(lstate, "Zeile eins");
 check(!!lcell && lcell.facs === "z1", "line cell carries the line's @facs zone id (z1)");
 const ldoc = addNoteForNode(lstate.doc, lcell.node, lcell.facs, "ambiguous reading");
-notes = readNotes(ldoc.raw);
-check(notes.length === 1 && notes[0].target === "#z1", "line note: target falls back to the zone id #z1");
+notes = noteIndex(ldoc);
+check(notes.size === 1 && notes.get("z1") === "ambiguous reading",
+  "line note: target falls back to the zone id z1");
 check(/Zeile eins/.test(ldoc.raw) && parseDocument(ldoc.raw).serialize() === ldoc.raw,
   "line note: body text untouched, byte-identical re-parse");
 
@@ -74,9 +66,10 @@ const pstate = parseEdition(PRAW);
 const pcell = cellByText(pstate, "nur text");
 check(!!pcell && !pcell.facs, "plain cell has no ancestor id and no facs");
 const pdoc = addNoteForNode(pstate.doc, pcell.node, pcell.facs, "see archive");
-notes = readNotes(pdoc.raw);
-check(notes.length === 1 && notes[0].target.startsWith("#"), "injected note: a target id was created");
-const injectedId = notes[0].target.slice(1);
+notes = noteIndex(pdoc);
+check(notes.size === 1 && notes.values().next().value === "see archive",
+  "injected note: a target id was created");
+const injectedId = notes.keys().next().value;
 check(pdoc.raw.includes('<p xml:id="' + injectedId + '">nur text</p>'),
   "injected note: the xml:id was added to the enclosing <p>, text intact");
 check(parseDocument(pdoc.raw).serialize() === pdoc.raw, "injected note: re-parses byte-identically");
@@ -94,7 +87,7 @@ check(e2.doc === reparsed.doc && e2.id === e1.id, "ensureXmlId is a no-op when t
 check(addNoteForNode(wstate.doc, wstate.cellById.get("w1").node, null, "   ") === wstate.doc,
   "empty note text is a byte-identical no-op (same doc)");
 const direct = addNote(parseEdition(WRAW).doc, "w2", "direct note");
-check(readNotes(direct.raw).some((n) => n.target === "#w2" && n.text === "direct note"),
+check(noteIndex(direct).get("w2") === "direct note",
   "addNote(doc, id, text) targets a given id directly");
 
 // --- summary -----------------------------------------------------------------

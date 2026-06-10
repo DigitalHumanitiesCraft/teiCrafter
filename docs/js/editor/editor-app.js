@@ -27,7 +27,6 @@ import {
   structuralSummary,
   xmlIdSet,
   countTags,
-  unescapeXmlText,
 } from "./edition.js";
 import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
@@ -185,24 +184,6 @@ function buildLegend() {
   for (const c of chips) host.appendChild(c);
 }
 
-// ---- note index (for has-note markers) -------------------------------------
-
-const RE_NOTE = /<note\b[^>]*\btarget="([^"]*)"[^>]*>([\s\S]*?)<\/note>/g;
-
-function indexNotes(raw) {
-  const map = new Map();
-  let m;
-  RE_NOTE.lastIndex = 0;
-  while ((m = RE_NOTE.exec(raw)) !== null) {
-    const text = unescapeXmlText(m[2]).trim();
-    for (const t of m[1].split(/\s+/)) {
-      const id = t.replace(/^#/, "");
-      if (id) map.set(id, text);
-    }
-  }
-  return map;
-}
-
 // ---- loading ---------------------------------------------------------------
 
 // Large documents (the Wenzelsbibel codex is tens of MB) parse synchronously on
@@ -237,7 +218,7 @@ function applyLoad(raw, name, handle, project) {
   app.folio = 0;
   app.fileHandle = handle || null;
   app.docName = name;
-  app.noteByWord = indexNotes(raw);
+  app.noteByWord = standoff.noteIndex(app.state.doc);
   // Default: no known page images. An example with an imageBase (loadExample)
   // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
@@ -710,7 +691,7 @@ function renderSourceView(host) {
       try {
         const changed = text !== app.state.raw;
         app.state = parseEdition(text);
-        app.noteByWord = indexNotes(text);
+        app.noteByWord = standoff.noteIndex(app.state.doc);
         app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
         if (changed) setDirty(true);
         setStatus(changed ? "XML source applied" : "XML source unchanged");
@@ -780,7 +761,7 @@ function applyDocFn(fn, label, failPrefix = "Edit", noopLabel = null) {
     const next = fn(app.state.doc);
     if (next !== app.state.doc) {
       app.state = parseEdition(next.raw);
-      app.noteByWord = indexNotes(app.state.raw);
+      app.noteByWord = standoff.noteIndex(app.state.doc);
       setDirty(true);
       setStatus(label);
     } else if (noopLabel) {
@@ -818,7 +799,7 @@ function beginNote(span, cell) {
         const next = standoff.addNoteForNode(app.state.doc, cell.node, cell.facs, text);
         if (next !== app.state.doc) {
           app.state = parseEdition(next.raw);
-          app.noteByWord = indexNotes(app.state.raw);
+          app.noteByWord = standoff.noteIndex(app.state.doc);
           setDirty(true);
           setStatus(`Note attached to "${cell.text.trim()}"`);
         }
@@ -1534,7 +1515,9 @@ const overlay = createEntityIndex({
 const annot = createAnnotationUi({
   app, setStatus, setDirty, applyDocFn,
   refresh: refreshAfterStandoffEdit,
-  entityMetaMap, entityUsage, indexNotes,
+  entityMetaMap, entityUsage,
+  // The raw argument is ignored: the index always reads the current doc.
+  indexNotes: () => standoff.noteIndex(app.state.doc),
   runLookup: overlay.runLookup,
   revealEntity: overlay.revealEntity,
   highlightMentions, beginTextInput, beginNote, beginCritic,

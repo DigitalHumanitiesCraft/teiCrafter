@@ -582,3 +582,24 @@ export function addNoteForNode(doc, textNode, fallbackFacs, text) {
   }
   return addNote(doc, targetId, body);
 }
+
+/**
+ * Index editorial notes by the ids they target: Map<id, text>. Walks the parsed
+ * tree (every <note> carrying @target, wherever it sits), splits the target on
+ * whitespace, strips the leading '#', and reads the body as the note's decoded
+ * text nodes (child markup contributes its text, tags fall away). Notes without
+ * @target are skipped.
+ */
+export function noteIndex(doc) {
+  const map = new Map();
+  for (const note of elementsByLocal(doc.root, "note")) {
+    const target = getAttr(note, "target");
+    if (!target) continue;
+    const text = textNodes(note).map((t) => textOf(doc, t)).join("").trim();
+    for (const t of target.split(/\s+/)) {
+      const id = t.replace(/^#/, "");
+      if (id) map.set(id, text);
+    }
+  }
+  return map;
+}
