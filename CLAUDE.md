@@ -35,7 +35,7 @@ Before generating or changing UI, read `knowledge/design.md`. Its principles are
 ## Knowledge Maintenance
 At the end of a session with code changes, update the affected knowledge documents:
 1. `architecture.md` for component, data-flow, or implementation-status changes.
-2. `journal.md` for a session entry and any new decisions.
+2. `journal.md` for a session entry and any new decisions. Journal style: an entry records the trigger, the decision and the reason, in a few sentences; no proof numbers or test counts (testing.md and goals.md carry them), no implementation detail (architecture.md carries it), no file-by-file lists. Lessons worth keeping are part of the reason.
 3. `specification.md` for new decisions, resolved open questions, or requirement changes.
 4. `design.md` only if the visual or interaction layer changed.
 
