@@ -14,7 +14,7 @@ status: active
 created: 2026-06-09
 updated: 2026-06-09
 language: en
-version: 0.11
+version: 0.12
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Jeanne Hersch]]", "[[Editopia]]"]
 related: [project, specification, goals, testing, paper-evidence, worked-example-szd]
 ---

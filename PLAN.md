@@ -410,11 +410,23 @@ Round-Trip byte-identisch, 480 Folios, Wort-Profil):
    WB-Manifest als erstes Profil committet (Ableitung der Editionsrichtlinien, offene Punkte bleiben
    offen statt erfunden); Manifest vor PID-Fallback, `markup` ersetzt die eingebaute Wrap-Liste
    projektweise; `indices`/`views` deklariert, Konsumenten folgen mit Index-Arbeit und F4.
-   `node test/tools/project_manifest_check.mjs` -> **30/30**. [proof] Offen: Operator-Sichtprüfung
+   `node test/tools/project_manifest_check.mjs` -> **62/62** (Stand 2026-06-11, seither um
+   Typ-Bindung und TEI-Scope gewachsen). [proof] Offen: Operator-Sichtprüfung
    (WB-Beispiel lädt mit "project: ... (manifest)" in der Statuszeile); M2.9 als nächster Anschluss.
-5. **WB-neu Doppellesung** (F4): Ansicht-Umschalter diplomatisch|normalisiert (Anzeige-Projektion)
-   plus Zwei-Feld-Doppelklick-Edit für `<w orig norm>`; neuer attributgenauer Offset-Splice in der
-   Engine mit Byte-Beweis.
+5. **WB-neu Doppellesung (F4): Engine und UI erledigt 2026-06-11** (Commits ae0b6f5 Engine,
+   1ef4bfe UI; orchestriert in zwei Opus-Paketen auf disjunkten Dateimengen). Engine: atomarer
+   Mehrteil-Edit `editTextAndAttrs` (`tei-document.js`) plus `editCellReadings` (`edition.js`)
+   editieren diplomatischen Kern und `@norm` in EINEM Re-Parse, Verweigerung statt Teilanwendung;
+   Zell-Projektion `w`/`hasDualReadings`. UI: Umschalter diplomatisch|normalisiert in der Lesepane
+   (nur bei Doppellesung und außerhalb der Quellansicht, je Dokument persistiert), normalisierte
+   Ansicht als Anzeige-Projektion, Zwei-Feld-Doppelklick-Edit, Selektions-Annotation auf die
+   diplomatische Ansicht beschränkt. `node test/tools/dual_reading_check.mjs` -> **28/28** (atomarer
+   Edit byte-treu per Voll-Rekonstruktion, `@orig`-Sync, `@norm` add/remove, Verweigerung bei
+   Element-Kindern, Projektion, Real-Codex-Guard SKIPpt ohne lokalen Codex). [proof] Der
+   Umschalter bindet an die Dokument-Kodierung (hasDualReadings), nicht an das Manifest;
+   die deklarierten `views` bleiben ohne Konsument. Offen: Operator-Sichtprüfung im Browser
+   (Umschalter am echten Codex,
+   Zwei-Feld-Edit, Annotations-Hinweis in der normalisierten Ansicht).
 6. **WB-AP4 StandOff-Apparat**: `app from/to` auf die Inline-`<anchor>`-Paare auflösen und im
    Lesetext markieren (Mechanik analog Textkritik-Schicht).
 7. **ED.1-ED.7 User Stories** schreiben (hängender Verweis im Project Overview; vier Arbeitsachsen),
@@ -428,7 +440,7 @@ Editor-Pfad, unabhängig von der Wenzelsbibel:
    Korrektur am selben Tag (Operator): ein Projekt ist KEIN Editionstyp, das Manifest trägt
    `documentTypes` + `files`, das Element-Inventar bindet an den Typ. Plaintext-Dateien öffnen
    als deterministischer line-level-Entwurf (Transport, nicht Interpretation, bewusst nicht
-   violett); erster Save erzeugt die .xml im Ordner. Proofs project_manifest_check.mjs 41/41,
+   violett); erster Save erzeugt die .xml im Ordner. Proofs project_manifest_check.mjs 62/62,
    project_case_check.mjs 24/24 (der Operator-Test-Case headless: eigenes Projekt, ein TEI,
    zwei Plaintexts). [proof] Offen: der Browser-Durchlauf genau dieses Test-Cases (Operator-Gate).
 10. **M5.7 Editionsrichtlinien der Quellprojekte** (SZD/GAMS, ZBZ Hersch) in die Wissensbasis.

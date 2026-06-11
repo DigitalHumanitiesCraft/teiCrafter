@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-06-10
+updated: 2026-06-11
 language: en
-version: 0.11
+version: 0.12
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
 ---
@@ -60,6 +60,7 @@ Each demo-critical feature added since the core engine proofs carries its own he
 | `test/tools/project_case_check.mjs` | The operator's acceptance case headless: one project folder (one TEI, two plaintexts). A `.txt` opens as deterministic line-level TEI via `plaintext-import.js` (paragraphs on blank lines, `<lb/>` per line, text XML-escaped and otherwise verbatim, CRLF treated as a line break not content), the same input always yields the same output, type-bound markup wraps splice losslessly, and the edited draft round-trips byte-faithfully (the diff is exactly the edit) | 24/24 |
 | `test/tools/depcha_demo_check.mjs` | The DEPCHA Wheaton demo project (an "Open project folder" use case): the committed manifest parses, types both volumes as `account` and binds the bookkeeping markup inventory (the `bk:` money and date descriptors); when the gitignored TEI is present (materialize via `make_depcha_demo.mjs`) both volumes serialize byte-identical, carry `<measure>` and read line-level into folios. SKIPs the content checks cleanly when the local-only data is absent | 15/15 (5/5 manifest-only when content absent) |
 | `test/tools/criticism_check.mjs` | Textual-critical markup (M3.6, done, commit 119a1a2): `<unclear>`/`<del>`/`<add>` wrap a node's core with edge whitespace kept outside, `<gap/>` replaces the core, `unwrapCritical` refuses to strip a shared wrapper, every mutation covers every byte and reverses byte-exact | 47/47 |
+| `test/tools/dual_reading_check.mjs` | Dual reading (F4): the atomic `editTextAndAttrs`/`editCellReadings` edit is byte-faithful by full reconstruction, `@orig` is kept in sync with the diplomatic core and never invented where absent, `@norm` adds on a non-empty value and removes on `""`, the op refuses element children (a critically-wrapped word) so it cannot half-apply, and the normalized projection reads correctly; a real-codex guard runs when the local codex is present and skips silently otherwise. Synthetic fixture `test/fixtures-synthetic/wb-dual-reading.xml` | 28/28 |
 | `test/tools/szd_worked_example.mjs` | M7.2 worked example: the real CC-BY `o_szd.1079` taken open -> correct (an HTR "Gerichte" -> "Gedichte" fix, proven a single-byte surgical splice by full reconstruction) -> annotate (person/place/work + GND/GeoNames/Wikidata authorities + a Wien mention, scaffolding a `<standOff>` where none existed) -> textual criticism (`<unclear>` wrap, `<gap/>` replace on folio 3) -> save, every step a byte-faithful splice and the final raw idempotent; gates to SKIP if the CC-BY fixture is absent | 38/38 |
 | `test/tools/zbz_worked_example.mjs` | M7.2 worked example, ZBZ half: the real ZBZ doc 1000 taken open -> correct (the OCR "inadaption" -> "inadaptation" fix, proven a two-byte surgical insertion by full reconstruction) -> annotate (Hersch GND 118815679 / Geneve Wikidata Q71 + GeoNames 7285902 / a work, scaffolding a `<standOff>` where none existed) -> mention link -> textual criticism (`<unclear>` wrap, `<gap/>` replace) -> save, every step a byte-faithful splice, all 4 surfaces carrying a GitHub-Pages `<graphic url>`; gates: local file, else built in memory from the zbz sibling via `make_zbz1000_demo.mjs`, else SKIP | 38/38 |
 | `test/tools/make_curated_set.mjs` | M7.4 curated example set: registry-driven generator that applies the proven worked-example curation arcs through the real engine and persists before/after/diff/summary per object under gitignored `output/curated-set/` plus the `SET.md` overview; verifies per object that the before round-trips byte-identically, the after is idempotent and keeps its folio model, and a `<standOff>` exists; registry entries pending operator sign-off are listed, not generated; SKIPs an absent rights-encumbered source | PASS (2 generated, 2 pending) |
@@ -118,7 +119,7 @@ Documentation is itself part of acceptance: the per-fixture JSON reports and the
 - `test/harness/selftest.mjs`: negative test (identity passes, corruption fails), 14/14.
 - `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`: the engine proofs above.
 - `test/tools/run_all.mjs`: the aggregate regression gate (glob-discovered proofs, sequential, exit 1 on any failure).
-- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `note_index_check.mjs`, `commit_invariants_check.mjs`, `guidelines_check.mjs`, `attr_edit_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`, `project_manifest_check.mjs`, `project_case_check.mjs`, `depcha_demo_check.mjs`, `szd_worked_example.mjs`, `zbz_worked_example.mjs`: the per-milestone feature proofs above.
+- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `note_index_check.mjs`, `commit_invariants_check.mjs`, `guidelines_check.mjs`, `attr_edit_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`, `project_manifest_check.mjs`, `project_case_check.mjs`, `depcha_demo_check.mjs`, `dual_reading_check.mjs`, `szd_worked_example.mjs`, `zbz_worked_example.mjs`: the per-milestone feature proofs above.
 - `test/tools/make_zbz1000_demo.mjs`: materializes the local-only ZBZ worked-example object (doc 1000 plus deterministic `<graphic url>` injection, M2.4 scheme) from the zbz sibling checkout.
 - `test/tools/make_depcha_demo.mjs`: materializes the local-only DEPCHA Wheaton demo project (two day-book volumes) by fetching the unchanged TEI from the public DEPCHA repository.
 - `test/tools/make_curated_set.mjs`: M7.4 curated example set generator (before/after/diff/summary per object under `output/curated-set/`).
@@ -148,9 +149,10 @@ node test/tools/whitespace_edit_check.mjs  # line edit preserves edge whitespace
 node test/tools/mention_projection_check.mjs # M2.5 projection + M2.8/M2.10 annotation ops (range wrap, unwrap, markup); 30/30
 node test/tools/source_highlight_check.mjs   # M2.12 XML source highlighter is lossless presentation; 18/18
 node test/tools/wb_codex_check.mjs           # WB-AP1/AP2: real codex load + IIIF resolver + points bboxes; 16/16 (SKIP without local codex)
-node test/tools/project_manifest_check.mjs   # manifest parse/validate/normalize, documentTypes/files binding, resolver parity, lossless wraps; 41/41
+node test/tools/project_manifest_check.mjs   # manifest parse/validate/normalize, documentTypes/files binding, teiModules/teiElements scope, resolver parity, lossless wraps; 62/62
 node test/tools/project_case_check.mjs       # M2.9 acceptance case: deterministic plaintext intake, type-bound markup, byte-faithful edits; 24/24
 node test/tools/criticism_check.mjs        # M3.6 textual-critical markup, 47/47
+node test/tools/dual_reading_check.mjs     # F4 dual reading: atomic orig/norm edit byte-faithful, refusal, projection; 28/28 (real-codex guard SKIPs when absent)
 node test/tools/szd_worked_example.mjs     # M7.2 worked example: real o_szd.1079 open->correct->annotate->criticism->save, 38/38 (SKIP if fixture absent)
 node test/tools/make_zbz1000_demo.mjs      # materialize the local-only ZBZ worked-example object (doc 1000 + graphic urls) from the zbz sibling
 node test/tools/zbz_worked_example.mjs     # M7.2 ZBZ half: real doc 1000 open->correct->annotate->criticism->save, 38/38 (SKIP without object/sibling)

@@ -12,15 +12,25 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-10
+updated: 2026-06-11
 language: en
-version: 0.11
+version: 0.12
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-11: Dual reading built (F4), orchestrated in Opus packages
+
+Trigger: the operator ordered continuation with sub-agent orchestration, and F4 (the Wenzelsbibel dual reading) was the plan's next implementable item now that the project layer stood. The Wenzelsbibel `<w>` encodes both readings at once: the text content is the diplomatic reading, `@orig` mirrors it, `@norm` carries the normalized reading. Decisions:
+
+- **The dual edit is atomic in one re-parse.** The text core and the attributes of a word commit together and any invalid or unrepresentable part refuses the whole operation, so a half-applied word edit cannot exist. Reason: refusal over partial application keeps the document always consistent.
+- **`@orig` mirrors the canonical diplomatic content where the source encodes it, and is never invented where it is absent.** Reason: the text content is the canonical reading, a silent divergence between content and `@orig` would be a hidden inconsistency, and an absent `@orig` is itself information about the source, not a gap to fill.
+- **An empty Normalized field removes `@norm`.** Reason: an `@norm=""` would claim a normalization, whereas absence claims nothing.
+- **The normalized view is a display projection, not a second document state.** Selection-to-annotate stays in the diplomatic view because the projected normalized text does not map back to raw offsets, while the double-click two-field edit works in both views because it anchors on the element, not on offsets. Reason: the projection is a reading layer over the same bytes; only the operations that need raw offsets are bound to the view that has them.
+- **Working model this session.** The orchestrator (the main lane) cut the work into two fully specified packages on disjoint file sets (engine, then UI), delegated each to an Opus sub-agent, and accepted each against the running proofs and the raw git diff. Acceptance added one hardening (an undefined diplomatic core leaves the content and `@orig` untouched) and the proof case locking it. Lesson: the package boundary that worked was the engine-proof seam, and the acceptance review is the orchestrator's own substantive work, not a formality.
 
 ## 2026-06-10 (night): Refactoring package, TEI Guidelines integration, attribute editor
 

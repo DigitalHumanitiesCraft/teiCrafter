@@ -13,7 +13,7 @@ status: active
 created: 2026-06-09
 updated: 2026-06-09
 language: en
-version: 0.11
+version: 0.12
 topics: ["[[Editopia]]", "[[Curation]]", "[[Evaluation]]"]
 related: [goals, paper-evidence, worked-example-zbz, worked-example-szd, testing]
 ---
