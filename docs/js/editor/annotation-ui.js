@@ -131,7 +131,10 @@ export function createAnnotationUi(ctx) {
       menu.appendChild(b);
     };
 
-    const target = selectionTarget();
+    // The normalized display text does not map to raw offsets, so a selection
+    // wrap would splice the wrong bytes: drop the selection-derived entry in the
+    // normalized variant; the word-anchored entries below stay available.
+    const target = app.readingVariant === "norm" ? null : selectionTarget();
     if (target) {
       const shortText = target.text.length > 28 ? target.text.slice(0, 28) + "..." : target.text;
       item(`Annotate "${shortText}"...`, () => openSelPopover());
@@ -694,6 +697,13 @@ export function createAnnotationUi(ctx) {
       if (!inReading) { removeSelPopover(); return; }
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed) { removeSelPopover(); return; }
+      // The normalized display text does not map to raw offsets, so a selection
+      // wrap would splice the wrong bytes: annotate in the diplomatic view.
+      if (app.readingVariant === "norm") {
+        removeSelPopover();
+        setStatus("Select in the diplomatic view to annotate.");
+        return;
+      }
       openSelPopover();
     }, 0);
   });

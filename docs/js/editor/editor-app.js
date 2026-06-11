@@ -22,6 +22,7 @@
 import {
   parseEdition,
   editCellCore,
+  editCellReadings,
   splitEdge,
   serialize,
   xmlIdSet,
@@ -69,6 +70,7 @@ const app = {
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
   sourceMode: false,  // true while the left pane shows the editable XML source
+  readingVariant: "dipl", // F4: "dipl" | "norm", which reading the pane shows (only meaningful when state.hasDualReadings)
   project: null,      // active project: manifest-parsed or PID-detected, or null
   projectFolder: null, // open project folder: { dir, name, files[], project }, or null (M2.9)
   markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
@@ -134,6 +136,35 @@ function syncViewTabs() {
   reading.setAttribute("aria-selected", String(!app.sourceMode));
   xml.classList.toggle("active", app.sourceMode);
   xml.setAttribute("aria-selected", String(app.sourceMode));
+  syncReadingVariant();
+}
+
+/**
+ * F4 reading-variant switcher (Diplomatic / Normalized): only meaningful for a
+ * document that carries dual readings, and only in the reading view. Hidden (not
+ * disabled) otherwise, like the other document controls. Reflects app.readingVariant.
+ */
+function syncReadingVariant() {
+  const wrap = $("ed-reading-variant");
+  if (!wrap) return;
+  const show = !!app.state && app.state.hasDualReadings && !app.sourceMode;
+  wrap.hidden = !show;
+  const dipl = $("variant-dipl");
+  const norm = $("variant-norm");
+  if (!dipl || !norm) return;
+  const isNorm = app.readingVariant === "norm";
+  dipl.classList.toggle("active", !isNorm);
+  dipl.setAttribute("aria-selected", String(!isNorm));
+  norm.classList.toggle("active", isNorm);
+  norm.setAttribute("aria-selected", String(isNorm));
+}
+
+function setReadingVariant(variant) {
+  if (variant !== "dipl" && variant !== "norm") return;
+  if (app.readingVariant === variant) return;
+  app.readingVariant = variant;
+  saveDocLayout({ reading: variant });
+  render();
 }
 
 /**
@@ -314,6 +345,9 @@ function applyLoad(raw, name, handle, project) {
   // Default context panel: the facsimile when the document has page images,
   // the entity index otherwise (updatePanels falls back the same way).
   app.panel = docHasImages() ? "facs" : "index";
+  // F4: the reading variant resets to diplomatic per load; applyDocLayout then
+  // restores the persisted value when this document had one.
+  app.readingVariant = "dipl";
   $("ed-doc-name").textContent = name;
   $("ed-doc-name").hidden = false;
   enableControls(true);
@@ -686,10 +720,16 @@ function renderReading() {
       const mentionClass = !cell.gap && cell.mention
         ? " mention" + (meta ? ` mention-${meta.kind}${meta.ai ? " mention-ai" : ""}` : "")
         : "";
+      // F4: the normalized variant shows @norm where a word carries one, the
+      // text as written otherwise; gap cells keep their marker. The diplomatic
+      // variant always shows the text as written.
+      const display = cell.gap
+        ? "[...]"
+        : (app.readingVariant === "norm" && cell.w && cell.w.norm != null ? cell.w.norm : cell.text);
       const span = el("span", {
         class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass,
         dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
-        text: cell.gap ? "[...]" : cell.text,
+        text: display,
         title: critTitle(cell, note, meta),
       });
       // Editor paradigm (operator decision 2026-06-10): a plain click only sets
@@ -708,7 +748,13 @@ function renderReading() {
         e.stopPropagation();
         if (cell.gap) return;
         const c = app.state.cellById.get(cell.id);
-        if (c) beginTextInput(span, c);
+        if (!c) return;
+        // F4: a word whose text sits directly inside its <w> takes the two-field
+        // diplomatic/normalized editor (the engine's atomic op accepts it). A <w>
+        // wrapping further markup (e.g. <unclear>) is refused there, so it keeps
+        // the single-field text edit.
+        if (c.w && c.node.parent === c.w.el) beginReadingsInput(span, c);
+        else beginTextInput(span, c);
       });
       span.addEventListener("mouseenter", () => highlightLine(lineIndex));
       span.addEventListener("mouseleave", () => clearLinks());
@@ -827,6 +873,73 @@ function beginTextInput(span, cell) {
   inp.addEventListener("blur", commit);
 }
 
+/**
+ * F4 two-field edit on a dual-reading word: the diplomatic core (text content,
+ * @orig kept in sync by the engine) and the normalized reading (@norm). Used in
+ * place of beginTextInput when the cell's text sits directly inside its <w>
+ * (the dblclick handler gates this; the engine refuses a <w> that wraps further
+ * markup). An empty Normalized field removes @norm, which claims no normalization.
+ */
+function beginReadingsInput(span, cell) {
+  const [, core] = splitEdge(cell.text);
+  const norm = cell.w.norm != null ? cell.w.norm : "";
+
+  const form = el("span", { class: "ed-readings-form" });
+  const field = (label, value) => {
+    const wrap = el("label", { class: "ed-readings-field" });
+    wrap.appendChild(el("span", { class: "ed-readings-label", text: label }));
+    const inp = el("input", { class: "ed-w-input", type: "text", value });
+    inp.style.width = `${Math.min(40, Math.max(2, value.length + 1))}ch`;
+    inp.style.maxWidth = "100%";
+    wrap.appendChild(inp);
+    form.appendChild(wrap);
+    return inp;
+  };
+  const diplInp = field("Diplomatic", core);
+  const normInp = field("Normalized", norm);
+
+  span.replaceWith(form);
+  // Focus the field matching the current variant, so the variant on screen is
+  // the one the cursor lands in.
+  const focusInp = app.readingVariant === "norm" ? normInp : diplInp;
+  focusInp.focus();
+  focusInp.select();
+
+  let done = false;
+  const commit = () => {
+    if (done) return;
+    done = true;
+    const diplVal = diplInp.value;
+    const normVal = normInp.value;
+    if (diplVal !== core || normVal !== norm) {
+      try {
+        const next = editCellReadings(app.state, cell.id, { core: diplVal, norm: normVal });
+        if (next !== app.state) { app.state = next; setDirty(true); }
+        else setStatus("Edit not applied: this word wraps further markup.");
+      } catch (err) {
+        setStatus(`Edit failed: ${err.message}`);
+      }
+    }
+    render();
+  };
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    render();
+  };
+  const onKey = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+  };
+  diplInp.addEventListener("keydown", onKey);
+  normInp.addEventListener("keydown", onKey);
+  // Commit only when focus leaves the whole form; moving between the two fields
+  // (relatedTarget still inside the form) must not commit.
+  form.addEventListener("focusout", (e) => {
+    if (!form.contains(e.relatedTarget)) commit();
+  });
+}
+
 // ---- the single standOff mutation path ---------------------------------------
 
 /**
@@ -911,6 +1024,13 @@ function critTitle(cell, note, meta) {
     parts.push(cell.critSole ? critLabel : `${critLabel} (shared markup)`);
   }
   if (note) parts.push(`note: ${note}`);
+  // F4: a dual-reading cell names the other reading, so the variant not on
+  // screen is still visible in the tooltip.
+  if (cell.w && cell.w.norm != null) {
+    parts.push(app.readingVariant === "norm"
+      ? `as written: ${cell.text.trim()}`
+      : `normalized: ${cell.w.norm}`);
+  }
   parts.push(cell.mention ? "click to edit the annotation"
     : "double-click to edit; right-click for actions");
   return parts.join("; ");
@@ -1319,6 +1439,9 @@ function applyDocLayout() {
     const p = activePanels().find((x) => x.id === L.panel);
     if (p && (!p.available || p.available())) app.panel = L.panel;
   }
+  // F4: only restore the reading variant for a document that carries dual
+  // readings (it is meaningless otherwise, and the switcher stays hidden).
+  if (L.reading === "norm" && app.state && app.state.hasDualReadings) app.readingVariant = "norm";
 }
 
 // ---- feature modules (M2.13 split) ------------------------------------------
@@ -1409,6 +1532,9 @@ function setSourceMode(on) {
 }
 $("view-reading").addEventListener("click", () => setSourceMode(false));
 $("view-xml").addEventListener("click", () => setSourceMode(true));
+// F4 reading-variant switcher (visible only for dual-reading documents).
+$("variant-dipl").addEventListener("click", () => setReadingVariant("dipl"));
+$("variant-norm").addEventListener("click", () => setReadingVariant("norm"));
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
 // Page turning where one expects it: arrow keys, unless typing in an input or
