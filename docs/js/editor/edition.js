@@ -30,6 +30,8 @@ import {
   isReadingContext,
   CRITICAL_LOCALS,
   editTextNode,
+  editTextAndAttrs,
+  hasAttrQName,
   countLocals,
   escapeText,
   decodeEntities,
@@ -127,6 +129,7 @@ function buildState(doc) {
   let curFolio = null;
   let curLine = null;
   let cellSeq = 0;
+  let hasDualReadings = false;
 
   const newFolio = (pbEl) => {
     const surfaceId = pbEl ? stripHash(getAttr(pbEl, "facs")) : null;
@@ -182,6 +185,20 @@ function buildState(doc) {
     return null;
   };
 
+  // F4: the nearest wrapping <w> within the line carries a dual reading: the text
+  // content is the diplomatic reading, @orig mirrors it where encoded, @norm the
+  // normalized reading. Walk the parent chain with the same reading-unit boundary
+  // as mentionRef, exposing decoded orig/norm so the dual-reading editor can act.
+  const dualReading = (node) => {
+    let p = node.parent;
+    while (p && p.type === "element") {
+      if (p.localName === "w") return { el: p, orig: getAttr(p, "orig"), norm: getAttr(p, "norm") };
+      if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") return null;
+      p = p.parent;
+    }
+    return null;
+  };
+
   // A cell id is the nearest ancestor xml:id, made unique against ids already used
   // for cells (synthetic positional fallback otherwise). Shared by text and gap cells.
   const makeCellId = (node) => {
@@ -219,6 +236,7 @@ function buildState(doc) {
         crit: "gap",
         critSole: false,
         mention: null,
+        w: null,
       });
       continue;
     }
@@ -230,6 +248,8 @@ function buildState(doc) {
     // content, i.e. whether "clear" can remove it without touching sibling content.
     const cp = e.node.parent;
     const critParent = cp && cp.type === "element" && CRITICAL_LOCALS.has(cp.localName) ? cp : null;
+    const w = dualReading(e.node);
+    if (w && w.norm != null) hasDualReadings = true;
     pushCell({
       id: makeCellId(e.node),
       text: e.text,
@@ -242,6 +262,7 @@ function buildState(doc) {
       crit: critParent ? critParent.localName : null,
       critSole: critParent ? (critParent.children.length === 1 && critParent.children[0] === e.node) : false,
       mention: mentionRef(e.node),
+      w,
     });
   }
 
@@ -263,6 +284,7 @@ function buildState(doc) {
     surfaceById,
     zoneIndex,
     folios,
+    hasDualReadings,
   };
 }
 
@@ -311,6 +333,37 @@ export function editCellCore(state, cellId, newCore) {
   if (!cell) throw new Error("Unknown cell id: " + cellId);
   const [lead, , trail] = splitEdge(cell.text);
   return editCell(state, cellId, lead + newCore + trail);
+}
+
+/**
+ * F4: edit a cell's dual reading: the diplomatic core (text content) and the
+ * normalized reading (@norm). The cell must carry a <w> ancestor (cell.w); the
+ * UI gates this, the engine refuses otherwise. Edge whitespace is preserved like
+ * editCellCore. core: undefined leaves the content (and @orig) untouched. @norm:
+ * undefined leaves it untouched, a non-empty string sets it, "" removes it (an
+ * empty norm="" would claim a normalization, its absence does not). Both the
+ * content and the attributes change in ONE re-parse. Returns a NEW model, or the
+ * SAME state when nothing changes.
+ */
+export function editCellReadings(state, cellId, { core, norm } = {}) {
+  const cell = state.cellById.get(cellId);
+  if (!cell) throw new Error("Unknown cell id: " + cellId);
+  if (!cell.w) throw new Error("Cell has no dual-reading <w>: " + cellId);
+
+  const editText = typeof core === "string";
+  const [lead, , trail] = splitEdge(cell.text);
+  const text = editText ? lead + core + trail : undefined;
+
+  const set = {};
+  // @orig mirrors the canonical diplomatic content where the source encodes it;
+  // keep them in sync to avoid a hidden inconsistency, but never invent a missing
+  // @orig (its absence is meaningful: the source did not record a separate orig).
+  if (editText && hasAttrQName(cell.w.el, "orig")) set.orig = core;
+  if (norm !== undefined) set.norm = norm === "" ? null : norm;
+
+  const newDoc = editTextAndAttrs(state.doc, cell.w.el, { text, set });
+  if (newDoc === state.doc) return state;
+  return buildState(newDoc);
 }
 
 /** The canonical serialization is the raw string itself (lossless). */

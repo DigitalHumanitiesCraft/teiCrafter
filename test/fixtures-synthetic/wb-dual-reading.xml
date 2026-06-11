@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Synthetic Wenzelsbibel dual-reading twin (no ONB data, CC0)</title>
+      </titleStmt>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <pb n="1r"/>
+      <l n="1"><lb/><w xml:id="w_1" orig="&#383;ich" norm="sich">&#383;ich</w> <w xml:id="w_2" orig="got" norm="got">got</w> <w xml:id="w_3" norm="unde">unde</w> <w xml:id="w_4">himel</w></l>
+      <l n="2"><lb/><w xml:id="w_5" orig="adam &amp; eva">adam &amp; eva</w> <w xml:id="w_6" norm='vnde'>und</w> <w xml:id="w_7" orig="&#383;chuof" norm="schuof">&#383;chuof</w></l>
+      <l n="3"><lb/><w xml:id="w_8" orig="erde" norm="erde"><unclear>erde</unclear></w></l>
+    </body>
+  </text>
+</TEI>

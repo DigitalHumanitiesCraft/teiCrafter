@@ -394,6 +394,86 @@ export function addAttr(doc, el, name, value) {
   return parseDocument(splice(doc.raw, at, at, ins));
 }
 
+/**
+ * Edit one element's text content and attribute values in a SINGLE re-parse.
+ * `text` (string) replaces the element's text content; `set` maps exact qnames to
+ * a string (set/add) or null (remove). All edits are computed against doc.raw,
+ * applied in one descending pass so earlier offsets stay valid, then parsed once;
+ * never re-parse between splices. Returns a NEW document, or the SAME doc when
+ * nothing remains to change. Atomic: if any requested part is invalid or
+ * unrepresentable (e.g. text on an element that is not a single text child),
+ * the whole op is refused and the SAME doc is returned.
+ *
+ * Attributes resolve by EXACT qname (so xml:id and id stay distinct), unlike
+ * getAttrObj which matches local-name. Absent attributes given a string value are
+ * concatenated into one insertion just after the element name, in `set` order.
+ */
+export function editTextAndAttrs(doc, el, { text, set } = {}) {
+  if (!el || el.type !== "element" || !el.attrs || el.stagStart == null) return doc;
+
+  const wantText = typeof text === "string";
+  if (wantText) {
+    // Text replacement is only representable when the element wraps exactly one
+    // text node; any other shape (children, multiple nodes, empty, self-closing)
+    // would need structural editing, so the whole op is refused for atomicity.
+    const kids = el.children;
+    if (!(kids && kids.length === 1 && kids[0].type === "text")) return doc;
+  }
+
+  const byName = new Map();
+  for (const a of el.attrs) byName.set(a.name, a);
+
+  const splices = [];      // { start, end, repl } against doc.raw, no overlaps
+  let addIns = "";         // concatenated insertion for absent attributes
+
+  if (set && typeof set === "object") {
+    for (const qname of Object.keys(set)) {
+      const value = set[qname];
+      const attr = byName.get(qname);
+      if (value === null) {
+        // Remove: drop the attribute and one preceding whitespace char if present.
+        if (!attr || attr.start == null) continue; // absent: no-op entry
+        let start = attr.start;
+        if (start > 0 && /\s/.test(doc.raw[start - 1])) start -= 1;
+        splices.push({ start, end: attr.end, repl: "" });
+      } else if (typeof value === "string") {
+        if (!RE_QNAME.test(qname)) return doc; // invalid name refuses the whole op
+        if (attr) {
+          // Replace value in place; skip the splice when it is a semantic no-op.
+          const escaped = escapeAttr(value, attr.quote);
+          if (decodeEntities(attr.rawValue) === value || escaped === attr.rawValue) continue;
+          splices.push({ start: attr.valueStart, end: attr.valueEnd, repl: escaped });
+        } else {
+          addIns += ` ${qname}="${escapeAttr(value, '"')}"`;
+        }
+      }
+      // any other value type is ignored
+    }
+  }
+
+  if (addIns) {
+    const at = el.stagStart + 1 + el.qname.length;
+    splices.push({ start: at, end: at, repl: addIns });
+  }
+
+  if (wantText) {
+    const child = el.children[0];
+    const rawSlice = doc.raw.slice(child.start, child.end);
+    const escaped = escapeText(text);
+    // Same semantic no-op guard as editTextNode.
+    if (!(decodeEntities(rawSlice) === text || escaped === rawSlice)) {
+      splices.push({ start: child.start, end: child.end, repl: escaped });
+    }
+  }
+
+  if (splices.length === 0) return doc;
+
+  splices.sort((a, b) => b.start - a.start);
+  let raw = doc.raw;
+  for (const s of splices) raw = splice(raw, s.start, s.end, s.repl);
+  return parseDocument(raw);
+}
+
 // ---- Layer 2: generic, schema-free TEI recognizers -------------------------
 
 // Milestone elements: empty markers that segment the text without wrapping it.
