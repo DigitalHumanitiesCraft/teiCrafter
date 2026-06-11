@@ -286,6 +286,22 @@ export function editCell(state, cellId, newText) {
 export const editWordText = editCell;
 
 /**
+ * The element whose attributes a cell's attribute editor targets: the cell
+ * text node's innermost wrapping element. Word-level that is the <w> itself
+ * (or a wrapper inside it, e.g. unclear); line-level the inline wrapper around
+ * the text, or <l> for verse. The reading containers p/head/note/body are no
+ * targets (same boundary as the mention walk), and gap cells have none in v1:
+ * the entry simply does not appear. Returns the element node or null.
+ */
+export function attrTargetForCell(cell) {
+  if (!cell || cell.gap || !cell.node) return null;
+  const p = cell.node.parent;
+  if (!p || p.type !== "element") return null;
+  if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") return null;
+  return p;
+}
+
+/**
  * Edit a cell by its trimmed CORE text, re-attaching the original edge whitespace
  * so a line edit never collapses the surrounding indentation. This is what the UI
  * commits: the input shows the core, the splice keeps lead/trail verbatim.

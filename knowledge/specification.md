@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-10
 language: en
-version: 0.10
+version: 0.11
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, user-stories, architecture, testing]
 ---
@@ -37,7 +37,10 @@ This replaces the earlier "two equal paths" framing. teiCrafter is one editor; t
 Open a TEI edition from the local file system (File System Access API, with a file-input fallback), or load the served synthetic demo. Split into folios by `<pb>` and navigate folio by folio. The reading text renders cell by cell (word or line).
 
 ### Edit losslessly in place
-Click a cell to correct its text inline. The edit is a single offset splice; only that text run changes, all markup and all other text are byte-preserved. The model re-parses so offsets stay correct.
+Click a cell to correct its text inline. The edit is a single offset splice; only that text run changes, all markup and all other text are byte-preserved. The model re-parses so offsets stay correct. Every standOff-layer mutation commits through one path (`commitStandoff`): a real change re-renders exactly once, an idempotent edit (same value again) is a SAME-document no-op that changes nothing, not even the dirty flag.
+
+### Edit element attributes
+A cell's context menu opens an attribute editor on the cell's innermost wrapping element (the `<w>` itself at word level, an inline wrapper or `<l>` at line level): edit or remove existing attributes, add new ones. Adding inserts the attribute directly after the element name and checks presence by exact qualified name, so `xml:id` and `id` stay distinct; add followed by remove restores the original bytes. With the TEI vocabulary loaded the name and closed-value fields suggest the element's resolved attributes with their plain-text descriptions and usage (required/recommended/optional) as hints, never enforcement; without it the editor is a fully working free-text attribute editor.
 
 ### Manage standOff entities
 Maintain an in-browser `<standOff>` index for the five entity types (person, place, org, work, event): add, rename, and delete entries, and link in-text mentions to them via `<name ref="#id">`. Each entry can carry authority identifiers (GND, GeoNames, Wikidata) as `<idno type="...">value</idno>` children, so one entity can hold several registers at once.
@@ -99,6 +102,7 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - **Reading-text gutter** (2026-06-10). The reading text's line label (`@n`) renders in an IDE-style gutter (fixed right-aligned mono channel, continuous rule, non-selectable) but keeps the edition's own numbering: an unnumbered line shows an empty cell and repeats or restarts stand, because the number is the source's, not a running count the editor invents.
 - **Editor layout is flexible and remembered** (2026-06-10). A draggable splitter (min 320px per pane, double-click reset, keyboard-resizable), a context-pane collapse toggle (a header button or Ctrl/Cmd+\, after which the `@facs` sync simply has no visible target), editor-wide text zoom, and a vertical pane stack below 900px. Split position, collapsed state and the active context tab persist per document; the text zoom globally; both through the existing settings store (`storage.js`/localStorage), not a second mechanism. The responsive case is a vertical stack, not pane-level tabs, because a third tab level over the view and panel tabs would confuse on a desktop-oriented tool.
 - **XML source: find/replace and go-to-line, but no reformat** (2026-06-10). The source view carries find / replace / go-to-line (Ctrl/Cmd+F) and a translucent selection tint so the coloured overlay text shows through a selection. A pretty-print / reformat action is deliberately absent: re-indenting would break the byte-faithful core. Markup application is not duplicated here; it stays the reading view's selection-to-annotate flow.
+- **TEI Guidelines as an on-demand authoring aid** (2026-06-10). The editor ships a vendored, version-pinned, attributed copy of the TEI P5 Guidelines compilation (`docs/data/tei/p5subset_en.json`, dual-licensed CC-BY 3.0 + BSD-2-Clause; source, SHA-256 and update procedure in its NOTICE.md). It loads lazily (idle prefetch when a project declares a TEI scope, never at boot) and answers authoring questions: which elements a module offers, which attributes an element carries (resolved recursively through the attribute-class graph), what they mean. It is explicitly NOT a validator: no content-model checking, no enforcement; suggestions are hints. Every consumer degrades to its explicit configuration when the data is unavailable, proven as a Node test. The manifest declares the scope via `teiModules`/`teiElements` (union, allow-lists only, per-type precedence): wraps in the annotate popover derive ONLY from `teiElements` (a curated list; a module-wide list does not fit a flat popover), `teiModules` scope the attribute editor's vocabulary and the Project panel line.
 
 ## Future (specified, not built)
 
@@ -108,6 +112,7 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - The project manifest's remaining consumers: the declared `indices` driving the entity index (including project-specific types such as peoples), the declared `views` as real authoring views (F4 dual reading first), and per-edition schema/Schematron validation from the `schema` field. The manifest format, its image-resolver and type-bound markup consumers, and "Open project folder" (M2.9) are built (see Key Decisions). Beyond folio-shaped editions: editing units and views for other edition types (dictionary entries, corpus sentences), as manifest-declared views over the same lossless core.
 - Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.
 - Replacing the hand-built XML source editor with CodeMirror, should it hit limits (the editable source view itself, including side-by-side with the facsimile, is built: M2.12 + M2.14).
+- Explicitly out of scope of the Guidelines integration until a real case demands it (2026-06-10): content-model validation, element insertion beyond selection wraps, per-element display rules, attribute editing on milestones (`pb`/`lb`; the engine primitive can already do it, the UI anchor is the open part), and generalizing the folio/line projection to container-shaped editions (dictionaries, drama, tables).
 
 ## Open Questions
 

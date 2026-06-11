@@ -642,6 +642,12 @@
 /* Project panel (M2.9): the open project folder's file list. */
 .ed-proj-head { font-size: var(--font-size-sm); color: var(--color-text); font-weight: 600; margin-bottom: var(--space-xs); }
 .ed-proj-vocab { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: var(--space-sm); }
+.ed-attr-row { display: flex; align-items: center; gap: var(--space-xs); }
+.ed-attr-name { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); min-width: 7ch; }
+.ed-attr-input { flex: 1 1 auto; min-width: 6ch; font-family: var(--font-mono); font-size: var(--font-size-xs);
+  padding: 2px 4px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.ed-attr-key { flex: 0 1 12ch; }
+.ed-attr-caption { font-size: var(--font-size-xs); color: var(--color-text-muted); max-width: 36ch; }
 .ed-proj-empty { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .ed-proj-list { display: flex; flex-direction: column; gap: 2px; }
 .ed-proj-file {

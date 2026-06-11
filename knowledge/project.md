@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-02
 language: en
-version: 0.10
+version: 0.11
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal, goals, integration]
 ---

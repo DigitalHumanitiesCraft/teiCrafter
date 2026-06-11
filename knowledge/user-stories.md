@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-10
 language: en
-version: 0.10
+version: 0.11
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
 related: [specification, architecture, design]
 ---
@@ -31,6 +31,7 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 - **E.4** As an editor I want to click a word or line and correct it in place so that fixing OCR or transcription errors is direct; nothing else in the file changes. *Built* (lossless offset splice; surgical-edit proof).
 - **E.5** As an editor I want my save to change nothing I did not edit so that the edition stays byte-faithful. *Built* (byte-identical round-trip on 295/295 files).
 - **E.6** As an editor I want to save in place or download so that I keep my work. *Browser-check* (File System write-in-place is Chromium-only; download is universal).
+- **E.7** As an editor I want to edit the attributes of the element wrapping a word or line (`@lemma`, `@ref`, `@type`) so that semantic detail does not force me into the XML source view. *Built* (attribute editor popover on the cell's innermost wrapping element; engine add/edit/remove through the single commit path; TEI-vocabulary suggestions as hints when loaded, free text always; browser run is the operator's gate).
 
 ## Projects (a project holds several edition types)
 
@@ -38,6 +39,7 @@ Acceptance scenarios in "As a ... I want ... so that ..." form. Status reflects 
 - **P.2** As a project lead I want a manifest (`teicrafter.project.json`) declaring my project's document types and each type's allowed elements so that collaborators only see the markup our guidelines permit for the document at hand. *Built* (documentTypes + files map; the wrap list binds to the open document's type, project default else, built-ins without a manifest).
 - **P.3** As an editor I want to drop plaintext transcriptions into my project and edit them as TEI so that plain text is a first-class starting point. *Built* (deterministic line-level draft, text carried verbatim, not AI-marked; first save creates the `.xml` in the folder).
 - **P.4** As a researcher I want to create a new project from an empty folder so that I can start my own edition without hand-writing configuration. *Built* ("New project..." writes a minimal manifest and opens the folder).
+- **P.5** As a project lead I want to declare my project's TEI vocabulary (modules and named elements) against the TEI Guidelines so that the editor's suggestions match our encoding scope. *Built* (`teiModules`/`teiElements` in the manifest; named elements feed the wrap menu, modules scope the attribute editor and the Project panel line; everything degrades to the explicit lists without the vendored data).
 
 The acceptance case for this section (operator, 2026-06-10): create an own project, put one TEI and two plaintext files in it, open and edit all three. Proven headless in `test/tools/project_case_check.mjs`; the browser run is the operator's gate.
 

@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-10
 language: en
-version: 0.10
+version: 0.11
 related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference, worked-example-szd, worked-example-zbz, promptotyping-case, paper-evidence, curated-set]
 ---
 
@@ -62,6 +62,8 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Lossless / byte-identical / byte-faithful | One concept, three precisions. **Lossless** is the product promise: saving changes nothing the human did not edit. **Byte-identical** is the no-edit case: the saved file equals the opened file in every byte. **Byte-faithful** is the with-edits case: outside the deliberately edited spans every byte is unchanged (whitespace, attribute order, comments, entity spellings included); the only difference between input and output is exactly the edit. ("Byte-exact" in older passages means byte-faithful.) | testing, specification |
 | Editorial annotation layer | standOff entities + authority `<idno>` + mention linking + notes + AI proposal (`resp="#ai"`) + live lookup + inline textual criticism (`unclear`/`del`/`add`/`gap`), all lossless | architecture, specification |
 | Project manifest | A declarative `teicrafter.project.json` next to a project's TEI files (name, schema, image resolver, allowed markup, indices, views), the machine-readable derivation of its editorial guidelines; a manifest wins, PID detection is the fallback. A project is not an edition type: it carries `documentTypes` and a `files` map, so the markup inventory binds to the open document's type | specification, architecture |
+| TEI vocabulary scope | A manifest's `teiModules`/`teiElements` declare its TEI vocabulary against a vendored, version-pinned copy of the P5 Guidelines compilation (an authoring aid, never a validator): named elements feed the wrap menu, modules scope the attribute editor; everything degrades to the explicit lists without the data | specification, architecture |
+| Single mutation path | Every standOff mutation commits through `commitStandoff` over the DOM-free `applyMutation` core: SAME-doc no-op contract, fresh note index, exactly one re-render on a real change | architecture, testing |
 | File System Access API | Lets the editor read and write editions locally without a backend | architecture |
 
 ## Lineage
@@ -70,4 +72,4 @@ teiCrafter shares architecture principles, UI patterns and the design system wit
 
 ## History Note
 
-Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor). The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Versions 0.4 to 0.9 then track the as-built growth: the editorial annotation layer (0.6), the SZD worked example and the Promptotyping case (0.7), the ZBZ worked example and the Editopia evidence sheet (0.8), the curated example set (0.9). Version 0.10 settles the editor surface: the welcome screen dissolved into the empty two-pane editor, an IDE-style line-number gutter, editor-wide text zoom, a draggable splitter and context-pane collapse with per-document layout persistence, and XML-source find/replace with go-to-line. The full narrative is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.
+Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor). The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Versions 0.4 to 0.9 then track the as-built growth: the editorial annotation layer (0.6), the SZD worked example and the Promptotyping case (0.7), the ZBZ worked example and the Editopia evidence sheet (0.8), the curated example set (0.9). Version 0.10 settles the editor surface: the welcome screen dissolved into the empty two-pane editor, an IDE-style line-number gutter, editor-wide text zoom, a draggable splitter and context-pane collapse with per-document layout persistence, and XML-source find/replace with go-to-line. Version 0.11 consolidates the mutation path (one `commitStandoff` over a DOM-free core), extracts the project-folder and validation surfaces from the integrator, vendors the TEI P5 Guidelines compilation behind a DOM-free reader (manifest-scoped, lazily loaded, degradation proven) and adds the generic attribute editor. The full narrative is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.

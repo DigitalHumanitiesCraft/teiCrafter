@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-10
 language: en
-version: 0.10
+version: 0.11
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
@@ -42,6 +42,8 @@ What teiCrafter consumes and produces, and which TEI proves the engine. teiCraft
 | Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10) |
 
 Output is the same TEI, edited byte-losslessly (only edited text runs change), saved in place via the File System Access API or downloaded. The LLM on-ramp output is a fresh TEI draft, marked as machine-generated and unreviewed until the human verifies it.
+
+The editor additionally ships one reference dataset: a vendored, version-pinned copy of the TEI P5 Guidelines compilation (`docs/data/tei/p5subset_en.json`; source, SHA-256, dual license and update procedure in the NOTICE.md next to it). It backs markup and attribute suggestions and is data the tool consults, never content it writes into an edition.
 
 ## How the Engine Reads TEI
 

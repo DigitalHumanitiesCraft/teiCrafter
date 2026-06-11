@@ -373,6 +373,27 @@ export function removeAttr(doc, el, localName) {
   return parseDocument(splice(doc.raw, start, attr.end, ""));
 }
 
+// QName: NCName with one optional prefix colon. Enough to reject injection and
+// malformed names, not a full XML 1.0 name check.
+const RE_QNAME = /^[A-Za-z_][A-Za-z0-9_.-]*(?::[A-Za-z_][A-Za-z0-9_.-]*)?$/;
+
+/** True if the element carries an attribute with this exact qualified name. */
+export function hasAttrQName(el, qname) {
+  return !!(el.attrs && el.attrs.some((a) => a.name === qname));
+}
+
+/** Add an attribute, inserted directly after the element name. Returns a NEW
+ *  document, or the SAME doc when the name is not a valid qualified name or
+ *  the element already carries that exact qname. Unlike getAttr/removeAttr
+ *  (local-name based), presence is checked by exact qname, so xml:id and id
+ *  stay distinct. */
+export function addAttr(doc, el, name, value) {
+  if (!RE_QNAME.test(String(name)) || hasAttrQName(el, name)) return doc;
+  const at = el.stagStart + 1 + el.qname.length;
+  const ins = ` ${name}="${escapeAttr(value, '"')}"`;
+  return parseDocument(splice(doc.raw, at, at, ins));
+}
+
 // ---- Layer 2: generic, schema-free TEI recognizers -------------------------
 
 // Milestone elements: empty markers that segment the text without wrapping it.

@@ -14,13 +14,24 @@ status: active
 created: 2026-02-05
 updated: 2026-06-10
 language: en
-version: 0.10
+version: 0.11
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-10 (night): Refactoring package, TEI Guidelines integration, attribute editor
+
+Trigger: the operator asked for a detailed repository analysis (what to refactor, what is oddly built, whether teiCrafter can truly support all TEI elements, and whether the TEI Guidelines themselves can be brought in to scope elements and modules). The analysis became a three-part implementation package, reviewed twice with the operator before execution. Decisions:
+
+- **One mutation path.** The standOff mutation path existed twice (a central helper with no-op detection, seven inline copies without it); every mutation now commits through `commitStandoff` over a DOM-free core, so the no-op contract, the fresh note index and the exactly-one-re-render invariant hold by construction. Reason: every future mutating feature inherits the invariants instead of re-implementing them. Lesson: push the node-testable core out of the DOM-bound integrator, then the proof runs the same function the browser does.
+- **The last regex XML parse fell.** The editorial-note index is a tree walk over the parsed document now; the regex it replaced silently missed single-quoted targets and leaked child markup into tooltips. Lesson: a regex over XML is a latent bug even at twenty lines.
+- **TEI Guidelines as data, not as a validator.** The TEI's machine-readable P5 compilation is vendored (version-pinned, attributed, byte-verbatim) and read by a DOM-free module; it loads lazily and every consumer degrades to its explicit configuration without it, which is proven as a Node test, not promised. The decision NOT to validate content models stands: the data answers what markup exists and what it means; judging conformance stays with the schema harness. Lessons: attribute resolution must recurse through the attribute-class graph (a one-level merge silently loses inherited attributes such as `@facs`); the `_en` variant is not smaller than the full file, it is just semantically cleaner; the compilation carries no version string of its own, so the pin is metadata of the copy.
+- **Scope binds to the manifest, wraps stay curated.** A manifest declares its TEI vocabulary as `teiModules`/`teiElements`, but wraps derive only from the named elements: a module-wide list does not fit a flat popover, so modules scope the attribute editor and the Project panel line instead. Reason: the wrap menu is a curated working set, not a browsing surface.
+- **Generic attribute editing, v1 on cell elements.** The engine gained the missing `addAttr` primitive (exact-qname presence check, so `xml:id` and `id` stay distinct) and the editor an attribute popover on a cell's innermost wrapping element. Milestones (`pb`/`lb`) wait for a real case; the primitive can already serve them.
+- **Working model for the session:** isolated, fully specified new-file packages were delegated to sub-agents (with explicit model choice), while the sequential refactoring chain through the integrator stayed with the orchestrator, which reviewed every delivery against the running proofs and made all commits. Reason: delegation pays where a proof is the acceptance criterion and files are disjoint; reviewing a foreign diff through a 1.6k-line integrator costs as much as writing it.
 
 ## 2026-06-10 (evening, continued): The editor surface settles, the welcome screen dissolved
 

@@ -25,13 +25,17 @@
  *     revealEntity(id),           // switch the right pane to the index, scrolled to an entry
  *     highlightMentions(entity),
  *     beginTextInput(span, cell), beginNote(span, cell), beginCritic(span, cell),
+ *     ensureGuidelines() -> Promise<g|null>,  // lazy TEI vocabulary (null on failure)
+ *     guidelinesNow() -> g|null,              // the loaded vocabulary, if any
  *   }
  *   Wires its own global listeners (mouseup selection, Escape, contextmenu).
  */
 
 import { el, clear } from "./dom.js";
 import * as standoff from "./standoff.js";
-import { parseEdition, rawRangeForDisplay, unescapeXmlText } from "./edition.js";
+import { parseEdition, rawRangeForDisplay, unescapeXmlText, attrTargetForCell } from "./edition.js";
+import { addAttr, editAttrValue, removeAttr } from "./tei-document.js";
+import { elementByName } from "./tei-guidelines.js";
 import { buildAuthorityForm } from "./authority-form.js";
 import { requireCtx } from "./ctx.js";
 
@@ -70,11 +74,13 @@ function allEntityIds(doc) {
 export function createAnnotationUi(ctx) {
   requireCtx("createAnnotationUi", ctx,
     ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage", "runLookup",
-     "revealEntity", "highlightMentions", "beginTextInput", "beginNote", "beginCritic"], ["app"]);
+     "revealEntity", "highlightMentions", "beginTextInput", "beginNote", "beginCritic",
+     "ensureGuidelines", "guidelinesNow"], ["app"]);
   const {
     app, setStatus, commitStandoff,
     entityMetaMap, entityUsage, runLookup, revealEntity,
     highlightMentions, beginTextInput, beginNote, beginCritic,
+    ensureGuidelines, guidelinesNow,
   } = ctx;
 
   const reading = () => document.getElementById("ed-reading");
@@ -137,6 +143,9 @@ export function createAnnotationUi(ctx) {
         item(app.state.profile === "word" ? "Edit word" : "Edit line", () => { if (c()) beginTextInput(span, c()); });
         item("Add note...", () => { if (c()) beginNote(span, c()); });
         item("Mark: unclear / deleted / added / gap...", () => { if (c()) beginCritic(span, c()); });
+        if (attrTargetForCell(cell)) {
+          item("Edit element attributes...", () => { if (c()) openAttrEditor(span, c()); });
+        }
         if (app.state.profile === "word") {
           item("Link this word to an entity...", () => { if (c()) openEntityPickerFor(span, c()); });
         }
@@ -285,6 +294,120 @@ export function createAnnotationUi(ctx) {
     });
     form.classList.add("ed-sel-auth");
     return form;
+  }
+
+  // ---- attribute editor -----------------------------------------------------
+  // Edits the attributes of a cell's innermost wrapping element (w, an inline
+  // wrapper, l). Works entirely on the engine primitives (addAttr,
+  // editAttrValue, removeAttr) through commitStandoff. The TEI vocabulary, when
+  // loaded, contributes name and closed-value suggestions plus a plain-text
+  // description; it never enforces anything, and without it the editor is a
+  // fully working free-text attribute editor (the degradation contract).
+
+  function openAttrEditor(span, cell) {
+    removeMenu();
+    removeSelPopover();
+    const target = attrTargetForCell(cell);
+    if (!target) return;
+    const host = reading();
+    const g = guidelinesNow();
+    if (!g) ensureGuidelines(); // arrives for the next open; this one stays free-text
+    const spec = g ? elementByName(g, target.localName) : null;
+    const attDef = (name) => (spec ? spec.attributes.find((a) => a.ident === name) || null : null);
+
+    // After a real change the reading pane re-rendered (popover gone): reopen
+    // on the same cell id so several attribute edits stay one gesture.
+    const commitAttr = (fn, opts) => {
+      if (!commitStandoff(fn, opts)) return;
+      const c = app.state.cellById.get(cell.id);
+      const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
+      if (c && s) openAttrEditor(s, c);
+    };
+
+    const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
+    pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `attributes of <${target.qname}>` }));
+
+    for (const attr of target.attrs || []) {
+      const def = attDef(attr.name);
+      const row = el("div", { class: "ed-sel-pop-row ed-attr-row" });
+      row.appendChild(el("span", {
+        class: "ed-attr-name", text: attr.name,
+        title: def && def.desc ? def.desc : "",
+      }));
+      const input = el("input", { class: "ed-attr-input", type: "text", value: attr.value });
+      const apply = () => commitAttr(
+        (doc) => editAttrValue(doc, attr, input.value),
+        { label: `Set @${attr.name} on <${target.qname}>`, failPrefix: "Set attribute",
+          noopLabel: "Attribute unchanged" },
+      );
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); apply(); } });
+      row.appendChild(input);
+      const setBtn = el("button", { class: "ed-act-btn", text: "set", title: "apply this value" });
+      setBtn.addEventListener("click", (e) => { e.stopPropagation(); apply(); });
+      row.appendChild(setBtn);
+      const rmBtn = el("button", { class: "ed-act-btn", text: "remove", title: "remove this attribute" });
+      rmBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        commitAttr(
+          (doc) => removeAttr(doc, target, attr.localName),
+          { label: `Removed @${attr.name} from <${target.qname}>`, failPrefix: "Remove attribute" },
+        );
+      });
+      row.appendChild(rmBtn);
+      pop.appendChild(row);
+    }
+
+    // Add row: free text always works; with the vocabulary loaded the name
+    // field suggests the element's resolved attributes and a closed value list
+    // suggests its items (hints, never enforcement).
+    const nameList = el("datalist", { id: "ed-attr-namelist" });
+    if (spec) for (const a of spec.attributes) nameList.appendChild(el("option", { value: a.ident }));
+    const valueList = el("datalist", { id: "ed-attr-valuelist" });
+    const caption = el("div", { class: "ed-attr-caption" });
+    const addRow = el("div", { class: "ed-sel-pop-row ed-attr-row" });
+    const nameInput = el("input", {
+      class: "ed-attr-input ed-attr-key", type: "text",
+      placeholder: "attribute", list: "ed-attr-namelist",
+    });
+    const valueInput = el("input", {
+      class: "ed-attr-input", type: "text",
+      placeholder: "value", list: "ed-attr-valuelist",
+    });
+    const syncCaption = () => {
+      clear(valueList);
+      caption.textContent = "";
+      const def = attDef(nameInput.value.trim());
+      if (!def) return;
+      if (def.valList) for (const it of def.valList.items) valueList.appendChild(el("option", { value: it.ident }));
+      const usage = def.usage === "req" ? "required" : def.usage === "rec" ? "recommended" : "optional";
+      caption.textContent = `${usage}${def.datatype ? `, ${def.datatype}` : ""}${def.desc ? `: ${def.desc}` : ""}`;
+    };
+    nameInput.addEventListener("input", syncCaption);
+    const doAdd = () => {
+      const nm = nameInput.value.trim();
+      if (!nm) return;
+      commitAttr(
+        (doc) => addAttr(doc, target, nm, valueInput.value),
+        { label: `Added @${nm} to <${target.qname}>`, failPrefix: "Add attribute",
+          noopLabel: "Nothing added (attribute exists or the name is invalid)" },
+      );
+    };
+    for (const inp of [nameInput, valueInput]) {
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); doAdd(); } });
+    }
+    const addBtn = el("button", { class: "ed-act-btn", text: "add", title: "add this attribute" });
+    addBtn.addEventListener("click", (e) => { e.stopPropagation(); doAdd(); });
+    addRow.append(nameInput, valueInput, addBtn);
+    pop.append(nameList, valueList, addRow, caption);
+
+    const closeRow = el("div", { class: "ed-sel-pop-row" });
+    const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "close" });
+    xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+    closeRow.appendChild(xBtn);
+    pop.appendChild(closeRow);
+
+    anchorPopAt(pop, span.getBoundingClientRect(), host);
+    nameInput.focus();
   }
 
   // ---- selection annotation (M2.8) ----------------------------------------

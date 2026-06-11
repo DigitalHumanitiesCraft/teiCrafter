@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-10
 language: en
-version: 0.10
+version: 0.11
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, user-stories, architecture]
 ---
@@ -97,6 +97,7 @@ Violet appears exclusively on AI-origin content: the generated-and-unreviewed ba
 - **No raw hex in components:** tokens only.
 - **Keyboard focus is always visible.** Every interactive control has a `:focus-visible` outline (gold; violet on AI-origin controls), the keyboard counterpart of the triple-coding stance: state never hangs on hover alone.
 - **Disabled controls are quiet.** A disabled button never carries the primary accent, and chrome that cannot be used yet is hidden rather than shown disabled.
+- **Suggestions are hints, never enforcement.** Vocabulary-backed suggestions (attribute names, closed value lists) appear as datalists and captions; free text always stays possible, and deterministic reference data carries no AI marking.
 
 ## Annotation Visibility Layer (M2.5)
 
@@ -133,6 +134,8 @@ The M2.6 inline cell action chooser that accompanied this layer was superseded t
 | Entity index (M2.11, a right-pane context panel since M2.14): filterable `<standOff>` index with mention counts; row click jumps to the first mention while the index stays visible | Built (2026-06-10) |
 | Project panel (M2.9, right-pane context panel): the open project folder's `.xml`/`.txt` file list with document-type labels; a click opens the file (a plaintext draft marked as such), the active file highlighted | Built (2026-06-10) |
 | Annotation editor with in-place authority editing (idno add/remove + live lookup at the mention itself, M2.11) | Built (2026-06-10) |
+| Attribute editor popover on a cell's innermost wrapping element: existing attributes editable/removable, an add row; TEI-vocabulary suggestions (names, closed value lists, plain-text descriptions, usage) appear as hints, never enforcement, and carry NO new colour (the vocabulary is deterministic data, violet stays AI-only); same popover language as the annotate surfaces (`ed-sel-pop`, tokens only) | Built (2026-06-10) |
+| Project panel TEI vocabulary line: states the project's declared scope and load state in one factual sentence ("TEI P5 4.11.0: modules ... (n elements in scope)") | Built (2026-06-10) |
 | Authority lookup (M3.3): hand-entry plus live external lookup of authority records | Built |
 | AI entity suggestion (M3.7) | Removed from the UI (operator decision 2026-06-10); `ai-suggest.js` retained for a text-anchored re-entry |
 | Note creation (M3.5): adding `<note>` annotations to the document | Built |

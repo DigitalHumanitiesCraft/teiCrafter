@@ -1336,6 +1336,7 @@ const annot = createAnnotationUi({
   runLookup: overlay.runLookup,
   revealEntity: overlay.revealEntity,
   highlightMentions, beginTextInput, beginNote, beginCritic,
+  ensureGuidelines, guidelinesNow,
 });
 const projectFolderUi = createProjectFolder({
   app, setStatus, setDirty, confirmDiscard, load,
