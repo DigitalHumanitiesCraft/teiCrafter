@@ -52,6 +52,11 @@ function stripHash(v) {
 // Entity tokens decodeEntities resolves, for the display->raw offset scanner.
 const RE_ENTITY_TOKEN = /&(?:lt|gt|quot|apos|amp|#x[0-9a-fA-F]+|#\d+);/y;
 
+// Block-level reading containers whose start begins a new render line, so the
+// first (bare, <lb>-less) line of a paragraph does not merge with the previous
+// block's last line. <l> is already a line trigger; <lb/> marks breaks within.
+const BLOCK_LINE = new Set(["p", "head", "lg", "ab"]);
+
 /**
  * Map a DISPLAY range (offsets into the decoded text the renderer shows, i.e.
  * textOf()/cell.text) back to RAW offsets relative to the text node's slice.
@@ -78,6 +83,25 @@ export function rawRangeForDisplay(rawSlice, dFrom, dTo) {
     }
   }
   return relFrom >= 0 && relTo > relFrom ? [relFrom, relTo] : null;
+}
+
+/**
+ * Zero-width sibling of rawRangeForDisplay: map a single DISPLAY caret offset to
+ * a RAW offset relative to the text node's slice (for Author-mode structural
+ * splices that act at a caret, not a selection). Returns the raw position or null
+ * when the offset is past the decoded end.
+ */
+export function rawOffsetForDisplay(rawSlice, dOff) {
+  if (!Number.isInteger(dOff) || dOff < 0) return null;
+  let rawPos = 0, dispPos = 0;
+  while (true) {
+    if (dispPos === dOff) return rawPos;
+    if (rawPos >= rawSlice.length) return null;
+    RE_ENTITY_TOKEN.lastIndex = rawPos;
+    const m = RE_ENTITY_TOKEN.exec(rawSlice);
+    if (m) { dispPos += decodeEntities(m[0]).length; rawPos += m[0].length; }
+    else { dispPos += 1; rawPos += 1; }
+  }
 }
 
 /** Count tracked element tags in a raw TEI string (namespace-agnostic, regex).
@@ -111,6 +135,7 @@ function buildState(doc) {
     if (n.type === "element") {
       if (n.localName === "pb") events.push({ k: "pb", el: n });
       else if (n.localName === "lb" || n.localName === "l") events.push({ k: "line", el: n });
+      else if (BLOCK_LINE.has(n.localName)) events.push({ k: "block" });
       // A <gap/> stands in for omitted/illegible text: it has no text node, so emit
       // it as its own event to keep the line visible and the marker navigable. Gate
       // it the same way text cells are (no header/facsimile/standOff ancestor), so a
@@ -145,7 +170,10 @@ function buildState(doc) {
   };
   const newLine = (meta) => {
     if (!curFolio) newFolio(null); // reading text before any <pb>
-    curLine = { n: meta.n ?? null, facs: meta.facs ?? null, cells: [] };
+    // el/kind: the structural element that triggered this render line (<l> verse
+    // or <lb/> milestone), so Author-mode Enter/Backspace can split or merge the
+    // right element. Set only here, so a coalesced <l>+child <lb> keeps kind "l".
+    curLine = { n: meta.n ?? null, facs: meta.facs ?? null, el: meta.el ?? null, kind: meta.kind ?? null, cells: [] };
     curFolio.lines.push(curLine);
     lines.push(curLine);
   };
@@ -216,8 +244,11 @@ function buildState(doc) {
 
   for (const e of events) {
     if (e.k === "pb") { newFolio(e.el); continue; }
+    // A block container start ends the current line, so its first content opens a
+    // fresh line even without an <lb/>. Nulling (not creating) avoids empty lines.
+    if (e.k === "block") { if (curLine && curLine.cells.length) curLine = null; continue; }
     if (e.k === "line") {
-      lineTrigger({ n: getAttr(e.el, "n"), facs: stripHash(getAttr(e.el, "facs")) });
+      lineTrigger({ n: getAttr(e.el, "n"), facs: stripHash(getAttr(e.el, "facs")), el: e.el, kind: e.el.localName });
       continue;
     }
     if (e.k === "gap") {

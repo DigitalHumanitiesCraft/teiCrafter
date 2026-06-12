@@ -2,8 +2,9 @@
  * teiCrafter Editor -- deterministic plaintext intake.
  *
  * Turns a plaintext file into minimal line-level TEI so it opens in the same
- * editor: paragraphs split on blank lines, every line prefixed with <lb/>
- * (the Hersch shape the editor already reads). This is transport, not
+ * editor: paragraphs split on blank lines, <lb/> marking the break BETWEEN lines
+ * (the first line of a paragraph stays bare, the <p> already opens it). This is
+ * transport, not
  * interpretation: the text is carried verbatim (XML-escaped only), no model
  * is involved and the same input always yields the same output. It therefore
  * does NOT use the violet AI marking, which is reserved for machine-plausible
@@ -32,16 +33,16 @@ const MARKER = /\|(\d+)\|/g;
 const SURFACE_ID_PREFIX = "surface_";
 
 /**
- * Render one physical input line into TEI tokens. Without a marker this is
- * exactly "<lb/>" + escaped line (the historical shape). With markers the line
- * splits: each non-empty text segment opens an <lb/> line and each marker
- * becomes a <pb>. pbTag(n) renders the page-break tag (it owns the running
- * page index and the optional @facs). At most one space directly bordering a
- * marker is trimmed.
+ * Render one physical input line into TEI tokens. emitText(seg) escapes a text
+ * segment and prefixes <lb/> for every segment except the first one of the
+ * paragraph (the caller owns that running state), so <lb/> marks the break
+ * between lines, not the start of the first. A marker becomes a <pb> via
+ * pbTag(n) (which owns the running page index and the optional @facs). At most
+ * one space directly bordering a marker is trimmed.
  */
-function renderLine(line, pbTag) {
+function renderLine(line, pbTag, emitText) {
   MARKER.lastIndex = 0;
-  if (!MARKER.test(line)) return "<lb/>" + escapeText(line);
+  if (!MARKER.test(line)) return emitText(line);
 
   let result = "";
   let pos = 0;
@@ -50,13 +51,13 @@ function renderLine(line, pbTag) {
   while ((m = MARKER.exec(line)) !== null) {
     let seg = line.slice(pos, m.index);
     if (seg.endsWith(" ")) seg = seg.slice(0, -1);
-    if (seg !== "") result += "<lb/>" + escapeText(seg);
+    if (seg !== "") result += emitText(seg);
     result += pbTag(m[1]);
     pos = m.index + m[0].length;
     if (line[pos] === " ") pos += 1;
   }
   const tail = line.slice(pos);
-  if (tail !== "") result += "<lb/>" + escapeText(tail);
+  if (tail !== "") result += emitText(tail);
   return result;
 }
 
@@ -106,7 +107,13 @@ export function teiFromPlaintext(text, title, options = {}) {
   // (whose markers claim the following indices in document order).
   const leadPb = pbTag(1);
   const body = paras.length
-    ? paras.map((p) => "        <p>" + p.map((l) => renderLine(l, pbTag)).join("\n          ") + "</p>").join("\n")
+    ? paras.map((p) => {
+        // <lb/> marks the break between lines: the first text segment of the
+        // paragraph stays bare, each later one opens with <lb/>.
+        let started = false;
+        const emitText = (seg) => { const pre = started ? "<lb/>" : ""; started = true; return pre + escapeText(seg); };
+        return "        <p>" + p.map((l) => renderLine(l, pbTag, emitText)).join("\n          ") + "</p>";
+      }).join("\n")
     : "        <p/>";
 
   // Only surfaces that a <pb> actually references (cap at the page count), so no

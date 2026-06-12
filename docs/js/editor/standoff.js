@@ -91,7 +91,7 @@ export function slugify(s) {
 }
 
 /** Collect every xml:id present in the document. */
-function collectIds(doc) {
+export function collectIds(doc) {
   const ids = new Set();
   walk(doc.root, (n) => {
     if (n.type === "element") {
@@ -103,7 +103,7 @@ function collectIds(doc) {
 }
 
 /** Make an id unique against an existing set by appending _2, _3, ... if needed. */
-function uniquify(base, taken) {
+export function uniquify(base, taken) {
   if (!taken.has(base)) return base;
   let i = 2;
   while (taken.has(base + "_" + i)) i++;
