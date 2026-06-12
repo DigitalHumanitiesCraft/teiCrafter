@@ -1,10 +1,38 @@
 # teiCrafter Handoff and Working State
 
 Action-layer summary so work can resume without re-deriving anything. Snapshot:
-2026-06-12, end of the HSA-letter feedback session (six accepted packages, a
-behavior-preserving extraction, PLAN slimmed, knowledge synced to v0.13).
-Replaces the 2026-06-11 F4 snapshot. Conceptual detail lives in `knowledge/`
-(start at `INDEX.md`); per-milestone evaluation reports live in `reports/`.
+2026-06-12, end of a documentation and language session (PLAN.md translated to
+English, knowledge/ refactored, English commit rule set). The product state, the
+open gates and the one next step are unchanged from the HSA-letter feedback session
+that precedes it (recorded below). Conceptual detail lives in `knowledge/` (start at
+`INDEX.md`); per-milestone evaluation reports live in `reports/`.
+
+## This session (documentation and language)
+
+Local commit `eda7c90` on `main`, NOT pushed (one ahead of origin):
+- **PLAN.md is now English.** Full translation, structure 1:1; the former
+  "deliberately German" header rationale is dropped. With knowledge/ already
+  English, the repo documentation is now English throughout. CLAUDE.md gained one
+  line mandating English commit messages for this repo (local override of the
+  global German default); `eda7c90` is the first commit under it.
+- **knowledge/ refactoring (same truth, better structure).** integration.md
+  section 3 de-staled: the pre-M2.13 module list, the duplicated layer signatures
+  and the raw hex values became references into architecture.md and design.md (64
+  lines leaner). Two verified proof drifts fixed in goals.md (project_manifest_check
+  62 to 81, converter-reference v0.5 to v0.6.1, both checked against the running
+  proof and the frontmatter). attr_edit_check.mjs added as a proof row in testing.md
+  (46/46). The missing topics field added to INDEX.md and journal.md. version stays
+  0.14 repo-wide (maintenance, no new knowledge, so no bump).
+- **Deliberately left for the operator:** the multiply-stated LLM-flag status and
+  the threefold lossless definition (redundancy, not staleness; the Promptotyping
+  docs are intentionally self-supporting per function), and converter-reference.md's
+  line-anchored code references (SZD lane, own version).
+
+**Parallel lane in the working tree, do NOT commit:** `docs/css/editor.css`,
+`docs/css/style.css` and `docs/editor.html` carry another lane's CSS refactoring (a
+global `[hidden] { display: none !important }` guard replacing per-component
+overrides, a shared form-control surface, dropped redundant classes and dated
+comments). Left uncommitted and untouched here; that lane owns those three files.
 
 ## Frame: what this lane is working on
 
@@ -18,10 +46,11 @@ Editopia experiment (operator, 2026-06-09): demonstrable added value for the
 Hersch project, confirmed by the ZBZ. The Wenzelsbibel (PLUS Salzburg, autumn
 2026) is the primary own use case beyond Editopia.
 
-## State at handoff (pushed)
+## State after the HSA session (the product baseline this session did not change)
 
-Branch `main`, clean working tree, no stash, in sync with `origin/main`
-(pushed 2026-06-12 with the operator's approval, `ae9303e..df19321`).
+Branch `main`, then a clean working tree in sync with `origin/main`
+(pushed 2026-06-12 with the operator's approval, `ae9303e..df19321`); this session
+added the local `eda7c90` on top, so `main` is now one ahead of origin.
 The session's commits, in order: the session branch had already been merged
 before this session started; then `3147529` (engine: `|N|` page markers + the
 hsa-7711 demo project), `bad70d3` (draft-recovery core + proof), `317293d`
