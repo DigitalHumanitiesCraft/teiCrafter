@@ -113,6 +113,12 @@
     box-sizing: border-box;
 }
 
+/* The hidden attribute always wins. A component's own display (flex/grid/inline-
+   block) would otherwise beat the user-agent [hidden] rule by origin and leak the
+   element while set hidden; this one guard makes hidden reliable everywhere and
+   replaces a per-component [hidden] override on every such block. */
+[hidden] { display: none !important; }
+
 html {
     font-size: 16px;
     -webkit-font-smoothing: antialiased;

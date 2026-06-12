@@ -17,10 +17,6 @@
 }
 .ed-toolbar .group { display: flex; align-items: center; gap: var(--space-xs); }
 .ed-toolbar .sep { width: 1px; height: 22px; background: var(--color-border); margin: 0 var(--space-xs); }
-/* The document-only toolbar parts are hidden until a document is loaded; the
-   explicit rule is needed because the display:flex above would beat the
-   user-agent [hidden] rule (same trap as the generated banner below). */
-.ed-toolbar .ed-tool-doc[hidden] { display: none; }
 .ed-folio-label { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-family: var(--font-mono); }
 
 .ed-btn {
@@ -44,6 +40,18 @@
 }
 .ed-btn-ai:focus-visible { outline-color: var(--color-ai); }
 
+/* Shared form-control surface: the text inputs, selects and textareas across
+   the index panel, the annotate popover, the source find bar and the LLM modal
+   sit on one field surface (token-only). Each control adds only its own font,
+   size and padding; focus colours stay with the control (gold in the human
+   editor, violet in the LLM modal). */
+.ed-idx-filter, .ed-idx-add-input, .ed-idx-authinput, .ed-idx-authtypesel,
+.ed-sel-filter, .ed-modal textarea, .ed-modal select, .ed-modal input,
+.ed-src-find input {
+  color: var(--color-text); background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+}
+
 /* Examples dropdown menu in the toolbar (a real menu, not a select-as-action). */
 .ed-dd-wrap { position: relative; display: inline-flex; }
 .ed-dd {
@@ -52,7 +60,6 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   background: var(--color-panel); box-shadow: var(--shadow-pop);
 }
-.ed-dd[hidden] { display: none; }
 .ed-dd-item { font-family: var(--font-ui); font-size: var(--font-size-sm); text-align: left;
   cursor: pointer; border: none; background: none; color: var(--color-text);
   padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); white-space: nowrap; }
@@ -69,10 +76,6 @@
   background: var(--color-ai-tint); border-bottom: 1px solid var(--color-ai);
   font-size: var(--font-size-xs); color: var(--color-ai);
 }
-/* The hidden attribute must win over the display:flex above (author rules beat the
-   user-agent [hidden] rule regardless of specificity), or the banner shows even when
-   no LLM-generated edition is loaded. */
-.ed-genbanner[hidden] { display: none; }
 .ed-genbanner b { color: var(--color-ai); }
 
 /* Plaintext-draft banner: deterministic transport, not AI, so it stays neutral
@@ -83,7 +86,6 @@
   background: var(--color-surface-sunken); border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-xs); color: var(--color-text-body);
 }
-.ed-draftbanner[hidden] { display: none; }
 .ed-draftbanner-dismiss { margin-left: auto; }
 
 /* Document strip: a slim factual line under the toolbar, visible only while a
@@ -97,7 +99,6 @@
   font-family: var(--font-ui); font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
-.ed-docstrip[hidden] { display: none; }
 .ed-docstrip:hover { color: var(--color-text-body); }
 .ed-docstrip:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
 .ed-docstrip-name { font-family: var(--font-mono); font-size: var(--font-size-sm);
@@ -116,7 +117,6 @@
   display: flex; align-items: center; justify-content: center;
   background: var(--scrim-modal); padding: var(--space-md);
 }
-.ed-modal[hidden] { display: none; }
 .ed-modal-card {
   width: min(640px, 100%); max-height: 90vh; overflow: auto;
   background: var(--color-panel); border: 1px solid var(--color-border);
@@ -135,9 +135,8 @@
 .ed-field-row { display: flex; gap: var(--space-sm); }
 .ed-field-row .ed-field { flex: 1; min-width: 0; }
 .ed-modal textarea, .ed-modal select, .ed-modal input {
-  font-family: var(--font-ui); font-size: var(--font-size-sm); color: var(--color-text);
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm); padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-ui); font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
 }
 .ed-modal textarea { font-family: var(--font-mono); resize: vertical; }
 .ed-modal textarea:focus, .ed-modal select:focus, .ed-modal input:focus { outline: 2px solid var(--color-ai); border-color: var(--color-ai); }
@@ -145,23 +144,21 @@
 .ed-modal-status.err { color: var(--color-problem); }
 .ed-modal-status.busy { color: var(--color-ai); }
 
-/* Dual view (M2.14): two panes, always. Left is the text work surface (reading
+/* Dual view: two panes, always. Left is the text work surface (reading
    text or XML source, the view tabs switch it); right is the context panel
    (facsimile, entity index, project panels; the panel tabs switch it). */
 .ed-main {
   display: grid;
   grid-template-columns: var(--ed-split, 52%) 6px minmax(0, 1fr);
   flex: 1; min-height: 0;
-}
-.ed-main[hidden] { display: none; }
-/* Collapsed: the context pane and the splitter fold away and the text pane
+}/* Collapsed: the context pane and the splitter fold away and the text pane
    takes the full width. The @facs click sync then has no visible target. */
 .ed-main.right-collapsed { grid-template-columns: 1fr; }
 .ed-main.right-collapsed > #ed-splitter,
 .ed-main.right-collapsed > #ed-pane-right { display: none; }
 /* min-height: 0 on the pane AND its body breaks the min-height:auto chain, so
    tall content (the XML source gutter) scrolls INSIDE the pane instead of
-   growing the pane past the viewport ("everything slides down"). */
+   growing the pane past the viewport. */
 .ed-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 /* Draggable splitter between the panes: a thin rule whose 6px column widens the
    hit area. Resizable by pointer drag, double-click reset, or arrow keys when
@@ -185,7 +182,7 @@
 }
 .ed-pane-head-right { display: inline-flex; align-items: center; gap: var(--space-md); }
 
-/* View / panel tabs in the pane heads (M2.14): a small segmented switcher.
+/* View / panel tabs in the pane heads: a small segmented switcher.
    The active tab reads as the pane's title; exactly one is active per pane. */
 .ed-tabs { display: inline-flex; align-items: center; gap: var(--space-xs); }
 .ed-tab {
@@ -203,11 +200,9 @@
 
 /* Context panels in the right pane: exactly the active one is shown. */
 .ed-panel { height: 100%; min-height: 0; }
-.ed-panel[hidden] { display: none; }
 .ed-pane-body { flex: 1; min-height: 0; overflow: auto; padding: var(--space-md); }
 /* XML source view fills the pane exactly: the editor frame brings its own
-   spacing, and height:100% plus the body padding would otherwise overflow
-   (the "everything slides down" finding, operator feedback 2026-06-10). */
+   spacing, and height:100% plus the body padding would otherwise overflow. */
 .ed-pane-body.src { padding: 0; }
 .ed-pane-body.src .ed-src-root { box-sizing: border-box; padding: var(--space-sm) var(--space-md); }
 
@@ -218,7 +213,6 @@
 /* View controls at the right edge of the text-pane header: text zoom and the
    context-pane collapse toggle (the collapse button sits last, the edge). */
 .ed-view-controls { display: inline-flex; align-items: center; gap: var(--space-xs); }
-.ed-view-controls[hidden] { display: none; }
 .ed-icon-btn { font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 1; padding: 3px 6px; }
 .ed-zoom-level { min-width: 3.4em; text-align: center; }
 
@@ -231,7 +225,6 @@
 .ed-empty-hint { font-family: var(--font-ui); font-size: var(--font-size-sm);
   color: var(--color-text-muted); margin: 0; }
 .ed-recent { margin-top: var(--space-xl); }
-.ed-recent[hidden] { display: none; }
 .ed-recent h2 { font-family: var(--font-ui); font-size: var(--font-size-xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted);
   margin: 0 0 var(--space-sm); }
@@ -256,7 +249,6 @@
   position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center;
   background: var(--scrim-drop); pointer-events: none;
 }
-.ed-drop[hidden] { display: none; }
 .ed-drop span {
   font-family: var(--font-ui); font-size: var(--font-size-lg); font-weight: 600;
   color: var(--color-text); background: var(--color-panel);
@@ -272,7 +264,6 @@
   background: var(--color-surface);
   font-family: var(--font-ui); font-size: var(--font-size-sm); color: var(--color-text-secondary);
 }
-.ed-loading[hidden] { display: none; }
 .ed-spinner {
   width: 32px; height: 32px; border-radius: var(--radius-pill);
   border: 3px solid var(--color-border); border-top-color: var(--color-blue);
@@ -305,7 +296,7 @@
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
 .ed-w.linked { background: var(--color-gold-light); }
 
-/* Textual-critical markup (M3.6): editorial (not AI), so it uses the human
+/* Textual-critical markup: editorial (not AI), so it uses the human
    editorial colour families, never the violet AI family. The :is() selector
    covers the reading text and the legend chips with one rule, so the legend
    always shows exactly the code it names. */
@@ -327,7 +318,7 @@
   border: none; outline: 2px solid var(--color-gold); border-radius: 2px;
   padding: 0 1px; margin: 0; min-width: 2ch; }
 
-/* F4 two-field dual-reading edit: the diplomatic core and the normalized
+/* Two-field dual-reading edit: the diplomatic core and the normalized
    reading side by side, quiet labels, inputs sized like .ed-w-input, inline so
    the line layout survives. */
 .ed-readings-form { display: inline-flex; gap: var(--space-sm); align-items: baseline; vertical-align: baseline; }
@@ -372,15 +363,14 @@
 
 .ed-empty { color: var(--color-text-muted); font-size: var(--font-size-sm); text-align: center; padding: var(--space-xl); }
 
-/* Entity index panel (a right-pane context panel since the M2.14 dual view);
+/* Entity index panel (a right-pane context panel);
    inputs focus gold here (violet is AI-only). */
 #ed-panel-index input:focus, #ed-panel-index select:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
 .ed-idx-filter {
   display: block; box-sizing: border-box; width: 100%;
   margin: 0 0 var(--space-sm);
-  font-family: var(--font-ui); font-size: var(--font-size-sm); color: var(--color-text);
-  background: var(--color-surface); border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm); padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-ui); font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
 }
 .ed-idx-occ { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
@@ -436,8 +426,7 @@
 .ed-idx-addrow { display: flex; gap: var(--space-xs); align-items: center; }
 .ed-idx-add-input {
   flex: 1; min-width: 0; font-family: var(--font-ui); font-size: var(--font-size-sm);
-  color: var(--color-text); background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs);
+  padding: 2px var(--space-xs);
 }
 .ed-idx-add-input:focus { outline: none; border-color: var(--color-gold); }
 
@@ -459,17 +448,15 @@
 .ed-idx-authadd { display: flex; gap: 2px; align-items: center; }
 .ed-idx-authtypesel {
   font-family: var(--font-ui); font-size: var(--font-size-xs);
-  color: var(--color-text); background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 1px 2px;
+  padding: 1px 2px;
 }
 .ed-idx-authinput {
   flex: 1; min-width: 0; font-family: var(--font-ui); font-size: var(--font-size-xs);
-  color: var(--color-text); background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 1px var(--space-xs);
+  padding: 1px var(--space-xs);
 }
 .ed-idx-authinput:focus { outline: none; border-color: var(--color-gold); }
 
-/* Live authority lookup (M3.3): results popover under the id form */
+/* Live authority lookup: results popover under the id form */
 .ed-idx-authadd { position: relative; flex-wrap: wrap; }
 .ed-idx-lookupresults {
   width: 100%; margin-top: 2px; display: flex; flex-direction: column; gap: 1px;
@@ -490,7 +477,7 @@
 .ed-idx-lookupid { font-family: var(--font-mono); color: var(--color-text-muted); }
 .ed-idx-lookupdesc { color: var(--color-text-muted); width: 100%; }
 
-/* M2.5 annotation visibility layer: every linked mention is visible in the
+/* Annotation visibility layer: every linked mention is visible in the
    reading text, coloured by entity type (the annotation token family). The
    generic .mention rule stays as the fallback for a mention whose target id has
    no index entry (dangling ref). A mention of an AI-proposed, unconfirmed entity
@@ -520,7 +507,7 @@
    codes use different positions and can never be confused. */
 .ed-w.mention-hit { background: var(--color-gold-light); outline: 1px solid var(--color-gold); outline-offset: 0; }
 
-/* M2.5 note marker, triple-coded: colour (review family) + icon (degree sign
+/* Note marker, triple-coded: colour (review family) + icon (degree sign
    after the word) + position (the existing underline via .has-note). */
 :is(.ed-w, .ed-legend-chip).has-note::after {
   content: "\00B0";
@@ -531,7 +518,7 @@
   vertical-align: super;
 }
 
-/* M2.5 legend strip under the reading-pane header: names every visual code
+/* Legend strip under the reading-pane header: names every visual code
    present in the current document. Hosted on the reading surface (not the
    secondary tone), so the chips' background tints stay clearly visible. */
 .ed-legend {
@@ -540,7 +527,6 @@
   background: var(--color-surface); border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-xs); color: var(--color-text-secondary);
 }
-.ed-legend[hidden] { display: none; }
 .ed-legend-chips { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-sm); }
 .ed-legend-title { text-transform: uppercase; letter-spacing: .08em; color: var(--color-text-muted); }
 .ed-legend-chip { font-family: var(--font-serif); padding: 0 3px; border-radius: 2px; white-space: nowrap; }
@@ -560,7 +546,7 @@
   color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .08em; }
 .ed-act-empty { font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
-/* M2.8 selection-annotate popover: select words in a line, annotate exactly
+/* Selection-annotate popover: select words in a line, annotate exactly
    that text. Anchored inside the reading pane, panel surface, token-only. */
 .ed-sel-pop {
   position: absolute; z-index: 20; max-width: 420px;
@@ -579,10 +565,8 @@
   color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .08em; }
 .ed-sel-sec-head:hover { color: var(--color-text); }
 .ed-sel-sec-body { display: flex; flex-direction: column; gap: var(--space-xs); }
-.ed-sel-sec-body[hidden] { display: none; }
 .ed-sel-filter { font-family: var(--font-ui); font-size: var(--font-size-xs);
-  color: var(--color-text); background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
+  padding: 2px var(--space-xs); }
 .ed-sel-filter:focus { outline: none; border-color: var(--color-gold); }
 /* The flat, filterable action list of the annotate popover: group headings and
    action rows stacked, scrolling inside the popover when long. */
@@ -618,10 +602,8 @@
    button or Ctrl/Cmd+F, closed with Escape. Edits stage in the textarea and
    commit only on Apply, like every other source edit. */
 .ed-src-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); padding-bottom: var(--space-sm); }
-.ed-src-find[hidden] { display: none; }
 .ed-src-find input { font-family: var(--font-mono); font-size: var(--font-size-xs);
-  color: var(--color-text); background: var(--color-surface);
-  border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
+  padding: 2px var(--space-xs); }
 .ed-src-find input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
 .ed-find-q, .ed-find-r { width: 16ch; }
 .ed-find-ln { width: 5ch; text-align: right; }
@@ -668,7 +650,6 @@
 /* Footer content conventions come from .site-foot (style.css); the editor
    adds only its strip geometry and the status line. */
 .ed-footer { height: var(--footer-height); padding: 0 var(--space-md); background: var(--color-panel); }
-.ed-status-wrap[hidden] { display: none; }
 .ed-status-dot { color: var(--color-confident); }
 .ed-status-dot.dirty { color: var(--color-review); }
 
@@ -690,9 +671,7 @@
   border-radius: var(--radius-sm); background: var(--color-panel);
   box-shadow: var(--shadow-pop);
 }
-.ed-val-pop[hidden] { display: none; }
-
-/* Project panel (M2.9): the open project folder's file list. */
+/* Project panel: the open project folder's file list. */
 .ed-proj-head { font-size: var(--font-size-sm); color: var(--color-text); font-weight: 600; margin-bottom: var(--space-xs); }
 .ed-proj-vocab { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: var(--space-sm); }
 .ed-attr-row { display: flex; align-items: center; gap: var(--space-xs); }
@@ -702,7 +681,6 @@
 .ed-attr-key { flex: 0 1 12ch; }
 .ed-attr-caption { font-size: var(--font-size-xs); color: var(--color-text-muted); max-width: 36ch; }
 .ed-attr-warn { font-size: var(--font-size-xs); color: var(--color-problem); max-width: 36ch; }
-.ed-attr-warn[hidden] { display: none; }
 .ed-proj-empty { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .ed-proj-list { display: flex; flex-direction: column; gap: 2px; }
 .ed-proj-file {
