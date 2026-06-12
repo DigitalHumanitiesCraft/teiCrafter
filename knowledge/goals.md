@@ -13,7 +13,7 @@ status: active
 created: 2026-06-07
 updated: 2026-06-11
 language: en
-version: 0.12
+version: 0.13
 topics: ["[[Project Goals]]", "[[Milestones]]"]
 related: [integration, project, specification, testing]
 ---

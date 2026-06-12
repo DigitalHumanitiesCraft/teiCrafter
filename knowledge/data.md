@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-06-11
+updated: 2026-06-12
 language: en
-version: 0.12
+version: 0.13
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
@@ -38,8 +38,19 @@ What teiCrafter consumes and produces, and which TEI proves the engine. teiCraft
 | Input | Entry | Notes |
 |-------|-------|-------|
 | Existing TEI edition | Editor | Any TEI; opened from local disk, edited losslessly, saved back |
-| Plaintext | Project folder | A `.txt` in an open project folder opens as minimal line-level TEI by a fixed rule (paragraphs on blank lines, `<lb/>` per line, text XML-escaped and otherwise verbatim): transport, not interpretation, so the same input always yields the same output and the draft is never AI-marked. The first save creates the `.xml` next to its source in the folder |
+| Plaintext (`.txt`/`.md`) | Editor (picker, drop) or project folder | Opens as minimal line-level TEI by the fixed conventions below: transport, not interpretation, so the same input always yields the same output and the draft is never AI-marked. In a project folder the first save creates the `.xml` next to its source; opened directly, the draft has no save target and downloads its `.xml` |
 | Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10) |
+
+### Plaintext conventions (deterministic ingest rules)
+
+| Convention | Resolves to | Since |
+|------------|-------------|-------|
+| Blank line | paragraph boundary (`<p>`) | M2.9 |
+| Line break | `<lb/>` before each line | M2.9 |
+| `\|N\|` (N = digits), standalone or mid-line | `<pb n="N"/>`; a page break implies a line break, one conventional bordering space dropped | 2026-06-12 |
+| Anything else | carried verbatim (XML-escaped) | M2.9 |
+
+The boundary rule (decision 2026-06-12, [specification](specification.md)): a convention resolves at ingest only where it encodes structure the text itself carries. Semantics (entities, dates, normalizations) is never pseudo-syntax in the source file; it belongs in the editor, where verification, lookup and validation live. New conventions are added only when real material carries them.
 
 Output is the same TEI, edited byte-losslessly (only edited text runs change), saved in place via the File System Access API or downloaded. The LLM on-ramp output is a fresh TEI draft, marked as machine-generated and unreviewed until the human verifies it.
 
@@ -76,6 +87,10 @@ Key finding from profiling the pipelines: SZD ships no transcription TEI of its 
 ## Account Ledger Demo (DEPCHA Wheaton)
 
 A fourth real shape, not a pipeline: the Laban Morey Wheaton Day Book from DEPCHA (Digital Edition Publishing Cooperative for Historical Accounts), an account ledger encoded with the DEPCHA bookkeeping ontology. Each entry is a `<row ana="bk:entry">` of `<cell>`s carrying `<measure ana="bk:money">` amounts, `<name ana="bk:to|bk:from" type="person">` parties and `<date ana="bk:when">`; there is no `<w>`, so the editor reads it line-level (volumes 1 and 2 split into 23 and 26 folios by `<pb>`, serialize byte-identically). It lives as a `docs/data/editor/depcha-wheaton/` project folder (manifest plus `wheaton.1.xml`, `wheaton.2.xml`) opened through "Open project folder", deliberately NOT wired into the example registry. Its purpose is to exercise the project layer: a manifest binding an `account` document type and the bookkeeping markup inventory (the `bk:` descriptors above) to a markup vocabulary unlike the letters and the codex.
+
+## Sample Letter (HSA 7711)
+
+The plaintext-to-TEI walkthrough material: Benndorf to Hugo Schuchardt, Vienna 1879-02-14 (Hugo Schuchardt Archiv, letter 7711, ed. Szemethy 2022). `docs/data/editor/hsa-7711/` is a committed project folder holding the letter text as plaintext (with the `|2|` page marker; the web presentation's footnote numerals removed), a manifest binding a `letter` document type (persName, placeName, date with `attrField` `@when`, ref with `attrField` `@target`, editorial foot note, salute, signed), and a README with the full citation. The letter text (author died 1907) is in the public domain and committed; the edition's editorial apparatus is the edition's content and stays local-only (`target-reference.xml`, gitignored), serving as the annotation target of the walkthrough.
 
 ## Wenzelsbibel Material Profile
 

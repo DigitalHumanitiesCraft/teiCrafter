@@ -1,130 +1,122 @@
 # teiCrafter Handoff and Working State
 
 Action-layer summary so work can resume without re-deriving anything. Snapshot:
-2026-06-11, end of the F4 dual-reading session (engine + UI landed, then this
-documentation sync). Replaces the previous 2026-06-10 editor-surface snapshot.
-Conceptual detail lives in `knowledge/` (start at `INDEX.md`); per-milestone
-evaluation reports live in `reports/`.
+2026-06-12, end of the HSA-letter feedback session (six accepted packages, a
+behavior-preserving extraction, PLAN slimmed, knowledge synced to v0.13).
+Replaces the 2026-06-11 F4 snapshot. Conceptual detail lives in `knowledge/`
+(start at `INDEX.md`); per-milestone evaluation reports live in `reports/`.
 
 ## Frame: what this lane is working on
 
 The Editopia contribution (Pollin / Kreyenbuehl, "Agentenbasierte Editionsworkflows
 und epistemische Infrastrukturen", conference 02. to 04.09.2026, Wuppertal).
 Cross-project master plan, zbz-lane order, concept chapter draft, full-text
-Rohfassung and the M7.1 provenance page live in the Obsidian vault; session plan
-documents in `~/.claude/plans/editopia-*.md`; the repo-side milestone register is
-`knowledge/goals.md` (H1 to H7); the full plan and backlog is `PLAN.md` (German).
-Success criterion for the Editopia experiment (operator, 2026-06-09): demonstrable
-added value for the Hersch project, confirmed by the ZBZ. The Wenzelsbibel
-(PLUS Salzburg, autumn 2026) is the primary own use case beyond Editopia.
+Rohfassung and the M7.1 provenance page live in the Obsidian vault; the repo-side
+milestone register is `knowledge/goals.md` (H1 to H7); the full plan and backlog
+is `PLAN.md` (German, slimmed to registers in v0.8). Success criterion for the
+Editopia experiment (operator, 2026-06-09): demonstrable added value for the
+Hersch project, confirmed by the ZBZ. The Wenzelsbibel (PLUS Salzburg, autumn
+2026) is the primary own use case beyond Editopia.
 
-## State at handoff (engine-proven, local only)
+## State at handoff (local only, push pending)
 
-Branch `session/2026-06-07-place-graphic`, clean working tree expected once this
-documentation commit lands, no stash, **93 commits over `main`**, **3 ahead of
-`origin`** (origin was up to date with `dfc8a81` this morning; pushing still
-requires the operator's word).
+Branch `main`, clean working tree expected once the v0.13 documentation commit
+lands, no stash, several commits ahead of `origin/main` (origin was at `ae9303e`;
+pushing still requires the operator's word). Today's commits, in order: the
+session branch had already been merged before this session started; then
+`3147529` (engine: `|N|` page markers + the hsa-7711 demo project), `bad70d3`
+(draft-recovery core + proof), `317293d` (the bundled editor surfaces of four
+packages), `e2861d5` (document-facts extraction), `efb8cbb` (PLAN v0.8), plus
+the v0.13 documentation commit.
 
-What landed today (F4 dual reading), in the orchestrator / Opus-package working
-model (the main lane cut the work into two fully specified packages on disjoint
-file sets, delegated each to an Opus sub-agent, and accepted each against the
-running proofs and the raw git diff):
+What landed today (operator feedback session at a real letter, Hugo Schuchardt
+Archiv 7711; orchestrator / Opus-package working model, each package accepted
+against the raw diff and the proof gate):
 
-- **Engine (`ae0b6f5`).** `tei-document.js` gained `editTextAndAttrs(doc, el,
-  { text, set })`, the atomic multi-part edit (text content plus attribute
-  set/replace/remove of one element, all splices against the raw string, applied
-  descending, ONE re-parse; exact-qname resolution; per-part semantic no-op
-  guards; any invalid or unrepresentable part refuses the WHOLE op, returning the
-  SAME doc). `edition.js` projects per text cell `w: { el, orig, norm }` and a
-  `hasDualReadings` flag; `editCellReadings(state, cellId, { core, norm })` edits
-  the diplomatic core (edge whitespace preserved, `@orig` kept in sync where it
-  exists, never invented) and `@norm` (undefined untouched, non-empty sets, `""`
-  removes), atomically. New synthetic fixture
-  `test/fixtures-synthetic/wb-dual-reading.xml`, new proof
-  `test/tools/dual_reading_check.mjs` (28/28).
-- **UI (`1ef4bfe`).** A segmented control "Diplomatic" / "Normalized" in the
-  reading-pane header, shown only on a dual-reading document outside source mode
-  (hidden, not disabled, otherwise), the choice persisted per document through
-  the existing layout store. The normalized view is a display projection (a word
-  shows `@norm` where present, the written text otherwise; the tooltip names the
-  other reading). A double-click on a word whose text sits directly in its `<w>`
-  opens a two-field Diplomatic/Normalized inline edit committing atomically
-  through `editCellReadings`; a word wrapped in critical markup keeps the
-  single-field text edit (the atomic op refuses element children).
-  Selection-to-annotate is gated off in the normalized view with the status hint
-  "Select in the diplomatic view to annotate." and the context menu drops its
-  selection-derived entry there; word-anchored actions stay.
-- **This documentation sync (this commit).** Knowledge docs updated
-  (architecture, specification, design, testing, goals, journal, INDEX, data),
-  repo version 0.11 to 0.12 across all knowledge docs (converter-reference keeps
-  its own 0.6.1); PLAN.md item 5 marked done.
+- **Examples are local-development surfaces.** Landing cards, "Try an example",
+  the Load... menu entries and the `#example` deep link show only on local hosts
+  (`FEATURES.examples`); the public Pages deployment hides them. UI gating only.
+- **Plaintext is a first-class entry.** `.txt`/`.md` open directly (picker with
+  one combined filter, input fallback, drop) as the deterministic line-level
+  draft; `|N|` tokens resolve to `<pb n="N"/>` at ingest (the conventions table
+  and the transport-only boundary rule are in `knowledge/data.md`). A neutral
+  banner and the status line state the provenance.
+- **Document identity moved to the document.** The name left the site header for
+  a document strip under the toolbar plus a Document context panel (file, source,
+  project, type, unit, counts, save target); image-less documents open on it.
+- **Draft recovery.** An unsaved draft persists into a localStorage slot and the
+  empty editor offers Restore/Discard after a reload; nothing clears the slot
+  silently (acceptance hardening: only the draft's own save or explicit discard).
+- **Reconciliation at the annotation.** The authority candidate picker is shared
+  (`authority-picker.js`) and reachable in the annotation popover; the manifest
+  field `reconciliation` (registers, `auto`) opts a project into auto-querying,
+  default off, applying always by human click.
+- **Popover redesign.** The selection popover is one flat filterable list
+  (Entities, Markup, Criticism, Note); a manifest wrap may declare an `attrField`
+  so `<date>` plus `@when` commit as one step; scholarly inline wraps render with
+  a dotted underline and an attribute tooltip.
+- **Refactor.** The document surfaces were extracted into `document-facts.js`
+  (factory, ctx contract, behavior-preserving).
 
-Proofs green: the regression gate (`node test/tools/run_all.mjs`) discovers 25
-proof scripts, all green; `dual_reading_check.mjs` 28/28 (its real-codex guard
-runs when the local codex is present and skips silently otherwise).
+Proofs green: `node test/tools/run_all.mjs` discovers 27 proof scripts, 25 pass;
+the 2 failures (`hersch_loadability`, `port_parity`) are pre-existing and
+environmental (sibling checkouts absent on this machine).
 
-## Decisions this conversation (dated, with reasons; journal carries the long form)
+## Decisions this session
 
-1. **The dual edit is atomic in one re-parse** (2026-06-11): refusal over partial
-   application, so a half-applied word edit cannot exist.
-2. **`@orig` mirrors the canonical diplomatic content where the source encodes it,
-   never invented where absent** (2026-06-11): the content is the canonical
-   reading, a silent divergence would be a hidden inconsistency, and an absent
-   `@orig` is information about the source.
-3. **An empty Normalized field removes `@norm`** (2026-06-11): an `@norm=""` would
-   claim a normalization, absence claims nothing.
-4. **The normalized view is a display projection, not a second document state**
-   (2026-06-11): selection annotation stays in the diplomatic view because the
-   displayed text does not map to raw offsets, while the double-click edit works
-   in both views because it anchors on the element, not on offsets.
-5. **Working model this session** (2026-06-11): the orchestrator cut the work into
-   two fully specified packages on disjoint file sets, delegated each to an Opus
-   sub-agent, and accepted each against the running proofs and the raw git diff;
-   acceptance added one hardening (an undefined diplomatic core leaves content and
-   `@orig` untouched) and the proof case locking it. Lesson: the package boundary
-   that worked was the engine-proof seam, and the acceptance review is the
-   orchestrator's own substantive work, not a formality.
+All dated and reasoned in `knowledge/journal.md` (2026-06-12 entry) and
+`knowledge/specification.md` (Key Decisions): examples local-only; plaintext
+direct with the transport-only convention boundary; no pre-load configuration
+dialog (rejected); document identity at the document; no silent draft loss;
+reconciliation auto only by project opt-in; `attrField`; the TypeScript question
+recorded as JSDoc-plus-`tsc --noEmit` recommendation (Open Questions, not
+commissioned).
 
 ## Open threads (none lost, all registered)
 
-- **Operator browser sight-check**, now extended by the dual-reading surfaces:
-  the Diplomatic/Normalized switcher on the real codex, the two-field edit, and
-  the normalized-view annotation hint. Carried over from the prior handoff: the
-  empty editor with recents; gutter alignment under zoom; the XML-source
-  selection visibility; find / replace / go-to-line; the splitter (drag,
-  double-click reset, keyboard); collapse (button and Ctrl/Cmd+backslash); the
-  vertical stack below 900px; and that split / collapsed / active-tab survive a
-  reload (the PLAN.md acceptance criterion). One thing to watch: OpenSeadragon
-  re-sizing when the context pane returns from collapsed.
-- **The M2.9 project-layer acceptance case in a browser** (one own project, one
-  TEI, two plaintexts, edit all three).
-- **Push approval** for the local commits (now 3 ahead of `origin`).
-- Carried over and still open: Wenzelsbibel next packages, with **WB-AP4
-  standOff apparatus** the next implementable item now that F4 is built (then
-  ED.1 to ED.7, WB-AP5 PAGE-XML import); manifest consumers (declared `indices`,
-  `views`, `schema`: the F4 switcher binds to the document's encoding, so the
-  declared views still await a consumer); sibling-lane orders (szd-htr converter empty-page
-  guard; zbz four-point order); the TEI-Guidelines feature decision; M7.4 object
-  sign-off; Editopia chapter draft, Rohfassung, provenance page, Kreyenbuehl
-  package.
-- Pre-existing: the ZBZ example is local-only (rights) and fails with a status
-  message on public Pages.
+- **Package F, specified and queued** (specification.md, Future): the declared
+  manifest `indices` as the index panel's consumer ("Add index..." writes the
+  declaration, empty panel without declarations, per-index registers feeding
+  reconciliation); empty-project onboarding (always switch to the Project panel,
+  "New plaintext...", drop-adoption into the open folder); the draft banner
+  merging into the strip as a Draft badge; the strip click returning the left
+  pane to the reading view (diagnosis: a persisted XML-source view next to the
+  Document panel read as "the panel shows XML"); a clearer collapse control
+  (the ⇥ toggle sits unrecognized in the zoom group).
+- **The next gate before any new surface work (operator agreement): the letter
+  walkthrough end-to-end in the browser.** Open the hsa-7711 project folder,
+  draft, annotate Wien as place with Wikidata Q1741 via the popover find,
+  wrap "14/2 79" as Date with `when="1879-02-14"` through the attrField input,
+  save into the folder, reopen, verify the diff is exactly the intention. This
+  doubles as the third worked example (worked-example-hsa.md, registered idea).
+- **Live Playwright capture at F acceptance:** the browser-check agent was
+  sandbox-blocked on `C:\tmp`; rerun with artifacts under an allowed directory
+  (e.g. `GitHub/tc-browsercheck`). Static analysis already answered today's
+  panel questions.
+- **Push approval** for the local commits on `main`.
+- Carried over from the F4 handoff, unchanged: the operator sight-check of the
+  dual-reading surfaces on the real codex; the M2.9 project-layer acceptance
+  case in a browser; Wenzelsbibel next packages with **WB-AP4 standOff
+  apparatus** next (then ED.1 to ED.7, WB-AP5 PAGE-XML import after the data
+  model decision); manifest `views`/`schema` consumers; sibling-lane orders
+  (szd-htr empty-page guard; zbz four-point order); M7.4 object sign-off;
+  Editopia chapter draft, Rohfassung, provenance page, Kreyenbuehl package.
+- Pre-existing: the ZBZ example is local-only (rights); with the example
+  surfaces now hidden publicly, the public-Pages fallback question is moot.
 
 ## The one next step
 
-The operator verifies this session's dual-reading surfaces in his browser (the
-switcher on the real codex, the two-field edit, the normalized-view annotation
-hint, alongside the carried-over editor-surface checklist); then the next
-Wenzelsbibel package, WB-AP4 standOff apparatus.
+The operator walks the HSA letter end-to-end in the browser (the gate above);
+then Package F.
 
 ## Shared and held files
 
 - This repo: every change is this lane's own. Clean at handoff once the
   documentation commit lands, nothing else uncommitted, no stash.
-- Memory (`~/.claude/projects/...teiCrafter/memory/`): untouched this
-  conversation.
+- Memory (`~/.claude/projects/...teiCrafter/memory/`): untouched this session.
 - Obsidian vault and sibling repos (szd-htr, zbz-ocr-tei): untouched.
 - Local-only artifacts unchanged: `docs/data/editor/wb-codex/` (real codex),
   `docs/data/editor/zbz-100/`, `docs/data/editor/zbz-1000/`,
   `docs/data/editor/depcha-wheaton/` (rights-encumbered, regenerable),
+  `docs/data/editor/hsa-7711/target-reference.xml` (edition apparatus),
   `output/curated-set/`.

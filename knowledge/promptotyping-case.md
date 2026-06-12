@@ -13,7 +13,7 @@ status: active
 created: 2026-06-08
 updated: 2026-06-09
 language: en
-version: 0.12
+version: 0.13
 topics: ["[[Promptotyping]]", "[[Method]]", "[[Project Status]]", "[[Editopia]]"]
 related: [project, goals, journal, integration]
 ---

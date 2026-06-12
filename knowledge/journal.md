@@ -12,15 +12,19 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-11
+updated: 2026-06-12
 language: en
-version: 0.12
+version: 0.13
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-12: Feedback session at a real letter; the plaintext on-ramp becomes first-class
+
+The operator drove the editor against a real simple letter (Hugo Schuchardt Archiv 7711, Benndorf to Schuchardt 1879, now the `hsa-7711` demo project) and every friction he hit became a package in the orchestrator / Opus-package working model, each accepted against the raw diff and the running proofs. The decisions, each from a concrete friction: the built-in examples show only on local development hosts, because the public deployment is a tool, not a demo shelf (UI gating; committed data stays fetchable by URL). Plaintext (`.txt`, and now `.md` alike) opens directly via picker and drop, not only through a project folder, because the deterministic draft is the editor's own on-ramp, not a project feature. A `|N|` token resolves to a page break at ingest, and that fixed the boundary rule for any plaintext convention: structure the text itself carries is transport and resolves deterministically; semantics (entities, normalizations) stays in the editor, where verification, lookup and validation live, so a pseudo-syntax never grows toward a worse XML. The document's identity moved out of the site header, where it read as navigation, into a document strip under the toolbar plus a Document context panel, after the operator could not place "letter.xml". An unsaved draft now survives a reload through a recovery slot with an explicit restore offer, after the operator lost a draft and its first annotation to a refresh; acceptance added the hardening that nothing clears the slot silently (only the draft's own save or an explicit discard). Authority reconciliation moved to the point of annotation through a shared candidate picker, with automatic querying a per-project manifest opt-in, default off, because auto-query sends edition text to external registers without an explicit click. The selection popover became one flat, filterable list after the operator could not find "Date" behind a submenu, and a manifest wrap may declare one attribute field so a date and its `@when` commit as one step. A pre-load configuration dialog was considered and rejected ("No configuration needed" is a product promise; the removed stepper stays removed). Lessons: real-use friction reports were worth more than any feature list, but building outpaced browser verification, so the letter walkthrough end-to-end is deliberately the next gate; and an acceptance review with substance caught a silent-data-loss path the package itself had shipped. PLAN.md was slimmed to registers (v0.8). Package F is specified and queued: the declared manifest `indices` become the index panel's consumer, an empty project gets onboarding instead of a dead end, and the draft banner merges into the document strip.
 
 ## 2026-06-11: Dual reading built (F4), orchestrated in Opus packages
 
