@@ -11,9 +11,9 @@ template:
   version: 0.1
 status: active
 created: 2026-06-07
-updated: 2026-06-10
+updated: 2026-06-12
 language: de
-version: 0.7
+version: 0.8
 topics: ["[[Projektplan]]", "[[TEI XML]]", "[[Digitale Editionen]]", "[[Promptotyping]]"]
 related: [goals, integration, converter-reference, project, data, architecture, specification, testing]
 ---
@@ -100,66 +100,22 @@ Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ei
 
 ### Erledigt (mit Proof)
 
-- **Verlustfreie Engine.** Round-Trip-Sweep byte-identisch: `node test/tools/roundtrip_sweep.mjs` ->
-  **295/295** (285 Hersch + 5 SZD + 5 synthetisch; Lauf 2026-06-10). [proof] (M1.1, M2.1, M4.1)
-- **ZBZ direkt ladbar.** Editor-Ladbarkeit: `node test/tools/hersch_loadability.mjs` ->
-  **285/285** nutzbare Editor-Ansicht, 0 Parse-Fehler; gesamt 4.115 Folios, 49.324 Zellen,
-  23.421 Zonen, 266 Notes. [proof] (M1.1, M4.2)
-- **Bildanzeige Engine-Seite.** Der Editor liest `<graphic url>` aus `<surface>` und nutzt
-  `surface.graphic` als imageUrl-Fallback (tei-document.js, editor-app.js). (M2.2; Browser-Visualtest
-  bestanden, siehe unten.)
-- **Annotationsschicht gebaut.** Ort (M3.1), Werk (M3.2), Normdaten-Handeingabe als
-  `<idno type="GND|GeoNames|Wikidata">` mit add/replace/remove (M3.3-Kern), typ-unabhängiges
-  Mention-Linking (M3.4). Ein gemeinsamer Proof deckt alles ab: `node test/tools/szd_demo_check.mjs`
-  -> **32/32**. [proof] Die drei festen Sweeps bleiben grün.
-- **SZD-Konverter-Kontrakt eingefroren (M1.2 erledigt).** [converter-reference.md](knowledge/converter-reference.md)
-  (status `active`, v0.5): vollständiges deterministisches Page-JSON-v0.2-zu-TEI-Mapping; die fünf
-  §9-Punkte am echten Datensatz aufgelöst (bbox bestätigt Prozent, nur `~~x~~`/`[?]`-Marker real,
-  `pages[].notes` in v1 verworfen per reversibler Entscheidung, kein weiteres standOff-Seeding,
-  images 1:1 zu pages; Zusatzbefunde: doppelte ID o_szd.161, leere/blanke Objekte mit `cells===0`). [proof]
-- **SZD-Batch-Konverter gebaut (M1.3 erledigt).** `pipeline/export_tei.py`: byte-treuer Python-Port des
-  Referenz-Prototyps (pfad-getrieben plus `--id`-Modus, der bei mehrdeutiger ID hart abbricht).
-  Byte-identisch zum Prototyp auf der Handvoll (`node test/tools/port_parity.mjs` 6/6) und über einen
-  151-Objekt-Spread des ~2.103-Korpus (151/151). [proof]
-- **Voller Korpus konvertiert und geprüft (M1.4 + M1.5 erledigt).** `pipeline/export_tei.py --all`
-  konvertiert alle 2.103 Objekte; `node test/tools/szd_loadability_sweep.mjs`: 2.103/2.103 konvertiert,
-  2.103/2.103 byte-identischer Round-Trip, 0 Parse-Fehler, 40 leere/blanke Objekte (cells===0, valide). [proof] (deckt auch M4.4)
-- **SZD-Demo-Objekt real konvertiert.** o_szd.1079 aus dem echten `o_szd.1079_page.json` via
-  `test/tools/szd-pagejson-to-tei.mjs`: 5 Folios, line-level, **byte-identischer Round-Trip**,
-  GAMS-`<graphic>`-URLs, Zonen Prozent->Pixel, kein standOff (1079 hat keinen creator, wie der
-  Kontrakt vorhersagt). [proof] (M1.4 für 1079)
-- **M2.2 Browser-Visualtest bestanden (2026-06-08).** o_szd.1079 im Editor geladen (headless Chrome
-  via Playwright): GAMS-Faksimile rendert in OpenSeadragon (IMG.1/IMG.2 HTTP 200), 2 Zonen-Overlays
-  auf Folio 1, line-level-Zellen, Folio-Navigation. Beleg: `c:\tmp\m2_2_1079_folio1.png`.
-- **M7.2 SZD-Worked-Example im Browser bewiesen (2026-06-08).** o_szd.1079 end-to-end: Öffnen plus
-  Speichern byte-identisch zur Quelle; Zeilenkorrektur (Wohlgeboren -> Hochwohlgeboren) ändert genau
-  diese Stelle; Annotation (Ort Komotau + `<idno type="GeoNames">`) fügt genau den standOff-Block ein;
-  erneutes Öffnen stabil. Reproduzierbar via `c:\tmp\pwtest\m72.js`; Beleg `c:\tmp\m72_annotate.png`.
+Die vollständig belegten Strecken führt das Milestone-Register [goals.md](knowledge/goals.md);
+die zitierfähigen Zahlen samt Re-Run-Befehlen liegen in [paper-evidence.md](knowledge/paper-evidence.md).
+Kurzregister (Details und Befehle dort; die ausführlichen Einzel-Einträge dieses Abschnitts
+bis Stand 2026-06-10 sind in der Git-History dieser Datei erhalten, Version 0.7):
 
-- **Whitespace-Vorbehalt geschlossen (2026-06-08).** Zeilen-Edit erhält die Rand-Whitespace
-  (Einrückung/Newlines) verbatim: nur der getrimmte Kern wird bearbeitet, lead/trail werden beim Commit
-  wieder angelegt (`editCellCore`/`splitEdge` in edition.js). `node test/tools/whitespace_edit_check.mjs`
-  -> **14/14** (mit dem alten kollabierenden Pfad als Kontrolle). [proof] commit 8fd281c.
-- **M3.5 Notiz-Erstellung gebaut (2026-06-08).** Verlustfreies `<note target="#id">` in `<standOff>`,
-  Anker via Ancestor-xml:id, sonst Zeilen-`@facs`, sonst injizierte xml:id (`addNote`/`addNoteForNode`/
-  `ensureXmlId` in standoff.js); UI: "Add note"-Modus. `node test/tools/note_create_check.mjs` ->
-  **15/15**. [proof] commit d3fc922.
-- **M3.7 KI-Annotations-Vorschlag gebaut (2026-06-08).** LLM schlägt Entitäten vor, als unverifiziert
-  `resp="#ai"` (TEI-valide, verlustfrei) eingefügt, violett gerendert; Mensch bestätigt (`confirmEntity`
-  entfernt den Marker) oder verwirft (`deleteEntity`). `node test/tools/ai_proposal_check.mjs` -> **17/17**,
-  Parser robust (`ai_suggest_parse_check.mjs`). Der LLM-Aufruf ist browser-verifiziert. [proof] commit f647e7e.
-- **M3.3 Live-Lookup gebaut (2026-06-08).** Normdaten-Suche Wikidata/GND/GeoNames (URL-Builder + Parser
-  in `services/authority-lookup.js`), Index-Panel "find"-Button + Ergebnis-Popover. Wikidata und GND
-  schlüssellos und CORS-fähig; GeoNames braucht Username. `node test/tools/authority_lookup_check.mjs` ->
-  **15/15**. Der fetch ist browser-verifiziert. [proof] commit 8ce938a.
-- **M3.6 Textkritik gebaut (2026-06-08).** Inline, verlustfrei in `docs/js/editor/criticism.js`:
-  `markCritical` wraps `<unclear>`/`<del>`/`<add>` (Rand-Whitespace bleibt ausserhalb der Tags) bzw.
-  ersetzt den Kern durch `<gap/>`; `unwrapCritical` macht ein Wrap rückgängig, verweigert aber das
-  Entfernen eines geteilten Wrappers; `removeGap` löscht eine Lücke. Geteiltes `splitEdge`/
-  `CRITICAL_LOCALS`/`nearestAncestor` im Core; Gap-Zelle + `crit`/`critSole` in edition.js; "Mark text"-
-  Modus + Inline-Chooser. `node test/tools/criticism_check.mjs` -> **47/47**, gehärtet gegen ein
-  22-Befund-Adversarial-Review. [proof] commit 119a1a2. Auto-Mapping der Pipeline-Marker
-  (`[?]`/`~~x~~` -> Tags) bleibt separate spätere Aufgabe.
+- **Verlustfreie Engine:** Round-Trip-Sweep 295/295. (M1.1, M2.1, M4.1)
+- **ZBZ direkt ladbar:** 285/285, 0 Parse-Fehler. (M1.1, M4.2)
+- **SZD-Kette komplett (M1.2 bis M1.5, M4.4):** Kontrakt eingefroren (converter-reference.md, active),
+  Batch-Konverter byte-treu (port_parity 6/6), voller Korpus 2.103/2.103 byte-identisch.
+- **Bildanzeige (M2.2):** Engine plus Browser-Visualtest (Playwright, GAMS-Faksimile in OpenSeadragon).
+- **M7.2-SZD-Worked-Example:** o_szd.1079 end-to-end im Browser bewiesen (Byte-Diff exakt die Absicht).
+- **Editoriale Annotationsschicht komplett (M3.1 bis M3.7):** Entitäten (Ort/Werk), Normdaten-`<idno>`
+  (Handeingabe und Live-Lookup), Mention-Linking, Notizen, Textkritik (`unclear`/`del`/`add`/`gap`),
+  KI-Vorschlag (`resp="#ai"`, violett, confirm/reject); je headless belegt, LLM-Aufruf und fetch
+  browser-verifiziert.
+- **Whitespace-Vorbehalt geschlossen:** Zeilen-Edit erhält Rand-Whitespace verbatim (editCellCore, 8fd281c).
 
 ### Offen (Umsetzungs-Scope teiCrafter + SZD)
 
@@ -358,19 +314,20 @@ demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur) u
 
 ## 11. Umsetzungs-Backlog (nächste Schritte, geordnet)
 
-teiCrafter + SZD:
-1. **SZD-Realitätsabgleich + Kontrakt einfrieren: erledigt 2026-06-08** (§9 am echten Page-JSON
-   aufgelöst, converter-reference.md status active v0.5).
-2. **Whitespace-Vorbehalt: geschlossen 2026-06-08** (editor-seitig, editCellCore; whitespace_edit_check.mjs 14/14).
-3. **M1.3 Batch-Konverter: erledigt 2026-06-08** (`pipeline/export_tei.py`, byte-treuer Port;
-   port_parity.mjs 6/6, 151/151 Korpus-Stichprobe).
-4. **M1.4 + M1.5: erledigt 2026-06-08** (`export_tei.py --all` 2.103/2.103; `szd_loadability_sweep.mjs`
-   2.103/2.103 byte-identisch, 40 leer/blank valide; deckt auch M4.4).
-5. **M7.2** SZD-Hälfte erledigt (o_szd.1079, 2026-06-08); ZBZ-Hälfte liegt in der ZBZ-Spur.
-6. **M3.5 Notiz-UI, M3.7 KI-Vorschlag, M3.3 Live-Lookup: erledigt 2026-06-08** (commits d3fc922,
-   f647e7e, 8ce938a; je headless belegt; Browser-Pfade zur Operator-Sichtprüfung offen).
-7. **M5.2 / M5.6: erledigt** (M5.2 am 2026-06-09 via paper-evidence.md; M5.6 verifiziert 2026-06-10).
-   **M6.x:** laufend (Wissensvaults werden je Session nachgezogen).
+teiCrafter + SZD: die früheren Punkte 1 bis 7 dieses Backlogs (SZD-Abgleich und Kontrakt-Einfrieren,
+Whitespace, Batch-Konverter, Voll-Korpus, M7.2-SZD, Notiz/KI-Vorschlag/Live-Lookup, M5.2/M5.6) sind
+erledigt und in [goals.md](knowledge/goals.md) bzw. [paper-evidence.md](knowledge/paper-evidence.md)
+registriert; die Einzelnachweise mit Commits und Proof-Zahlen trägt die Git-History dieser Datei
+(Version 0.7). **M6.x** läuft (Wissensvaults werden je Session nachgezogen).
+
+**Editor-Spur, Stand 2026-06-12:** eine Feedback-Session am neuen HSA-Brief-Demoprojekt
+(`docs/data/editor/hsa-7711`) brachte sechs abgenommene Pakete (Plaintext-Direktimport `.txt`/`.md`,
+`|N|`-Seitenmarker, Beispiele nur noch lokal sichtbar, Dokumentzeile plus Document-Panel,
+Reconciliation am Annotationsort mit Manifest-Opt-in, Entwurfs-Sicherung gegen Reload-Verlust,
+flaches filterbares Annotations-Popover mit Manifest-`attrField`) und definierte **Paket F**
+(Index-Deklaration als Manifest-Konsument, Empty-Project-Onboarding, Banner-Integration in die
+Dokumentzeile, Document-Panel-Befund). Details, Entscheidungen und offene Gates: `HANDOFF.md`
+und `knowledge/journal.md`.
 
 Separat (Autor, ZBZ): ZBZ-Bild-URL-Schema verifizieren, Live-ZBZ-Durchlauf, ZBZ-Worked-Example,
 oekosystem-synthese-Korrektur, ZBZ-Projektbericht.
