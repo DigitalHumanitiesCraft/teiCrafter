@@ -21,3 +21,7 @@ docs/data/editor/wb-codex/*
 # Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
 docs/data/editor/depcha-wheaton/*
 !docs/data/editor/depcha-wheaton/teicrafter.project.json
+
+# HSA sample letter (hsa-7711): the letter text (1879, public domain) and the
+# manifest are committed; the edition's editorial apparatus stays local-only.
+docs/data/editor/hsa-7711/target-reference.xml

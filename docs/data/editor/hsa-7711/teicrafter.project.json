@@ -1,0 +1,27 @@
+{
+  "teicrafter": 1,
+  "name": "Hugo Schuchardt Archiv sample letter",
+  "documentTypes": [
+    {
+      "key": "letter",
+      "label": "Letter",
+      "markup": [
+        { "element": "persName", "label": "Person name" },
+        { "element": "placeName", "label": "Place name" },
+        { "element": "date", "label": "Date", "attrField": { "name": "when", "label": "Normalized (YYYY-MM-DD)", "placeholder": "1879-02-14" } },
+        { "element": "ref", "label": "Reference (link target)", "attrField": { "name": "target", "label": "Target (URL)" } },
+        { "element": "note", "label": "Editorial footnote", "attributes": { "type": "editorial", "place": "foot" } },
+        { "element": "salute", "label": "Salutation" },
+        { "element": "signed", "label": "Signature" }
+      ],
+      "teiModules": ["core", "namesdates", "textstructure"],
+      "teiElements": ["persName", "placeName", "date", "ref", "note", "dateline", "opener", "closer", "salute", "signed"]
+    }
+  ],
+  "files": {
+    "brief-benndorf-1879.txt": "letter",
+    "brief-benndorf-1879.xml": "letter",
+    "letter.txt": "letter",
+    "letter.xml": "letter"
+  }
+}
