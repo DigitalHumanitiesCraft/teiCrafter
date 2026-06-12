@@ -18,16 +18,16 @@ Editopia experiment (operator, 2026-06-09): demonstrable added value for the
 Hersch project, confirmed by the ZBZ. The Wenzelsbibel (PLUS Salzburg, autumn
 2026) is the primary own use case beyond Editopia.
 
-## State at handoff (local only, push pending)
+## State at handoff (pushed)
 
-Branch `main`, clean working tree expected once the v0.13 documentation commit
-lands, no stash, several commits ahead of `origin/main` (origin was at `ae9303e`;
-pushing still requires the operator's word). Today's commits, in order: the
-session branch had already been merged before this session started; then
-`3147529` (engine: `|N|` page markers + the hsa-7711 demo project), `bad70d3`
-(draft-recovery core + proof), `317293d` (the bundled editor surfaces of four
-packages), `e2861d5` (document-facts extraction), `efb8cbb` (PLAN v0.8), plus
-the v0.13 documentation commit.
+Branch `main`, clean working tree, no stash, in sync with `origin/main`
+(pushed 2026-06-12 with the operator's approval, `ae9303e..df19321`).
+The session's commits, in order: the session branch had already been merged
+before this session started; then `3147529` (engine: `|N|` page markers + the
+hsa-7711 demo project), `bad70d3` (draft-recovery core + proof), `317293d`
+(the bundled editor surfaces of four packages), `e2861d5` (document-facts
+extraction), `efb8cbb` (PLAN v0.8), the v0.13 documentation commit, and
+`df19321` (the operator-approved README rewrite).
 
 What landed today (operator feedback session at a real letter, Hugo Schuchardt
 Archiv 7711; orchestrator / Opus-package working model, each package accepted
@@ -93,7 +93,6 @@ commissioned).
   sandbox-blocked on `C:\tmp`; rerun with artifacts under an allowed directory
   (e.g. `GitHub/tc-browsercheck`). Static analysis already answered today's
   panel questions.
-- **Push approval** for the local commits on `main`.
 - Carried over from the F4 handoff, unchanged: the operator sight-check of the
   dual-reading surfaces on the real codex; the M2.9 project-layer acceptance
   case in a browser; Wenzelsbibel next packages with **WB-AP4 standOff
@@ -119,8 +118,6 @@ commissioned).
   SECURITY.md counterpart becomes relevant when the LLM on-ramp goes live.
   Discarded as out-of-domain: batch queues, per-page review flags, multi-page
   ZIP/PAGE-XML export.
-- **README.md rewritten** (operator draft as the core, translated and adjusted
-  to the public-text rules; uncommitted, awaiting the operator's approval).
 
 ## The one next step
 
