@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/user-stories
 status: active
 created: 2026-02-05
-updated: 2026-06-10
+updated: 2026-06-12
 language: en
-version: 0.13
+version: 0.14
 topics: ["[[Scholar-Centered Design]]", "[[User Stories]]"]
 related: [specification, architecture, design]
 ---

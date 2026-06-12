@@ -11,9 +11,9 @@ template:
   version: 0.1
 status: active
 created: 2026-06-08
-updated: 2026-06-09
+updated: 2026-06-12
 language: en
-version: 0.13
+version: 0.14
 topics: ["[[Promptotyping]]", "[[Method]]", "[[Project Status]]", "[[Editopia]]"]
 related: [project, goals, journal, integration]
 ---

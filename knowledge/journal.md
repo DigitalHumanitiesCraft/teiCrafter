@@ -14,13 +14,17 @@ status: active
 created: 2026-02-05
 updated: 2026-06-12
 language: en
-version: 0.13
+version: 0.14
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-12 (continued): Markup-wrap attributes editable on click, with a non-blocking date hint
+
+Trigger: walking the hsa-7711 letter, the operator wrapped "14/2 79" as `<date>` with `@when` but could not find how to edit or normalize that attribute afterwards. The attribute editor already existed and resolved the `<date>` correctly, but only the right-click context menu reached it: an entity mention opens its editor on a plain left-click, a scholarly inline wrap (date, ref, salute, ...) had no left-click affordance, so the way in was hidden. Decisions: a left-click on a semantic markup wrap now opens its attribute editor, the same gesture that opens the annotation editor on a mention, and the tooltip names the gesture, so the `@when` normalization sits one click from the marked text. Second, the attribute editor gained a validity hint for the W3C date attributes (`when`, `notBefore`, `notAfter`, `from`, `to`): a value that does not parse shows a warning, but the commit stays enabled. The hint never blocks, because the editor's free-text degradation contract and the design principle (the tool warns, the human decides) hold; an editor may deliberately record an uncertain or partial date. The lexical check is a regex, which is the canonical form for `teidata.temporal.w3c` (TEI defines it as a union of XSD types, themselves pattern-defined), with a small numeric calendar check on top for what a pattern cannot express (month range, day-per-month, leap year). The validator lives in the DOM-free `tei-guidelines.js` and is proof-covered.
 
 ## 2026-06-12: Feedback session at a real letter; the plaintext on-ramp becomes first-class
 

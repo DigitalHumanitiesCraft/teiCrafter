@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/worked-example
 status: active
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-06-12
 language: en
-version: 0.13
+version: 0.14
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Stefan Zweig]]", "[[Editopia]]"]
 related: [project, specification, goals, testing]
 ---

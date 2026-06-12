@@ -19,6 +19,7 @@ import {
   addAttr, editAttrValue, removeAttr, hasAttrQName,
 } from "../../docs/js/editor/tei-document.js";
 import { parseEdition, attrTargetForCell } from "../../docs/js/editor/edition.js";
+import { isW3cDateAttr, w3cDateReason } from "../../docs/js/editor/tei-guidelines.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -120,6 +121,31 @@ check(!!hcell && attrTargetForCell(hcell).localName === "hi", "an inline wrapper
 const gstate = parseEdition(TEI('<p><lb n="1"/>text <gap/> more</p>'));
 const gcell = gstate.cells.find((c) => c.gap);
 check(!!gcell && attrTargetForCell(gcell) === null, "gap cells have no target in v1");
+
+// --- 9. W3C date validity hint (non-blocking) --------------------------------
+// The check is a hint only; the editor never blocks a commit. These cover the
+// accepted W3C forms, calendar validity, and the date-attribute gating.
+
+check(isW3cDateAttr("when", null) && isW3cDateAttr("notBefore", null)
+  && isW3cDateAttr("from", null) && isW3cDateAttr("to", null) && isW3cDateAttr("notAfter", null),
+  "date attributes are recognised by name when no datatype is available");
+check(!isW3cDateAttr("type", null) && !isW3cDateAttr("rend", null),
+  "non-date attributes are not gated");
+check(isW3cDateAttr("foo", { datatype: "teidata.temporal.w3c" }),
+  "the vocabulary datatype gates regardless of the attribute name");
+check(!isW3cDateAttr("when", { datatype: "teidata.text" }),
+  "a non-temporal datatype overrides the name fallback");
+
+check(w3cDateReason("") === null, "an empty value is acceptable (removes the constraint)");
+for (const ok of ["1879", "1879-02", "1879-02-14", "2000-02-29", "-0044-03-15",
+  "1879-02-14T09:30:00", "1879-02-14T09:30:00Z", "1879-02-14T09:30:00+01:00"]) {
+  check(w3cDateReason(ok) === null, `accepts the W3C form "${ok}"`);
+}
+for (const bad of ["14/2 79", "1879-13-01", "1879-02-30", "1900-02-29", "Feb 1879", "187", "1879-2-14"]) {
+  check(w3cDateReason(bad) !== null, `flags the invalid value "${bad}"`);
+}
+check(w3cDateReason("2000-02-29") === null && w3cDateReason("1900-02-29") !== null,
+  "leap-year rule: 2000 accepts 02-29, 1900 does not");
 
 console.log("=".repeat(60));
 if (failed === 0) {

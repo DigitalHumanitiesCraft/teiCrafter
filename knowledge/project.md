@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: active
 created: 2026-02-05
-updated: 2026-06-02
+updated: 2026-06-12
 language: en
-version: 0.13
+version: 0.14
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal, goals, integration]
 ---

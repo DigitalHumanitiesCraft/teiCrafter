@@ -231,3 +231,55 @@ export function elementsForScope(g, { modules = [], elements = [] } = {}) {
   for (const ident of elements) add(ident);
   return out;
 }
+
+// ---- attribute-value validity hints (non-enforcing) -----------------------
+// The attribute editor never blocks a commit (the free-text degradation
+// contract); these helpers only let it surface a warning when a date-typed
+// value does not parse, so the human sees the problem and still decides.
+
+// The W3C date attributes (teidata.temporal.w3c). Used as the fallback when the
+// vocabulary is not loaded and no datatype is available for the attribute.
+const W3C_DATE_ATTRS = new Set(["when", "notBefore", "notAfter", "from", "to"]);
+
+/**
+ * Whether an attribute carries W3C date/time values. Prefers the vocabulary's
+ * datatype (teidata.temporal.w3c); without it, falls back to the known date
+ * attribute names so the check still works in the degraded, vocabulary-less editor.
+ */
+export function isW3cDateAttr(name, attDef) {
+  if (attDef && attDef.datatype) return attDef.datatype === "teidata.temporal.w3c";
+  return W3C_DATE_ATTRS.has(name);
+}
+
+/**
+ * A non-blocking validity reason for a teidata.temporal.w3c value, or null when
+ * it is acceptable (including an empty value, which removes the constraint).
+ * Accepts the W3C forms TEI uses: gYear (YYYY), gYearMonth (YYYY-MM), date
+ * (YYYY-MM-DD), dateTime (with a T time part) and time (HH:MM:SS), each with an
+ * optional timezone; the date part is checked for calendar validity.
+ */
+export function w3cDateReason(value) {
+  const v = String(value == null ? "" : value).trim();
+  if (!v) return null;
+  // gYear / gYearMonth / date, dateTime (with a T part) and time, each with an
+  // optional W3C timezone suffix. The date part's calendar validity is checked below.
+  const reDate = /^-?\d{4}(-\d{2}(-\d{2})?)?(Z|[+-]\d{2}:\d{2})?$/;
+  const reDateTime = /^-?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
+  const reTime = /^\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$/;
+  if (!reDate.test(v) && !reDateTime.test(v) && !reTime.test(v)) {
+    return "not a valid W3C date (expected YYYY, YYYY-MM or YYYY-MM-DD)";
+  }
+  const m = v.match(/^-?(\d{4})-(\d{2})(?:-(\d{2}))?/);
+  if (m) {
+    const month = +m[2];
+    if (month < 1 || month > 12) return "month must be 01-12";
+    if (m[3]) {
+      const year = +m[1];
+      const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+      const dim = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+      const day = +m[3];
+      if (day < 1 || day > dim) return `day must be 01-${String(dim).padStart(2, "0")} for this month`;
+    }
+  }
+  return null;
+}

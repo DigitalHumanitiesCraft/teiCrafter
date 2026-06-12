@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-12
 language: en
-version: 0.13
+version: 0.14
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, user-stories, architecture]
 ---
@@ -134,7 +134,8 @@ The M2.6 inline cell action chooser that accompanied this layer was superseded t
 | Reading-text gutter: the edition's line label (@n) in a fixed mono channel with a continuous rule; keeps the source's numbering (empty cell for an unnumbered line), non-selectable | Built (2026-06-10) |
 | Editor layout flexibility: draggable splitter (min 320px, double-click reset, keyboard), context-pane collapse (button or Ctrl/Cmd+\), vertical stack below 900px, editor-wide text zoom; split / collapsed / active-tab persisted per document, zoom globally (storage.js) | Built (2026-06-10) |
 | XML source find / replace and go-to-line (Ctrl/Cmd+F); translucent selection tint so the coloured overlay shows through | Built (2026-06-10) |
-| Editor paradigm: cursor click, click-to-edit on annotated elements, double-click direct edit, right-click context menu (M2.10) | Built (2026-06-10) |
+| Editor paradigm: cursor click, click-to-edit on annotated elements (a mention opens its annotation editor, a scholarly markup wrap its attribute editor), double-click direct edit, right-click context menu (M2.10) | Built (2026-06-10; markup-wrap click 2026-06-12) |
+| Attribute-value validity hint: a W3C date attribute that does not parse shows a warning in `--color-problem`, but the commit stays enabled (the tool warns, the human decides; categorical, never a numeric score) | Built (2026-06-12) |
 | Evidence-first annotate popover with provenance groups, filter, and plain-TEI markup wraps incl. structured persName | Built (2026-06-10) |
 | Editable XML source view: syntax highlighting, line numbers, Check XML with error jump, gated Apply (M2.12) | Built (2026-06-10) |
 | LLM on-ramp modal (violet) | Built; hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10) |

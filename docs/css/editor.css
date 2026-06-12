@@ -701,6 +701,8 @@
   padding: 2px 4px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .ed-attr-key { flex: 0 1 12ch; }
 .ed-attr-caption { font-size: var(--font-size-xs); color: var(--color-text-muted); max-width: 36ch; }
+.ed-attr-warn { font-size: var(--font-size-xs); color: var(--color-problem); max-width: 36ch; }
+.ed-attr-warn[hidden] { display: none; }
 .ed-proj-empty { font-size: var(--font-size-xs); color: var(--color-text-muted); }
 .ed-proj-list { display: flex; flex-direction: column; gap: 2px; }
 .ed-proj-file {

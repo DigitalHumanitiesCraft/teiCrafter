@@ -34,7 +34,7 @@ import { el, clear } from "./dom.js";
 import * as standoff from "./standoff.js";
 import { parseEdition, rawRangeForDisplay, unescapeXmlText, attrTargetForCell } from "./edition.js";
 import { addAttr, editAttrValue, removeAttr } from "./tei-document.js";
-import { elementByName } from "./tei-guidelines.js";
+import { elementByName, isW3cDateAttr, w3cDateReason } from "./tei-guidelines.js";
 import { buildAuthorityForm } from "./authority-form.js";
 import { runAuthorityLookup } from "./authority-picker.js";
 import { requireCtx } from "./ctx.js";
@@ -366,6 +366,17 @@ export function createAnnotationUi(ctx) {
     const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
     pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `attributes of <${target.qname}>` }));
 
+    // Non-blocking validity hint: a date-typed value (@when and the other W3C
+    // date attributes) that does not parse shows a warning, but the commit stays
+    // enabled (the free-text contract: the editor warns, the human decides).
+    const dateReason = (name, def, value) =>
+      isW3cDateAttr(name, def) ? w3cDateReason(value) : null;
+    const syncWarn = (warn, name, def, value) => {
+      const r = dateReason(name, def, value);
+      warn.textContent = r ? `! ${r}` : "";
+      warn.hidden = !r;
+    };
+
     for (const attr of target.attrs || []) {
       const def = attDef(attr.name);
       const row = el("div", { class: "ed-sel-pop-row ed-attr-row" });
@@ -374,6 +385,9 @@ export function createAnnotationUi(ctx) {
         title: def && def.desc ? def.desc : "",
       }));
       const input = el("input", { class: "ed-attr-input", type: "text", value: attr.value });
+      const warn = el("div", { class: "ed-attr-warn" });
+      syncWarn(warn, attr.name, def, attr.value);
+      input.addEventListener("input", () => syncWarn(warn, attr.name, def, input.value));
       const apply = () => commitAttr(
         (doc) => editAttrValue(doc, attr, input.value),
         { label: `Set @${attr.name} on <${target.qname}>`, failPrefix: "Set attribute",
@@ -394,6 +408,7 @@ export function createAnnotationUi(ctx) {
       });
       row.appendChild(rmBtn);
       pop.appendChild(row);
+      pop.appendChild(warn);
     }
 
     // Add row: free text always works; with the vocabulary loaded the name
@@ -412,6 +427,11 @@ export function createAnnotationUi(ctx) {
       class: "ed-attr-input", type: "text",
       placeholder: "value", list: "ed-attr-valuelist",
     });
+    const addWarn = el("div", { class: "ed-attr-warn" });
+    const syncAddWarn = () => {
+      const nm = nameInput.value.trim();
+      syncWarn(addWarn, nm, attDef(nm), valueInput.value);
+    };
     const syncCaption = () => {
       clear(valueList);
       caption.textContent = "";
@@ -421,7 +441,9 @@ export function createAnnotationUi(ctx) {
       const usage = def.usage === "req" ? "required" : def.usage === "rec" ? "recommended" : "optional";
       caption.textContent = `${usage}${def.datatype ? `, ${def.datatype}` : ""}${def.desc ? `: ${def.desc}` : ""}`;
     };
-    nameInput.addEventListener("input", syncCaption);
+    syncAddWarn();
+    nameInput.addEventListener("input", () => { syncCaption(); syncAddWarn(); });
+    valueInput.addEventListener("input", syncAddWarn);
     const doAdd = () => {
       const nm = nameInput.value.trim();
       if (!nm) return;
@@ -437,7 +459,7 @@ export function createAnnotationUi(ctx) {
     const addBtn = el("button", { class: "ed-act-btn", text: "add", title: "add this attribute" });
     addBtn.addEventListener("click", (e) => { e.stopPropagation(); doAdd(); });
     addRow.append(nameInput, valueInput, addBtn);
-    pop.append(nameList, valueList, addRow, caption);
+    pop.append(nameList, valueList, addRow, addWarn, caption);
 
     const closeRow = el("div", { class: "ed-sel-pop-row" });
     const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "close" });
@@ -884,6 +906,6 @@ export function createAnnotationUi(ctx) {
 
   return {
     openContextMenu, openSelPopover, openAnnotationEditor,
-    openAnnotationEditorFor, removeSelPopover, removeMenu,
+    openAnnotationEditorFor, openAttrEditor, removeSelPopover, removeMenu,
   };
 }

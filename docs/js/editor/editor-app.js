@@ -822,7 +822,7 @@ function renderReading() {
       const semWrap = semanticWrapFor(cell);
       const semClass = semWrap ? " ed-w-sem" : "";
       const semTitlePart = semWrap ? semanticWrapTitle(semWrap) : null;
-      const baseTitle = critTitle(cell, note, meta);
+      const baseTitle = critTitle(cell, note, meta, !!semWrap);
       const span = el("span", {
         class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + semClass,
         dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
@@ -830,15 +830,18 @@ function renderReading() {
         title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
       });
       // Editor paradigm (operator decision 2026-06-10): a plain click only sets
-      // the cursor. Clicking an ANNOTATED element opens its annotation editor;
-      // a gap opens its remove chooser; double-click edits the text directly;
-      // right-click opens the context menu; selecting text annotates it.
+      // the cursor. Clicking an ANNOTATED element opens its editor: an entity
+      // mention its annotation editor, a scholarly inline wrap (date, ref, ...)
+      // its attribute editor, so the @when normalization sits one click from the
+      // marked text. A gap opens its remove chooser; double-click edits the text
+      // directly; right-click opens the context menu; selecting text annotates it.
       span.addEventListener("click", (e) => {
         if (e.detail > 1) return; // second click of a double-click
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
         if (cell.gap) { beginCritic(span, cell); return; }
         if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
+        if (semWrap) { annot.openAttrEditor(span, cell); return; }
         // plain reading text: the click is just a cursor, not a command
       });
       span.addEventListener("dblclick", (e) => {
@@ -1105,7 +1108,7 @@ function beginNote(span, cell) {
 // ---- textual-critical markup (M3.6) ----------------------------------------
 
 /** Tooltip for a reading cell, composed from its link / note / critical state. */
-function critTitle(cell, note, meta) {
+function critTitle(cell, note, meta, semWrap) {
   if (cell.gap) return "gap: omitted or illegible text; click to remove";
   const parts = [];
   if (cell.mention) {
@@ -1130,6 +1133,7 @@ function critTitle(cell, note, meta) {
       : `normalized: ${cell.w.norm}`);
   }
   parts.push(cell.mention ? "click to edit the annotation"
+    : semWrap ? "click to edit attributes; double-click to edit text; right-click for actions"
     : "double-click to edit; right-click for actions");
   return parts.join("; ");
 }
