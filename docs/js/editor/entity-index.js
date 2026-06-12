@@ -127,15 +127,55 @@ export function createEntityIndex(ctx) {
     showPanel("index");
   }
 
-  /** DOM-level filter over the rendered panel: rows by name/id, empty sections fold. */
+  /**
+   * DOM-level filter over the rendered panel: rows match by name or id only (not
+   * the whole row text, so id-badge and authority values do not create false
+   * hits), the match is highlighted, per-section counts read "shown / total", and
+   * a section with matches opens even when collapsed.
+   */
   function applyFilter(q) {
     const f = (q || "").trim().toLowerCase();
+    let shown = 0, total = 0;
     for (const row of document.querySelectorAll("#ed-index-host .ed-idx-row")) {
-      row.hidden = !!f && !row.textContent.toLowerCase().includes(f);
+      total++;
+      const name = (row.dataset.name || "").toLowerCase();
+      const id = (row.dataset.id || "").toLowerCase();
+      const hit = !f || name.includes(f) || id.includes(f);
+      row.hidden = !hit;
+      if (hit) shown++;
+      highlightName(row, f);
     }
     for (const sec of document.querySelectorAll("#ed-index-host .ed-idx-section")) {
-      sec.hidden = !!f && !sec.querySelector(".ed-idx-row:not([hidden])");
+      const body = sec.querySelector(".ed-idx-section-body");
+      const vis = sec.querySelectorAll(".ed-idx-row:not([hidden])").length;
+      if (f) {
+        sec.hidden = vis === 0;
+        if (body && vis > 0) body.hidden = false;                 // reveal matches in a collapsed section
+      } else {
+        sec.hidden = false;
+        if (body) body.hidden = sec.dataset.collapsed === "1";     // restore the collapse state
+      }
+      const count = sec.querySelector(".ed-idx-count");
+      if (count) {
+        const declared = count.dataset.total || String(sec.querySelectorAll(".ed-idx-row").length);
+        count.textContent = f ? `${vis} / ${declared}` : declared;
+      }
     }
+    const cl = $("idx-filter-count");
+    if (cl) { cl.textContent = f ? `${shown} of ${total} shown` : ""; cl.hidden = !f; }
+  }
+
+  /** Re-render an entity's name span with the filter match wrapped in <mark>. */
+  function highlightName(row, f) {
+    const span = row.querySelector(".ed-idx-name");
+    if (!span || row.querySelector(".ed-idx-rename")) return; // leave a name being renamed
+    const name = row.dataset.name || "";
+    clear(span);
+    const i = f ? name.toLowerCase().indexOf(f) : -1;
+    if (i < 0) { span.textContent = name || "(unnamed)"; return; }
+    span.appendChild(document.createTextNode(name.slice(0, i)));
+    span.appendChild(el("mark", { class: "ed-idx-hit", text: name.slice(i, i + f.length) }));
+    span.appendChild(document.createTextNode(name.slice(i + f.length)));
   }
 
   /**
@@ -169,12 +209,25 @@ export function createEntityIndex(ctx) {
     if (indexPanel) indexPanel.setActive(id);
     const row = document.querySelector(`#ed-index-host .ed-idx-row[data-id="${CSS.escape(id)}"]`);
     if (!row) { setStatus(`No index entry for ${id}`); return; }
+    // Open the containing section if it was collapsed, so the row is visible.
+    const sec = row.closest(".ed-idx-section");
+    if (sec) {
+      const body = sec.querySelector(".ed-idx-section-body");
+      if (body) body.hidden = false;
+      sec.dataset.collapsed = "0";
+      const h = sec.querySelector(".ed-idx-heading");
+      if (h) h.setAttribute("aria-expanded", "true");
+    }
+    row.hidden = false;
     row.scrollIntoView({ block: "center" });
     row.classList.add("ed-idx-row-flash");
     setTimeout(() => row.classList.remove("ed-idx-row-flash"), 1200);
   }
 
   $("idx-filter").addEventListener("input", (e) => applyFilter(e.target.value));
+  $("idx-filter").addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.target.value = ""; applyFilter(""); }
+  });
 
   return { renderIndex, open, revealEntity, runLookup };
 }

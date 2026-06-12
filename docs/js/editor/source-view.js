@@ -141,7 +141,12 @@ export function mountSourceView(host, opts = {}) {
     autocapitalize: "off", autocomplete: "off",
   });
   ta.value = opts.value || "";
-  const stack = el("div", { class: "ed-src-stack" }, [pre, ta]);
+  // Error-line band: a faint full-width highlight behind the text, shown on a
+  // failed well-formedness check at the reported line. Behind the overlay so the
+  // text stays crisp; cleared on the next edit.
+  const errBand = el("div", { class: "ed-src-errband", "aria-hidden": "true" });
+  errBand.hidden = true;
+  const stack = el("div", { class: "ed-src-stack" }, [errBand, pre, ta]);
   const wrap = el("div", { class: "ed-src-wrap" }, [gutter, stack]);
 
   let lineCount = -1;
@@ -162,12 +167,31 @@ export function mountSourceView(host, opts = {}) {
     pre.scrollTop = ta.scrollTop;
     pre.scrollLeft = ta.scrollLeft;
     gutter.scrollTop = ta.scrollTop;
+    positionErrBand();
   };
+
+  // ---- error-line band ------------------------------------------------------
+  let errLine = null;
+  const lineMetrics = () => {
+    const cs = getComputedStyle(ta);
+    let lh = parseFloat(cs.lineHeight);
+    if (!Number.isFinite(lh)) lh = (parseFloat(cs.fontSize) || 0) * 1.5;
+    return { lh, padTop: parseFloat(cs.paddingTop) || 0 };
+  };
+  function positionErrBand() {
+    if (errLine == null) return;
+    const { lh, padTop } = lineMetrics();
+    errBand.style.height = lh + "px";
+    errBand.style.top = (padTop + (errLine - 1) * lh - ta.scrollTop) + "px";
+  }
+  const markErrorLine = (line) => { errLine = line; errBand.hidden = false; positionErrBand(); };
+  const clearErrorLine = () => { errLine = null; errBand.hidden = true; };
 
   let raf = 0;
   ta.addEventListener("input", () => {
     result.textContent = "";
     result.className = "ed-src-result";
+    clearErrorLine();
     if (raf) return;
     raf = requestAnimationFrame(() => { raf = 0; refresh(); syncScroll(); });
   });
@@ -275,11 +299,12 @@ export function mountSourceView(host, opts = {}) {
     if (wf.ok) {
       result.className = "ed-src-result ok";
       result.textContent = "well-formed";
+      clearErrorLine();
     } else {
       result.className = "ed-src-result err";
       result.textContent = wf.message;
       const pos = errorPosition(wf.message);
-      if (pos) caretToLineCol(pos.line, pos.column);
+      if (pos) { caretToLineCol(pos.line, pos.column); markErrorLine(pos.line); }
     }
   };
   checkBtn.addEventListener("click", runCheck);
@@ -289,7 +314,7 @@ export function mountSourceView(host, opts = {}) {
       result.className = "ed-src-result err";
       result.textContent = wf.message;
       const pos = errorPosition(wf.message);
-      if (pos) caretToLineCol(pos.line, pos.column);
+      if (pos) { caretToLineCol(pos.line, pos.column); markErrorLine(pos.line); }
       return;
     }
     onApply(ta.value);

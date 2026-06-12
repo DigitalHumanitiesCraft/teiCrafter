@@ -363,8 +363,8 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
   // Default context panel: the facsimile when the document has page images, the
-  // Document context panel otherwise (the empty entity Index is one click away).
-  app.panel = docHasImages() ? "facs" : "document";
+  // entity Index otherwise.
+  app.panel = docHasImages() ? "facs" : "index";
   // F4: the reading variant resets to diplomatic per load; applyDocLayout then
   // restores the persisted value when this document had one.
   app.readingVariant = "dipl";
@@ -1362,12 +1362,6 @@ function docHasImages() {
 
 const PANELS = [
   {
-    id: "document", label: "Document", host: "ed-panel-document",
-    title: "The loaded document's facts: name, source, project, editing unit, counts and save target",
-    available: () => true,
-    render: () => documentFacts.renderDocumentPanel(),
-  },
-  {
     id: "facs", label: "Facsimile", host: "ed-panel-facs",
     title: "Page image with TEI zones; hovering a zone highlights the linked text and vice versa",
     unavailableTitle: "This document carries no page images",
@@ -1619,7 +1613,7 @@ function setRightCollapsed(on, persist = true, rerender = true) {
   if (btn) {
     btn.setAttribute("aria-pressed", String(on));
     btn.title = on ? "Show the context pane" : "Hide the context pane";
-    btn.textContent = on ? "⇤" : "⇥"; // expand back / collapse away
+    btn.textContent = on ? "‹" : "›"; // restore the pane / collapse it away
   }
   if (persist) saveDocLayout({ collapsed: on });
   // Re-render the now-visible panel so OpenSeadragon sizes to the restored width.
@@ -1650,17 +1644,28 @@ function setupSplitter() {
     return Math.max(minPct, Math.min(100 - minPct, pct));
   };
   const curPct = () => widthPct(left.getBoundingClientRect().width);
-  let dragging = false;
+  let dragging = false, moved = false, startX = 0;
   splitter.addEventListener("pointerdown", (e) => {
-    if (main.classList.contains("right-collapsed")) return;
-    dragging = true;
+    dragging = true; moved = false; startX = e.clientX;
     splitter.setPointerCapture(e.pointerId);
-    document.body.style.cursor = "col-resize";
     e.preventDefault();
   });
   splitter.addEventListener("pointermove", (e) => {
     if (!dragging) return;
+    // A clean press without travel stays a click (rail-click restores when
+    // collapsed); only a real drag past a few pixels resizes.
+    if (!moved) {
+      if (Math.abs(e.clientX - startX) < 3) return;
+      moved = true;
+      document.body.style.cursor = "col-resize";
+    }
     const rect = main.getBoundingClientRect();
+    // Collapsed: a leftward drag reopens the pane and sizes it in one gesture,
+    // but only once the pointer has pulled in far enough to form a 320px pane.
+    if (main.classList.contains("right-collapsed")) {
+      if (rect.right - e.clientX < SPLIT_MIN_PX) return;
+      setRightCollapsed(false);
+    }
     setSplitPct(clamp(widthPct(e.clientX - rect.left)), false);
   });
   const end = (e) => {
@@ -1668,7 +1673,10 @@ function setupSplitter() {
     dragging = false;
     try { splitter.releasePointerCapture(e.pointerId); } catch (_) { /* not captured */ }
     document.body.style.cursor = "";
-    saveDocLayout({ split: Math.round(curPct() * 10) / 10 });
+    const collapsed = main.classList.contains("right-collapsed");
+    if (!moved && collapsed) setRightCollapsed(false);            // plain click on the collapsed rail restores
+    else if (moved && !collapsed) saveDocLayout({ split: Math.round(curPct() * 10) / 10 });
+    moved = false;
   };
   splitter.addEventListener("pointerup", end);
   splitter.addEventListener("pointercancel", end);
@@ -1855,9 +1863,8 @@ document.addEventListener("keydown", (e) => {
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
 
-// The document strip opens the Document context panel; its Dismiss button hides
-// the plaintext-draft banner until the next draft.
-$("ed-docstrip").addEventListener("click", () => { if (app.state) showPanel("document"); });
+// The document strip displays the loaded document's facts inline; its Dismiss
+// button hides the plaintext-draft banner until the next draft.
 $("ed-draftbanner-dismiss").addEventListener("click", documentFacts.hideDraftBanner);
 
 // View controls: text zoom (a global preference) and the context-pane collapse

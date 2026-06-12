@@ -55,6 +55,9 @@ export function createIndexPanel(hostEl, hooks = {}) {
   // are indexed by id for setActive() to toggle without a full re-render.
   let activeId = null;
   let rowById = new Map();
+  // Per-section collapse choices the user made this session (survives re-renders).
+  // Absent for a section => the default applies: empty collapsed, populated open.
+  const explicitCollapse = new Map();
 
   function applyActive() {
     for (const [id, row] of rowById) row.classList.toggle("ed-idx-row-active", id === activeId);
@@ -65,8 +68,14 @@ export function createIndexPanel(hostEl, hooks = {}) {
   function buildRow(entity) {
     const row = el("div", {
       class: "ed-idx-row" + (entity.ai ? " ed-idx-row-ai" : ""),
-      dataset: { id: entity.id },
+      dataset: { id: entity.id, name: entity.name || "" },
     });
+
+    // Editorial-gap flags (categorical, never violet): an entry with no authority
+    // id yet, or with no in-text mention (an orphan), so a reviewer can see the
+    // work left without opening each entry.
+    const noId = !(Array.isArray(entity.authorities) && entity.authorities.length);
+    const orphan = typeof entity.count === "number" && entity.count === 0;
 
     // Body: name + faded id + mention count. Clicking it selects the entity
     // (the integrator jumps to its first in-text mention).
@@ -84,10 +93,12 @@ export function createIndexPanel(hostEl, hooks = {}) {
       el("span", { class: "ed-idx-name", text: entity.name || "(unnamed)" }),
       el("span", { class: "ed-idx-id", text: entity.id }),
       typeof entity.count === "number" ? el("span", {
-        class: "ed-idx-occ",
+        class: "ed-idx-occ" + (orphan ? " ed-idx-occ-zero" : ""),
         text: `${entity.count}×`,
-        title: `${entity.count} mention(s) in this document`,
+        title: orphan ? "Not linked to any mention in the text yet" : `${entity.count} mention(s) in this document`,
       }) : null,
+      noId ? el("span", { class: "ed-idx-flag", text: "no id",
+        title: "No authority id yet (GND, GeoNames, Wikidata)" }) : null,
     ]);
 
     // Inline rename: swap the name span for an input bound to onUpdate.
@@ -150,12 +161,34 @@ export function createIndexPanel(hostEl, hooks = {}) {
     });
     row.addEventListener("mouseleave", disarm);
 
+    // Authority ids: the shared form (same UI as in the annotation editor). Built
+    // before the actions so the "+ id" toggle can reveal its add/lookup row.
+    const authForm = buildAuthorityForm(entity, {
+      onSet: (authority, value) => onSetAuthority(entity.id, { authority, value }),
+      onLookup: (authority, query, anchor, onPick) =>
+        onLookup(entity.id, { authority, query, anchor, onPick }),
+    });
+    // One scannable line by default: existing id chips stay visible, the add and
+    // lookup controls are revealed on demand (details on demand).
+    const addForm = authForm.querySelector(".ed-idx-authadd");
+    if (addForm) addForm.hidden = true;
+    const idToggle = el("button", {
+      class: "ed-idx-btn ed-idx-idtoggle", type: "button",
+      title: "Add or look up an authority id", "aria-label": "Add authority id", text: "+ id",
+      onclick: () => {
+        if (!addForm) return;
+        addForm.hidden = !addForm.hidden;
+        if (!addForm.hidden) { const i = addForm.querySelector(".ed-idx-authinput"); if (i) i.focus(); }
+      },
+    });
+
     const actions = el("div", { class: "ed-idx-actions" }, [
       entity.ai ? el("button", {
         class: "ed-idx-btn ed-idx-confirm", type: "button", title: "Confirm this AI suggestion",
         "aria-label": "Confirm", text: "confirm",
         onclick: () => onConfirm(entity.id),
       }) : null,
+      idToggle,
       el("button", {
         class: "ed-idx-btn ed-idx-edit", type: "button", title: "Rename",
         "aria-label": "Rename", text: "edit",
@@ -168,13 +201,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
     main.appendChild(body);
     main.appendChild(actions);
     row.appendChild(main);
-    // Authority ids: the shared form (same UI as in the annotation editor),
-    // routed into this panel's hooks.
-    row.appendChild(buildAuthorityForm(entity, {
-      onSet: (authority, value) => onSetAuthority(entity.id, { authority, value }),
-      onLookup: (authority, query, anchor, onPick) =>
-        onLookup(entity.id, { authority, query, anchor, onPick }),
-    }));
+    row.appendChild(authForm);
     return row;
   }
 
@@ -207,24 +234,34 @@ export function createIndexPanel(hostEl, hooks = {}) {
   // ---- one section ---------------------------------------------------------
 
   function buildSection(section, items) {
+    // Empty sections collapse by default so the panel stays an overview; a user
+    // toggle (explicitCollapse) overrides and survives re-renders. The count is
+    // refreshed to "shown / total" by the integrator's filter.
+    const collapsed = explicitCollapse.has(section.type) ? explicitCollapse.get(section.type) : items.length === 0;
     const list = el("div", { class: "ed-idx-list" });
-    if (!items.length) {
-      list.appendChild(el("div", { class: "ed-idx-empty", text: "No entries yet." }));
-    } else {
-      for (const entity of items) {
-        const row = buildRow(entity);
-        rowById.set(entity.id, row);
-        list.appendChild(row);
-      }
+    for (const entity of items) {
+      const row = buildRow(entity);
+      rowById.set(entity.id, row);
+      list.appendChild(row);
     }
-    return el("section", { class: "ed-idx-section", dataset: { type: section.type } }, [
-      el("h4", { class: "ed-idx-heading" }, [
-        el("span", { text: section.label }),
-        el("span", { class: "ed-idx-count", text: String(items.length) }),
-      ]),
-      list,
-      buildAddRow(section),
-    ]);
+    const count = el("span", { class: "ed-idx-count", text: String(items.length) });
+    count.dataset.total = String(items.length);
+    const heading = el("button", {
+      class: "ed-idx-heading", type: "button", "aria-expanded": String(!collapsed),
+      title: "Show or hide this section",
+    }, [el("span", { class: "ed-idx-heading-label", text: section.label }), count]);
+    const sectionBody = el("div", { class: "ed-idx-section-body" }, [list, buildAddRow(section)]);
+    sectionBody.hidden = collapsed;
+    const sec = el("section", { class: "ed-idx-section",
+      dataset: { type: section.type, collapsed: collapsed ? "1" : "0" } }, [heading, sectionBody]);
+    heading.addEventListener("click", () => {
+      const willCollapse = !sectionBody.hidden;
+      explicitCollapse.set(section.type, willCollapse);
+      sectionBody.hidden = willCollapse;
+      sec.dataset.collapsed = willCollapse ? "1" : "0";
+      heading.setAttribute("aria-expanded", String(!willCollapse));
+    });
+    return sec;
   }
 
   // ---- public API ----------------------------------------------------------
@@ -233,6 +270,11 @@ export function createIndexPanel(hostEl, hooks = {}) {
     clearNode(hostEl);
     rowById = new Map();
     const root = el("div", { class: "ed-idx" });
+    const total = SECTIONS.reduce((n, s) => n + (Array.isArray(entities[s.key]) ? entities[s.key].length : 0), 0);
+    if (total === 0) {
+      root.appendChild(el("div", { class: "ed-idx-allempty",
+        text: "No index entities yet. Select text in the reading view to create one, or add it in a section below." }));
+    }
     for (const section of SECTIONS) {
       const items = Array.isArray(entities[section.key]) ? entities[section.key] : [];
       root.appendChild(buildSection(section, items));

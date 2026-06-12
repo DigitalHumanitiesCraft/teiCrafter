@@ -62,9 +62,9 @@
             <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
         </div>
         <!-- Document identity: right-aligned in the toolbar, visible only while a
-             document is loaded; clicking it opens the Document context panel. -->
-        <button class="ed-docstrip" id="ed-docstrip" type="button" hidden
-                title="Open the Document panel with this document's facts"></button>
+             document is loaded. A factual display, not interactive. -->
+        <span class="ed-docstrip" id="ed-docstrip" hidden
+              title="The loaded document's name, source, type, editing unit and page count"></span>
     </div>
 
     <!-- Dual view: two panes, always. The left
@@ -113,7 +113,7 @@
              tabindex="0" aria-label="Resize panes"
              title="Drag to resize; double-click to reset; arrow keys to nudge">
             <button class="ed-splitter-toggle" id="ed-collapse-btn" type="button" aria-pressed="false"
-                    title="Hide the context pane">&#8677;</button>
+                    title="Hide the context pane">&#8250;</button>
         </div>
 
         <section class="ed-pane" id="ed-pane-right">
@@ -124,12 +124,10 @@
                 <div class="ed-panel" id="ed-panel-facs" hidden>
                     <div class="ed-osd" id="ed-osd"></div>
                 </div>
-                <div class="ed-panel" id="ed-panel-document" hidden>
-                    <div id="ed-document-host"></div>
-                </div>
                 <div class="ed-panel" id="ed-panel-index" hidden>
-                    <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter entities..."
-                           title="Filter by name or id; sections without a match collapse" />
+                    <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter by name or id..."
+                           title="Filter entities by name or id; matches are highlighted, Escape clears" />
+                    <span class="ed-idx-filter-count" id="idx-filter-count" hidden></span>
                     <div id="ed-index-host">
                         <div class="ed-empty">Entity index appears after a document is loaded.</div>
                     </div>

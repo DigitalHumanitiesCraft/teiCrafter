@@ -2,16 +2,16 @@
  * teiCrafter Editor -- document-identity surfaces.
  *
  * The factual, no-invented-data views of the loaded document: the slim strip
- * under the toolbar (#ed-docstrip), the Document context panel (#ed-document-host),
- * the small derivations they share (editing unit, title, source wording, save
- * target), the plaintext-draft banner (#ed-draftbanner), and the unsaved-draft
- * recovery wiring (persist a handle-less plaintext draft to localStorage on the
- * first dirty change, offer to restore it in the empty reading pane).
+ * under the toolbar (#ed-docstrip), the small derivations it shares (editing
+ * unit, title, source wording, save target), the plaintext-draft banner
+ * (#ed-draftbanner), and the unsaved-draft recovery wiring (persist a handle-less
+ * plaintext draft to localStorage on the first dirty change, offer to restore it
+ * in the empty reading pane).
  *
  * Contract:
  *   createDocumentFacts(ctx) -> {
  *     editingUnit, docTitle, sourceLabel, saveTargetLabel,
- *     updateDocStrip, renderDocumentPanel,
+ *     updateDocStrip,
  *     showDraftBanner, hideDraftBanner,
  *     isUnsavedDraft, persistDraftIfNeeded, clearDraftRecovery,
  *     renderDraftRecovery, restoreDraft,
@@ -26,7 +26,7 @@
  */
 
 import { el, clear } from "./dom.js";
-import { serialize, xmlIdSet } from "./edition.js";
+import { serialize } from "./edition.js";
 import { firstByLocal, textOf, textNodes } from "./tei-document.js";
 import { typeForFile } from "./project-manifest.js";
 import { saveDraft, loadDraft, clearDraft } from "./draft-recovery.js";
@@ -130,38 +130,6 @@ export function createDocumentFacts(ctx) {
     if (banner) banner.hidden = true;
   }
 
-  // ---- right-pane Document panel ---------------------------------------------
-
-  /**
-   * The Document context panel: key-value facts about the loaded document. No
-   * invented values; a row whose value is unknown is omitted rather than guessed.
-   */
-  function renderDocumentPanel() {
-    const host = $("ed-document-host");
-    if (!host || !app.state) return;
-    clear(host);
-    const sec = el("div", { class: "ed-section" }, [el("h4", { text: "Document" })]);
-    const kv = (label, value) => sec.appendChild(
-      el("div", { class: "ed-kv" }, [el("span", { text: label }), el("b", { text: String(value) })]));
-
-    const title = docTitle();
-    if (title) kv("Title", title);
-    kv("File", app.docName || "(unnamed)");
-    const src = sourceLabel();
-    if (src) kv("Source", src);
-    const project = activeProject();
-    kv("Project", project && project.name ? project.name : "none");
-    const docType = typeForFile(app.project, app.docName);
-    kv("Document type", docType ? docType.label : "not assigned");
-    kv("Editing unit", editingUnit());
-    kv("Pages", app.state.folios.length);
-    kv(editingUnit() === "words" ? "Words" : "Lines", app.state.cells.length);
-    kv("xml:id count", xmlIdSet(app.state).size);
-    kv("Save target", saveTargetLabel());
-
-    host.appendChild(sec);
-  }
-
   // ---- unsaved-draft recovery -----------------------------------------------
   // A plaintext-derived draft (kind "draft", no file handle) is the only document
   // that has no file behind it: a reload loses it. On the first dirty change it is
@@ -249,7 +217,7 @@ export function createDocumentFacts(ctx) {
 
   return {
     editingUnit, docTitle, sourceLabel, saveTargetLabel,
-    updateDocStrip, renderDocumentPanel,
+    updateDocStrip,
     showDraftBanner, hideDraftBanner,
     isUnsavedDraft, persistDraftIfNeeded, clearDraftRecovery,
     renderDraftRecovery, restoreDraft,

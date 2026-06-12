@@ -580,91 +580,112 @@ export function createAnnotationUi(ctx) {
   }
 
   /**
-   * Shared entity-choice list with provenance: suggestions first (same name as
-   * the selection, or the same text already annotated), then groups "annotated
-   * on this page" / "annotated in this document" / "in the index (not yet
-   * linked)", with a filter once the list grows. onPick(entityId) applies;
-   * excludeId hides the entity the text is currently linked to.
+   * Classify the index against the selected text: suggestions with hard evidence
+   * (an index entry with exactly this name, or this exact text already annotated
+   * elsewhere) and the rest, deduplicated so an entity never appears in both.
+   * The single source of truth for the matching, shared by the annotate popover,
+   * relink and the word-profile picker.
    */
-  function buildEntityChoiceRows(container, selText, onPick, excludeId) {
-    const meta = entityMetaMap();
-    const usage = entityUsage();
+  function entityMatches(selText, excludeId) {
     const all = standoff.readEntities(app.state.doc);
     const entities = ["persons", "places", "orgs", "works", "events"]
       .flatMap((k) => all[k] || [])
       .filter((ent) => ent.id !== excludeId);
-    if (!entities.length) {
-      container.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet" }));
-      return;
-    }
     const norm = (s) => (s || "").trim().toLowerCase();
     const want = norm(selText);
-
-    const entBtn = (ent, why) => {
-      const m = meta.get(ent.id);
-      const u = usage.get(ent.id);
-      const kindLabel = m ? TYPE_LABEL[m.kind] : "entity";
-      const b = el("button", {
-        class: "ed-act-btn" + (m && m.ai ? " ed-btn-ai" : ""),
-        text: `${ent.name || "(unnamed)"} (${kindLabel})`,
-        title: `${ent.id}${why ? "; " + why : ""}${u ? `; ${u.count} mention(s) in this document` : "; no mentions yet"}`,
-      });
-      b.addEventListener("click", (e) => { e.stopPropagation(); if (e.detail > 1) return; onPick(ent.id); });
-      return b;
-    };
-
-    // Suggestions: hard evidence only (name equals the selection, or the exact
-    // selected text is already annotated with this entity somewhere).
-    const suggested = new Set();
-    const sugRow = el("div", { class: "ed-sel-pop-row" });
-    for (const ent of entities) {
-      if (norm(ent.name) === want && want) { suggested.add(ent.id); sugRow.appendChild(entBtn(ent, "index entry with exactly this name")); }
-    }
-    for (const folio of app.state.folios) {
-      for (const line of folio.lines) {
-        for (const c of line.cells) {
-          if (!c.mention || suggested.has(c.mention)) continue;
-          if (norm(c.text) !== want || !want) continue;
-          const ent = entities.find((x) => x.id === c.mention);
-          if (ent) { suggested.add(ent.id); sugRow.appendChild(entBtn(ent, "this exact text is already annotated with it")); }
+    const suggested = [];
+    const seen = new Set();
+    if (want) {
+      for (const ent of entities) {
+        if (norm(ent.name) === want) { suggested.push({ ent, why: "index entry with exactly this name" }); seen.add(ent.id); }
+      }
+      for (const folio of app.state.folios) {
+        for (const line of folio.lines) {
+          for (const c of line.cells) {
+            if (!c.mention || seen.has(c.mention)) continue;
+            if (norm(c.text) !== want) continue;
+            const ent = entities.find((x) => x.id === c.mention);
+            if (ent) { suggested.push({ ent, why: "this exact text is already annotated with it" }); seen.add(ent.id); }
+          }
         }
       }
     }
-    if (sugRow.childElementCount) {
-      container.appendChild(el("span", { class: "ed-act-group", text: "suggested (matches this text)" }));
-      container.appendChild(sugRow);
-    }
+    const rest = entities.filter((ent) => !seen.has(ent.id));
+    return { entities, suggested, rest };
+  }
 
-    // Provenance groups for the rest, filterable when long.
-    const rest = entities.filter((ent) => !suggested.has(ent.id));
+  /** A single entity-choice button (name + kind, provenance in the title). */
+  function entChoiceBtn(ent, why, onPick, meta, usage) {
+    const m = meta.get(ent.id);
+    const u = usage.get(ent.id);
+    const kindLabel = m ? TYPE_LABEL[m.kind] : "entity";
+    const b = el("button", {
+      class: "ed-act-btn" + (m && m.ai ? " ed-btn-ai" : ""),
+      text: `${ent.name || "(unnamed)"} (${kindLabel})`,
+      title: `${ent.id}${why ? "; " + why : ""}${u ? `; ${u.count} mention(s) in this document` : "; no mentions yet"}`,
+    });
+    b.addEventListener("click", (e) => { e.stopPropagation(); if (e.detail > 1) return; onPick(ent.id); });
+    return b;
+  }
+
+  /**
+   * Render the rest of the index grouped by provenance (this page / this document
+   * / index only), filtered by name or id. subLevel marks the headings as a
+   * sub-level (used inside the popover disclosure). meta/usage are captured once
+   * by the caller so a large index does not rebuild them per button.
+   */
+  function renderProvenanceGroups(host, rest, filterStr, onPick, meta, usage, opts = {}) {
+    clear(host);
+    const norm = (s) => (s || "").trim().toLowerCase();
+    const f = norm(filterStr);
     const groups = [
       ["annotated on this page", (ent) => { const u = usage.get(ent.id); return u && u.onPage; }],
       ["annotated in this document", (ent) => { const u = usage.get(ent.id); return u && !u.onPage; }],
       ["in the index, not yet linked", (ent) => !usage.get(ent.id)],
     ];
+    const headCls = "ed-act-group" + (opts.subLevel ? " ed-sel-prov-group" : "");
+    for (const [label, match] of groups) {
+      const items = rest.filter((ent) => match(ent) && (!f || norm(ent.name).includes(f) || ent.id.toLowerCase().includes(f)));
+      if (!items.length) continue;
+      host.appendChild(el("span", { class: headCls, text: label }));
+      const row = el("div", { class: "ed-sel-pop-row" });
+      for (const ent of items) row.appendChild(entChoiceBtn(ent, label, onPick, meta, usage));
+      host.appendChild(row);
+    }
+    if (!host.childElementCount && f) {
+      host.appendChild(el("span", { class: "ed-act-empty", text: "no entity matches the filter" }));
+    }
+  }
+
+  /**
+   * Shared entity-choice list with provenance: suggestions first, then the rest
+   * grouped by provenance with a filter once the list grows. onPick(entityId)
+   * applies; excludeId hides the entity the text is currently linked to. Used by
+   * relink and the word-profile picker; the annotate popover composes the same
+   * parts differently (suggestions inline, the rest behind a disclosure).
+   */
+  function buildEntityChoiceRows(container, selText, onPick, excludeId) {
+    const meta = entityMetaMap();
+    const usage = entityUsage();
+    const { entities, suggested, rest } = entityMatches(selText, excludeId);
+    if (!entities.length) {
+      container.appendChild(el("span", { class: "ed-act-empty", text: "no entities yet" }));
+      return;
+    }
+    if (suggested.length) {
+      container.appendChild(el("span", { class: "ed-act-group", text: "suggested (matches this text)" }));
+      const sugRow = el("div", { class: "ed-sel-pop-row" });
+      for (const { ent, why } of suggested) sugRow.appendChild(entChoiceBtn(ent, why, onPick, meta, usage));
+      container.appendChild(sugRow);
+    }
     const listHost = el("div", {});
-    const renderGroups = (filter) => {
-      clear(listHost);
-      const f = norm(filter);
-      for (const [label, match] of groups) {
-        const items = rest.filter((ent) => match(ent) && (!f || norm(ent.name).includes(f) || ent.id.toLowerCase().includes(f)));
-        if (!items.length) continue;
-        listHost.appendChild(el("span", { class: "ed-act-group", text: label }));
-        const row = el("div", { class: "ed-sel-pop-row" });
-        for (const ent of items) row.appendChild(entBtn(ent, label));
-        listHost.appendChild(row);
-      }
-      if (!listHost.childElementCount && f) {
-        listHost.appendChild(el("span", { class: "ed-act-empty", text: "no entity matches the filter" }));
-      }
-    };
     if (rest.length > 8) {
       const filter = el("input", { class: "ed-sel-filter", type: "text", placeholder: `filter ${rest.length} entities...` });
-      filter.addEventListener("input", () => renderGroups(filter.value));
+      filter.addEventListener("input", () => renderProvenanceGroups(listHost, rest, filter.value, onPick, meta, usage));
       filter.addEventListener("mouseup", (e) => e.stopPropagation());
       container.appendChild(filter);
     }
-    renderGroups("");
+    renderProvenanceGroups(listHost, rest, "", onPick, meta, usage);
     container.appendChild(listHost);
   }
 
@@ -698,7 +719,16 @@ export function createAnnotationUi(ctx) {
     }
     const host = reading();
     const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
-    pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
+
+    // Title row: the selection label and a top-right close button. Cancel only
+    // removes the popover (no reading-pane re-render), so look-and-cancel keeps
+    // the scroll and facsimile state.
+    const titleRow = el("div", { class: "ed-sel-pop-titlerow" });
+    titleRow.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
+    const closeBtn = el("button", { class: "ed-sel-pop-close", text: "×", title: "cancel", "aria-label": "cancel", type: "button" });
+    closeBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+    titleRow.appendChild(closeBtn);
+    pop.appendChild(titleRow);
 
     // Filter input: type to narrow every group by label substring (case
     // insensitive). Escape clears a non-empty filter, then closes the popover.
@@ -706,60 +736,81 @@ export function createAnnotationUi(ctx) {
     filter.addEventListener("mouseup", (e) => e.stopPropagation());
     pop.appendChild(filter);
 
-    // The scrollable list host; rebuilt on every filter keystroke. Items declare
-    // their filter label and an activation function; group headings are kept and
-    // shown only when the group has a visible item.
+    // The scrollable list host; rebuilt on every filter keystroke.
     const listHost = el("div", { class: "ed-sel-list" });
     pop.appendChild(listHost);
 
-    const all = standoff.readEntities(app.state.doc);
-    const haveEntities = ["persons", "places", "orgs", "works", "events"].some((k) => (all[k] || []).length);
+    // Disclosure open-state, persisted across re-renders within this open popover.
+    const open = new Set();
 
-    // Each render produces a flat sequence of activatable buttons (for keyboard
-    // navigation) interleaved with headings. An item may instead reveal an inline
-    // attribute field (the attrField wraps); those still count as one nav item.
+    // Relevance-led order: suggestions (evidence) and "new entity" lead and stay
+    // visible; the rest of the index sits behind a disclosure. Markup, Criticism
+    // and Note stay flat with every label directly visible.
     const render = (raw) => {
       clear(listHost);
       const f = raw.trim().toLowerCase();
       const match = (label) => !f || label.toLowerCase().includes(f);
-      const items = [];
 
       const groupHead = (label) => el("span", { class: "ed-act-group", text: label });
       const actBtn = (label, title, fn, cls) => {
         const b = el("button", { class: "ed-act-btn" + (cls ? " " + cls : ""), text: label, title });
         b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
-        items.push(b);
         return b;
       };
 
-      // Entities: link to an existing index entity (provenance groups inside the
-      // shared chooser) plus "new index entity from this text".
-      if (haveEntities) {
-        const linkLabel = "link to an index entity";
-        // The chooser does its own grouping/filtering; show it whenever the
-        // heading itself matches or the filter is empty, so its internal filter
-        // is not shadowed by this one.
-        if (!f || match(linkLabel)) {
-          listHost.appendChild(groupHead("Entities"));
-          const entBody = el("div", { class: "ed-sel-sec-body" });
-          buildEntityChoiceRows(entBody, target.text, (entId) => {
-            removeSelPopover();
-            annotateSelection(target, entId, null);
-          }, null);
-          listHost.appendChild(entBody);
-        }
-      }
+      // Entities: evidence-first. Suggestions inline and open; the five "new
+      // entity" actions visible; the rest of the index behind a disclosure.
+      const meta = entityMetaMap();
+      const usage = entityUsage();
+      const { entities, suggested, rest } = entityMatches(target.text, null);
+      const norm = (s) => (s || "").trim().toLowerCase();
+      const sugMatches = suggested.filter(({ ent }) => match(ent.name || ""));
       const newItems = ENTITY_TYPE_LABELS.filter(([, label]) => match(`new ${label}`));
-      if (newItems.length) {
-        if (!haveEntities) listHost.appendChild(groupHead("Entities"));
-        const newRow = el("div", { class: "ed-sel-pop-row" });
-        listHost.appendChild(newRow);
-        for (const [type, label] of newItems) {
-          const b = actBtn(`new ${label}`, `create a ${label} named "${target.text}", link this text, then add authority ids right here`, () => {
-            removeSelPopover();
-            annotateSelection(target, null, type);
+      const restHits = f ? rest.filter((e) => norm(e.name).includes(f) || e.id.toLowerCase().includes(f)) : rest;
+      const showExisting = rest.length > 0 && (!f || restHits.length > 0);
+      if (sugMatches.length || newItems.length || showExisting) {
+        listHost.appendChild(groupHead("Entities"));
+        if (sugMatches.length) {
+          const sugRow = el("div", { class: "ed-sel-pop-row" });
+          for (const { ent, why } of sugMatches) {
+            sugRow.appendChild(entChoiceBtn(ent, why, (entId) => {
+              removeSelPopover();
+              annotateSelection(target, entId, null);
+            }, meta, usage));
+          }
+          listHost.appendChild(sugRow);
+        }
+        if (newItems.length) {
+          const newRow = el("div", { class: "ed-sel-pop-row" });
+          listHost.appendChild(newRow);
+          for (const [type, label] of newItems) {
+            newRow.appendChild(actBtn(`new ${label}`, `create a ${label} named "${target.text}", link this text, then add authority ids right here`, () => {
+              removeSelPopover();
+              annotateSelection(target, null, type);
+            }));
+          }
+        }
+        if (showExisting) {
+          // A non-empty filter with entity hits force-opens the disclosure so the
+          // matches show; otherwise it honours the per-popover open state.
+          const key = "existing-entities";
+          const isOpen = (!!f && restHits.length > 0) || open.has(key);
+          const head = el("button", { class: "ed-sel-sec-head", type: "button",
+            text: `link to an existing entity (${rest.length})`, "aria-expanded": String(isOpen) });
+          head.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (open.has(key)) open.delete(key); else open.add(key);
+            rerender(filter.value);
           });
-          newRow.appendChild(b);
+          listHost.appendChild(head);
+          if (isOpen) {
+            const body = el("div", { class: "ed-sel-sec-body" });
+            renderProvenanceGroups(body, rest, raw, (entId) => {
+              removeSelPopover();
+              annotateSelection(target, entId, null);
+            }, meta, usage, { subLevel: true });
+            listHost.appendChild(body);
+          }
         }
       }
 
@@ -862,33 +913,33 @@ export function createAnnotationUi(ctx) {
       if (!listHost.childElementCount) {
         listHost.appendChild(el("span", { class: "ed-act-empty", text: "no action matches the filter" }));
       }
-      return items;
     };
 
-    let navItems = render("");
-
-    // Keyboard navigation across the visible activatable items.
+    // Keyboard navigation across the visible activatable controls (action buttons
+    // and disclosure headers), collected from the DOM after each render so the
+    // suggestion and disclosure-revealed entity buttons are reachable too.
+    let navItems = [];
     let navIndex = -1;
+    const collectNav = () => { navItems = Array.from(listHost.querySelectorAll(".ed-act-btn, .ed-sel-sec-head")); };
+    const rerender = (raw) => { render(raw); collectNav(); navIndex = -1; };
     const focusNav = (i) => {
       if (!navItems.length) return;
       navIndex = (i + navItems.length) % navItems.length;
       navItems[navIndex].focus();
     };
-    filter.addEventListener("input", () => { navItems = render(filter.value); navIndex = -1; });
+    rerender("");
+    filter.addEventListener("input", () => rerender(filter.value));
     pop.addEventListener("keydown", (e) => {
       if (e.key === "ArrowDown") { e.preventDefault(); focusNav(navIndex + 1); }
       else if (e.key === "ArrowUp") { e.preventDefault(); focusNav(navIndex - 1); }
-      else if (e.key === "Enter" && document.activeElement && document.activeElement.classList.contains("ed-act-btn")) {
+      else if (e.key === "Enter" && document.activeElement &&
+               (document.activeElement.classList.contains("ed-act-btn") || document.activeElement.classList.contains("ed-sel-sec-head"))) {
         e.preventDefault(); document.activeElement.click();
       } else if (e.key === "Escape") {
-        if (filter.value) { e.stopPropagation(); filter.value = ""; navItems = render(""); navIndex = -1; filter.focus(); }
+        if (filter.value) { e.stopPropagation(); filter.value = ""; rerender(""); filter.focus(); }
         else removeSelPopover();
       }
     });
-
-    const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
-    xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
-    pop.appendChild(xBtn);
 
     anchorPopAt(pop, window.getSelection().getRangeAt(0).getBoundingClientRect(), host);
     filter.focus();
