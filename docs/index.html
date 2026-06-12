@@ -145,7 +145,7 @@
                 <p class="lp-lede">teiCrafter opens a TEI document, whether an edition, a dictionary or a language corpus, and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). Where the document links a facsimile, text and page image appear side by side. It runs in the browser; the file stays a local file on your computer.</p>
                 <div class="lp-cta-group">
                     <a class="lp-btn lp-open" href="editor.html" title="Open the editor to load a TEI document or a project folder">Open the editor</a>
-                    <a class="lp-btn lp-ghost" href="#examples">Try an example</a>
+                    <a class="lp-btn lp-ghost" href="#examples" id="lp-try-example" hidden>Try an example</a>
                 </div>
                 <p class="lp-cta-note">No upload. Your files never leave your device.</p>
                 <figure class="lp-shot">
@@ -154,7 +154,9 @@
             </div>
         </section>
 
-        <section id="examples" class="lp-examples">
+        <!-- Hidden by default; the script at the end of body reveals the
+             example surfaces on local development hosts (FEATURES.examples). -->
+        <section id="examples" class="lp-examples" hidden>
             <div class="lp-wrap">
                 <h2 class="lp-section-title">Example projects</h2>
                 <div class="lp-cards">
@@ -223,5 +225,14 @@
             </a>
         </div>
     </footer>
+    <script type="module">
+        // Example surfaces show only during local development; the public
+        // deployment keeps them hidden (flag computed in constants.js).
+        import { FEATURES } from "./js/utils/constants.js";
+        if (FEATURES.examples) {
+            document.getElementById("examples").hidden = false;
+            document.getElementById("lp-try-example").hidden = false;
+        }
+    </script>
 </body>
 </html>

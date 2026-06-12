@@ -33,8 +33,16 @@
  *                          "teiModules": [ ... ], "teiElements": [ ... ] } ],
  *     "files":   { "brief-001.xml": "letter" },
  *     "indices": [ { "key": "peoples", "label": "...", "listType": "...", "registers": ["GND"] } ],
- *     "views":   [ { "key": "diplomatic", "label": "..." } ]
+ *     "views":   [ { "key": "diplomatic", "label": "..." } ],
+ *     "reconciliation": { "registers": ["Wikidata", "GND"], "auto": true }
  *   }
+ *
+ * "reconciliation" (optional) opts a project into authority reconciliation at
+ * the point of annotation: "registers" are the registers (GND | Wikidata |
+ * GeoNames) the candidate lookup queries, defaulting to ["Wikidata", "GND"];
+ * "auto" (default false) lets the lookup fire automatically as the entity name
+ * is typed. Absent, the field normalizes to project.reconciliation = null and
+ * the operator always triggers the lookup by an explicit click.
  *
  * teiModules / teiElements declare the project's TEI vocabulary scope against
  * the vendored P5 Guidelines (their union; allow-lists only). Role split:
@@ -66,9 +74,32 @@ function escapeAttr(value) {
 }
 
 /**
- * One markup entry -> [label, build, element] in the MARKUP_WRAPS shape
- * (annotation-ui reads the first two; the element name lets resolveMarkup
- * deduplicate derived wraps against explicit ones).
+ * The optional "attrField" of a markup entry -> { name, label, placeholder } or
+ * null. Declares one attribute the operator may fill in the popover when wrapping
+ * (e.g. @when on <date>). "name" is required and a valid XML attribute name;
+ * "label" defaults to the name; "placeholder" is optional UI hint text.
+ */
+function attrFieldDef(value, i) {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`markup[${i}].attrField is not an object`);
+  if (typeof value.name !== "string" || !RE_XML_NAME.test(value.name)) {
+    fail(`markup[${i}].attrField.name is missing or not a valid XML attribute name`);
+  }
+  if (value.label !== undefined && typeof value.label !== "string") fail(`markup[${i}].attrField.label is not a string`);
+  if (value.placeholder !== undefined && typeof value.placeholder !== "string") fail(`markup[${i}].attrField.placeholder is not a string`);
+  return {
+    name: value.name,
+    label: typeof value.label === "string" && value.label.trim() ? value.label.trim() : value.name,
+    placeholder: typeof value.placeholder === "string" ? value.placeholder : "",
+  };
+}
+
+/**
+ * One markup entry -> [label, build, element, attrField] in the MARKUP_WRAPS
+ * shape. annotation-ui reads the label and build; the element name lets
+ * resolveMarkup deduplicate derived wraps against explicit ones; attrField (or
+ * null) declares one operator-filled attribute. build(inner, attrValue) injects
+ * that attribute only when attrValue is a non-empty trimmed string.
  */
 function markupWrap(entry, i) {
   if (!entry || typeof entry !== "object") fail(`markup[${i}] is not an object`);
@@ -82,9 +113,16 @@ function markupWrap(entry, i) {
     attrStr += ` ${name}="${escapeAttr(value)}"`;
   }
   const label = typeof entry.label === "string" && entry.label.trim() ? entry.label.trim() : el;
-  const open = `<${el}${attrStr}>`;
+  const attrField = attrFieldDef(entry.attrField, i);
   const close = `</${el}>`;
-  return [label, (inner) => `${open}${inner}${close}`, el];
+  const build = (inner, attrValue) => {
+    let dynamic = "";
+    if (attrField && typeof attrValue === "string" && attrValue.trim()) {
+      dynamic = ` ${attrField.name}="${escapeAttr(attrValue.trim())}"`;
+    }
+    return `<${el}${attrStr}${dynamic}>${inner}${close}`;
+  };
+  return [label, build, el, attrField];
 }
 
 /** Validate the optional teiModules / teiElements pair into a scope object. */
@@ -117,6 +155,34 @@ function indexDef(entry, i) {
     listType: typeof entry.listType === "string" ? entry.listType : null,
     registers: Array.isArray(entry.registers) ? entry.registers.map(String) : [],
   };
+}
+
+// Registers a reconciliation query may target (the authority-lookup registers).
+const RECONCILIATION_REGISTERS = ["GND", "Wikidata", "GeoNames"];
+
+/**
+ * The optional "reconciliation" opt-in -> { registers, auto } or null when
+ * absent. "registers" defaults to ["Wikidata", "GND"]; "auto" defaults to false.
+ */
+function reconciliationDef(value) {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail('"reconciliation" is not an object');
+  let registers = ["Wikidata", "GND"];
+  if (value.registers !== undefined) {
+    if (!Array.isArray(value.registers)) fail('"reconciliation.registers" is not an array');
+    registers = value.registers.map((v, i) => {
+      if (typeof v !== "string" || !RECONCILIATION_REGISTERS.includes(v)) {
+        fail(`reconciliation.registers[${i}] must be one of ${RECONCILIATION_REGISTERS.join(" | ")}`);
+      }
+      return v;
+    });
+  }
+  let auto = false;
+  if (value.auto !== undefined) {
+    if (typeof value.auto !== "boolean") fail('"reconciliation.auto" is not a boolean');
+    auto = value.auto;
+  }
+  return { registers, auto };
 }
 
 function viewDef(entry, i) {
@@ -191,6 +257,7 @@ export function parseManifest(input) {
     files,
     indices: Array.isArray(m.indices) ? m.indices.map(indexDef) : [],
     views: Array.isArray(m.views) ? m.views.map(viewDef) : [],
+    reconciliation: reconciliationDef(m.reconciliation),
   };
 }
 
@@ -255,6 +322,7 @@ export function resolveMarkup(project, fileName, guidelines) {
       spec.gloss ? `${spec.gloss} (${ident})` : ident,
       (inner) => `<${ident}>${inner}</${ident}>`,
       ident,
+      null, // derived wraps carry no attrField
     ]);
   }
   if (!derived.length) return explicit;

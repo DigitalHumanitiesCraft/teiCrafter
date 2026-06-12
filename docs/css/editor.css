@@ -7,8 +7,8 @@
    footer, with or without the generated-edition banner. */
 .ed-body { margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-/* Header and logo conventions come from .site-head (style.css). */
-.ed-doc-name { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-gold-light); }
+/* Header and logo conventions come from .site-head (style.css). The document
+   name moved out of the site header into the document strip under the toolbar. */
 
 .ed-toolbar {
   display: flex; align-items: center; gap: var(--space-sm);
@@ -74,6 +74,41 @@
    no LLM-generated edition is loaded. */
 .ed-genbanner[hidden] { display: none; }
 .ed-genbanner b { color: var(--color-ai); }
+
+/* Plaintext-draft banner: deterministic transport, not AI, so it stays neutral
+   (no violet). Sunken surface band, like the other full-width bands. */
+.ed-draftbanner {
+  display: flex; align-items: center; gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-surface-sunken); border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-xs); color: var(--color-text-body);
+}
+.ed-draftbanner[hidden] { display: none; }
+.ed-draftbanner-dismiss { margin-left: auto; }
+
+/* Document strip: a slim factual line under the toolbar, visible only while a
+   document is loaded. Sunken band, small font, clear hierarchy, no shouting. */
+.ed-docstrip {
+  display: flex; align-items: baseline; gap: var(--space-xs); flex-wrap: wrap;
+  width: 100%; text-align: left; cursor: pointer;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-surface-sunken); border: none;
+  border-bottom: 1px solid var(--color-border);
+  font-family: var(--font-ui); font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.ed-docstrip[hidden] { display: none; }
+.ed-docstrip:hover { color: var(--color-text-body); }
+.ed-docstrip:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
+.ed-docstrip-name { font-family: var(--font-mono); font-size: var(--font-size-sm);
+  color: var(--color-text); }
+.ed-docstrip-name.dirty::after { content: " *"; color: var(--color-gold-hover); }
+.ed-docstrip-sep { color: var(--color-text-muted); }
+.ed-docstrip-fact { color: var(--color-text-secondary); }
+
+/* Live-checks term definitions in the validation popover (muted, not hover-only). */
+.ed-val-note { font-size: var(--font-size-xs); color: var(--color-text-muted);
+  margin-top: var(--space-xs); }
 
 /* LLM-input modal */
 .ed-modal {
@@ -472,6 +507,13 @@
 :is(.ed-w, .ed-legend-chip).mention-ai { background: var(--color-ai-tint); box-shadow: inset 0 -2px 0 var(--color-ai);
   outline: 1px dashed var(--color-ai); outline-offset: -1px; }
 
+/* Semantic-wrap visibility: text inside a scholarly inline element (date, ref,
+   salute, signed, ...) that is neither a linked mention nor critical markup.
+   A subtle dotted underline in the cool blue family (NOT the violet AI hue, NOT
+   the mention background), with the element and its attributes in the tooltip.
+   Underline only, so it adds no bold and changes no text metrics. */
+.ed-w.ed-w-sem { text-decoration: underline dotted var(--color-blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
 /* Temporary "show this entity's mentions" highlight (index-panel selection).
    Its own class, so clearing it never strips the permanent visibility layer.
    An outline (not an underline), so the selection state and the annotation
@@ -542,6 +584,9 @@
   color: var(--color-text); background: var(--color-surface);
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 2px var(--space-xs); }
 .ed-sel-filter:focus { outline: none; border-color: var(--color-gold); }
+/* The flat, filterable action list of the annotate popover: group headings and
+   action rows stacked, scrolling inside the popover when long. */
+.ed-sel-list { display: flex; flex-direction: column; gap: var(--space-xs); max-height: 320px; overflow: auto; }
 /* The shared authority form (.ed-idx-auth) inside the annotation editor:
    no index-row indent, quiet separators, roomier input. */
 .ed-sel-auth.ed-idx-auth {

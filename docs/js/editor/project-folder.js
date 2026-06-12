@@ -37,6 +37,9 @@ export function createProjectFolder(ctx) {
     app, setStatus, setDirty, confirmDiscard, load,
     showPanel, updatePanels, teiVocabularyLine, getProjectPanelHost,
   } = ctx;
+  // Optional hook: announce a plaintext draft so the shell can show the neutral
+  // draft banner and record the Source provenance. Absent in headless callers.
+  const onPlaintextDraft = ctx.onPlaintextDraft || (() => {});
 
   function renderProjectPanel() {
     const host = getProjectPanelHost();
@@ -47,7 +50,7 @@ export function createProjectFolder(ctx) {
     const vocab = teiVocabularyLine();
     if (vocab) host.appendChild(el("div", { class: "ed-proj-vocab", text: vocab }));
     if (!pf.files.length) {
-      host.appendChild(el("p", { class: "ed-proj-empty", text: "No .xml or .txt files in this folder yet." }));
+      host.appendChild(el("p", { class: "ed-proj-empty", text: "No .xml, .txt or .md files in this folder yet." }));
       return;
     }
     const list = el("div", { class: "ed-proj-list" });
@@ -76,11 +79,12 @@ export function createProjectFolder(ctx) {
       if (f.kind === "text") {
         // Deterministic transport, no model: the draft exists only in the editor
         // until Save creates the .xml next to the source in the project folder.
-        const baseName = f.name.replace(/\.txt$/i, "");
+        const baseName = f.name.replace(/\.(txt|md)$/i, "");
         const xmlName = baseName + ".xml";
         await load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project);
         app.saveTarget = { dir: app.projectFolder.dir, name: xmlName };
         setDirty(true);
+        onPlaintextDraft(f.name);
         setStatus(`Drafted ${xmlName} deterministically from ${f.name} (text carried verbatim). Save writes it into the project folder.`);
       } else {
         await load(await file.text(), f.name, f.handle, project);
@@ -99,7 +103,7 @@ export function createProjectFolder(ctx) {
       if (entry.kind !== "file") continue;
       if (entry.name === MANIFEST_FILENAME) manifestText = await (await entry.getFile()).text();
       else if (/\.xml$/i.test(entry.name)) files.push({ name: entry.name, kind: "tei", handle: entry });
-      else if (/\.txt$/i.test(entry.name)) files.push({ name: entry.name, kind: "text", handle: entry });
+      else if (/\.(txt|md)$/i.test(entry.name)) files.push({ name: entry.name, kind: "text", handle: entry });
     }
     files.sort((a, b) => a.name.localeCompare(b.name));
     let project = null, note = "";

@@ -52,10 +52,11 @@ export function createValidationView(ctx) {
     const curIds = xmlIdSet(app.state);
     const missing = [...base.xmlIds].filter((id) => !curIds.has(id));
     const added = [...curIds].filter((id) => !base.xmlIds.has(id)).length;
+    const unit = app.state.profile === "word" ? "word" : "line";
     if (!missing.length && added === 0) {
       rows.push(["ok", base.xmlIds.size
         ? `All ${base.xmlIds.size} xml:id(s) preserved (no structural loss)`
-        : `All ${base.wordCount} reading unit(s) preserved (no xml:id to lose)`]);
+        : `All ${base.wordCount} ${unit}(s) preserved (no xml:id to lose)`]);
     } else {
       if (missing.length) rows.push(["err", `${missing.length} xml:id(s) lost: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""}`]);
       if (added) rows.push(["warn", `${added} new xml:id(s) added`]);
@@ -89,20 +90,25 @@ export function createValidationView(ctx) {
     chip.hidden = false;
     chip.className = "ed-val-chip " + level;
     chip.textContent = errs ? "checks failing" : warns ? `checks: ${warns} warning(s)` : "well-formed, lossless";
-    chip.title = "Live checks. well-formed: the XML parses without errors. "
-      + "lossless: saving now would reproduce the opened file byte for byte, apart from your own edits "
-      + "(no ids lost, element counts unchanged). Full RelaxNG and Schematron run in the offline harness. "
-      + "Click for details.";
+    chip.title = "Live checks (well-formed and lossless). Full RelaxNG and "
+      + "Schematron run in the offline harness. Click for details.";
 
     // Detail popover
     clear(pop);
     const sec1 = el("div", { class: "ed-section" }, [el("h4", { text: "Live checks" })]);
     for (const [kind, text] of rows) sec1.appendChild(valRow(kind, text));
+    // Term definitions live here (not only in the chip tooltip) so the meaning is
+    // readable, not hover-only.
+    sec1.appendChild(el("div", { class: "ed-val-note",
+      text: "Well-formed: the XML parses without errors." }));
+    sec1.appendChild(el("div", { class: "ed-val-note",
+      text: "Lossless: saving now reproduces the opened file byte for byte, apart from your own edits." }));
     pop.appendChild(sec1);
 
+    const unitLabel = summary.profile === "word" ? "Words" : "Lines";
     const sec2 = el("div", { class: "ed-section" }, [el("h4", { text: "Structure" })]);
     sec2.appendChild(kv("Folios", summary.folios));
-    sec2.appendChild(kv("Words", summary.words));
+    sec2.appendChild(kv(unitLabel, summary.words));
     sec2.appendChild(kv("xml:id count", summary.ids));
     for (const t of ["surface", "zone", "l", "lb", "pb", "note", "standOff"]) {
       if (summary.counts[t]) sec2.appendChild(kv(`<${t}>`, summary.counts[t]));

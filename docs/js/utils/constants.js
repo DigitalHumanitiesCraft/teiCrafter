@@ -6,10 +6,20 @@
  * default TEI mapping rules per source type that seed the generation prompt.
  */
 
+// True on a local development host (loopback or a file: URL).
+const IS_LOCAL_DEV = typeof location !== "undefined" &&
+  (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) ||
+    location.protocol === "file:");
+
 // Feature flags. llmOnRamp shows or hides the "New from text (LLM)" entries;
 // the landing-page card in index.html is static and changes with this flag.
+// examples gates the built-in demo surfaces (landing cards, Load... menu
+// entries, the #example deep link): visible during local development, hidden
+// on the public deployment. This gates UI only; committed files under
+// docs/data/ remain fetchable by URL.
 export const FEATURES = Object.freeze({
   llmOnRamp: false,
+  examples: IS_LOCAL_DEV,
 });
 
 // LLM provider ids (keys of the provider catalog in services/llm.js).

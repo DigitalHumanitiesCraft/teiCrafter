@@ -21,7 +21,6 @@
  *     commitStandoff(fn, { label, failPrefix, noopLabel }) -> bool,
  *     entityMetaMap(),            // id -> { name, kind, ai }
  *     entityUsage(),              // id -> { count, onPage }
- *     runLookup(authority, query, anchor, onPick),
  *     revealEntity(id),           // switch the right pane to the index, scrolled to an entry
  *     highlightMentions(entity),
  *     beginTextInput(span, cell), beginNote(span, cell), beginCritic(span, cell),
@@ -37,6 +36,7 @@ import { parseEdition, rawRangeForDisplay, unescapeXmlText, attrTargetForCell } 
 import { addAttr, editAttrValue, removeAttr } from "./tei-document.js";
 import { elementByName } from "./tei-guidelines.js";
 import { buildAuthorityForm } from "./authority-form.js";
+import { runAuthorityLookup } from "./authority-picker.js";
 import { requireCtx } from "./ctx.js";
 
 const ENTITY_TYPE_LABELS = [
@@ -73,12 +73,12 @@ function allEntityIds(doc) {
 
 export function createAnnotationUi(ctx) {
   requireCtx("createAnnotationUi", ctx,
-    ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage", "runLookup",
+    ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage",
      "revealEntity", "highlightMentions", "beginTextInput", "beginNote", "beginCritic",
      "ensureGuidelines", "guidelinesNow"], ["app"]);
   const {
     app, setStatus, commitStandoff,
-    entityMetaMap, entityUsage, runLookup, revealEntity,
+    entityMetaMap, entityUsage, revealEntity,
     highlightMentions, beginTextInput, beginNote, beginCritic,
     ensureGuidelines, guidelinesNow,
   } = ctx;
@@ -283,8 +283,21 @@ export function createAnnotationUi(ctx) {
    * Authority ids (GND / GeoNames / Wikidata) of the linked entity, editable at
    * the mention: the shared form (authority-form.js, same UI as in the index
    * overlay), committing losslessly and reopening the editor on the same cell.
+   *
+   * The explicit "find" routes through the shared candidate picker; the human
+   * always confirms by clicking a candidate (onPick fills the id field and
+   * commits). When the active project opts into reconciliation.auto, the same
+   * query fires automatically (debounced) on open and on name changes, querying
+   * ONLY the project's declared registers. Auto never applies a candidate: it
+   * surfaces the same confirm-by-click list. No network call ever fires without
+   * either the explicit click or the project's declared opt-in.
    */
   function buildAuthorityEditor(entity, cell) {
+    const applyPick = (authority) => (id) => commitAndReopen(
+      (doc) => standoff.setAuthority(doc, entity.id, authority, id),
+      `Set ${authority} id on ${entity.name || entity.id}`,
+      cell.id,
+    );
     const form = buildAuthorityForm(entity, {
       onSet: (authority, value) => commitAndReopen(
         (doc) => standoff.setAuthority(doc, entity.id, authority, value),
@@ -293,10 +306,33 @@ export function createAnnotationUi(ctx) {
           : `Removed ${authority} id from ${entity.name || entity.id}`,
         cell.id,
       ),
-      onLookup: runLookup,
+      onLookup: (authority, query, anchor, onPick) =>
+        runAuthorityLookup(authority, query, anchor, onPick, { onError: setStatus }),
     });
     form.classList.add("ed-sel-auth");
+    maybeAutoReconcile(form, entity.name || "", applyPick);
     return form;
+  }
+
+  /**
+   * Stage 2 auto-reconciliation: when the active project declares
+   * reconciliation.auto, fire the candidate lookup for each declared register
+   * the moment the authority form is shown, anchored to the add row. Debounced
+   * and one-shot per open (the name does not change inside this read-only form);
+   * the operator still confirms every match by clicking a candidate.
+   */
+  function maybeAutoReconcile(form, name, applyPick) {
+    const recon = app.project && app.project.reconciliation;
+    if (!recon || !recon.auto || !name.trim()) return;
+    const anchor = form.querySelector(".ed-idx-authadd");
+    if (!anchor) return;
+    const register = recon.registers[0];
+    if (!register) return;
+    clearTimeout(form._reconTimer);
+    form._reconTimer = setTimeout(() => {
+      if (!anchor.isConnected) return;
+      runAuthorityLookup(register, name.trim(), anchor, applyPick(register), { onError: setStatus });
+    }, 400);
   }
 
   // ---- attribute editor -----------------------------------------------------
@@ -585,18 +621,24 @@ export function createAnnotationUi(ctx) {
     container.appendChild(listHost);
   }
 
-  function applyMarkupWrap(target, build, label) {
+  function applyMarkupWrap(target, build, label, attrValue) {
     commitStandoff(
-      (doc) => standoff.wrapRange(doc, target.cell.node, target.relFrom, target.relTo, build),
+      (doc) => standoff.wrapRange(doc, target.cell.node, target.relFrom, target.relTo, (inner) => build(inner, attrValue)),
       { label: `Marked "${target.text}" as ${label}`, failPrefix: "Annotate",
         noopLabel: "Nothing changed (invalid range or text would be lost)" },
     );
   }
 
   /**
-   * The annotate popover on a finished selection. Evidence first (suggestions
-   * with provenance), then collapsed sections: link an existing entity, create a
-   * new index entity, or apply plain TEI markup (full flexibility, no entity).
+   * The annotate popover on a finished selection: ONE flat, filterable list,
+   * grouped under small headings visible at once (Entities, Markup, Criticism,
+   * Note). A filter input on top narrows every group by label substring; empty
+   * groups hide while filtering. ArrowDown/ArrowUp move through the visible
+   * activatable items and Enter activates the focused one. Every commit path
+   * (entity link/create, markup wrap, criticism, note) is unchanged in behaviour;
+   * this is a presentation restructure. A markup wrap that declares an attrField
+   * reveals an inline input + Apply (one commit wraps with the attribute; an
+   * empty input wraps without it).
    */
   function openSelPopover() {
     removeSelPopover();
@@ -611,77 +653,198 @@ export function createAnnotationUi(ctx) {
     const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
     pop.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
 
-    // Collapsible section helper: header toggles the body.
-    const section = (label, open) => {
-      const body = el("div", { class: "ed-sel-sec-body" });
-      body.hidden = !open;
-      const head = el("button", { class: "ed-sel-sec-head", text: label, type: "button" });
-      head.addEventListener("click", (e) => { e.stopPropagation(); body.hidden = !body.hidden; });
-      pop.appendChild(head);
-      pop.appendChild(body);
-      return body;
-    };
+    // Filter input: type to narrow every group by label substring (case
+    // insensitive). Escape clears a non-empty filter, then closes the popover.
+    const filter = el("input", { class: "ed-sel-filter", type: "text", placeholder: "filter actions..." });
+    filter.addEventListener("mouseup", (e) => e.stopPropagation());
+    pop.appendChild(filter);
 
-    // 1. Entities: suggestions (always visible inside) + provenance groups.
+    // The scrollable list host; rebuilt on every filter keystroke. Items declare
+    // their filter label and an activation function; group headings are kept and
+    // shown only when the group has a visible item.
+    const listHost = el("div", { class: "ed-sel-list" });
+    pop.appendChild(listHost);
+
     const all = standoff.readEntities(app.state.doc);
     const haveEntities = ["persons", "places", "orgs", "works", "events"].some((k) => (all[k] || []).length);
-    if (haveEntities) {
-      const entBody = section("link to an index entity", true);
-      buildEntityChoiceRows(entBody, target.text, (entId) => {
-        removeSelPopover();
-        annotateSelection(target, entId, null);
-      }, null);
-    }
 
-    // 2. New index entity from the selection (collapsed when entities exist:
-    //    not every selection is an entity, so this must not be the loudest offer).
-    const newBody = section("new index entity from this text", !haveEntities);
-    const newRow = el("div", { class: "ed-sel-pop-row" });
-    for (const [type, label] of ENTITY_TYPE_LABELS) {
-      const b = el("button", { class: "ed-act-btn", text: label, title: `create a ${label} named "${target.text}", link this text, then add authority ids right here` });
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        removeSelPopover();
-        annotateSelection(target, null, type);
-      });
-      newRow.appendChild(b);
-    }
-    newBody.appendChild(newRow);
+    // Each render produces a flat sequence of activatable buttons (for keyboard
+    // navigation) interleaved with headings. An item may instead reveal an inline
+    // attribute field (the attrField wraps); those still count as one nav item.
+    const render = (raw) => {
+      clear(listHost);
+      const f = raw.trim().toLowerCase();
+      const match = (label) => !f || label.toLowerCase().includes(f);
+      const items = [];
 
-    // 3. Plain TEI markup (full flexibility, no index entry).
-    const muBody = section("TEI markup (no index entry)", false);
-    const muRow = el("div", { class: "ed-sel-pop-row" });
-    for (const [label, build] of markupWraps()) {
-      const b = el("button", { class: "ed-act-btn", text: label, title: `wrap the selection in <${label.split(" ")[0]}>` });
-      b.addEventListener("click", (e) => {
-        e.stopPropagation();
-        removeSelPopover();
-        applyMarkupWrap(target, build, label);
-      });
-      muRow.appendChild(b);
-    }
-    // Any element by name (the full-TEI escape hatch).
-    const freeWrap = el("div", { class: "ed-sel-pop-row" });
-    const freeInput = el("input", { class: "ed-sel-filter", type: "text", placeholder: "any element name..." });
-    freeInput.addEventListener("mouseup", (e) => e.stopPropagation());
-    const freeBtn = el("button", { class: "ed-act-btn", text: "wrap", title: "wrap the selection in the named element" });
-    freeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const tag = freeInput.value.trim();
-      if (!/^[A-Za-z_][\w.-]*$/.test(tag)) { setStatus("Not a valid element name"); return; }
-      removeSelPopover();
-      applyMarkupWrap(target, (inner) => `<${tag}>${inner}</${tag}>`, `<${tag}>`);
+      const groupHead = (label) => el("span", { class: "ed-act-group", text: label });
+      const actBtn = (label, title, fn, cls) => {
+        const b = el("button", { class: "ed-act-btn" + (cls ? " " + cls : ""), text: label, title });
+        b.addEventListener("click", (e) => { e.stopPropagation(); fn(); });
+        items.push(b);
+        return b;
+      };
+
+      // Entities: link to an existing index entity (provenance groups inside the
+      // shared chooser) plus "new index entity from this text".
+      if (haveEntities) {
+        const linkLabel = "link to an index entity";
+        // The chooser does its own grouping/filtering; show it whenever the
+        // heading itself matches or the filter is empty, so its internal filter
+        // is not shadowed by this one.
+        if (!f || match(linkLabel)) {
+          listHost.appendChild(groupHead("Entities"));
+          const entBody = el("div", { class: "ed-sel-sec-body" });
+          buildEntityChoiceRows(entBody, target.text, (entId) => {
+            removeSelPopover();
+            annotateSelection(target, entId, null);
+          }, null);
+          listHost.appendChild(entBody);
+        }
+      }
+      const newItems = ENTITY_TYPE_LABELS.filter(([, label]) => match(`new ${label}`));
+      if (newItems.length) {
+        if (!haveEntities) listHost.appendChild(groupHead("Entities"));
+        const newRow = el("div", { class: "ed-sel-pop-row" });
+        listHost.appendChild(newRow);
+        for (const [type, label] of newItems) {
+          const b = actBtn(`new ${label}`, `create a ${label} named "${target.text}", link this text, then add authority ids right here`, () => {
+            removeSelPopover();
+            annotateSelection(target, null, type);
+          });
+          newRow.appendChild(b);
+        }
+      }
+
+      // Markup: the resolved wrap list (or the built-in wraps), each by its label.
+      // A wrap with an attrField reveals an inline input + Apply on click.
+      const wraps = markupWraps().filter(([label]) => match(label));
+      if (wraps.length) {
+        listHost.appendChild(groupHead("Markup"));
+        const muRow = el("div", { class: "ed-sel-pop-row" });
+        listHost.appendChild(muRow);
+        for (const [label, build, , attrField] of wraps) {
+          const elName = label.split(" ")[0];
+          if (!attrField) {
+            const b = actBtn(label, `wrap the selection in <${elName}>`, () => {
+              removeSelPopover();
+              applyMarkupWrap(target, build, label);
+            });
+            muRow.appendChild(b);
+            continue;
+          }
+          // attrField: clicking reveals an inline field row instead of committing.
+          const b = actBtn(label, `wrap the selection in <${elName}> and set @${attrField.name}`, () => {
+            const fieldRow = el("div", { class: "ed-sel-pop-row ed-attr-row" });
+            const input = el("input", { class: "ed-attr-input", type: "text", placeholder: attrField.placeholder, title: attrField.label });
+            input.setAttribute("aria-label", attrField.label);
+            input.addEventListener("mouseup", (e) => e.stopPropagation());
+            const commitWrap = () => {
+              removeSelPopover();
+              applyMarkupWrap(target, build, label, input.value);
+            };
+            input.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") { e.preventDefault(); commitWrap(); }
+              else if (e.key === "Escape") { e.stopPropagation(); fieldRow.remove(); }
+            });
+            const apply = el("button", { class: "ed-act-btn", text: "Apply", title: `wrap in <${elName}> with @${attrField.name} (leave empty to wrap without it)` });
+            apply.addEventListener("click", (e) => { e.stopPropagation(); commitWrap(); });
+            fieldRow.append(el("span", { class: "ed-attr-name", text: attrField.label }), input, apply);
+            muRow.insertAdjacentElement("afterend", fieldRow);
+            input.focus();
+          });
+          muRow.appendChild(b);
+        }
+      }
+      // Any element by name (the full-TEI escape hatch), part of Markup.
+      if (!f || match("any element")) {
+        if (!wraps.length) listHost.appendChild(groupHead("Markup"));
+        const freeWrap = el("div", { class: "ed-sel-pop-row" });
+        const freeInput = el("input", { class: "ed-sel-filter", type: "text", placeholder: "any element name..." });
+        freeInput.addEventListener("mouseup", (e) => e.stopPropagation());
+        const freeBtn = el("button", { class: "ed-act-btn", text: "wrap", title: "wrap the selection in the named element" });
+        const freeApply = () => {
+          const tag = freeInput.value.trim();
+          if (!/^[A-Za-z_][\w.-]*$/.test(tag)) { setStatus("Not a valid element name"); return; }
+          removeSelPopover();
+          applyMarkupWrap(target, (inner) => `<${tag}>${inner}</${tag}>`, `<${tag}>`);
+        };
+        freeInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); freeApply(); } });
+        freeBtn.addEventListener("click", (e) => { e.stopPropagation(); freeApply(); });
+        freeWrap.append(freeInput, freeBtn);
+        listHost.appendChild(freeWrap);
+      }
+
+      // Criticism: mark the selected text as unclear / deleted / added / gap.
+      // Routed through beginCritic on the cell, the established commit path.
+      const critActions = [
+        ["unclear", "mark the selection as unclear"],
+        ["deleted", "mark the selection as deleted"],
+        ["added", "mark the selection as added"],
+        ["gap", "mark the selection as a gap"],
+      ].filter(([label]) => match(label));
+      if (critActions.length) {
+        listHost.appendChild(groupHead("Criticism"));
+        const critRow = el("div", { class: "ed-sel-pop-row" });
+        listHost.appendChild(critRow);
+        for (const [label, title] of critActions) {
+          const b = actBtn(label, title, () => {
+            removeSelPopover();
+            const c = app.state.cellById.get(target.cell.id);
+            const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
+            if (c && s) beginCritic(s, c);
+          });
+          critRow.appendChild(b);
+        }
+      }
+
+      // Note: add an editorial note on the selected segment, via beginNote.
+      if (match("note")) {
+        listHost.appendChild(groupHead("Note"));
+        const noteRow = el("div", { class: "ed-sel-pop-row" });
+        listHost.appendChild(noteRow);
+        const b = actBtn("note", "add an editorial note on this text", () => {
+          removeSelPopover();
+          const c = app.state.cellById.get(target.cell.id);
+          const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
+          if (c && s) beginNote(s, c);
+        });
+        noteRow.appendChild(b);
+      }
+
+      if (!listHost.childElementCount) {
+        listHost.appendChild(el("span", { class: "ed-act-empty", text: "no action matches the filter" }));
+      }
+      return items;
+    };
+
+    let navItems = render("");
+
+    // Keyboard navigation across the visible activatable items.
+    let navIndex = -1;
+    const focusNav = (i) => {
+      if (!navItems.length) return;
+      navIndex = (i + navItems.length) % navItems.length;
+      navItems[navIndex].focus();
+    };
+    filter.addEventListener("input", () => { navItems = render(filter.value); navIndex = -1; });
+    pop.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); focusNav(navIndex + 1); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); focusNav(navIndex - 1); }
+      else if (e.key === "Enter" && document.activeElement && document.activeElement.classList.contains("ed-act-btn")) {
+        e.preventDefault(); document.activeElement.click();
+      } else if (e.key === "Escape") {
+        if (filter.value) { e.stopPropagation(); filter.value = ""; navItems = render(""); navIndex = -1; filter.focus(); }
+        else removeSelPopover();
+      }
     });
-    freeWrap.appendChild(freeInput);
-    freeWrap.appendChild(freeBtn);
-    muBody.appendChild(muRow);
-    muBody.appendChild(freeWrap);
 
     const xBtn = el("button", { class: "ed-act-btn", text: "x", title: "cancel" });
     xBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
     pop.appendChild(xBtn);
 
     anchorPopAt(pop, window.getSelection().getRangeAt(0).getBoundingClientRect(), host);
+    filter.focus();
   }
 
   // Selection handling: a finished mouse DRAG selection inside the reading pane

@@ -27,8 +27,10 @@ import {
   serialize,
   xmlIdSet,
   countTags,
+  attrTargetForCell,
 } from "./edition.js";
 import { el, clear } from "./dom.js";
+import { firstByLocal, textOf } from "./tei-document.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
@@ -37,6 +39,7 @@ import { createEntityIndex } from "./entity-index.js";
 import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { FEATURES } from "../utils/constants.js";
+import { teiFromPlaintext } from "./plaintext-import.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
 import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile } from "./project-manifest.js";
 import { createProjectFolder } from "./project-folder.js";
@@ -47,6 +50,7 @@ import {
 } from "./tei-guidelines.js";
 import * as recents from "./recent-files.js";
 import { getSetting, setSetting } from "../services/storage.js";
+import { saveDraft, loadDraft, clearDraft } from "./draft-recovery.js";
 
 const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
 const WB_CODEX_URL = "data/editor/wb-codex/codex-2759.xml";
@@ -67,6 +71,7 @@ const app = {
   noteByWord: new Map(), // wordId -> note text (for has-note marker + tooltip)
   currentLines: [],   // lines of the folio currently rendered (for zone <-> line linking)
   generated: false,   // true when the current edition came from the LLM (unreviewed)
+  source: null,       // load provenance: { kind: "tei"|"draft"|"example", txtName?, label? } or null
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
   sourceMode: false,  // true while the left pane shows the editable XML source
@@ -102,7 +107,44 @@ function setDirty(d) {
   const dot = $("ed-status-dot");
   dot.classList.toggle("dirty", d);
   $("btn-save").disabled = !app.state;
-  if (d) setStatus("Unsaved changes");
+  if (d) { setStatus("Unsaved changes"); persistDraftIfNeeded(); }
+  if (app.state) updateDocStrip();
+}
+
+// ---- unsaved-draft recovery -------------------------------------------------
+// A plaintext-derived draft (kind "draft", no file handle) is the only document
+// that has no file behind it: a reload loses it. On the first dirty change it is
+// persisted to localStorage (debounced); a successful save or a non-draft load
+// clears the slot. The empty reading pane offers to restore it (renderEmptyReading).
+
+/** True when the current document is an unsaved draft with no file to fall back on. */
+function isUnsavedDraft() {
+  return !!(app.state && app.source && app.source.kind === "draft" && !app.fileHandle);
+}
+
+let _draftTimer = null;
+const DRAFT_DEBOUNCE_MS = 1000;
+
+/** Debounced persist of the current draft; a no-op for any non-draft document. */
+function persistDraftIfNeeded() {
+  if (!isUnsavedDraft()) return;
+  if (_draftTimer) clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(() => {
+    _draftTimer = null;
+    if (!isUnsavedDraft()) return;
+    saveDraft({
+      raw: serialize(app.state),
+      docName: app.docName,
+      sourceName: app.source.txtName || null,
+      savedAt: new Date().toISOString(),
+    });
+  }, DRAFT_DEBOUNCE_MS);
+}
+
+/** Drop any pending persist and clear the stored slot (on save or non-draft load). */
+function clearDraftRecovery() {
+  if (_draftTimer) { clearTimeout(_draftTimer); _draftTimer = null; }
+  clearDraft();
 }
 
 function enableControls(on) {
@@ -336,25 +378,32 @@ function applyLoad(raw, name, handle, project) {
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
   app.project = project || detectProject(app.state.doc);
+  // Load provenance for the Document panel's Source row. Default: an opened TEI
+  // file. The plaintext and example paths override this after load() returns.
+  app.source = { kind: "tei" };
   app.markup = resolveMarkup(app.project, name, guidelinesNow());
   maybePrefetchGuidelines(name);
   app.saveTarget = null;
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
   app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
-  // Default context panel: the facsimile when the document has page images,
-  // the entity index otherwise (updatePanels falls back the same way).
-  app.panel = docHasImages() ? "facs" : "index";
+  // Default context panel: the facsimile when the document has page images, the
+  // Document context panel otherwise (the empty entity Index is one click away).
+  app.panel = docHasImages() ? "facs" : "document";
   // F4: the reading variant resets to diplomatic per load; applyDocLayout then
   // restores the persisted value when this document had one.
   app.readingVariant = "dipl";
-  $("ed-doc-name").textContent = name;
-  $("ed-doc-name").hidden = false;
   enableControls(true);
   applyDocLayout();
   if (handle) { recents.rememberRecent(handle, name); }
   setDirty(false);
+  // The recovery slot is NOT cleared here: loading another document must not
+  // silently discard a stored draft. It clears only when the draft itself is
+  // saved or the operator discards the offer; a new draft overwrites the slot.
   markGenerated(false); // opening a real file clears the AI-generated flag
+  // The plaintext-draft banner belongs to a draft only; any load hides it, the
+  // draft paths re-show it afterwards. It must never linger over an opened .xml.
+  hideDraftBanner();
   refreshAfterStandoffEdit();
   const unit = app.state.profile === "word" ? "word" : "line";
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
@@ -371,18 +420,134 @@ function markGenerated(on) {
   if (b) b.hidden = !on;
 }
 
+// ---- document facts (strip, panel, title) -----------------------------------
+
+/** The detected editing unit as a plain noun ("words" or "lines"). */
+function editingUnit(plural = true) {
+  const word = app.state && app.state.profile === "word";
+  return plural ? (word ? "words" : "lines") : (word ? "word" : "line");
+}
+
+/** The teiHeader <title> text, trimmed, or null when there is none. */
+function docTitle() {
+  if (!app.state) return null;
+  const node = firstByLocal(app.state.doc.root, "title");
+  if (!node) return null;
+  const t = textOf(app.state.doc, node).replace(/\s+/g, " ").trim();
+  return t || null;
+}
+
+/** The Source-row wording, shared by the strip context and the Document panel. */
+function sourceLabel() {
+  const s = app.source;
+  if (!s) return null;
+  if (s.kind === "draft") return s.txtName ? `Drafted from ${s.txtName}` : "Drafted from a plaintext file";
+  if (s.kind === "example") return s.label || "Loaded example";
+  return "Opened TEI file";
+}
+
+/** Where Save sends the bytes: in place when a target exists, else a download. */
+function saveTargetLabel() {
+  if (app.fileHandle) return `in place: ${app.docName}`;
+  if (app.saveTarget && app.saveTarget.name) return `in place: ${app.saveTarget.name}`;
+  return "download";
+}
+
+/**
+ * The slim document strip under the toolbar: factual, dot-separated, no invented
+ * data. Visible only while a document is loaded; a click opens the Document panel.
+ */
+function updateDocStrip() {
+  const strip = $("ed-docstrip");
+  if (!strip) return;
+  if (!app.state) { strip.hidden = true; return; }
+  strip.hidden = false;
+  clear(strip);
+
+  const name = el("span", { class: "ed-docstrip-name" + (app.dirty ? " dirty" : ""),
+    text: app.docName || "" });
+  if (app.dirty) name.title = "Unsaved changes";
+  strip.appendChild(name);
+
+  const facts = [];
+  const project = app.projectFolder ? app.projectFolder.project : app.project;
+  if (project && project.name) facts.push(`Project: ${project.name}`);
+  const docType = typeForFile(app.project, app.docName);
+  if (docType) facts.push(`Type: ${docType.label}`);
+  facts.push(`Editing unit: ${editingUnit()}`);
+  facts.push(`${app.state.folios.length} page(s)`);
+
+  for (const f of facts) {
+    strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
+    strip.appendChild(el("span", { class: "ed-docstrip-fact", text: f }));
+  }
+}
+
+// ---- plaintext-draft banner --------------------------------------------------
+// Deterministic transport, not AI: neutral surface family, never the violet
+// --color-ai. Shown after any plaintext draft creation; dismissible; re-shown
+// only on the next draft. Never shown for an opened .xml.
+
+function showDraftBanner(txtName) {
+  const banner = $("ed-draftbanner");
+  const text = $("ed-draftbanner-text");
+  if (!banner || !text) return;
+  text.textContent = `Drafted from ${txtName}: each line became an editable line, the text was `
+    + "carried over verbatim. Your source file is untouched; saving produces the TEI file.";
+  banner.hidden = false;
+}
+
+function hideDraftBanner() {
+  const banner = $("ed-draftbanner");
+  if (banner) banner.hidden = true;
+}
+
+// Plaintext (.txt or .md) opened directly (picker, input fallback, or drop)
+// becomes the same deterministic line-level draft as in the project flow, but
+// without a save target: the draft carries no file handle, so the first save
+// falls back to downloading the .xml. Only the project flow creates it in place.
+const RE_PLAINTEXT = /\.(txt|md)$/i;
+
+async function loadPlaintextDraft(text, txtName) {
+  const baseName = txtName.replace(RE_PLAINTEXT, "");
+  const xmlName = `${baseName}.xml`;
+  await load(teiFromPlaintext(text, baseName), xmlName, null);
+  // Mirror the project-flow wording; a direct draft has no save target, so Save
+  // downloads the TEI file (the project flow says "writes it into the folder").
+  app.source = { kind: "draft", txtName };
+  setStatus(`Drafted ${xmlName} deterministically from ${txtName} (text carried verbatim). `
+    + "Save downloads the TEI file.");
+  showDraftBanner(txtName);
+  updateDocStrip();
+  renderActivePanel();
+}
+
 async function openLocal() {
   if (!confirmDiscard()) return;
   // Preferred: File System Access API (lets us save in place later).
   if (window.showOpenFilePicker) {
     try {
       const [handle] = await window.showOpenFilePicker({
-        types: [{ description: "TEI XML", accept: { "application/xml": [".xml"], "text/xml": [".xml"] } }],
+        // One combined filter: the picker shows all supported files at once
+        // instead of hiding .txt/.md behind a second dropdown entry.
+        types: [{
+          description: "XML or text files",
+          accept: {
+            "application/xml": [".xml"],
+            "text/xml": [".xml"],
+            "text/plain": [".txt"],
+            "text/markdown": [".md"],
+          },
+        }],
         excludeAcceptAllOption: false,
         multiple: false,
       });
       const file = await handle.getFile();
-      await load(await file.text(), file.name, handle);
+      if (RE_PLAINTEXT.test(file.name)) {
+        await loadPlaintextDraft(await file.text(), file.name);
+      } else {
+        await load(await file.text(), file.name, handle);
+      }
       return;
     } catch (err) {
       if (err && err.name === "AbortError") return; // user cancelled
@@ -395,11 +560,15 @@ async function openLocal() {
 let _fileInput = null;
 function fileInput() {
   if (_fileInput) return _fileInput;
-  _fileInput = el("input", { type: "file", accept: ".xml,application/xml,text/xml", style: "display:none" });
+  _fileInput = el("input", { type: "file", accept: ".xml,.txt,.md,application/xml,text/xml,text/plain,text/markdown", style: "display:none" });
   _fileInput.addEventListener("change", async () => {
     const file = _fileInput.files && _fileInput.files[0];
     if (!file) return;
-    await load(await file.text(), file.name, null);
+    if (RE_PLAINTEXT.test(file.name)) {
+      await loadPlaintextDraft(await file.text(), file.name);
+    } else {
+      await load(await file.text(), file.name, null);
+    }
     _fileInput.value = "";
   });
   document.body.appendChild(_fileInput);
@@ -468,6 +637,7 @@ async function loadExample(key) {
       }
     }
     await load(await res.text(), ex.file, null, project);
+    app.source = { kind: "example", label: `Loaded example: ${ex.label}` };
     if (manifestNote && ex.done) ex = { ...ex, done: ex.done + manifestNote };
     if (ex.imageBase) {
       app.imageBase = ex.imageBase;
@@ -493,8 +663,17 @@ async function openDropped(dt) {
   const item = dt.items && dt.items[0];
   const file = dt.files && dt.files[0];
   if (!file) return;
+  if (RE_PLAINTEXT.test(file.name)) {
+    if (!confirmDiscard()) return;
+    try {
+      await loadPlaintextDraft(await file.text(), file.name);
+    } catch (err) {
+      setStatus(`Could not open ${file.name}: ${err.message}`);
+    }
+    return;
+  }
   if (!/\.xml$/i.test(file.name)) {
-    setStatus(`Not opened: ${file.name} is not an .xml file.`);
+    setStatus(`Not opened: ${file.name} is not an .xml, .txt or .md file.`);
     return;
   }
   // Start the handle request synchronously: a DataTransferItem is only live
@@ -633,6 +812,7 @@ function highlightZone(zoneId, zoneIndex) {
 
 function render() {
   updateFolioButtons();
+  updateDocStrip();
   buildLegend();
   renderReading();
   updatePanels();
@@ -684,6 +864,34 @@ function entityUsage() {
   return usage;
 }
 
+// Text-structure wrappers that carry no scholarly semantics: they must not get
+// the semantic-wrap treatment. Critical locals are styled by their own crit-*
+// classes (handled separately), so they are excluded here too.
+const STRUCTURE_WRAPS = new Set(["w", "l", "lb"]);
+const SEM_WRAP_EXCLUDE = new Set(["unclear", "del", "add", "gap"]);
+
+/**
+ * The inline semantic element wrapping a cell's text (date, ref, salute, signed,
+ * persName, ...), or null. Reuses attrTargetForCell (which already excludes the
+ * reading containers p/head/note/body), then drops the bare text-structure
+ * wrappers and the critical locals: what remains is a scholarly inline wrap whose
+ * presence should be visible in the reading view. A linked mention is left to the
+ * mention layer (it already shows). Returns the element node or null.
+ */
+function semanticWrapFor(cell) {
+  if (!cell || cell.gap || cell.mention) return null;
+  const elNode = attrTargetForCell(cell);
+  if (!elNode) return null;
+  if (STRUCTURE_WRAPS.has(elNode.localName) || SEM_WRAP_EXCLUDE.has(elNode.localName)) return null;
+  return elNode;
+}
+
+/** Tooltip naming a semantic wrap and its attributes, e.g. "date when=1879-02-14". */
+function semanticWrapTitle(elNode) {
+  const attrs = (elNode.attrs || []).map((a) => `${a.name}=${a.value}`).join(" ");
+  return attrs ? `${elNode.localName} ${attrs}` : elNode.localName;
+}
+
 function renderReading() {
   const host = $("ed-reading");
   clear(host);
@@ -726,11 +934,19 @@ function renderReading() {
       const display = cell.gap
         ? "[...]"
         : (app.readingVariant === "norm" && cell.w && cell.w.norm != null ? cell.w.norm : cell.text);
+      // Semantic-wrap visibility (M2.5 family): text inside a scholarly inline
+      // element (date, ref, salute, ...) that is neither a mention nor critical
+      // gets a subtle dotted underline and a tooltip naming the element and its
+      // attributes, so the markup is visible without changing text metrics.
+      const semWrap = semanticWrapFor(cell);
+      const semClass = semWrap ? " ed-w-sem" : "";
+      const semTitlePart = semWrap ? semanticWrapTitle(semWrap) : null;
+      const baseTitle = critTitle(cell, note, meta);
       const span = el("span", {
-        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass,
+        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + semClass,
         dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
         text: display,
-        title: critTitle(cell, note, meta),
+        title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
       });
       // Editor paradigm (operator decision 2026-06-10): a plain click only sets
       // the cursor. Clicking an ANNOTATED element opens its annotation editor;
@@ -774,7 +990,8 @@ function renderEmptyReading(host) {
   box.appendChild(el("p", { class: "ed-empty-lead",
     text: "Open a TEI document or a project folder to start editing." }));
   box.appendChild(el("p", { class: "ed-empty-hint",
-    text: "Use the Load... menu above, or drop a .xml file anywhere on this page." }));
+    text: "Use the Load... menu above, or drop a .xml, .txt or .md file anywhere on this page. Plaintext opens as a line-level draft; saving produces the TEI file." }));
+  renderDraftRecovery(box);
   const recent = el("div", { class: "ed-recent", id: "ed-recent" });
   recent.hidden = true;
   recent.appendChild(el("h2", { text: "Recent files" }));
@@ -782,6 +999,55 @@ function renderEmptyReading(host) {
   box.appendChild(recent);
   host.appendChild(box);
   renderRecents();
+}
+
+/**
+ * Offer to restore an unsaved draft persisted by a previous session (never
+ * silent): a small section above Recent files naming the source and the saved
+ * time, with Restore and Discard. A restored project draft has no directory
+ * handle anymore, so it restores as a handle-less draft (Save downloads).
+ */
+function renderDraftRecovery(box) {
+  const record = loadDraft();
+  if (!record) return;
+  const sec = el("div", { class: "ed-recent" });
+  const source = record.sourceName || "a plaintext file";
+  sec.appendChild(el("h2", { text: `Unsaved draft from ${source}` }));
+  const list = el("div", { class: "ed-recent-list" });
+
+  const row = el("div", { class: "ed-recent-row" });
+  row.appendChild(el("span", { class: "ed-recent-name", text: record.docName || "draft" }));
+  let when = "";
+  if (record.savedAt) {
+    const d = new Date(record.savedAt);
+    if (!Number.isNaN(d.getTime())) when = d.toLocaleString();
+  }
+  row.appendChild(el("span", { class: "ed-recent-when", text: when }));
+  list.appendChild(row);
+
+  const restore = el("button", { class: "ed-recent-forget", type: "button", text: "Restore",
+    title: "Reopen this draft in the editor (Save downloads the TEI file)" });
+  restore.addEventListener("click", () => restoreDraft(record));
+  row.appendChild(restore);
+
+  const discard = el("button", { class: "ed-recent-forget", type: "button", text: "Discard",
+    title: "Remove this recovered draft" });
+  discard.addEventListener("click", () => { clearDraftRecovery(); render(); });
+  row.appendChild(discard);
+
+  sec.appendChild(list);
+  box.appendChild(sec);
+}
+
+async function restoreDraft(record) {
+  // Load the stored raw with no handle, then re-mark it as a handle-less draft
+  // so Save falls back to a download and the strip wording matches a draft.
+  await load(record.raw, record.docName || "draft.xml", null);
+  app.source = { kind: "draft", txtName: record.sourceName || null };
+  updateDocStrip();
+  renderActivePanel();
+  setDirty(true); // unsaved by definition; this also re-persists the slot
+  setStatus("Restored an unsaved draft. Save downloads the TEI file.");
 }
 
 /**
@@ -1142,6 +1408,12 @@ function docHasImages() {
 
 const PANELS = [
   {
+    id: "document", label: "Document", host: "ed-panel-document",
+    title: "The loaded document's facts: name, source, project, editing unit, counts and save target",
+    available: () => true,
+    render: () => renderDocumentPanel(),
+  },
+  {
     id: "facs", label: "Facsimile", host: "ed-panel-facs",
     title: "Page image with TEI zones; hovering a zone highlights the linked text and vice versa",
     unavailableTitle: "This document carries no page images",
@@ -1228,6 +1500,36 @@ function renderActivePanel() {
   else if (p.mount) p.mount(panelHost(p));
 }
 
+/**
+ * The Document context panel: key-value facts about the loaded document. No
+ * invented values; a row whose value is unknown is omitted rather than guessed.
+ */
+function renderDocumentPanel() {
+  const host = $("ed-document-host");
+  if (!host || !app.state) return;
+  clear(host);
+  const sec = el("div", { class: "ed-section" }, [el("h4", { text: "Document" })]);
+  const kv = (label, value) => sec.appendChild(
+    el("div", { class: "ed-kv" }, [el("span", { text: label }), el("b", { text: String(value) })]));
+
+  const title = docTitle();
+  if (title) kv("Title", title);
+  kv("File", app.docName || "(unnamed)");
+  const src = sourceLabel();
+  if (src) kv("Source", src);
+  const project = app.projectFolder ? app.projectFolder.project : app.project;
+  kv("Project", project && project.name ? project.name : "none");
+  const docType = typeForFile(app.project, app.docName);
+  kv("Document type", docType ? docType.label : "not assigned");
+  kv("Editing unit", editingUnit());
+  kv("Pages", app.state.folios.length);
+  kv(editingUnit() === "words" ? "Words" : "Lines", app.state.cells.length);
+  kv("xml:id count", xmlIdSet(app.state).size);
+  kv("Save target", saveTargetLabel());
+
+  host.appendChild(sec);
+}
+
 function renderFacsimile() {
   if (!app.state || app.panel !== "facs" || app.rightCollapsed) return;
   const ctrl = ensureFacsimile();
@@ -1304,6 +1606,9 @@ function highlightMentions(entity) {
 async function save() {
   if (!app.state) return;
   const raw = serialize(app.state);
+  // Whether THIS document owns the recovery slot: only a draft's own save may
+  // clear it; saving an unrelated document must not discard a stored draft.
+  const wasDraft = isUnsavedDraft();
   // A plaintext draft has no file yet: first save creates the .xml in the
   // project folder, then the normal in-place path takes over.
   await projectFolderUi.finalizeSaveTarget();
@@ -1313,6 +1618,7 @@ async function save() {
       await writable.write(raw);
       await writable.close();
       setDirty(false);
+      if (wasDraft) clearDraftRecovery(); // the draft now has a real file
       setStatus(`Saved in place: ${app.docName}`);
       return;
     } catch (err) {
@@ -1321,6 +1627,9 @@ async function save() {
   }
   download();
   setDirty(false);
+  // The download also produced the TEI file; the draft's recovery slot (and
+  // only the draft's) is no longer the only copy.
+  if (wasDraft) clearDraftRecovery();
 }
 
 function download() {
@@ -1465,6 +1774,9 @@ const projectFolderUi = createProjectFolder({
   app, setStatus, setDirty, confirmDiscard, load,
   showPanel, updatePanels, teiVocabularyLine,
   getProjectPanelHost: () => panelHost(activePanels().find((p) => p.id === "project")),
+  // Project-flow plaintext draft: same neutral banner and Source provenance as
+  // the direct draft path (the wording differs: a project draft saves in place).
+  onPlaintextDraft: (txtName) => { app.source = { kind: "draft", txtName }; showDraftBanner(txtName); },
 });
 const validationView = createValidationView({ app });
 // LLM on-ramp ("New from text"), hidden while the flag is off. The flag
@@ -1514,11 +1826,19 @@ $("menu-new-project").addEventListener("click", () => {
   closeLoadMenu();
   projectFolderUi.newProject();
 });
-for (const item of document.querySelectorAll("[data-example]")) {
-  item.addEventListener("click", () => {
-    closeLoadMenu();
-    loadExample(item.dataset.example);
-  });
+// Built-in examples: shown during local development, removed on the public
+// deployment (FEATURES.examples), together with their menu separator.
+if (FEATURES.examples) {
+  for (const item of document.querySelectorAll("[data-example]")) {
+    item.addEventListener("click", () => {
+      closeLoadMenu();
+      loadExample(item.dataset.example);
+    });
+  }
+} else {
+  for (const node of document.querySelectorAll("#ed-load-menu [data-example], #ed-load-menu .ed-dd-sep")) {
+    node.remove();
+  }
 }
 setupDragDrop();
 // Left pane view switcher: reading text or XML source, one always active.
@@ -1550,6 +1870,11 @@ document.addEventListener("keydown", (e) => {
 });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
+
+// The document strip opens the Document context panel; its Dismiss button hides
+// the plaintext-draft banner until the next draft.
+$("ed-docstrip").addEventListener("click", () => { if (app.state) showPanel("document"); });
+$("ed-draftbanner-dismiss").addEventListener("click", hideDraftBanner);
 
 // View controls: text zoom (a global preference) and the context-pane collapse
 // toggle. Ctrl/Cmd+\ mirrors the collapse button; the splitter resizes the panes.
@@ -1594,5 +1919,6 @@ window.addEventListener("beforeunload", (e) => {
 render(); // start state: the empty editor (no document) with its load prompt
 
 // Deep link from the landing page: editor.html#example=KEY loads that example.
+// Gated like the menu entries: inert on the public deployment.
 const exampleLink = location.hash.match(/^#example=([a-z]+)$/);
-if (exampleLink) loadExample(exampleLink[1]);
+if (exampleLink && FEATURES.examples) loadExample(exampleLink[1]);

@@ -113,6 +113,49 @@ const [, suppliedBuild] = synth.markup[1];
 check(suppliedBuild("x") === '<supplied reason="add&quot;itional&lt;P&gt;">x</supplied>',
   "attribute values are XML-escaped in the opening tag");
 
+// --- 3b. attrField: a declared operator-filled attribute on a wrap -----------
+
+const withField = parseManifest({
+  teicrafter: 1,
+  name: "Field",
+  markup: [
+    { element: "date", label: "Date", attrField: { name: "when", label: "Normalized (YYYY-MM-DD)", placeholder: "1879-02-14" } },
+    { element: "ref", label: "Reference", attrField: { name: "target" } },
+    { element: "hi" },
+  ],
+});
+const [, dateBuild, dateEl, dateField] = withField.markup[0];
+check(dateEl === "date" && dateField && dateField.name === "when"
+  && dateField.label === "Normalized (YYYY-MM-DD)" && dateField.placeholder === "1879-02-14",
+  "attrField: name, label and placeholder parsed onto the wrap tuple's 4th slot");
+const [, , , refField] = withField.markup[1];
+check(refField && refField.label === "target" && refField.placeholder === "",
+  "attrField: label defaults to the name, placeholder defaults to empty");
+const [, , , hiField] = withField.markup[2];
+check(hiField === null, "a wrap without attrField carries null in the 4th slot");
+
+check(dateBuild("Feb 14", "1879-02-14") === '<date when="1879-02-14">Feb 14</date>',
+  "build injects the attribute for a non-empty value");
+check(dateBuild("Feb 14", '<a&"b>') === '<date when="&lt;a&amp;&quot;b&gt;">Feb 14</date>',
+  "build XML-escapes the injected attribute value (& and \" and angle brackets)");
+check(dateBuild("Feb 14") === "<date>Feb 14</date>"
+  && dateBuild("Feb 14", "") === "<date>Feb 14</date>"
+  && dateBuild("Feb 14", "   ") === "<date>Feb 14</date>",
+  "build omits the attribute for undefined, empty or whitespace-only values");
+// The no-attrValue output equals the pre-change plain wrap byte for byte.
+const plainDate = parseManifest({ teicrafter: 1, name: "P", markup: [{ element: "date", label: "Date" }] }).markup[0][1];
+check(dateBuild("Feb 14") === plainDate("Feb 14"),
+  "a wrap without attrValue is byte-identical to a wrap declaring no attrField");
+
+rejects({ teicrafter: 1, name: "x", markup: [{ element: "date", attrField: [] }] },
+  /markup\[0\]\.attrField is not an object/, "an attrField that is not an object is rejected");
+rejects({ teicrafter: 1, name: "x", markup: [{ element: "date", attrField: {} }] },
+  /markup\[0\]\.attrField\.name is missing or not a valid XML attribute name/, "an attrField without a name is rejected");
+rejects({ teicrafter: 1, name: "x", markup: [{ element: "date", attrField: { name: "a b" } }] },
+  /markup\[0\]\.attrField\.name is missing or not a valid XML attribute name/, "an attrField with an invalid name is rejected");
+rejects({ teicrafter: 1, name: "x", markup: [{ element: "date", attrField: { name: "when", label: 5 } }] },
+  /markup\[0\]\.attrField\.label is not a string/, "a non-string attrField label is rejected");
+
 let state = parseEdition(WRAPTEI('<p><w xml:id="w1">Hallo</w> <w xml:id="w2">Welt</w></p>'));
 let cell = state.cellById.get("w1");
 let doc = standoff.wrapRange(state.doc, cell.node, 0, cell.node.end - cell.node.start, hiBuild);
@@ -238,6 +281,35 @@ check(!resolved.some((w) => w[2] === "placeName"),
 const modulesOnly = parseManifest({ teicrafter: 1, name: "m", teiModules: ["namesdates"] });
 check(resolveMarkup(modulesOnly, "x.xml", g) === null,
   "a modules-only scope derives no wraps: built-in wraps stay in force");
+
+// --- 7. reconciliation: the per-project authority opt-in (Stage 2) -------------
+
+const recon = parseManifest({
+  teicrafter: 1, name: "Reconciled",
+  reconciliation: { registers: ["Wikidata", "GND"], auto: true },
+});
+check(recon.reconciliation && recon.reconciliation.registers.join(",") === "Wikidata,GND" && recon.reconciliation.auto === true,
+  "reconciliation: registers carried verbatim and auto true");
+
+check(parseManifest({ teicrafter: 1, name: "x" }).reconciliation === null,
+  "reconciliation absent: project.reconciliation is null");
+
+const reconDefault = parseManifest({ teicrafter: 1, name: "x", reconciliation: { auto: true } });
+check(reconDefault.reconciliation.registers.join(",") === "Wikidata,GND" && reconDefault.reconciliation.auto === true,
+  "reconciliation: registers default to Wikidata,GND when only auto is given");
+
+check(parseManifest({ teicrafter: 1, name: "x", reconciliation: { registers: ["GeoNames"] } }).reconciliation.auto === false,
+  "reconciliation: auto defaults to false when absent");
+
+rejects({ teicrafter: 1, name: "x", reconciliation: [] }, /"reconciliation" is not an object/,
+  "a non-object reconciliation is rejected");
+rejects({ teicrafter: 1, name: "x", reconciliation: { registers: "GND" } }, /"reconciliation\.registers" is not an array/,
+  "a non-array reconciliation.registers is rejected");
+rejects({ teicrafter: 1, name: "x", reconciliation: { registers: ["VIAF"] } },
+  /reconciliation\.registers\[0\] must be one of GND \| Wikidata \| GeoNames/,
+  "an unknown reconciliation register name is rejected");
+rejects({ teicrafter: 1, name: "x", reconciliation: { auto: "yes" } }, /"reconciliation\.auto" is not a boolean/,
+  "a non-boolean reconciliation.auto is rejected");
 
 // --- summary ------------------------------------------------------------------
 
