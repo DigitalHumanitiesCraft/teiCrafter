@@ -3,7 +3,7 @@
 
 Faithful Python port of test/tools/szd-pagejson-to-tei.mjs (the reference
 prototype, spec-by-example). Same input, byte-identical output. The contract is
-knowledge/converter-reference.md; goals.md M1.3.
+knowledge/converter-reference.md.
 
 The conversion is a rule, never an LLM: the transcription is already in
 pages[].text. Output is byte-identical round-trippable by the teiCrafter engine

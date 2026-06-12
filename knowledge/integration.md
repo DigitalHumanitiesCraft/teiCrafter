@@ -13,9 +13,9 @@ status: active
 created: 2026-06-07
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
-related: [project, data, specification, user-stories, architecture, design, testing, goals]
+related: [project, data, specification, architecture, design, testing]
 ---
 
 # Three-Project Master Reference
@@ -23,8 +23,10 @@ related: [project, data, specification, user-stories, architecture, design, test
 Single, verified reference across the three projects. It holds
 the complete picture: the editor internals, both HTR pipelines, the data formats and
 metadata mappings, the TEI models, verification, the converter contract, and the open
-work. Claims are tagged where verified against code; corrections are in section 11. The
-live gate plan with status is [goals.md](goals.md).
+work. Claims are tagged where verified against code; corrections are in section 12.
+Milestone planning is research steering and lives outside this repository; the
+implementation status is [architecture.md](architecture.md) and the proofs are
+[testing.md](testing.md).
 
 ## 1. Frame and Demo Gate
 
@@ -43,24 +45,40 @@ live gate plan with status is [goals.md](goals.md).
 | **zbz-ocr-tei** | `GitHub/DHCraft/zbz-ocr-tei` | Jeanne Hersch: PDF to line-level TEI |
 | **szd-htr** | `GitHub/szd-htr` | Stefan Zweig: images to Page-JSON to METS/PAGE-XML |
 
-Live status in [goals.md](goals.md) (goals H1 to H7).
+The implementation status of these projects lives in [architecture.md](architecture.md)
+and the proofs in [testing.md](testing.md).
 
-## 3. teiCrafter: Editor Internals (verified)
+## 3. Tool Boundary
+
+- **teiCrafter edits TEI.** A generic, lossless TEI editor that edits and annotates
+  arbitrary TEI, project-independent. ZBZ and SZD are two input pipelines that deliver TEI
+  in.
+- **EditionCrafter builds whole digital editions.** Its own, independent sister line:
+  display, apparatus, publication. It is not a part of teiCrafter.
+- **Static pipeline viewers (ZBZ/SZD).** The project-specific static web interfaces of the
+  pipelines (a public read-only proto-edition plus a local editorial workspace) belong to
+  the respective pipelines, not to teiCrafter.
+
+Dividing line in one sentence: teiCrafter creates and edits TEI; EditionCrafter creates
+the edition.
+
+## 4. teiCrafter: Editor Internals (verified)
 
 Client-only, ES6 modules, no build step, deployed from `/docs` via GitHub Pages. A
 three-layer engine (an offset-true document core, the edition model, the UI controller)
 plus services. The full layer breakdown, the method-level signatures and the current
 module map live in [architecture.md](architecture.md) and are not duplicated here. What
-bears on the cross-project integration is the reading contract below (how the editor
-consumes any pipeline's TEI byte-losslessly), the facsimile-image flow, the verification
-surface and the corpus.
+bears on the cross-project integration is the reading contract (how the editor consumes
+any pipeline's TEI byte-losslessly), the facsimile-image flow, the verification surface
+and the corpus.
 
-**Reading contract (how it consumes any TEI).** `<pb>` (opt. `@facs`, `@n`) splits
-folios; `<lb>`/`<l>` splits lines; reading-text nodes become cells (word-level only with
-`<w xml:id>`); `<facsimile>`/`<surface>`/`<zone>` with `ulx/uly/lrx/lry` drive the viewer,
-`@facs` links a line to its zone; `<standOff>`/`<note target>` carry entities/apparatus.
-Uninterpreted markup is preserved verbatim. Raw string canonical, edits are offset
-splices, `serialize()` is byte-identical.
+**Reading contract (how it consumes any TEI).** The editor reads any TEI generically by
+local-name (`<pb>` folios, `<lb>`/`<l>` lines, reading-text cells word-level only with
+`<w xml:id>`, `<facsimile>`/`<surface>`/`<zone>` overlays with `@facs` line-to-zone,
+`<standOff>`/`<note target>` for entities and apparatus) and preserves uninterpreted
+markup verbatim; the raw string is canonical and `serialize()` is byte-identical. The
+single home of this contract is "The Engine Reading Contract" in
+[architecture.md](architecture.md).
 
 **Facsimile image (verified, M2.2 done).** The viewer renders with a `surface` and an
 image URL. The engine reads `<graphic url>` from each `<surface>` via `readSurfaces`
@@ -69,8 +87,8 @@ image URL. The engine reads `<graphic url>` from each `<surface>` via `readSurfa
 (surface && surface.graphic)`, so the `surface.graphic` value from the TEI is the
 fallback that lets any opened file with a `<graphic url>` show its page image. The
 hardcoded ZBZ demo path (`ZBZ_IMAGE_BASE = "data/editor/zbz-100/"`, used only by
-the ZBZ example registry entry) takes precedence for the ZBZ demo. This is no longer a gap: M2.2 is done and
-browser-verified (2026-06-08), see [goals.md](goals.md).
+the ZBZ example registry entry) takes precedence for the ZBZ demo. This is built and
+browser-verified; the engine proof is `szd_demo_check.mjs` (see [testing.md](testing.md)).
 
 **Design system.** Design tokens (`--color-*`, `--space-*`, `--font-*`, `--radius-*`) are
 the single source of truth, no raw hex in components; AI-generated content is marked in the
@@ -105,7 +123,7 @@ structural twin; the real ONB codex (unresolved redistribution licence) lives lo
 the gitignored `docs/data/editor/wb-codex/` and is the editor example's first choice, with
 the twin as public fallback. Real third-party proof files live only under gitignored paths.
 
-## 4. ZBZ Pipeline (zbz-ocr-tei), verified
+## 5. ZBZ Pipeline (zbz-ocr-tei), verified
 
 **Source.** 286 PDFs from ZBZ (`data/source/pdf/{id}.pdf`); 40 Transkribus reference TEIs
 (ground truth, 25 used for CER); Masterfile.xlsx catalog; editorial guidelines (DTA-
@@ -150,10 +168,9 @@ or download fallback; dual-write to canonical `output/` and viewer mirror `docs/
 **Quality.** Fidelity-CER median 1.40%, mean 2.71% (n=25 GT, corrected run of
 2026-06-08; E70 methodology: case-sensitive full-text Levenshtein, fidelity isolates
 real OCR/layout errors from scope inserts). 285/285 schema-valid. 79 blank pages in
-15 docs. Every citable number, with source and re-runnable command, is fixed in
-[paper-evidence.md](paper-evidence.md).
+15 docs.
 
-## 5. SZD Pipeline (szd-htr), verified
+## 6. SZD Pipeline (szd-htr), verified
 
 **Source.** ~2107 objects across 4 collections (18,719 images). Images from a local
 backup (`SZD_BACKUP_ROOT`) and GAMS URLs (`https://gams.uni-graz.at/o:szd.NNNN/IMG.N`).
@@ -180,8 +197,7 @@ prompt (system + group A-I + auto object-context from TEI + optional per-object 
 all images in one batch, auto-chunk above 20 images, backoff on 429, JSON sanitization;
 output `{id}_{model}.json` with pages[] (transcription, notes, type), confidence, metadata.
 (2) `quality_signals.py` v1.5: 7 signals + page.type (content/blank/color_chart);
-needs_review 16.4% live on the post-dedup corpus (340/2069, 2026-06-09; the earlier
-~27% figure predates full transcription coverage, see [paper-evidence.md](paper-evidence.md)). (3) `layout_analysis.py`: ensemble Docling (blocks) + Surya (lines) +
+needs_review 16.4% on the post-dedup corpus (340/2069, 2026-06-09). (3) `layout_analysis.py`: ensemble Docling (blocks) + Surya (lines) +
 Gemini 3 Flash (merge+verify), output `{id}_layout.json` with regions (bbox in percent).
 (4) exports: `export_page_json.py` (Page-JSON v0.2), `export_pagexml.py` (PAGE XML 2019,
 deterministic), `export_mets.py` (METS/MODS, ~2074 objects).
@@ -220,7 +236,7 @@ v0.2 to teiCrafter-target TEI, per the frozen contract in
 [converter-reference.md](converter-reference.md). PAGE-XML and METS remain archival, not
 editor input.
 
-## 6. Data Flow
+## 7. Data Flow
 
 ```
 ZBZ:  PDF -> Mistral OCR -> Docling layout -> Unified TEI -> {id}_final.xml ──┐
@@ -236,9 +252,10 @@ M2.4 scheme) is materialized deterministically by `test/tools/make_zbz1000_demo.
 from the zbz sibling checkout; like zbz-100 it stays local-only (rights). There is no
 automated pipeline-to-teiCrafter link beyond that generator.
 
-## 7. teiCrafter Target Contract for Converters
+## 8. teiCrafter Target Contract for Converters
 
-Both pipelines must hit the section 3 reading contract. Concretely:
+Both pipelines must hit the engine reading contract (the single home is "The Engine
+Reading Contract" in [architecture.md](architecture.md)). Concretely:
 - `<pb facs="#facs_N" n>` per page; `<lb>` (or `<l>`) per line; line-level for both ZBZ
   and SZD (no `<w>` tokens).
 - `<facsimile>`/`<surface ulx uly lrx lry>`/`<zone>` for overlays; `@facs` line-to-zone.
@@ -246,7 +263,7 @@ Both pipelines must hit the section 3 reading contract. Concretely:
   `readSurfaces` and the `surface.graphic` fallback (M2.2 done). The ZBZ schema already
   permits `<graphic url>`; the SZD converter emits it from `source.images[]` / GAMS URLs.
 
-## 8. SZD Converter Contract (M1.2 frozen, M1.3 done)
+## 9. SZD Converter Contract (M1.2 frozen, M1.3 done)
 
 The converter is `teiCrafter/pipeline/export_tei.py`: Page-JSON v0.2 to teiCrafter-native
 TEI, following the existing `export_*.py` conventions (argparse `<obj> -c <collection>` /
@@ -262,21 +279,21 @@ works fully without zones and adds `<zone>` only where present. It emits `<graph
 in each `<surface>` so images render in the editor (M2.2 done). It preserves provenance
 and the unverified status. Authority identifiers are carried as `<idno>` children
 (`<idno type="GND|GeoNames|Wikidata">value</idno>`), the same shape the editor uses (see
-section 11 and [converter-reference.md](converter-reference.md)).
+section 12 and [converter-reference.md](converter-reference.md)).
 
-## 9. Milestone Status
+## 10. Milestone Status
 
-Live milestone status (H1 to H7, every "done" line cites a re-runnable proof) is
-maintained in [goals.md](goals.md), the single source of truth. This document does not
-duplicate it.
+Milestone planning is research steering and lives outside this repository. The repo-side
+homes for what it answers are the implementation status in
+[architecture.md](architecture.md) and the proofs in [testing.md](testing.md).
 
-## 10. Standing Dependencies and Input Gaps
+## 11. Standing Dependencies and Input Gaps
 
 The dependency chain and input gaps that shape the work, independent of milestone state:
 
 1. The SZD chain runs converter reference (M1.2) -> batch converter `export_tei.py`
    (M1.3) -> demo example (M1.4) -> full-corpus sweep (M1.5); each step depends on the
-   one before it. Current state per step is in [goals.md](goals.md).
+   one before it. Current state per step is in [architecture.md](architecture.md).
 2. Image display for opened files depends on the TEI carrying `<graphic url>` in each
    `<surface>` (the SZD converter emits it; the ZBZ schema permits it).
 3. Demo annotation depends on the entity types, authority identifiers, and mention
@@ -287,24 +304,24 @@ The dependency chain and input gaps that shape the work, independent of mileston
 5. **SZD layout batch** is a stratified pilot (~1% of objects), so most objects have no
    zones and the converter must work without them.
 
-## 11. Corrections (verified)
+## 12. Corrections (verified)
 
-- **`<graphic>` in ZBZ TEI:** the claim "no `<graphic url>` anywhere" was imprecise. Precise:
-  no `<graphic>` inside `<facsimile>`/`<surface>`; but 26 docs carry `<graphic url>` inside
-  `<figure>` blocks in the body (~101 total). The `zbz_hersch.rng` schema permits
-  `<graphic url>`, so the M2.2 fix (graphic in surface) is schema-compatible.
+Precise statements that guard a likely misreading of the pipeline TEI:
+
+- **`<graphic>` in ZBZ TEI:** no `<graphic>` sits inside `<facsimile>`/`<surface>`, but 26
+  docs carry `<graphic url>` inside `<figure>` blocks in the body (~101 total). The
+  `zbz_hersch.rng` schema permits `<graphic url>`, so the M2.2 placement of a graphic in a
+  surface is schema-compatible.
 - **`@facs` cross-linking:** in pipeline `_final.xml`, body `<p>`/`<hi>` do not carry
   `@facs` to zones; only `<pb>` and `<lb>` do. The teiCrafter bundled demo additionally
   adds inline `<name ref="#id">` links that the raw pipeline output does not have.
-- **Gate plan on disk:** the gate plan exists as [goals.md](goals.md), which carries the
-  live milestone status (the earlier claim that the plan was absent was wrong).
 - **Status values:** SZD uses a 4-tier verification model (gt_verified, approved,
   agent_verified, needs_review) plus unreviewed, not 3.
 
-## 12. Source Evidence
+## 13. Source Evidence
 
-- teiCrafter: knowledge/{project,data,specification,user-stories,architecture,design,
-  testing,journal,goals,converter-reference}.md; PLAN.md; the editor and service modules
+- teiCrafter: knowledge/{project,data,specification,architecture,design,
+  testing,journal,converter-reference}.md; the editor and service modules
   under docs/js/editor/ and docs/js/services/ (the current module map is in
   architecture.md); docs/css/style.css; pipeline/export_tei.py; the proofs under
   test/tools/ (documented in testing.md).

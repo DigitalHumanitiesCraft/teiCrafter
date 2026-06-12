@@ -14,7 +14,7 @@ status: active
 created: 2026-05-30
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
 ---
@@ -53,7 +53,7 @@ Each demo-critical feature added since the core engine proofs carries its own he
 | `test/tools/guidelines_check.mjs` | The TEI Guidelines reader (`tei-guidelines.js`) answers the authoring questions offline against the vendored compilation: pinned module count, persName resolves RECURSIVELY to its pinned attribute count incl. `@facs` from the nested class (the recursion proof), dedup, module/scope filters with silent skips, tag stripping, malformed input rejected, no `validate` export, pinned version reported | 30/30 |
 | `test/tools/ai_proposal_check.mjs` | AI-proposed entities (M3.7) carry a lossless `resp="#ai"` marker, read as unverified, and the human gate works: confirm drops the marker, reject removes the entity, every step round-trips byte-identically | PASS |
 | `test/tools/ai_suggest_parse_check.mjs` | The LLM reply parser (`docs/js/editor/ai-suggest.js`) tolerates a code fence and prose, normalises free-form type labels to the teiCrafter types, drops malformed/unknown items, de-duplicates, and never throws (M3.7) | PASS |
-| `test/tools/whitespace_edit_check.mjs` | A line-level cell edit preserves the text node's edge whitespace (indentation, newlines), so correcting one line never collapses the surrounding formatting; the old raw-node path is kept as a failing control | 14/14 |
+| `test/tools/whitespace_edit_check.mjs` | A line-level cell edit preserves the text node's edge whitespace (indentation, newlines), so correcting one line never collapses the surrounding formatting; a raw-node edit path is kept as a failing control | 14/14 |
 | `test/tools/mention_projection_check.mjs` | The M2.5 mention projection (`cell.mention`) is a pure read layer: after `addEntity` + `linkMention` the linked cell exposes the entity id, neighbours and gap cells stay `null`, offsets still address the exact reading text, a dangling `ref` still projects, a header `<name>` never leaks into reading cells, and every round-trip stays byte-identical. Also proves projection/mutation agreement (relinking a critically-wrapped mention retargets the enclosing `<name>`, never nests; same-entity relink is a SAME-doc no-op) and the M2.8 selection annotation: `rawRangeForDisplay` maps display offsets to exact raw bytes (including across entity references), `linkMentionRange` is a pure insertion around the selected bytes (full reconstruction), the line splits and the selected words project the mention, and a sub-range inside an existing `<name>` is refused. M2.10 ops: link -> `unwrapMention` restores the exact pre-link bytes (no-op outside a `<name>`), and `wrapRange` applies arbitrary TEI markup (structured persName) while refusing any build that loses reading text | 30/30 |
 | `test/tools/source_highlight_check.mjs` | The source-view highlighter (M2.12, `highlightXml`) is a pure, lossless presentation layer: stripping the token spans and decoding the three HTML escapes reproduces the input byte-for-byte, for well-formed XML, mid-edit fragments (unterminated comment/tag/quote) and the real o_szd.1079; the token classes actually appear and no source angle bracket survives unescaped | 18/18 |
 | `test/tools/wb_codex_check.mjs` | The Wenzelsbibel load path (WB-AP1) and the project-profile IIIF resolver (WB-AP2) on the REAL codex (read from the local licence-restricted data folder, override `WB_CODEX`; SKIPs cleanly when absent so the repo regression never depends on uncommittable data): the full codex parses word-level into 480 folios (timed, threshold 15 s), the no-op save is byte-identical, the profile is detected from the `o:wen.*` PID, every surface `<graphic url>` resolves to the ÖNB IIIF `info.json` URL, and ALL Transkribus `@points`-only zones get a derived bounding box that lies inside its surface. Plus codex-free unit cases for PID reading and resolver edge cases (absolute URLs and path-ish urls left alone) | 16/16 |
@@ -108,12 +108,23 @@ The verification methods are complementary, not alternatives: each answers a dif
 | Was everything processed? | Coverage sweep: counts over the whole corpus | automatic | 285/285 Hersch load, 295/295 round-trip, every SZD demo file converts |
 | Is the output valid TEI? | Well-formedness + schema (TEI All RNG + Schematron; ZBZ also `zbz_hersch.rng`) | automatic | L2, green/red |
 | Is nothing lost, and is the only change the intended one? | Round-trip byte-identity + L1 text + L3 counts + diff-is-exactly-intent | contextual | byte-identical (`roundtrip_sweep.mjs`, `edit_fidelity.mjs`) |
-| Does the intended use actually work for a human? | Walk each demo-critical user story as a concrete path in the browser on a real object | visual | observed; the part headless tests cannot cover (the user-stories.md "Browser-check" status) |
+| Does the intended use actually work for a human? | Walk each demo-critical acceptance scenario as a concrete path in the browser on a real object | visual | observed; the part headless tests cannot cover (the Browser-check scenarios in [specification](specification.md)) |
 | Is it correct as an edition? | Domain-expert review of the content | professional | expert sign-off (both corpora are currently unreviewed) |
 
-The visual level is the centerpiece for "did we reach the goal in our sense". The success criterion (open, correct line by line, annotate person/place/work with authority ids, save byte-faithfully) is the chain of user stories E.1 to E.5, F.1, F.2 and I.1 to I.4 (all built), plus FU.4 (the in-editor pre-open Page-JSON conversion) and a future text-anchored re-entry of the AI-proposal step (M3.7, UI removed in M2.11). Each demo-critical feature is verified twice: a headless proof added to the engine harness above, and a browser path walked on the real demo object (o_szd.1079 for SZD; one of docs 1000 / 1330 / 1540 / 2310 for ZBZ).
+The visual level is the centerpiece for "did we reach the goal in our sense". The success criterion (open, correct line by line, annotate person/place/work with authority ids, save byte-faithfully) is the chain of acceptance scenarios E.1 to E.5, F.1, F.2 and I.1 to I.4 (all built), plus FU.4 (the in-editor pre-open Page-JSON conversion) and a future text-anchored re-entry of the AI-proposal step (M3.7, UI removed in M2.11). Each demo-critical feature is verified twice: a headless proof added to the engine harness above, and a browser path walked on the real demo object (o_szd.1079 for SZD; one of docs 1000 / 1330 / 1540 / 2310 for ZBZ).
 
-Documentation is itself part of acceptance: the per-fixture JSON reports and the knowledge vaults let a reviewer trace every claim, which is the paper's reproducibility requirement. The acceptance table (goal to proof to green/red) is kept in [PLAN.md](../PLAN.md) (acceptance section).
+The visual level is run as six yes/no frontend checks per demo object, the success criterion made concrete:
+
+1. Open: folios (or lines) are visible.
+2. Image: the facsimile is visible and a zone highlights the right line.
+3. Correct: an edited line stays edited.
+4. Annotate: a person, place or work carries its authority id.
+5. AI suggestion (M3.7): the proposal shows violet, then normal after confirmation.
+6. Save: the file reopens identical except for the deliberate changes.
+
+Twelve visual checks (the six on each of the two demo objects) plus the machine test commands listed under How to Run are the tool acceptance. Every demo-critical feature is proven twice: a headless proof in the harness AND a browser path on the real object.
+
+Documentation is itself part of acceptance: the per-fixture JSON reports and the knowledge vaults let a reviewer trace every claim, which is the paper's reproducibility requirement. This document is the home of the acceptance method (the goal-to-proof-to-green/red cascade above); the machine commands are under How to Run, and the implementation status of each milestone is in [architecture.md](architecture.md).
 
 ## Components
 

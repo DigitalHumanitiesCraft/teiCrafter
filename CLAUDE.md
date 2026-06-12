@@ -9,6 +9,7 @@
 - UI and public-facing text (landing, About, README, tooltips, status lines): descriptive and factual, written for researchers. Full sentences that state what the tool does and what a property concretely means; no slogans, no marketing claims, no metaphors, no undefined shorthand ("by construction", "proof harness"). A property that cannot be explained where it is claimed, or linked to its explanation, is left out. Do not present a current configuration as identity (e.g. "no LLM" while LLM features are planned).
 - Knowledge documents follow the Promptotyping Documents convention: standard Markdown with YAML frontmatter (title, project, method, template, status, created, updated; plus topics, language, version, related). This replaces the former "no frontmatter" rule.
 - Knowledge documents describe patterns, decisions, constraints and mechanisms, not incidental surface details the artifact shows on sight (a count of cards, an enumeration of visible sections): those go stale on trivial change and carry no decision. Concreteness stays where it is the document's function (proof counts in testing.md, formats in data.md, the module map in architecture.md, the registers).
+- Knowledge documents describe the current state only: no narrative of what a document previously carried, what moved where, or what no longer exists. History belongs in journal.md and in git. Dated decision provenance is kept only where it is the document's function: journal.md and the Key Decisions in specification.md.
 
 ## Project
 - A browser-based, lossless editor for arbitrary TEI-XML. Open an existing edition, correct it folio by folio at its natural granularity (word-level if `<w>` is present, else line-level), save it back byte-faithfully. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
@@ -25,13 +26,17 @@ Function-separated per the Promptotyping convention. Read `INDEX.md` first; it c
 | Document | Read first when |
 |----------|-----------------|
 | project.md | positioning or identity is unclear |
-| data.md | formats or test material are in question |
-| specification.md | a requirement or decision is at stake |
-| user-stories.md | a usage scenario is unclear |
-| architecture.md | components, data flow, or implementation status |
+| data.md | formats or the plaintext ingest conventions or test material are in question |
+| specification.md | a requirement, a decision, or an acceptance scenario is at stake |
+| architecture.md | components, data flow, the engine reading contract, the module map, or implementation status |
 | design.md | UI, visual, or interaction work (the aesthetic value source) |
-| testing.md | the test approach, engine proofs, or harness is in question |
+| testing.md | the test approach, the acceptance method, engine proofs, or the harness is in question |
 | journal.md | how a decision came about |
+| integration.md | working across the sibling projects: cross-project data flow or the tool boundary |
+| converter-reference.md | building or verifying the SZD Page-JSON to TEI converter |
+| worked-examples.md | the SZD or ZBZ object taken end-to-end in the editor is in question |
+| curated-set.md | the curated example set, its production, or its rights status is in question |
+| promptotyping-case.md | teiCrafter as a Promptotyping case, its provenance, is in question |
 
 ## Design as Value Source
 Before generating or changing UI, read `knowledge/design.md`. Its principles are binding: the AI assists and the human decides (expert-in-the-loop); categorical confidence, not numeric; AI-generated content is always marked in the violet token family (`--color-ai`); design tokens are the single source of truth (live prefix is `--color-*`/`--space-*`/`--font-*`/`--radius-*`, no raw hex in components); label consistency is a rule, not a freedom.
@@ -39,8 +44,10 @@ Before generating or changing UI, read `knowledge/design.md`. Its principles are
 ## Knowledge Maintenance
 At the end of a session with code changes, update the affected knowledge documents:
 1. `architecture.md` for component, data-flow, or implementation-status changes.
-2. `journal.md` for a session entry and any new decisions. Journal style: an entry records the trigger, the decision and the reason, in a few sentences; no proof numbers or test counts (testing.md and goals.md carry them), no implementation detail (architecture.md carries it), no file-by-file lists. Lessons worth keeping are part of the reason.
+2. `journal.md` for a session entry and any new decisions. Journal style: an entry records the trigger, the decision and the reason, in a few sentences; no proof numbers or test counts (testing.md carries them), no implementation detail (architecture.md carries it), no file-by-file lists. Lessons worth keeping are part of the reason.
 3. `specification.md` for new decisions, resolved open questions, or requirement changes.
 4. `design.md` only if the visual or interaction layer changed.
 
 Keep `version:` consistent repo-wide. Distill: one function per document, cross-link via `related:` rather than repeat.
+
+Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository, and is not to be recreated here. This repository carries tool knowledge and reproducibility only.

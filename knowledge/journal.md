@@ -14,14 +14,34 @@ status: active
 created: 2026-02-05
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
 
 # teiCrafter Development Journal
 
-Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and [goals](goals.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-12 (continued): documentation split public/internal, knowledge base consolidated
+
+Trigger: the operator asked for a correctness and compactness pass over HANDOFF, CLAUDE, PLAN and README, and for merge options inside `knowledge/`. The decisions:
+
+- **The public repository carries tool knowledge and reproducibility; research steering lives in the operator's vault.** The milestone register, the backlog and the paper evidence sheet moved to the private vault, because they are steering, not tool knowledge, and a public repository for a research tool should let a forking agent learn the tool without carrying the operator's project planning.
+- **PLAN.md dissolved.** It had drifted against the milestone register in four places, and the duplication was the cause: the same facts kept in two files diverge. Its proven, tool-facing content went into the knowledge documents (the reading contract and implementation status to architecture, the proofs to testing, formats to data, the tool boundary to integration), its steering content to the vault, and the file was deleted.
+- **User stories merged into the specification** as an Acceptance Scenarios section, because a usage scenario is a requirement seen from the user's side and belongs with the requirements it tests, not in a parallel document.
+- **The two worked examples merged into one document**, the two objects as sections sharing the method text once, since the method was the same and stated twice.
+- **The Promptotyping case was slimmed to the case description and provenance pointers**, after its repo-side status snapshot had demonstrably drifted: a status spine duplicated elsewhere goes stale, so the case keeps only what is its own.
+- **Style principle: knowledge documents describe the current state only**, history lives in the journal and in git. The trigger was the drifted status snapshot and the "moved to" narrations the consolidation would otherwise have written into the documents themselves; provenance stays where it is the function (this journal, and the dated Key Decisions in the specification). HANDOFF stays the one root working-state snapshot, now drastically slimmer.
+
+## 2026-06-12 (continued): popover relevance, Document panel dissolved, structural groundwork
+
+Trigger: continued work at the letter and the start of the author-mode track. The decisions, each from a concrete friction or a deliberate next step:
+
+- **The annotate popover leads with suggestions and new-entity, the full index behind a disclosure**, so the common case (a suggested entity, or a fresh one) is the first thing reached and the long index list does not sit in the way. Reason: the popover is a working surface, and the work starts with the relevant candidate, not with browsing everything known.
+- **The Document panel dissolved into the non-interactive document strip.** Two surfaces carried the same document facts (a strip and a panel), so the panel went and the strip in the toolbar became the one identity surface, non-interactive because the facts are read, not operated. The context pane now defaults to the facsimile, or the index when there is no image.
+- **The plaintext draft writes `<lb/>` as a separator between the lines of a paragraph, the first line bare.** The paragraph element already opens the first line, so a leading break before it encoded nothing and only made the shape inconsistent; the editor reads both shapes, so old drafts still open. (The plaintext proof still asserts the old leading-break shape; updating it is open.)
+- **Structural author-mode primitives (split, merge, line break, delete) enter the engine** as offset splices behind the same mutation contract every other edit uses, and are deliberately left unwired until the editing surface for author mode is designed. Reason: landing the engine ops behind the proven contract first keeps the later UI work from re-deriving the invariants, and an unwired primitive changes nothing a user can reach.
 
 ## 2026-06-12 (continued): page images on the on-ramp, a more direct line editor, a chrome round
 

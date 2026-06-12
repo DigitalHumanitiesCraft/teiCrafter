@@ -14,9 +14,9 @@ status: active
 created: 2026-05-27
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
-related: [project, specification, user-stories, architecture]
+related: [project, specification, architecture]
 ---
 
 # teiCrafter Design System
@@ -158,6 +158,5 @@ The M2.6 inline cell action chooser that accompanied this layer was superseded t
 ## Related
 
 - [project](project.md) for the positioning the design serves
-- [specification](specification.md) for the capabilities the UI exposes
-- [user-stories](user-stories.md) for the scenarios behind the components
+- [specification](specification.md) for the capabilities the UI exposes and the acceptance scenarios behind the components
 - [architecture](architecture.md) for how the panes are implemented

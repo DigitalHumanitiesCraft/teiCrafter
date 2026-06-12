@@ -15,7 +15,7 @@ updated: 2026-06-08
 language: en
 version: 0.6.1
 topics: ["[[Converter]]", "[[SZD]]", "[[Page-JSON]]", "[[TEI]]"]
-related: [data, architecture, specification, goals, integration]
+related: [data, architecture, specification, integration]
 ---
 
 # SZD Page-JSON v0.2 to TEI Converter Reference
@@ -341,7 +341,7 @@ It writes `<out.xml>` and self-verifies (round-trip + line-level) before exiting
 on any contract violation it prints the failing summary and exits 1.
 `pipeline/export_tei.py` is a faithful port of this prototype's rules (Python instead
 of Node, same output), driven by object id, producing the handful with o_szd.1079
-first (goals.md M1.3).
+first (M1.3).
 
 teiCrafter's own per-feature proof for the engine side of this contract (graphic url,
 zones in pixels, place/work entities, authority idno, line-level model, byte-identical

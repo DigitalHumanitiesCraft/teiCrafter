@@ -14,14 +14,14 @@ status: active
 created: 2026-02-05
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
-related: [project, data, user-stories, architecture, testing]
+related: [project, data, architecture, testing]
 ---
 
 # teiCrafter Specification
 
-What the system does and why. The core mechanism (a generic lossless reader), the editor capabilities, the LLM on-ramp, the validation levels, and the decisions and open questions. Component behaviour is in [architecture](architecture.md); scenarios are in [user-stories](user-stories.md).
+What the system does and why. The core mechanism (a generic lossless reader), the editor capabilities, the LLM on-ramp, the validation levels, and the decisions and open questions. Component behaviour is in [architecture](architecture.md); the acceptance scenarios are the Acceptance Scenarios section of this document.
 
 ## Core Mechanism: a Generic Lossless Reader
 
@@ -71,6 +71,63 @@ Live, in the browser: well-formedness plus structural integrity against the load
 
 ### Save
 Save in place when a File System handle exists (Chromium), else download. Nothing is written until the human saves or downloads.
+
+## Acceptance Scenarios
+
+Scenarios in "As a ... I want ... so that ..." form, each with its status and proof pointer. Status legend: **Built** (implemented and verified, headlessly or by serving), **Browser-check** (built, needs a human click-through), **Engine built, UI removed** (the engine path is built and proven, its UI was withdrawn), **Partially built** (one part shipped, one part still specified), **Future** (specified, not built). LLM stories need a valid API key.
+
+### Editing any TEI
+
+- **E.1** As an editor I want to open a TEI edition from my local disk so that I can work without a server. *Built* (File System Access API, file-input fallback, drag-and-drop, recent files, the served registry examples).
+- **E.2** As an editor I want the edition split into folios I can page through so that I navigate a long document. *Built* (`<pb>` segmentation, prev/next).
+- **E.3** As an editor I want the reading text rendered cell by cell, word-level when the TEI has `<w>` and line-level otherwise, so that I edit at the document's natural granularity. *Built* (proven on Wenzelsbibel word-level and Hersch line-level).
+- **E.4** As an editor I want to click a word or line and correct it in place so that fixing OCR or transcription errors is direct and nothing else in the file changes. *Built* (lossless offset splice; surgical-edit proof).
+- **E.5** As an editor I want my save to change nothing I did not edit so that the edition stays byte-faithful. *Built* (byte-identical round-trip on 295/295 files).
+- **E.6** As an editor I want to save in place or download so that I keep my work. *Browser-check* (File System write-in-place is Chromium-only; download is universal).
+- **E.7** As an editor I want to edit the attributes of the element wrapping a word or line (`@lemma`, `@ref`, `@type`) so that semantic detail does not force me into the XML source view. *Built* (attribute editor popover on the cell's innermost wrapping element; TEI-vocabulary suggestions as hints when loaded, free text always; browser run is the operator's gate).
+
+### Projects (a project holds several edition types)
+
+- **P.1** As an editor I want to open a whole project folder (granted once) so that I switch between the project's documents without re-picking files. *Built* (M2.9: directory handle, Project panel, save-in-place per file; Chromium-only).
+- **P.2** As a project lead I want a manifest (`teicrafter.project.json`) declaring my project's document types and each type's allowed elements so that collaborators only see the markup our guidelines permit for the document at hand. *Built* (documentTypes plus files map; built-ins without a manifest).
+- **P.3** As an editor I want to drop plaintext transcriptions into my project and edit them as TEI so that plain text is a first-class starting point. *Built* (deterministic line-level draft, verbatim, not AI-marked; first save creates the `.xml`).
+- **P.4** As a researcher I want to create a new project from an empty folder so that I can start my own edition without hand-writing configuration. *Built* ("New project..." writes a minimal manifest and opens the folder).
+- **P.5** As a project lead I want to declare my project's TEI vocabulary (modules and named elements) against the TEI Guidelines so that the editor's suggestions match our encoding scope. *Built* (`teiModules`/`teiElements`; degrades to the explicit lists without the vendored data).
+
+The acceptance case for this section (operator, 2026-06-10): create an own project, put one TEI and two plaintext files in it, open and edit all three. Proven headless in `test/tools/project_case_check.mjs`; the browser run is the operator's gate.
+
+### Facsimile
+
+- **F.1** As an editor I want to see the folio's zones and have text and zone highlight each other so that I relate text to image regions. *Built* (real `@facs` link in Hersch, positional fallback; `<zone>` overlays bidirectionally linked).
+- **F.2** As an editor I want real page images with deep zoom and pan so that I read the manuscript itself. *Built* (OpenSeadragon 5.0.1, plain-image tileSource with an IIIF-ready hook; verified live).
+
+### Validation
+
+- **V.1** As an editor I want a live well-formedness and structural-integrity check so that I see immediately if an edit broke something or lost content. *Built* (browser-light panel vs load-time baseline).
+- **V.2** As an editor I want full schema validation (TEI All RelaxNG plus Schematron) on demand so that I catch structural errors. *Built, offline* (the Node plus Python/lxml harness; not yet wired as an in-browser button).
+
+### LLM on-ramp
+
+All L stories are built but currently hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10); the modal and provider client stay in the codebase.
+
+- **L.1** As an editor I want to paste plaintext and have a model draft an initial TEI that opens in the editor so that I have a starting point to refine. *Built* (the "New from text (LLM)" modal).
+- **L.2** As an editor I want generated content clearly marked as machine-made and unreviewed so that I never mistake a draft for finished work. *Built* (violet marking, unreviewed banner).
+- **L.3** As an editor I want my API key kept in memory only and never persisted so that my credentials are safe. *Built* (module-scoped Map in llm.js, `credentials: 'omit'`).
+- **L.4** As an editor I want to choose among providers so that I am not vendor-locked. *Built* (six providers).
+
+### Index and standOff
+
+- **I.1** As an editor I want to create, rename and delete entries for all five entity types (person, place, org, event, work) in an in-browser index so that the edition's `<standOff>` stays authoritative and editable. *Built* (lossless `<standOff>` model, inside the offset-splice engine).
+- **I.2** As an editor I want to link an in-text mention to an index entry so that the word carries `<name ref="#id">`. *Built* (verified live: linking produces `<w><name ref="#id">...</name></w>`).
+- **I.3** As an editor I want to select a word or line range and attach an editorial-apparatus or commentary note so that the tool writes the anchor and the note body. *Built* (M3.5; lossless `<note target="#id">` in `<standOff>`, anchor via ancestor `xml:id`, else line `@facs`, else injected `xml:id`; proof `node test/tools/note_create_check.mjs` (15/15)).
+- **I.4** As an editor I want to enter or edit external authority ids on an index entry from the UI, with a live lookup against Wikidata, GND and GeoNames, so that I do not have to copy ids by hand. *Built* (M3.3; hand-entry as `<idno type="...">` children, lookup in `services/authority-lookup.js`, in the index overlay and the annotation editor; proof `node test/tools/authority_lookup_check.mjs` (15/15), fetch browser-verified).
+- **I.5** As an editor I want a model to propose entities that arrive unreviewed and gated so that I can confirm or reject each one before it counts. *Engine built, UI removed* (M3.7 path: proposals inserted unreviewed as `resp="#ai"`, rendered violet, confirm/reject via `confirmEntity`/`deleteEntity`; proofs `ai_proposal_check.mjs` (17/17), `ai_suggest_parse_check.mjs` (8/8). The "Suggest entities (AI)" UI was removed in M2.11, operator "vorerst rausnehmen"; a re-entry should anchor proposals in the text).
+
+### Future (specified, not built)
+
+- **FU.3** Form-based authoring views per project module (e.g. diplomatic transcription, Bible-verse). *Future*.
+- **FU.4** Convert pipeline Page-JSON (SZD) to minimal editable TEI before opening. *Partially built* (the SZD converter round-trips byte-identically, `pipeline/export_tei.py`, frozen contract in `converter-reference.md`; only the in-editor pre-open integration remains).
+- **FU.5** Open and edit very large editions (tens of MB) with a segmented load. *Future*.
 
 ## LLM On-Ramp
 
@@ -132,6 +189,7 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 - Streaming/segmented load for very large editions (Wenzelsbibel ~78 MB); the current model re-parses the whole string per edit, fine for folio-sized and synthetic files.
 - Replacing the hand-built XML source editor with CodeMirror, should it hit limits (the editable source view itself, including side-by-side with the facsimile, is built: M2.12 + M2.14).
 - Explicitly out of scope of the Guidelines integration until a real case demands it (2026-06-10): content-model validation, element insertion beyond selection wraps, per-element display rules, attribute editing on milestones (`pb`/`lb`; the engine primitive can already do it, the UI anchor is the open part), and generalizing the folio/line projection to container-shaped editions (dictionaries, drama, tables).
+- Registered ideas (none commissioned), from the coOCR-HTR comparison (Opus analysis 2026-06-12, ranked by value/effort): (1) a keyboard jump to the next critical or uncertain spot in the reading text (small, builds on the existing keyboard base); (2) activate the existing categorical confidence tokens (`--color-confident`/`review`/`problem`) at mentions once a confidence producer exists (the on-ramp or auto-reconciliation); (3) a service worker for an offline-capable app shell (medium, cache-first shell, network-only lookups, no build step); (4) a read-only plaintext/Markdown export of the current folio (small, a projection, never a save path); (5) i18n DE/EN as externalized strings (medium, only if a German-speaking user test shows friction). A SECURITY.md counterpart becomes relevant when the LLM on-ramp goes live. Discarded as out-of-domain: batch queues, per-page review flags, multi-page ZIP/PAGE-XML export.
 
 ## Open Questions
 
@@ -142,4 +200,4 @@ The **MVP gate** is well-formed AND L1 pass AND L3 counts preserved. L2 is alway
 
 ## Related
 
-- [project](project.md) for positioning, [data](data.md) for formats and corpus, [user-stories](user-stories.md) for acceptance criteria, [architecture](architecture.md) for implementation, [testing](testing.md) for the harness
+- [project](project.md) for positioning, [data](data.md) for formats and corpus, [architecture](architecture.md) for implementation, [testing](testing.md) for the harness

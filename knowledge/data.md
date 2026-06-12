@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:
@@ -39,16 +39,18 @@ What teiCrafter consumes and produces, and which TEI proves the engine. teiCraft
 |-------|-------|-------|
 | Existing TEI edition | Editor | Any TEI; opened from local disk, edited losslessly, saved back |
 | Plaintext (`.txt`/`.md`) | Editor (picker, drop) or project folder | Opens as minimal line-level TEI by the fixed conventions below: transport, not interpretation, so the same input always yields the same output and the draft is never AI-marked. In a project folder the first save creates the `.xml` next to its source; opened directly, the draft has no save target and downloads its `.xml` |
-| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10) |
+| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Hidden behind `FEATURES.llmOnRamp` (currently off) |
 
 ### Plaintext conventions (deterministic ingest rules)
 
 | Convention | Resolves to | Since |
 |------------|-------------|-------|
 | Blank line | paragraph boundary (`<p>`) | M2.9 |
-| Line break | `<lb/>` before each line | M2.9 |
+| Line break between lines of a paragraph | `<lb/>` marking the break BETWEEN lines; the first line of a paragraph stays bare (the `<p>` already opens it) | 2026-06-12 |
 | `\|N\|` (N = digits), standalone or mid-line | `<pb n="N"/>`; a page break implies a line break, one conventional bordering space dropped | 2026-06-12 |
 | Anything else | carried verbatim (XML-escaped) | M2.9 |
+
+A `<lb/>` marks the break between lines inside a paragraph and the first line of a paragraph stays bare. The editor also reads drafts where every line carries a leading `<lb/>` (including the first), so both line shapes load.
 
 The boundary rule (decision 2026-06-12, [specification](specification.md)): a convention resolves at ingest only where it encodes structure the text itself carries. Semantics (entities, dates, normalizations) is never pseudo-syntax in the source file; it belongs in the editor, where verification, lookup and validation live. New conventions are added only when real material carries them.
 
@@ -58,19 +60,13 @@ The editor additionally ships one reference dataset: a vendored, version-pinned 
 
 ## How the Engine Reads TEI
 
-The editor does not require a particular TEI profile. It recognises, generically by local-name:
-
-- folio breaks `<pb>` (with `@facs` to a surface) split the document into folios;
-- line markers `<lb>`/`<l>` split a folio into lines;
-- reading-text nodes become editable cells; if `<w xml:id>` word tokens are present the cells are words, otherwise whole lines;
-- `<facsimile>`/`<surface>`/`<zone>` with `ulx/uly/lrx/lry` drive the OpenSeadragon facsimile viewer as `<zone>` overlays; a line's `@facs` links it bidirectionally to its zone;
-- `<standOff>`/`<note target>` mark words or lines that carry apparatus.
-
-Anything it does not interpret is preserved verbatim on save.
+The editor requires no particular TEI profile: it recognises the structural markup (`<pb>`, `<lb>`/`<l>`, `<w xml:id>`, `<facsimile>`/`<surface>`/`<zone>`, `<standOff>`, `<note target>`) generically by local-name and preserves everything it does not interpret verbatim on save. The single home of how the engine reads TEI is the Engine Reading Contract in [architecture](architecture.md); this document carries only the format-level facts of what the tool consumes and produces.
 
 ## Facsimile Images
 
 The facsimile pane is a real OpenSeadragon 5.0.1 deep-zoom viewer (loaded from CDN), showing the folio's page image with the edition's real `<zone>` rectangles as overlays bidirectionally linked to the reading text by `@facs`. Image sources can be imported from a IIIF manifest or a METS file's image references; see [specification](specification.md). If OpenSeadragon is unavailable the viewer degrades to an empty state rather than failing.
+
+The text+image on-ramp ("New from text and images") attaches page scans by page order, weaving a `<facsimile>` whose surfaces carry a `<graphic url>` to a relative filename and binding each `<pb>` to its surface by `@facs`. On a project-folder save the uploaded images are written as files next to the TEI under those relative filenames; no image binary is ever embedded in the XML. Reopening the folder resolves the filenames back to the displayed images.
 
 ## Real Test Corpus
 

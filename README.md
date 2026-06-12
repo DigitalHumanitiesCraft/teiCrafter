@@ -40,7 +40,7 @@ teiCrafter is a client-only, browser-based editor for arbitrary [TEI-XML](https:
 
 TEI encodes its own structure, so the editor reads the editing unit from the document instead of asking for configuration: word-level where the TEI tokenizes words (`<w>`), line-level where it marks only line breaks (`<lb>`). Any TEI opens without setup; an optional project manifest (`teicrafter.project.json` next to the edition) adds project-specific settings such as an image resolver, indices, authority reconciliation, and the allowed markup. A project is not a single edition type: one project can hold several document types (for Stefan Zweig Digital: letters, life documents, typescripts), so the manifest declares the allowed markup per document type and the markup offered in the editor follows the open document's type. You can also open a whole project folder: granting a folder once through the browser's File System Access directory handle (Chromium browsers) lists its files in the Project panel.
 
-Plaintext is a first-class entry: a `.txt` or `.md`, opened directly (file picker, drag and drop) or from a project folder, becomes a minimal line-level TEI draft produced by a fixed rule (paragraphs on blank lines, a line-break element per line, a `|N|` token as a page break, the text carried verbatim and XML-escaped). This is transport, not interpretation, so the draft is deliberately not marked as machine-generated. An unsaved draft survives a reload through a recovery offer. There is no build step.
+Plaintext is a first-class entry: a `.txt` or `.md`, opened directly (file picker, drag and drop) or from a project folder, becomes a minimal line-level TEI draft produced by a fixed rule (paragraphs on blank lines, a line-break element separating the lines of a paragraph, a `|N|` token as a page break, the text carried verbatim and XML-escaped). This is transport, not interpretation, so the draft is deliberately not marked as machine-generated. The same deterministic draft can take page images: "New from text and images" attaches images by page order, holds them in memory, and writes them next to the TEI on a project-folder save (a plain download warns that the images stay behind). An unsaved draft survives a reload through a recovery offer. There is no build step.
 
 Two paths lead into the same editor:
 
@@ -65,10 +65,10 @@ The design rests on the principle of **epistemic asymmetry**: LLMs generate plau
 
 ## The Editor
 
-The editor is a dual-view workbench: two panes, always. A document strip under the toolbar states what is loaded (name, project, document type, editing unit, page count) and opens the Document panel with the full facts (source provenance, counts, save target).
+The editor is a dual-view workbench: two panes, always. A document strip in the toolbar carries the document facts (name, project, document type, editing unit, page count); it is non-interactive and there is no separate Document panel.
 
-1. **Left pane: the text surface.** View tabs switch between the diplomatic **Reading text** (folio by folio; editable units are words when `<w>` is present, lines otherwise; edits are offset splices into the canonical string) and the editable **XML source** (syntax-highlighted, line numbers, Check XML, Apply gated on well-formedness). Live integrity checks sit in the pane head as a chip with a detail popover that defines its terms.
-2. **Right pane: the context panel.** Panel tabs switch between the **Document** facts, the **Facsimile** (a real [OpenSeadragon](https://openseadragon.github.io/) deep-zoom viewer over the page image, with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook), the **Index** (an editable `<standOff>` of persons, places, organisations, works, and events with authority identifiers and mention counts), and, when a project folder is open, the **Project** panel (the folder's TEI and plaintext files; click a file to switch the open document). The panel registry is open for project-specific panels.
+1. **Left pane: the text surface.** View tabs switch between the diplomatic **Reading text** (editable units are words when `<w>` is present, lines otherwise; edits are offset splices into the canonical string) and the editable **XML source** (syntax-highlighted, line numbers, Check XML, Apply gated on well-formedness). The reading text shows page by page or as a continuous view, one renderer behind both; in the continuous view the facsimile follows the hovered line's page. Live integrity checks sit in the pane head as a chip with a detail popover that defines its terms.
+2. **Right pane: the context panel.** Panel tabs switch between the **Facsimile** (a real [OpenSeadragon](https://openseadragon.github.io/) deep-zoom viewer over the page image, with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook), the **Index** (an editable `<standOff>` of persons, places, organisations, works, and events with authority identifiers and mention counts), and, when a project folder is open, the **Project** panel (the folder's TEI and plaintext files; click a file to switch the open document). The panel registry is open for project-specific panels.
 
 Annotation happens at the text: select words and pick from one flat, filterable action list (entities, markup, textual criticism, notes), click a mention to edit its annotation and authority ids in place (with a live candidate lookup against Wikidata, GND and GeoNames), right-click for the context menu. A markup entry declared in the manifest can carry one attribute field, so for example a date and its normalized `@when` commit as one step. All operations stay inside the lossless offset-splice model.
 
@@ -82,7 +82,7 @@ Annotation happens at the text: select words and pick from one flat, filterable 
 | **Editing unit from the document** | Word-level when `<w>` is present, line/cell-level otherwise; read from the encoding, no configuration needed to open a file. |
 | **Project manifests** | An optional `teicrafter.project.json` configures name, IIIF image resolver, indices, authority reconciliation, and the allowed markup declared per document type, including per-wrap attribute fields. |
 | **Project folders** | A folder granted once through a File System Access directory handle; the Project panel lists its TEI and plaintext files; a plaintext file opens as a deterministic draft, and the first save creates the `.xml` next to the source. |
-| **Plaintext entry** | `.txt`/`.md` open directly as a deterministic line-level draft; documented ingest conventions (blank line, `\|N\|` page marker); never AI-marked. |
+| **Plaintext entry** | `.txt`/`.md` open directly as a deterministic line-level draft; documented ingest conventions (blank line, a line-break element separating a paragraph's lines, `\|N\|` page marker); page images can attach by page order ("New from text and images"); never AI-marked. |
 | **Draft recovery** | An unsaved draft persists locally and is offered for restore after a reload; nothing is discarded silently. |
 | **Real OpenSeadragon facsimile** | Deep-zoom page image with `<zone>` overlays bidirectionally linked to the reading text; IIIF-ready tileSource hook. |
 | **In-browser index management** | Editable `<standOff>` of persons, places, organisations, works, and events with mention linking via `<name ref>`. |
@@ -209,22 +209,18 @@ The project maintains a knowledge base in [`knowledge/`](knowledge/) following t
 | [INDEX.md](knowledge/INDEX.md) | Navigation, document map, glossary |
 | [project.md](knowledge/project.md) | Identity, positioning, success criteria |
 | [data.md](knowledge/data.md) | Formats, plaintext conventions, TEI test corpus, real-case material |
-| [specification.md](knowledge/specification.md) | Requirements, function cores, decisions |
-| [user-stories.md](knowledge/user-stories.md) | Acceptance scenarios |
-| [architecture.md](knowledge/architecture.md) | Components, data flow, editor engine, status |
+| [specification.md](knowledge/specification.md) | Requirements, function cores, decisions, acceptance scenarios |
+| [architecture.md](knowledge/architecture.md) | Components, data flow, engine reading contract, status |
 | [design.md](knowledge/design.md) | Design system, tokens, UI components |
-| [testing.md](knowledge/testing.md) | Test approach, engine proofs, harness |
+| [testing.md](knowledge/testing.md) | Test approach, acceptance method, engine proofs, harness |
 | [journal.md](knowledge/journal.md) | Development log |
-| [integration.md](knowledge/integration.md) | Cross-project data flow (ZBZ and SZD pipelines into the editor) |
-| [goals.md](knowledge/goals.md) | Goals and milestones register (H1 to H7) with proof per "done" line |
+| [integration.md](knowledge/integration.md) | Cross-project data flow (ZBZ and SZD pipelines into the editor), tool boundary |
 | [converter-reference.md](knowledge/converter-reference.md) | Deterministic SZD Page-JSON v0.2 to TEI mapping |
-| [worked-example-szd.md](knowledge/worked-example-szd.md) | Real SZD object end-to-end in the editor |
-| [worked-example-zbz.md](knowledge/worked-example-zbz.md) | Real ZBZ object end-to-end, with the added-value before/after |
+| [worked-examples.md](knowledge/worked-examples.md) | Real SZD and ZBZ objects end-to-end in the editor, with the added-value before/after |
 | [curated-set.md](knowledge/curated-set.md) | Curated example set: before/after pairs, method, rights status |
-| [paper-evidence.md](knowledge/paper-evidence.md) | Every externally citable number with source and verification command |
-| [promptotyping-case.md](knowledge/promptotyping-case.md) | teiCrafter as a Promptotyping case, status spine, talking points |
+| [promptotyping-case.md](knowledge/promptotyping-case.md) | teiCrafter as a Promptotyping case, provenance |
 
-Milestone evaluation reports live in [`reports/`](reports/).
+Evaluation reports live in [`reports/`](reports/).
 
 ---
 

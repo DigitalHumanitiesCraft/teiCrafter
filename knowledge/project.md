@@ -14,9 +14,9 @@ status: active
 created: 2026-02-05
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
-related: [data, specification, architecture, design, journal, goals, integration]
+related: [data, specification, architecture, design, journal, integration]
 ---
 
 # teiCrafter Project Overview
@@ -72,5 +72,5 @@ The Wenzelsbibel is the reference manuscript case. Because the real codex is thi
 
 ## Related
 
-- [data](data.md), [specification](specification.md), [architecture](architecture.md), [design](design.md), [journal](journal.md), [goals](goals.md), [integration](integration.md)
+- [data](data.md), [specification](specification.md), [architecture](architecture.md), [design](design.md), [journal](journal.md), [integration](integration.md)
 - Vault: [[teiCrafter]], [[Project Overview Wenzelsbibel]], [[coOCR HTR]], [[Project Overview EditionCrafter]]

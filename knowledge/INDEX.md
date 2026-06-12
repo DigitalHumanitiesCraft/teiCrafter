@@ -14,14 +14,14 @@ status: active
 created: 2026-05-27
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, user-stories, architecture, design, journal, testing, integration, goals, converter-reference, worked-example-szd, worked-example-zbz, promptotyping-case, paper-evidence, curated-set]
+related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples, curated-set, promptotyping-case]
 ---
 
 # teiCrafter Knowledge Base
 
-Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. Plaintext also enters the editor: a `.txt` or `.md`, opened directly (picker, drop) or from a project folder, becomes a line-level TEI draft by a fixed, deterministic rule (paragraphs on blank lines, `<lb/>` per line, a `|N|` token as a page break; never AI-marked). Separately, an optional LLM on-ramp drafts an initial TEI from plaintext into the same editor (currently switched off behind a feature flag). Client-only, no backend, no build step; the built-in examples show only on local development hosts.
+Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. Plaintext also enters the editor: a `.txt` or `.md`, opened directly (picker, drop) or from a project folder, becomes a line-level TEI draft by a fixed, deterministic rule (paragraphs on blank lines, a `<lb/>` between the lines of a paragraph with the first line bare, a `|N|` token as a page break; never AI-marked). Separately, an optional LLM on-ramp drafts an initial TEI from plaintext into the same editor (currently switched off behind a feature flag). Client-only, no backend, no build step; the built-in examples show only on local development hosts.
 
 This knowledge base follows the [Promptotyping Documents convention](https://dhcraft.org/Promptotyping/), function-separated as in the ancestor tool coOCR HTR.
 
@@ -30,23 +30,19 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | Document | Answers | Read first when | Depends on |
 |----------|---------|-----------------|------------|
 | [project](project.md) | What is teiCrafter, why does it exist, how is it positioned? | Scope or identity unclear | - |
-| [data](data.md) | What does it consume and produce; what TEI proves the engine? | Formats or test corpus in question | project |
-| [specification](specification.md) | What should the system do and why? (generic reader, editor, LLM on-ramp, validation, decisions) | A requirement or decision is at stake | project, data |
-| [user-stories](user-stories.md) | Who uses it, in which scenarios, and what is built? | A usage scenario or status is unclear | specification |
-| [architecture](architecture.md) | How is it built? (three-layer engine, services, status) | Wrong assumptions about components or data flow | specification |
+| [data](data.md) | What does it consume and produce; the plaintext ingest conventions; what TEI proves the engine? | Formats or test corpus in question | project |
+| [specification](specification.md) | What should the system do and why? (generic reader, editor, LLM on-ramp, validation, decisions, acceptance scenarios) | A requirement, a decision, or an acceptance scenario is at stake | project, data |
+| [architecture](architecture.md) | How is it built? (three-layer engine, the engine reading contract, services, implementation status) | Wrong assumptions about components, the reading contract, or data flow | specification |
 | [design](design.md) | How does it look and behave? (tokens, dual-view layout, AI marking) | UI or design-system work | specification |
-| [testing](testing.md) | How is it proven and validated? (engine proofs, harness levels) | Coverage or eval method in question | architecture |
+| [testing](testing.md) | How is it proven and validated? (the acceptance method, engine proofs, harness levels) | Coverage or acceptance method in question | architecture |
 | [journal](journal.md) | How did we get here? (decision log) | Decision logic unclear | - |
-| [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
-| [goals](goals.md) | What are the main goals and milestones, with status? (the on-disk gate plan) | Checking objectives, milestones, or the demo critical path | integration |
-| [converter-reference](converter-reference.md) | The deterministic Page-JSON v0.2 to TEI mapping (body, header, facsimile, bbox formula, standOff seeding, markers) | Building or verifying the SZD converter | data, architecture, specification, goals |
-| [worked-example-szd](worked-example-szd.md) | The real SZD object taken end-to-end in the editor (M7.2): the object, the seven-step walkthrough, the proof, the entity table | The SZD worked example or the live demo path is in question | goals, testing, specification |
-| [worked-example-zbz](worked-example-zbz.md) | The real ZBZ object (doc 1000) taken end-to-end in the editor (M7.2 ZBZ half): the object, the seven-step walkthrough, the proof, the entity table, the added-value before/after | The ZBZ worked example, the Hersch demo path, or the paper's added-value claim is in question | goals, testing, paper-evidence, worked-example-szd |
-| [paper-evidence](paper-evidence.md) | Every number the Editopia paper may cite, with source of record, re-runnable verification and caveat | A number is about to go into the paper, slides, or any external text | integration, goals, testing |
-| [promptotyping-case](promptotyping-case.md) | teiCrafter as a Promptotyping case (M7.1), the repo-side project-status spine (M5.4), and the talking-points draft (M7.3) | Presenting the tool, its provenance, or its status | goals, journal, integration |
-| [curated-set](curated-set.md) | The M7.4 curated example set: how the before/after pairs are produced, the set table, rights and schema-validity status | The paper's empirical partial result or the set's reproduction is in question | goals, paper-evidence, worked-example-zbz, worked-example-szd |
+| [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor, and where is the tool boundary? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
+| [converter-reference](converter-reference.md) | The deterministic Page-JSON v0.2 to TEI mapping (body, header, facsimile, bbox formula, standOff seeding, markers) | Building or verifying the SZD converter | data, architecture, specification |
+| [worked-examples](worked-examples.md) | The real SZD and ZBZ objects taken end-to-end in the editor: the objects, the walkthrough, the proof, the entity tables, the added-value before/after | A worked example or a live demo path is in question | testing, specification |
+| [curated-set](curated-set.md) | The curated example set: how the before/after pairs are produced, the set table, rights and schema-validity status | The empirical partial result or the set's reproduction is in question | worked-examples |
+| [promptotyping-case](promptotyping-case.md) | teiCrafter as a Promptotyping case: the case description and provenance pointers | Presenting the tool or its provenance | journal, integration |
 
-Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary; `PLAN.md` is the full plan and implementation backlog (German): purpose, tool boundaries, goals H1-H7 with status, SZD data model, proofs, open items.
+Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.
 
 ## Core Concepts
 
@@ -72,6 +68,4 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 
 teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed as an independent browser tool. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
 
-## History Note
-
-Through version 0.3 this knowledge base described two equal paths (an LLM Generator with a five-step stepper, and an Editor). The 2026-05-30 consolidation made the editor the single product, generalised it to the lossless reader, demoted the LLM to an on-ramp, and removed the legacy generator code. Versions 0.4 to 0.9 then track the as-built growth: the editorial annotation layer (0.6), the SZD worked example and the Promptotyping case (0.7), the ZBZ worked example and the Editopia evidence sheet (0.8), the curated example set (0.9). Version 0.10 settles the editor surface: the welcome screen dissolved into the empty two-pane editor, an IDE-style line-number gutter, editor-wide text zoom, a draggable splitter and context-pane collapse with per-document layout persistence, and XML-source find/replace with go-to-line. Version 0.11 consolidates the mutation path (one `commitStandoff` over a DOM-free core), extracts the project-folder and validation surfaces from the integrator, vendors the TEI P5 Guidelines compilation behind a DOM-free reader (manifest-scoped, lazily loaded, degradation proven) and adds the generic attribute editor. Version 0.12 adds the Wenzelsbibel dual reading (F4): an atomic engine op that edits a word's diplomatic content and its `@orig`/`@norm` attributes together in one re-parse, a normalized display projection, a Diplomatic/Normalized switcher, and a two-field double-click edit. Version 0.13 makes the plaintext on-ramp first-class from a real-letter feedback session (direct `.txt`/`.md` open, `|N|` page markers, draft recovery across reloads), moves the document identity into a document strip and a Document context panel, gates the built-in examples to local hosts, brings authority reconciliation into the annotation popover (manifest opt-in for auto), and rebuilds the selection popover as one flat filterable list with declared attribute fields. The full narrative is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.
+The version history is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.

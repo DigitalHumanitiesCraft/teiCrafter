@@ -13,9 +13,9 @@ status: active
 created: 2026-06-09
 updated: 2026-06-12
 language: en
-version: 0.14
+version: 0.15
 topics: ["[[Editopia]]", "[[Curation]]", "[[Evaluation]]"]
-related: [goals, paper-evidence, worked-example-zbz, worked-example-szd, testing]
+related: [worked-examples, testing]
 ---
 
 # Curated Example Set (M7.4)
@@ -23,10 +23,9 @@ related: [goals, paper-evidence, worked-example-zbz, worked-example-szd, testing
 The paper's empirical partial result (operator decision 2026-06-09): persisted
 before/after pairs of fully curated TEIs from both pipelines, each pair with a
 unified diff and a per-object step log. The set is the on-disk demonstration of
-the success criterion in [goals.md](goals.md) (Frame): from the unverified
-pipeline TEI of a real object, curation in teiCrafter produces a demonstrably
-better TEI while preserving the pipeline output byte-exactly outside the
-touched regions.
+the Editopia success criterion (operator 2026-06-09): from the unverified pipeline
+TEI of a real object, curation in teiCrafter produces a demonstrably better TEI
+while preserving the pipeline output byte-exactly.
 
 ## 1. How the set is produced
 
@@ -72,8 +71,8 @@ authority on purpose, to be resolved via the live lookup (M3.3).
 
 "Curation steps" counts the human-visible actions in the step log (an entity
 add bundles its authority assignments); "engine splices" counts the distinct
-byte-level edits as reported by the corresponding worked-example proof. Both
-figures are registered in [paper-evidence.md](paper-evidence.md) section 3.
+byte-level edits as reported by the corresponding worked-example proof
+(`zbz_worked_example.mjs`, `szd_worked_example.mjs`).
 
 What each generated pair contains, per the recipes:
 
@@ -101,8 +100,8 @@ absent.
 
 ## 4. Schema validity of the curated additions
 
-Against the ZBZ schema `zbz_hersch.rng` (finding 2026-06-09, see
-[goals.md](goals.md) M7.4): `graphic`, the line correction, `unclear` and `gap`
+Against the ZBZ schema `zbz_hersch.rng` (finding 2026-06-09, M7.4):
+`graphic`, the line correction, `unclear` and `gap`
 validate; `<standOff>` and `<name ref>` do not and need the schema extension
 ordered to the zbz lane (E68 precedent). The set's generation does not wait on
 that extension; full ZBZ schema validity of the after-files does.

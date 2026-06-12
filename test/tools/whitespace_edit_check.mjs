@@ -1,7 +1,7 @@
 /**
  * Proof: a line-level cell edit preserves the text node's edge whitespace
  * (indentation/newlines), so correcting one line never collapses the surrounding
- * formatting. This guards the whitespace caveat recorded in PLAN.md section 10.
+ * formatting. This guards the whitespace caveat in the lossless edit contract.
  *
  * The fix lives in editCellCore (edition.js): the UI edits only the trimmed core
  * and re-attaches the original lead/trail on commit. editWordText (the raw node
