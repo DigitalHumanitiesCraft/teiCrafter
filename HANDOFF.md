@@ -103,6 +103,24 @@ commissioned).
   Editopia chapter draft, Rohfassung, provenance page, Kreyenbuehl package.
 - Pre-existing: the ZBZ example is local-only (rights); with the example
   surfaces now hidden publicly, the public-Pages fallback question is moot.
+- **Registered ideas from the coOCR-HTR comparison** (Opus analysis 2026-06-12,
+  against the live repo, ranked by value/effort; none commissioned): (1) a
+  keyboard jump to the next critical/uncertain spot in the reading text (small;
+  builds on the existing keyboard base; coOCR's data-line click-to-line is the
+  pattern, its own keyboard story is weaker than ours); (2) activate the
+  existing categorical confidence tokens (--color-confident/review/problem) at
+  mentions once a confidence producer exists (on-ramp or auto-reconciliation;
+  coOCR's category-to-status mapping is the blueprint); (3) a service worker
+  for an offline-capable app shell (medium; cache-first shell, network-only
+  lookups, coOCR proves it no-build-step); (4) a read-only plaintext/Markdown
+  export of the current folio (small; a projection, never a save path);
+  (5) i18n DE/EN as externalized strings (medium; collides with the CLAUDE.md
+  English rule, only if a German-speaking user test shows friction). Plus: a
+  SECURITY.md counterpart becomes relevant when the LLM on-ramp goes live.
+  Discarded as out-of-domain: batch queues, per-page review flags, multi-page
+  ZIP/PAGE-XML export.
+- **README.md rewritten** (operator draft as the core, translated and adjusted
+  to the public-text rules; uncommitted, awaiting the operator's approval).
 
 ## The one next step
 
