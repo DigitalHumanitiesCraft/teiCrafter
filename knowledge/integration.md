@@ -47,43 +47,13 @@ Live status in [goals.md](goals.md) (goals H1 to H7).
 
 ## 3. teiCrafter: Editor Internals (verified)
 
-Client-only, ES6 modules, no build step, deployed from `/docs` via GitHub Pages. Three-
-layer engine plus services.
-
-**Layer 1 - `docs/js/editor/tei-document.js` (offset-true core).**
-- `tokenize(raw)` builds a contiguous token list; concatenating every `[start:end)` slice
-  reproduces the input exactly. `parseDocument(raw)` is a stack-based tree where each
-  element/attribute/text node carries byte offsets `start`/`end`.
-- Reads generically by local-name (`localOf(name)` strips the namespace prefix). Schema-
-  free recognizer sets: `MILESTONE_LOCALS = {lb, pb, cb, gb, milestone}`,
-  `ENTITY_LOCALS = {persName, placeName, orgName, geogName, date, name, rs}`,
-  `NON_READING_LOCALS = {teiHeader, facsimile, standOff, fsdecl, sourceDoc}`.
-- Escaping never re-escapes existing entities (`&nbsp;`, `&#233;`, `&quot;`, `&apos;`
-  pass through). Edits (`editTextNode`, `editAttrValue`) detect no-ops by comparing
-  decoded forms and return the same doc on identity.
-
-**Layer 2 - `docs/js/editor/edition.js` (editor model).**
-- `parseEdition(raw)` projects the tree into `{ folios[], lines[], cells[], cellById,
-  profile }`. Folios split on `<pb>`, lines on `<lb>`/`<l>`, cells are reading-text nodes.
-- **Editing unit read from the document:** `profile = elementsByLocal(root, "w").length > 0 ? "word" :
-  "line"`. Word-level for Wenzelsbibel, line-level for Hersch and (future) SZD. No branching.
-- API: `editWordText`, `serialize`, `countTags`, `structuralSummary`, `xmlIdSet`,
-  `escapeXmlText`, `unescapeXmlText`.
-
-**Layer 3 - `docs/js/editor/editor-app.js` (UI controller).** Open (File System Access
-API + file-input fallback), demo loads, folio navigation, inline cell editing, validation
-panel, index panel, LLM modal. `app.imageBase` is set only by an example registry
-entry with an `imageBase` (the ZBZ example, via `loadExample`); all other entries
-leave it null.
-
-**Supporting modules.** `facsimile.js` (OpenSeadragon 5.0.1 from CDN, zone overlays,
-bidirectional zone/line highlight). `standoff.js` (DOM-free lossless `<standOff>`:
-`addEntity`, `updateEntity`, `deleteEntity`, `linkMention`; every mutation is an offset
-splice; adopts the document's newline style). `index-panel.js` (entity index UI).
-`services/llm.js` (multi-provider: Gemini, OpenAI, Anthropic, DeepSeek, Qwen, Ollama; API
-keys in a module-scoped Map only, never persisted; `fetch` uses `credentials: 'omit'`;
-keys validated max 256 chars printable ASCII). `services/storage.js` (localStorage for
-non-secret settings). `utils/constants.js` (provider configs, source mappings).
+Client-only, ES6 modules, no build step, deployed from `/docs` via GitHub Pages. A
+three-layer engine (an offset-true document core, the edition model, the UI controller)
+plus services. The full layer breakdown, the method-level signatures and the current
+module map live in [architecture.md](architecture.md) and are not duplicated here. What
+bears on the cross-project integration is the reading contract below (how the editor
+consumes any pipeline's TEI byte-losslessly), the facsimile-image flow, the verification
+surface and the corpus.
 
 **Reading contract (how it consumes any TEI).** `<pb>` (opt. `@facs`, `@n`) splits
 folios; `<lb>`/`<l>` splits lines; reading-text nodes become cells (word-level only with
@@ -102,12 +72,12 @@ hardcoded ZBZ demo path (`ZBZ_IMAGE_BASE = "data/editor/zbz-100/"`, used only by
 the ZBZ example registry entry) takes precedence for the ZBZ demo. This is no longer a gap: M2.2 is done and
 browser-verified (2026-06-08), see [goals.md](goals.md).
 
-**Design system (`docs/css/style.css`).** Tokens are the single source of truth
-(`--color-*`, `--space-*`, `--font-*`, `--radius-*`; no raw hex in components). AI marking:
-`--color-ai: #6D4AB6` (violet), `--color-ai-tint: #F1ECFA`. Confidence is categorical:
-`--color-confident` green, `--color-review` gold, `--color-problem` red. Dual-view layout
-(M2.14): left the text work surface (reading text or XML source), right a context panel
-switched from an open registry (facsimile, entity index, project files).
+**Design system.** Design tokens (`--color-*`, `--space-*`, `--font-*`, `--radius-*`) are
+the single source of truth, no raw hex in components; AI-generated content is marked in the
+violet `--color-ai` family and editorial confidence is categorical, not numeric. The dual-
+view layout puts the text work surface (reading text or XML source) on the left and a
+switchable context panel (facsimile, entity index, project files) on the right. The tokens,
+the layout and the AI-marking rule are owned by [design.md](design.md).
 
 **LLM on-ramp.** Modal captures text + provider/model/key; `complete(prompt)` calls the
 provider; XML is extracted; `load(...)` then `markGenerated(true)` shows the violet
@@ -334,10 +304,10 @@ The dependency chain and input gaps that shape the work, independent of mileston
 ## 12. Source Evidence
 
 - teiCrafter: knowledge/{project,data,specification,user-stories,architecture,design,
-  testing,journal,goals,converter-reference}.md; PLAN.md; docs/js/editor/{tei-document,
-  edition,editor-app,facsimile,standoff,index-panel,ai-suggest}.js;
-  docs/js/services/{llm,storage,authority-lookup}.js; docs/css/style.css;
-  pipeline/export_tei.py; test/tools/{roundtrip_sweep,hersch_loadability}.mjs.
+  testing,journal,goals,converter-reference}.md; PLAN.md; the editor and service modules
+  under docs/js/editor/ and docs/js/services/ (the current module map is in
+  architecture.md); docs/css/style.css; pipeline/export_tei.py; the proofs under
+  test/tools/ (documented in testing.md).
 - zbz-ocr-tei: knowledge/{project,pipeline,workflow,quality,viewer,methodik,decisions,
   journal}.md; scripts/{ocr,layout,tei,edition}/; data/schema/zbz_hersch.rng;
   docs/data/pages/<id>/<id>_final.xml; docs/images/<id>/.

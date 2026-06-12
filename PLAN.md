@@ -1,5 +1,5 @@
 ---
-title: Gesamtplan und Umsetzung des Editopia-Vorhabens (teiCrafter, SZD, ZBZ)
+title: Overall Plan and Implementation of the Editopia Project (teiCrafter, SZD, ZBZ)
 project:
   name: teiCrafter
   repository: https://github.com/DigitalHumanitiesCraft/teiCrafter
@@ -7,462 +7,461 @@ method:
   name: Promptotyping
   url: https://lisa.gerda-henkel-stiftung.de/digitale_geschichte_pollin
 template:
-  name: Vorlage Projektplan
+  name: Vorlage Project Plan
   version: 0.1
 status: active
 created: 2026-06-07
 updated: 2026-06-12
-language: de
+language: en
 version: 0.8
-topics: ["[[Projektplan]]", "[[TEI XML]]", "[[Digitale Editionen]]", "[[Promptotyping]]"]
+topics: ["[[Project Plan]]", "[[TEI XML]]", "[[Digital Editions]]", "[[Promptotyping]]"]
 related: [goals, integration, converter-reference, project, data, architecture, specification, testing]
 ---
 
-# Gesamtplan und Umsetzung des Editopia-Vorhabens (teiCrafter, SZD/Stefan Zweig, ZBZ/Hersch)
+# Overall Plan and Implementation of the Editopia Project (teiCrafter, SZD/Stefan Zweig, ZBZ/Hersch)
 
-Dies ist NICHT nur der teiCrafter-Plan: er umfasst die drei Projekte teiCrafter, SZD und ZBZ und das
-Vortrags-/Paper-Ziel. teiCrafter ist eines der drei Projekte, nicht das Ganze. Dieses Dokument ist
-zugleich der **Umsetzungsplan**: es hält den belegten Stand fest und ordnet die offene Arbeit.
+This is NOT only the teiCrafter plan: it covers the three projects teiCrafter, SZD and ZBZ and the
+talk/paper goal. teiCrafter is one of the three projects, not the whole. This document is at the same
+time the **implementation plan**: it records the proven state and orders the open work.
 
-Vollständige, selbsttragende Synthese des Vorhabens (Stand 2026-06-10), bewusst auf Deutsch verfasst
-(bewusste Entscheidung; weicht von der CLAUDE.md-Regel "documentation in English" und den englischen
-Schwesterdokumenten ab). Es verweist auf die Detail-Dokumente, statt sie zu duplizieren:
-[goals.md](knowledge/goals.md) (englisches Milestone-Register), [converter-reference.md](knowledge/converter-reference.md)
-(SZD-Konverter-Kontrakt) und die Ökosystem-Synthese im zbz-Repo (`zbz-ocr-tei/knowledge/oekosystem-synthese.md`).
+This document is the complete, self-supporting synthesis of the project (state 2026-06-10). It refers
+to the detail documents instead of duplicating them:
+[goals.md](knowledge/goals.md) (English milestone register), [converter-reference.md](knowledge/converter-reference.md)
+(SZD converter contract) and the ecosystem synthesis in the zbz repo (`zbz-ocr-tei/knowledge/oekosystem-synthese.md`).
 
-Belegregel: Aussagen mit `[proof]`/`datei:zeile` sind maschinell nachprüfbar; Absichts-Aussagen sind
-als Entscheidung festgehalten (Datum genannt); Zahlen Dritter sind zeitpunktbezogen und vor Nutzung
-gegen den Code zu prüfen.
+Evidence rule: statements with `[proof]`/`file:line` are machine-verifiable; intent statements are
+recorded as a decision (date named); third-party figures are point-in-time and to be checked against
+the code before use.
 
-## 0. Umsetzungs-Scope (wer macht was)
+## 0. Implementation Scope (who does what)
 
-- **In diesem Plan umgesetzt:** teiCrafter (Engine, Editor, Annotation, Bildanzeige, Worked Examples)
-  und die **SZD-Pipeline** (Konverter-Kontrakt finalisieren, Batch-Konverter, Konvertierung der
-  Objekte, Demo-Beispiel).
-- **Separat bearbeitet (Autor):** die **ZBZ-Pipeline**. teiCrafter lädt und rendert ZBZ-TEI bereits;
-  die ZBZ-pipeline-seitigen Aufgaben (Bild-URL-Schema-Lieferung, ZBZ-Projektbericht,
-  oekosystem-synthese-Korrektur, Live-ZBZ-Durchlauf) liegen außerhalb dieses Umsetzungs-Scopes und
-  sind unten mit **separat** markiert. Das ZBZ-Worked-Example (M7.2) hängt an dieser Spur.
+- **Implemented in this plan:** teiCrafter (engine, editor, annotation, image display, worked examples)
+  and the **SZD pipeline** (finalize converter contract, batch converter, conversion of the
+  objects, demo example).
+- **Handled separately (author):** the **ZBZ pipeline**. teiCrafter already loads and renders ZBZ TEI;
+  the ZBZ pipeline-side tasks (delivery of the image URL schema, ZBZ project report,
+  oekosystem-synthese correction, live ZBZ run) lie outside this implementation scope and
+  are marked **separate** below. The ZBZ worked example (M7.2) hangs on this track.
 
-## 1. Zweck und Positionierung
+## 1. Purpose and Positioning
 
-teiCrafter ist ein **nachnutzbares, browserbasiertes Static-Site-Research-Tool**: ein generischer,
-verlustfreier Editor für beliebiges TEI-XML, zügig mit Promptotyping gebaut und über mehrere Projekte
-hinweg im Einsatz (SZD, ZBZ/Hersch, Wenzelsbibel). Er nimmt TEI aus Eingabe-Pipelines auf, lässt einen
-Menschen es Folio für Folio korrigieren und semantisch annotieren, und speichert es byte-treu zurück.
-("Im Einsatz" heißt: deployt und als TEI-Editor genutzt; die Entitäten-Annotationsschicht für die
-Editopia-Demo ist der aktuelle Ausbau, siehe §4 für den belegten Stand.)
+teiCrafter is a **reusable, browser-based static-site research tool**: a generic,
+lossless editor for arbitrary TEI-XML, built quickly with Promptotyping and in use across several
+projects (SZD, ZBZ/Hersch, Wenzelsbibel). It takes in TEI from input pipelines, lets a
+human correct it folio by folio and annotate it semantically, and saves it back byte-faithfully.
+("In use" means: deployed and used as a TEI editor; the entity annotation layer for the
+Editopia demo is the current expansion, see §4 for the proven state.)
 
-Übergeordneter Anlass ist der **Editopia-Vortrag** (Christopher Pollin; Editopia 02.-04.09.2026,
-Wuppertal; Vortrag 2026-09-02). Die belegte These des eingereichten Abstracts: agentenbasierte
-Editions-Workflows setzen eine **epistemische Infrastruktur** voraus, also Mechanismen, Arbeitsschritte
-und Werkzeuge, um die Ergebnisse LLM-gestützter Verarbeitungsschritte zu verifizieren, zu kuratieren
-und zu dokumentieren. Der eingereichte Abstract ist ZBZ/Hersch-fokussiert; die Abstract-Datei selbst
-liegt nicht im Vault (dort ausdrücklich vermerkt), nur ihre These ist dokumentiert.
+The overarching occasion is the **Editopia talk** (Christopher Pollin; Editopia 02.-04.09.2026,
+Wuppertal; talk 2026-09-02). The proven thesis of the submitted abstract: agent-based
+editorial workflows presuppose an **epistemic infrastructure**, that is mechanisms, work steps
+and tools, to verify, curate and document the results of LLM-assisted processing steps. The submitted
+abstract is ZBZ/Hersch-focused; the abstract file itself
+is not in the vault (explicitly noted there), only its thesis is documented.
 
-teiCrafters Rolle in dieser These: teiCrafter **ist** ein konkretes Stück dieser epistemischen
-Infrastruktur, nämlich das deterministische, verlustfreie Werkzeug, in dem ein Mensch maschinell
-erzeugte TEI prüft, korrigiert und kuratiert, mit klarer Markierung des Maschinellen. teiCrafter
-erweitert das Paper damit um einen eigenen Promptotyping-Fall (ein agentisch gebautes
-Editionswerkzeug), neben den zwei Pipeline-Fällen SZD und Hersch/ZBZ.
+teiCrafter's role in this thesis: teiCrafter **is** a concrete piece of this epistemic
+infrastructure, namely the deterministic, lossless tool in which a human checks, corrects and curates
+machine-generated TEI, with clear marking of the machine-generated. teiCrafter
+thereby extends the paper with its own Promptotyping case (an agentically built
+editorial tool), alongside the two pipeline cases SZD and Hersch/ZBZ.
 
-Primärer eigener Anwendungsfall über Editopia hinaus ist die **Wenzelsbibel-Edition** (PLUS Salzburg,
-FWF, Wort-Ebene, ab Herbst 2026).
+The primary in-house use case beyond Editopia is the **Wenzelsbibel edition** (PLUS Salzburg,
+FWF, word-level, from autumn 2026).
 
-## 2. Werkzeug-Abgrenzung (verbindlich)
+## 2. Tool Boundary (binding)
 
-- **teiCrafter = TEI bearbeiten.** Generischer, verlustfreier TEI-Editor. Bearbeitet und annotiert
-  beliebiges TEI, projektunabhängig. ZBZ und SZD sind zwei Eingabe-Pipelines, die TEI hineinliefern.
-- **EditionCrafter = ganze digitale Editionen.** Eigene, unabhängige Schwesterlinie. Generalisierung
-  der statischen Pipeline-Viewer von ZBZ und SZD zu vollständigen Editionen. **Der Editopia-Hersch-
-  Demonstrator ist EditionCrafter v0, nicht teiCrafter** (Vault ACTIVE-WORK.md / EditionCrafter.md,
-  bestätigt). Achtung: `zbz-ocr-tei/knowledge/oekosystem-synthese.md` behauptet das Gegenteil
-  (teiCrafter sei die Hersch-Demo); das ist falsch und zu korrigieren (separat, siehe §10).
-- **Statische Viewer (ZBZ/SZD).** Die projekteigenen statischen Weboberflächen der Pipelines
-  (öffentlich read-only Proto-Edition plus lokal Editorial-Workspace; "Three Functions" im JOHD-Paper).
-  Gehören zu den jeweiligen Pipelines, nicht zu teiCrafter.
+- **teiCrafter = edit TEI.** Generic, lossless TEI editor. Edits and annotates
+  arbitrary TEI, project-independent. ZBZ and SZD are two input pipelines that deliver TEI in.
+- **EditionCrafter = whole digital editions.** Its own, independent sister line. Generalization
+  of the static pipeline viewers of ZBZ and SZD into complete editions. **The Editopia Hersch
+  demonstrator is EditionCrafter v0, not teiCrafter** (vault ACTIVE-WORK.md / EditionCrafter.md,
+  confirmed). Note: `zbz-ocr-tei/knowledge/oekosystem-synthese.md` claims the opposite
+  (teiCrafter is the Hersch demo); that is false and to be corrected (separate, see §10).
+- **Static viewers (ZBZ/SZD).** The project-specific static web interfaces of the pipelines
+  (public read-only proto-edition plus local editorial workspace; "Three Functions" in the JOHD paper).
+  They belong to the respective pipelines, not to teiCrafter.
 
-Trennlinie in einem Satz: teiCrafter erzeugt und bearbeitet TEI; EditionCrafter erzeugt die Edition
-(Anzeige, Apparat, Publikation).
+Dividing line in one sentence: teiCrafter creates and edits TEI; EditionCrafter creates the edition
+(display, apparatus, publication).
 
-## 3. Die drei Projekte
+## 3. The Three Projects
 
-| Projekt | Pfad | Rolle | Im Scope |
+| Project | Path | Role | In scope |
 |---|---|---|---|
-| teiCrafter | `GitHub/ResearchTools/teiCrafter` | verlustfreier TEI-Editor, Konvergenz für TEI-Bearbeitung | ja |
-| szd-htr | `GitHub/szd-htr` | Stefan-Zweig-Pipeline (Bilder zu Page-JSON; TEI-Konverter ausstehend) | ja |
-| zbz-ocr-tei | `GitHub/DHCraft/zbz-ocr-tei` | Jeanne-Hersch-Pipeline (PDF zu line-level TEI) | separat (Autor) |
+| teiCrafter | `GitHub/ResearchTools/teiCrafter` | lossless TEI editor, convergence for TEI editing | yes |
+| szd-htr | `GitHub/szd-htr` | Stefan Zweig pipeline (images to Page-JSON; TEI converter pending) | yes |
+| zbz-ocr-tei | `GitHub/DHCraft/zbz-ocr-tei` | Jeanne Hersch pipeline (PDF to line-level TEI) | separate (author) |
 
-Gemeinsame Haltung: maschinell erzeugte Inhalte gelten als unverifiziert, bis ein Mensch sie prüft
-(teiCrafter markiert sie violett über `--color-ai`; zbz/szd über Workflow-/Review-Status).
+Shared stance: machine-generated content is considered unverified until a human checks it
+(teiCrafter marks it violet via `--color-ai`; zbz/szd via workflow/review status).
 
-## 4. Stand: erledigt und offen
+## 4. State: Done and Open
 
-### Erledigt (mit Proof)
+### Done (with proof)
 
-Die vollständig belegten Strecken führt das Milestone-Register [goals.md](knowledge/goals.md);
-die zitierfähigen Zahlen samt Re-Run-Befehlen liegen in [paper-evidence.md](knowledge/paper-evidence.md).
-Kurzregister (Details und Befehle dort; die ausführlichen Einzel-Einträge dieses Abschnitts
-bis Stand 2026-06-10 sind in der Git-History dieser Datei erhalten, Version 0.7):
+The fully proven tracks are carried by the milestone register [goals.md](knowledge/goals.md);
+the citable figures together with re-run commands are in [paper-evidence.md](knowledge/paper-evidence.md).
+Short register (details and commands there; the detailed individual entries of this section
+up to state 2026-06-10 are preserved in the git history of this file, version 0.7):
 
-- **Verlustfreie Engine:** Round-Trip-Sweep 295/295. (M1.1, M2.1, M4.1)
-- **ZBZ direkt ladbar:** 285/285, 0 Parse-Fehler. (M1.1, M4.2)
-- **SZD-Kette komplett (M1.2 bis M1.5, M4.4):** Kontrakt eingefroren (converter-reference.md, active),
-  Batch-Konverter byte-treu (port_parity 6/6), voller Korpus 2.103/2.103 byte-identisch.
-- **Bildanzeige (M2.2):** Engine plus Browser-Visualtest (Playwright, GAMS-Faksimile in OpenSeadragon).
-- **M7.2-SZD-Worked-Example:** o_szd.1079 end-to-end im Browser bewiesen (Byte-Diff exakt die Absicht).
-- **Editoriale Annotationsschicht komplett (M3.1 bis M3.7):** Entitäten (Ort/Werk), Normdaten-`<idno>`
-  (Handeingabe und Live-Lookup), Mention-Linking, Notizen, Textkritik (`unclear`/`del`/`add`/`gap`),
-  KI-Vorschlag (`resp="#ai"`, violett, confirm/reject); je headless belegt, LLM-Aufruf und fetch
-  browser-verifiziert.
-- **Whitespace-Vorbehalt geschlossen:** Zeilen-Edit erhält Rand-Whitespace verbatim (editCellCore, 8fd281c).
+- **Lossless engine:** round-trip sweep 295/295. (M1.1, M2.1, M4.1)
+- **ZBZ directly loadable:** 285/285, 0 parse errors. (M1.1, M4.2)
+- **SZD chain complete (M1.2 to M1.5, M4.4):** contract frozen (converter-reference.md, active),
+  batch converter byte-faithful (port_parity 6/6), full corpus 2,103/2,103 byte-identical.
+- **Image display (M2.2):** engine plus browser visual test (Playwright, GAMS facsimile in OpenSeadragon).
+- **M7.2 SZD worked example:** o_szd.1079 end-to-end proven in the browser (byte diff exactly the intent).
+- **Editorial annotation layer complete (M3.1 to M3.7):** entities (place/work), authority `<idno>`
+  (manual entry and live lookup), mention linking, notes, textual criticism (`unclear`/`del`/`add`/`gap`),
+  AI suggestion (`resp="#ai"`, violet, confirm/reject); each proven headless, LLM call and fetch
+  browser-verified.
+- **Whitespace reservation closed:** line edit preserves edge whitespace verbatim (editCellCore, 8fd281c).
 
-### Offen (Umsetzungs-Scope teiCrafter + SZD)
+### Open (implementation scope teiCrafter + SZD)
 
-- **M7.1/M7.3** Demo-Material (M7.2-SZD erledigt: o_szd.1079 end-to-end im Browser 2026-06-08).
-- **Browser-Verifikation (Operator)** der drei neuen UI-Pfade auf einem echten Objekt: Notiz-Klick,
-  KI-Vorschlag (Provider-Key nötig), Live-Lookup (Netz). Engine/Parser sind headless belegt.
+- **M7.1/M7.3** demo material (M7.2 SZD done: o_szd.1079 end-to-end in the browser 2026-06-08).
+- **Browser verification (operator)** of the three new UI paths on a real object: note click,
+  AI suggestion (provider key needed), live lookup (network). Engine/parser are proven headless.
 
-### Separat (Autor, ZBZ-Pipeline)
+### Separate (author, ZBZ pipeline)
 
-- **M2.3** Live-ZBZ-Browser-Durchlauf, **M2.4** ZBZ-Bild-URL-Schema (geliefert, zu verifizieren),
-  oekosystem-synthese-Korrektur, ZBZ-Projektbericht. Das **ZBZ-Worked-Example** (M7.2-Hälfte) hängt an
-  dieser Spur; die teiCrafter-Seite (Rendering, `<graphic>`-Support) ist erledigt.
+- **M2.3** live ZBZ browser run, **M2.4** ZBZ image URL schema (delivered, to be verified),
+  oekosystem-synthese correction, ZBZ project report. The **ZBZ worked example** (M7.2 half) hangs on
+  this track; the teiCrafter side (rendering, `<graphic>` support) is done.
 
-Ehrlicher Rest: die drei neuen Annotations-Features (M3.5/M3.7/M3.3) sind engine- und parser-seitig
-headless belegt; ihre eigentlichen Browser-Pfade (Klick-UI, LLM-Aufruf, Live-fetch) stehen zur
-Operator-Sichtprüfung aus. Die deterministische SZD-Strecke (M1.2 bis M1.5, M4.4) ist vollständig belegt
-(Paritätstest `port_parity.mjs` 6/6 byte-identisch).
+Honest remainder: the three new annotation features (M3.5/M3.7/M3.3) are proven engine- and parser-side
+headless; their actual browser paths (click UI, LLM call, live fetch) are awaiting
+operator visual inspection. The deterministic SZD track (M1.2 to M1.5, M4.4) is fully proven
+(parity test `port_parity.mjs` 6/6 byte-identical).
 
-Hinweis: `pipeline.mjs` (Vor-Pivot) wurde 2026-06-10 aus der Wurzel gelöscht (aus der Git-History
-zurückholbar). Er war ein nicht lauffähiger Torso: er importierte das im Pivot gelöschte
-`docs/js/pipeline/` und brach mit ERR_MODULE_NOT_FOUND ab. Seine ~2033 gitignored `output/*.tei.xml`
-stammen aus der gelöschten Engine (LLM-`<div>/<head>/<p>`-Blöcke, NICHT line-level) und sind mit
-heutigem Code nicht reproduzierbar. "2030 TEIs fertig" ist kein gültiger Stand.
+Note: `pipeline.mjs` (pre-pivot) was deleted from the root on 2026-06-10 (recoverable from the git
+history). It was a non-runnable torso: it imported the `docs/js/pipeline/` deleted in the pivot
+and broke with ERR_MODULE_NOT_FOUND. Its ~2033 gitignored `output/*.tei.xml`
+stem from the deleted engine (LLM `<div>/<head>/<p>` blocks, NOT line-level) and are not
+reproducible with today's code. "2030 TEIs done" is not a valid state.
 
-## 5. teiCrafter Ziel-Contract (was der Editor liest und bewahrt)
+## 5. teiCrafter Target Contract (what the editor reads and preserves)
 
-Generisch nach local-name, kein Projekt-Profil ([data.md](knowledge/data.md),
+Generic by local-name, no project profile ([data.md](knowledge/data.md),
 [architecture.md](knowledge/architecture.md), `docs/js/editor/`):
-- `<pb>` (opt. `@facs`, `@n`) trennt Folios; `<lb>`/`<l>` trennt Zeilen.
-- Lesetext-Knoten werden editierbare Zellen: Wort-Ebene nur bei `<w xml:id>`, sonst Zeilen-Ebene.
-- `<facsimile>`/`<surface>`/`<zone ulx/uly/lrx/lry>` treiben den OpenSeadragon-Viewer; `@facs` verknüpft
-  Zeile und Zone bidirektional.
-- `<standOff>`/`<note target>` tragen Entitäten/Apparat.
-- Roher String ist kanonisch, Bearbeitung ist Offset-Splice, `serialize()` byte-identisch; nicht
-  Interpretiertes bleibt verbatim.
-- Laden: **Open** (File System Access API / Datei-Input) für jedes lokale XML; plus zwei fest
-  verdrahtete Demo-Fetches. Eine geöffnete Datei bekommt `app.imageBase = null`.
-- **Bildanzeige (M2.2, Engine erledigt):** Der Viewer zeigt ein Bild mit imageUrl UND surface; der
-  Editor liest `surface.graphic` aus `<graphic url>` und nutzt es als Fallback. Pipeline-seitig wird
-  `<graphic url>` in jede `<surface>` geschrieben (SZD = GAMS-URL, ZBZ = `docs/images/<id>/<id>_p00N.png`).
+- `<pb>` (opt. `@facs`, `@n`) separates folios; `<lb>`/`<l>` separates lines.
+- Reading text nodes become editable cells: word-level only with `<w xml:id>`, otherwise line-level.
+- `<facsimile>`/`<surface>`/`<zone ulx/uly/lrx/lry>` drive the OpenSeadragon viewer; `@facs` links
+  line and zone bidirectionally.
+- `<standOff>`/`<note target>` carry entities/apparatus.
+- Raw string is canonical, editing is offset splice, `serialize()` byte-identical; what is not
+  interpreted stays verbatim.
+- Loading: **Open** (File System Access API / file input) for any local XML; plus two hard-
+  wired demo fetches. An opened file gets `app.imageBase = null`.
+- **Image display (M2.2, engine done):** the viewer shows an image with imageUrl AND surface; the
+  editor reads `surface.graphic` from `<graphic url>` and uses it as a fallback. Pipeline-side,
+  `<graphic url>` is written into every `<surface>` (SZD = GAMS URL, ZBZ = `docs/images/<id>/<id>_p00N.png`).
 
-## 6. SZD-TEI-Datenmodell (Konverter-Kontrakt, Zusammenfassung)
+## 6. SZD TEI Data Model (converter contract, summary)
 
-Vollständige Spezifikation in [converter-reference.md](knowledge/converter-reference.md). Der Konverter
-ist **deterministisch** (Page-JSON -> TEI nach Regel, kein LLM): das ist die verlustfreie,
-reproduzierbare, kostenlose Stufe und trägt das Fidelity-Argument. Kern:
-- **teiHeader** aus `source` + `descriptive_metadata`: Titel, author/editor (persName + GND-`<idno>`),
-  respStmt, publicationStmt (Lizenz + Maschinen-Hinweis), msDesc/msIdentifier, physDesc, history/origin,
-  profileDesc (langUsage, correspDesc nur für Korrespondenzen), revisionDesc.
-- **standOff**: listPerson/listOrg/listPlace, aus Metadaten geseedet (Name +
-  `<idno type="GND">` verbatim). Kein creator -> kein standOff (gilt für o_szd.1079).
-- **facsimile**: eine `<surface>` je Seite (`<graphic>` GAMS-URL + Maße), `<zone>` je Region
-  (bbox -> Pixel). **bbox-Einheit:** der Kontrakt legt Prozent (0-100) fest, am realen Page-JSON
-  bestätigt (o_szd.100 r1 `[3.9,2.9,4.8,0.3]`, o_szd.1079 r1 `[17.5,37.9,34.9,5.2]`); am realen Datensatz
-  über die Handvoll zu verifizieren (kein Wert > 100), dann ist der Kontrakt eingefroren. Zonen nur
-  region-, nicht zeilengenau.
-- **body** line-level (`<pb>` + `<lb>`), je Dokumenttyp: typescript (Default), manuscript/diary
-  (nur Doppel-Tilde `~~x~~` = `<del>`, einzelne `~` ist Gedankenstrich), letter (correspDesc,
-  opener/closer/signed, `[Stempel:]`->note/stamp), form (Pipe-Tabellen -> table/row/cell),
-  newspaper_clipping (Spalten linearisiert).
-- **Editoriale Marker** (v1 wörtlich erhalten): `[?]`, `[...]`/`[...N...]`, `~~x~~`, `{x}`, `[Stempel:]`.
-  Die Ziel-Tags `<unclear>/<gap>/<del>/<add>/<note>` sind als Editor-Funktion gebaut (M3.6, criticism.js);
-  das automatische Mapping dieser Pipeline-Kürzel auf die Tags bleibt eine separate spätere Aufgabe.
-- **Leerseiten**: `<pb type="blank"/>` für blank/color_chart, Text dort verwerfen.
-- **Erste Konvertier-Handvoll** (deckt die Body-Typen ab UND enthält das Schaustück): o_szd.100
-  (Typoskript), o_szd.72 (Tagebuch, Tilde-Fall), **o_szd.1079 (Brief, Schaustück, bereits konvertiert)**,
-  o_szd.2215 (Zeitungsausschnitt), o_szd.161 (Formular, Pipe-Tabellen).
+Full specification in [converter-reference.md](knowledge/converter-reference.md). The converter
+is **deterministic** (Page-JSON -> TEI by rule, no LLM): this is the lossless,
+reproducible, free stage and carries the fidelity argument. Core:
+- **teiHeader** from `source` + `descriptive_metadata`: title, author/editor (persName + GND `<idno>`),
+  respStmt, publicationStmt (license + machine note), msDesc/msIdentifier, physDesc, history/origin,
+  profileDesc (langUsage, correspDesc only for correspondences), revisionDesc.
+- **standOff**: listPerson/listOrg/listPlace, seeded from metadata (name +
+  `<idno type="GND">` verbatim). No creator -> no standOff (applies to o_szd.1079).
+- **facsimile**: one `<surface>` per page (`<graphic>` GAMS URL + dimensions), `<zone>` per region
+  (bbox -> pixel). **bbox unit:** the contract fixes percent (0-100), confirmed
+  on the real Page-JSON (o_szd.100 r1 `[3.9,2.9,4.8,0.3]`, o_szd.1079 r1 `[17.5,37.9,34.9,5.2]`); to be
+  verified on the real dataset across the handful (no value > 100), then the contract is frozen. Zones only
+  region-, not line-precise.
+- **body** line-level (`<pb>` + `<lb>`), per document type: typescript (default), manuscript/diary
+  (only double tilde `~~x~~` = `<del>`, single `~` is an em dash), letter (correspDesc,
+  opener/closer/signed, `[Stempel:]`->note/stamp), form (pipe tables -> table/row/cell),
+  newspaper_clipping (columns linearized).
+- **Editorial markers** (v1 preserved literally): `[?]`, `[...]`/`[...N...]`, `~~x~~`, `{x}`, `[Stempel:]`.
+  The target tags `<unclear>/<gap>/<del>/<add>/<note>` are built as an editor function (M3.6, criticism.js);
+  the automatic mapping of these pipeline shorthands onto the tags remains a separate later task.
+- **Blank pages**: `<pb type="blank"/>` for blank/color_chart, discard the text there.
+- **First conversion handful** (covers the body types AND contains the showcase object): o_szd.100
+  (typescript), o_szd.72 (diary, tilde case), **o_szd.1079 (letter, showcase object, already converted)**,
+  o_szd.2215 (newspaper clipping), o_szd.161 (form, pipe tables).
 
-## 7. Semantische Annotation (der Mehrwert von teiCrafter)
+## 7. Semantic Annotation (the added value of teiCrafter)
 
-Definition: dem Text maschinenlesbare Bedeutung hinzufügen, in drei Schritten (abgrenzen,
-klassifizieren, mit Normdaten verknüpfen). Zwei Familien:
-- **Familie 1 Entitäten-Anreicherung:** Personen, Orte, Organisationen, Werke (+ GND/GeoNames/Wikidata),
-  Datum. Das ist die Lücke, die beide Pipelines auslassen: ZBZ hat NER entfernt (E71), SZD seedet nur
-  Metadaten-Entitäten in den Header, nicht die Erwähnungen im Text.
-- **Familie 2 editorische Annotation:** Notizen/Fußnoten/Kommentare; textkritische Marker.
+Definition: adding machine-readable meaning to the text, in three steps (delimit,
+classify, link with authority data). Two families:
+- **Family 1 entity enrichment:** persons, places, organizations, works (+ GND/GeoNames/Wikidata),
+  date. This is the gap that both pipelines leave out: ZBZ removed NER (E71), SZD seeds only
+  metadata entities into the header, not the mentions in the text.
+- **Family 2 editorial annotation:** notes/footnotes/comments; textual-criticism markers.
 
-teiCrafter heute (erledigt): Person/Org/Event/**Ort**/**Werk** mit Name UND
-**Normdaten-`<idno>`** (Handeingabe, add/replace/remove), typ-unabhängiges Mention-Linking,
-Notiz-Erstell-UI (M3.5), Textkritik (M3.6, `unclear`/`del`/`add`/`gap`), Live-Lookup (M3.3) und
-KI-Vorschlag (M3.7). Die gesamte editorische Annotationsschicht steht verlustfrei und headless belegt.
+teiCrafter today (done): person/org/event/**place**/**work** with name AND
+**authority `<idno>`** (manual entry, add/replace/remove), type-independent mention linking,
+note-creation UI (M3.5), textual criticism (M3.6, `unclear`/`del`/`add`/`gap`), live lookup (M3.3) and
+AI suggestion (M3.7). The entire editorial annotation layer stands lossless and proven headless.
 
-**KI-assistierte Annotation (M3.7, demonstriert die Editopia-These).** Ein **Offline-Pipeline-Schritt
-mit Gemini 3.1 Flash Lite** liest die fertige TEI, schlägt Entitäten samt Normdaten-Kandidaten vor und
-schreibt sie als **unverifizierte** Einträge in den `<standOff>`. teiCrafter zeigt sie violett
-(`--color-ai`); der Mensch bestätigt, korrigiert oder verwirft. Begründung: deterministische Konvertierung
-(verlustfrei) bleibt getrennt vom probabilistischen Vorschlag (assistiv); ein LLM für die Konvertierung
-selbst wäre falsch (Kosten, Nichtreproduzierbarkeit, Halluzination, bricht das Fidelity-Argument);
-teiCrafter bleibt rein im Browser (kein API-Schlüssel im Static-Site-Code, Gemini läuft davor in der
-Pipeline). Das ist genau die These des Abstracts und das Designprinzip "KI assistiert, Mensch entscheidet".
+**AI-assisted annotation (M3.7, demonstrates the Editopia thesis).** An **offline pipeline step
+with Gemini 3.1 Flash Lite** reads the finished TEI, suggests entities together with authority candidates and
+writes them as **unverified** entries into the `<standOff>`. teiCrafter shows them violet
+(`--color-ai`); the human confirms, corrects or discards. Rationale: deterministic conversion
+(lossless) stays separate from the probabilistic suggestion (assistive); an LLM for the conversion
+itself would be wrong (cost, non-reproducibility, hallucination, breaks the fidelity argument);
+teiCrafter stays purely in the browser (no API key in the static-site code, Gemini runs before it in the
+pipeline). This is exactly the thesis of the abstract and the design principle "AI assists, human decides".
 
-**Normdaten-Modus (Entscheidung 2026-06-07): alle drei Wege, gestaffelt auf einem Mechanismus.** Jede
-Entität trägt `<idno>` mit der Autoritäts-ID; drei Wege füllen dasselbe Feld: (1) **Handeingabe**
-(M3.3-Kern, erledigt). (2) **Live-Lookup** (Name eintippen, client-seitig GND/GeoNames/Wikidata
-abfragen, Treffer wählen). (3) **Offline Gemini** (M3.7, Vorschläge violett vor dem Öffnen). Konstante:
-der Mensch prüft und entscheidet immer. Bau-Reihenfolge: (1) erledigt, dann (3) (stärkster Beleg der
-These), dann (2) (meiste Frontend-Arbeit wegen CORS und Rate-Limits).
+**Authority mode (decision 2026-06-07): all three ways, staggered on one mechanism.** Each
+entity carries `<idno>` with the authority id; three ways fill the same field: (1) **manual entry**
+(M3.3 core, done). (2) **Live lookup** (type the name, query GND/GeoNames/Wikidata
+client-side, pick a hit). (3) **Offline Gemini** (M3.7, suggestions violet before opening). Constant:
+the human always checks and decides. Build order: (1) done, then (3) (strongest proof of the
+thesis), then (2) (most frontend work due to CORS and rate limits).
 
-## 8. Ziele und Milestones
+## 8. Goals and Milestones
 
-Legende: **★** demo-/vortragskritisch, **+** vollständige Ambition (parallel, nicht blockierend).
-Status: **erledigt** / läuft / offen / später / **separat** (Autor, ZBZ-Spur).
+Legend: **★** demo-/talk-critical, **+** full ambition (parallel, not blocking).
+Status: **done** / in progress / open / later / **separate** (author, ZBZ track).
 
-**H1 - Beide Pipelines in teiCrafter bringen**
-- ★ M1.1 ZBZ direkt ladbar. **erledigt** (hersch_loadability.mjs, 285/285).
-- ★ M1.2 SZD `converter-reference.md` (volles Page-JSON->TEI-Mapping, deterministisch). **erledigt
-  (eingefroren, status active v0.5, 2026-06-08)**; alle fünf §9-Punkte am realen Page-JSON aufgelöst.
-- ★ M1.3 SZD Batch-Konverter `pipeline/export_tei.py`. **erledigt** (byte-treuer Python-Port;
-  `node test/tools/port_parity.mjs` 6/6, plus 151/151 über Korpus-Stichprobe).
-- ★ M1.4 SZD Demo-Handvoll konvertieren + engine-verifiziert. **erledigt** (1079 + 100/72/2215/161
-  byte-identisch via port_parity und Prototyp-Engine-Check).
-- + M1.5 SZD alle ~2.103 konvertieren + Ladbarkeits-Sweep. **erledigt** (`node test/tools/szd_loadability_sweep.mjs`: 2.103/2.103 byte-identisch, 40 leer/blank valide).
+**H1 - Bring both pipelines into teiCrafter**
+- ★ M1.1 ZBZ directly loadable. **done** (hersch_loadability.mjs, 285/285).
+- ★ M1.2 SZD `converter-reference.md` (full Page-JSON->TEI mapping, deterministic). **done
+  (frozen, status active v0.5, 2026-06-08)**; all five §9 points resolved on the real Page-JSON.
+- ★ M1.3 SZD batch converter `pipeline/export_tei.py`. **done** (byte-faithful Python port;
+  `node test/tools/port_parity.mjs` 6/6, plus 151/151 across corpus sample).
+- ★ M1.4 SZD convert demo handful + engine-verified. **done** (1079 + 100/72/2215/161
+  byte-identical via port_parity and prototype engine check).
+- + M1.5 SZD convert all ~2,103 + loadability sweep. **done** (`node test/tools/szd_loadability_sweep.mjs`: 2,103/2,103 byte-identical, 40 empty/blank valid).
 
-**H2 - Sehen, navigieren, korrigieren**
-- ★ M2.1 Editor-Modell pro Datei. **erledigt**.
-- ★ M2.2 Bildanzeige bei geöffneten Dateien (`<graphic>`-Support). **erledigt** (Engine plus
-  Browser-Visualtest 2026-06-08: GAMS-Bild rendert in OpenSeadragon, Zonen, byte-clean; szd_demo_check.mjs).
-- ★ M2.3 Live-Browser-Durchlauf ZBZ. **separat** (Autor); der demo-relevante Teil (ein ZBZ-Objekt)
-  geht in M7.2 mit.
-- ★ M2.4 ZBZ-Bild-URL-Schema für `<graphic>` (Bilder nur für 1000/1330/1540/2310). **separat**
-  (geliefert, zu verifizieren).
+**H2 - See, navigate, correct**
+- ★ M2.1 Editor model per file. **done**.
+- ★ M2.2 Image display for opened files (`<graphic>` support). **done** (engine plus
+  browser visual test 2026-06-08: GAMS image renders in OpenSeadragon, zones, byte-clean; szd_demo_check.mjs).
+- ★ M2.3 Live browser run ZBZ. **separate** (author); the demo-relevant part (one ZBZ object)
+  goes along in M7.2.
+- ★ M2.4 ZBZ image URL schema for `<graphic>` (images only for 1000/1330/1540/2310). **separate**
+  (delivered, to be verified).
 
-**H3 - Semantisch annotieren**
-- ★ M3.1 Ort-Entität (`place`/`placeName`). **erledigt** (szd_demo_check.mjs).
-- ★ M3.2 Werk-Entität (`title`/`bibl`, `listBibl`, `wrk_`-IDs, auf standOff/listBibl beschränkt).
-  **erledigt** (szd_demo_check.mjs).
-- ★ M3.3 Normdaten-`<idno>` (GND/GeoNames/Wikidata) auf allen Typen + UI. **erledigt**: Handeingabe
-  (setAuthority, szd_demo_check.mjs) plus Live-Lookup (authority-lookup.js, authority_lookup_check.mjs
-  15/15; fetch browser-verifiziert), commit 8ce938a.
-- ★ M3.4 Mention-Linking auf neue Typen. **erledigt** (linkMention typ-unabhängig).
-- ★ M3.7 KI-Annotations-Vorschlag (violett zur Prüfung). **erledigt** (resp="#ai" + confirm/reject,
-  ai_proposal_check.mjs 17/17; nutzt In-Browser-llm.js, LLM-Aufruf browser-verifiziert), commit f647e7e.
-- + M3.5 Notizen/Fußnoten-Erstell-UI. **erledigt** (addNote/addNoteForNode, note_create_check.mjs 15/15),
+**H3 - Annotate semantically**
+- ★ M3.1 Place entity (`place`/`placeName`). **done** (szd_demo_check.mjs).
+- ★ M3.2 Work entity (`title`/`bibl`, `listBibl`, `wrk_` ids, restricted to standOff/listBibl).
+  **done** (szd_demo_check.mjs).
+- ★ M3.3 Authority `<idno>` (GND/GeoNames/Wikidata) on all types + UI. **done**: manual entry
+  (setAuthority, szd_demo_check.mjs) plus live lookup (authority-lookup.js, authority_lookup_check.mjs
+  15/15; fetch browser-verified), commit 8ce938a.
+- ★ M3.4 Mention linking on new types. **done** (linkMention type-independent).
+- ★ M3.7 AI annotation suggestion (violet for review). **done** (resp="#ai" + confirm/reject,
+  ai_proposal_check.mjs 17/17; uses in-browser llm.js, LLM call browser-verified), commit f647e7e.
+- + M3.5 Note/footnote creation UI. **done** (addNote/addNoteForNode, note_create_check.mjs 15/15),
   commit d3fc922.
-- + M3.6 Textkritik (`unclear`/`gap`/`del`/`add`). **erledigt** (criticism.js, inline + verlustfrei,
+- + M3.6 Textual criticism (`unclear`/`gap`/`del`/`add`). **done** (criticism.js, inline + lossless,
   criticism_check.mjs 47/47), commit 119a1a2.
 
-**H4 - Verlustfreiheit als Invariante**
-- ★ M4.1 Engine-Round-Trip-Sweep. **erledigt** (roundtrip_sweep.mjs, 295/295, Lauf 2026-06-10).
-- ★ M4.2 Editor-Ladbarkeits-Sweep. **erledigt** (hersch_loadability.mjs, 285/285).
-- ★ M4.3 Jedes Feature byte-clean (Regressionstest). laufend (szd_demo_check.mjs, 32/32).
-- ★ M4.4 SZD-konvertierte TEI byte-clean durch `tei-document.js`/`standoff.js`. **erledigt** (szd_loadability_sweep.mjs 2.103/2.103 Round-Trip; standoff.js via szd_demo_check.mjs).
+**H4 - Losslessness as an invariant**
+- ★ M4.1 Engine round-trip sweep. **done** (roundtrip_sweep.mjs, 295/295, run 2026-06-10).
+- ★ M4.2 Editor loadability sweep. **done** (hersch_loadability.mjs, 285/285).
+- ★ M4.3 Every feature byte-clean (regression test). in progress (szd_demo_check.mjs, 32/32).
+- ★ M4.4 SZD-converted TEI byte-clean through `tei-document.js`/`standoff.js`. **done** (szd_loadability_sweep.mjs 2,103/2,103 round-trip; standoff.js via szd_demo_check.mjs).
 
-**H5 - Verifikation, Dokumentation**
-- ★ M5.1 Kanonisches integration.md + dieser Plan. **erledigt**.
-- + M5.2 integration.md mit Proof-Evidenz anreichern + "Blocker not on disk" korrigieren. **erledigt
-  (2026-06-09)**: Proof-Evidenz zentral in paper-evidence.md, integration.md verweist dorthin; die
-  "Blocker not on disk"-Behauptung ist entfernt (goals.md führt den Abschluss).
-- + M5.5 oekosystem-synthese korrigieren (EditionCrafter, nicht teiCrafter, ist die Hersch-Demo).
-  **separat** (Autor, ZBZ-Spur).
-- + M5.6 Doku-Sync (data.md/architecture.md auf SZD-Konverter + neuen Test). **erledigt (verifiziert
-  2026-06-10)**: beide Dokumente tragen `pipeline/export_tei.py`, den eingefrorenen Kontrakt und die
-  Sweep-Proofs.
+**H5 - Verification, documentation**
+- ★ M5.1 Canonical integration.md + this plan. **done**.
+- + M5.2 Enrich integration.md with proof evidence + correct "Blocker not on disk". **done
+  (2026-06-09)**: proof evidence centralized in paper-evidence.md, integration.md refers there; the
+  "Blocker not on disk" claim is removed (goals.md carries the completion).
+- + M5.5 Correct oekosystem-synthese (EditionCrafter, not teiCrafter, is the Hersch demo).
+  **separate** (author, ZBZ track).
+- + M5.6 Documentation sync (data.md/architecture.md on SZD converter + new test). **done (verified
+  2026-06-10)**: both documents carry `pipeline/export_tei.py`, the frozen contract and the
+  sweep proofs.
 
-**H6 - Wissensvaults pflegen** (Promptotyping-Methode, Reproduzierbarkeit fürs Paper)
-- + M6.1 teiCrafter-`knowledge/` aktuell halten. laufend.
-- + M6.2 szd-htr-`knowledge/` aktuell halten. laufend.
-- + M6.3 zbz-ocr-tei-`knowledge/` aktuell halten. separat (Autor).
+**H6 - Maintain knowledge vaults** (Promptotyping method, reproducibility for the paper)
+- + M6.1 Keep teiCrafter `knowledge/` up to date. in progress.
+- + M6.2 Keep szd-htr `knowledge/` up to date. in progress.
+- + M6.3 Keep zbz-ocr-tei `knowledge/` up to date. separate (author).
 
-**H7 - Editopia-Beitrag und Demo-Material** (teiCrafter als Promptotyping-Fall)
-- ★ M7.1 teiCrafter als vorzeigbarer Promptotyping-Fall (Werkzeug + Provenienz im Vault/Repo). offen.
-- ★ M7.2 Zwei annotierte Worked Examples (je ein ZBZ- und ein SZD-Objekt, end-to-end im Editor).
-  **SZD-Hälfte erledigt** (o_szd.1079 im Browser bewiesen, Byte-Diff, 2026-06-08); die ZBZ-Hälfte
-  hängt an der separaten ZBZ-Spur.
-- + M7.3 Beitrag zu Foliensatz/Volltext, soweit teiCrafter betroffen. offen.
+**H7 - Editopia contribution and demo material** (teiCrafter as a Promptotyping case)
+- ★ M7.1 teiCrafter as a presentable Promptotyping case (tool + provenance in the vault/repo). open.
+- ★ M7.2 Two annotated worked examples (one ZBZ and one SZD object each, end-to-end in the editor).
+  **SZD half done** (o_szd.1079 proven in the browser, byte diff, 2026-06-08); the ZBZ half
+  hangs on the separate ZBZ track.
+- + M7.3 Contribution to slide deck/full text, insofar as teiCrafter is concerned. open.
 
-## 9. Erfolgskriterium, Demo-Objekte, kritischer Pfad
+## 9. Success Criterion, Demo Objects, Critical Path
 
-Erfolgskriterium (festgelegt 2026-06-07): **je ein reales ZBZ- und SZD-Objekt end-to-end im Browser**
-(öffnen, zeilenweise korrigieren, Person/Ort/Werk mit Normdaten annotieren, byte-treu speichern). Das
-ist M7.2 und zugleich der vorzeigbare Kern fürs Editopia-Material.
+Success criterion (set 2026-06-07): **one real ZBZ and one real SZD object end-to-end in the browser**
+(open, correct line by line, annotate person/place/work with authority data, save byte-faithfully). That
+is M7.2 and at the same time the presentable core for the Editopia material.
 
-Demo-Objekte:
-- **SZD-Schaustück:** o_szd.1079 (Brief an Max Fleischer 1901: echte Personen, Ort, Datum, Umschlag,
-  correspDesc, GAMS-Bild). Begleitende Handvoll zur Typabdeckung: o_szd.100/72/2215/161 (§6).
-- **ZBZ-Objekt:** aus {1000, 1330, 1540, 2310} (nur diese haben committete Bilder), das textlich
-  gehaltvollste; Auswahl in der separaten ZBZ-Spur.
+Demo objects:
+- **SZD showcase object:** o_szd.1079 (letter to Max Fleischer 1901: real persons, place, date, envelope,
+  correspDesc, GAMS image). Accompanying handful for type coverage: o_szd.100/72/2215/161 (§6).
+- **ZBZ object:** from {1000, 1330, 1540, 2310} (only these have committed images), the textually
+  richest; selection in the separate ZBZ track.
 
-Kritischer Pfad (SZD-Kette): **M1.2 -> M1.3 -> M1.4 -> M1.5** ist vollständig erledigt (Kontrakt
-eingefroren, Batch-Konverter byte-treu, voller Korpus 2.103/2.103 byte-identisch geladen). Nächstes:
-demo-seitig **M7.2** (SZD-Hälfte bewiesen, ZBZ-Hälfte in der separaten Spur) und optional **M3.7**
-(Offline-Gemini). Zeit ist ausdrücklich irrelevant; geordnet wird nur nach Abhängigkeit.
+Critical path (SZD chain): **M1.2 -> M1.3 -> M1.4 -> M1.5** is fully done (contract
+frozen, batch converter byte-faithful, full corpus 2,103/2,103 byte-identical loaded). Next:
+on the demo side **M7.2** (SZD half proven, ZBZ half in the separate track) and optionally **M3.7**
+(offline Gemini). Time is explicitly irrelevant; ordering is only by dependency.
 
-## 10. Offene Punkte, am realen Page-JSON zu bestätigen
+## 10. Open Points, to Be Confirmed on the Real Page-JSON
 
-- **converter-reference.md §9 (vor dem Einfrieren):** bbox-Konformität über die Handvoll (kein Wert
-  > 100); real vorkommende Marker; verworfene Felder (`reading_order`/`lines`/`label`/`source`/`notes`);
-  weiteres standOff-Seeding (repository -> listOrg, sender/recipient -> listPerson); images 1:1 zu pages.
-- **Whitespace bei Zeilen-Edit (geschlossen 2026-06-08, editor-seitig):** der Editor erhält die Rand-
-  Whitespace der bearbeiteten Zeile jetzt verbatim (nur der getrimmte Kern wird editiert,
-  `editCellCore`/`splitEdge`). Entscheidung: editor-seitig statt konverter-seitig, weil es die Byte-Treue
-  für alle Korpora hält (ZBZ, Wenzelsbibel, SZD). Beleg whitespace_edit_check.mjs 14/14, commit 8fd281c.
-- **Korrektheits-Audit (teils separat):** oekosystem-synthese.md behauptet falsch, teiCrafter sei die
-  Hersch-Demo (richtig: EditionCrafter v0); zbz-Statuszahlen (3 vs 4); szd schwankende Objektzahlen
-  (maßgeblich 2.107). teiCrafter-seitig erledigt: Token-Präfix-Drift (`--color-*`), AI-Violett-Ausfall.
+- **converter-reference.md §9 (before freezing):** bbox conformity across the handful (no value
+  > 100); markers that really occur; rejected fields (`reading_order`/`lines`/`label`/`source`/`notes`);
+  further standOff seeding (repository -> listOrg, sender/recipient -> listPerson); images 1:1 to pages.
+- **Whitespace on line edit (closed 2026-06-08, editor-side):** the editor now preserves the edge
+  whitespace of the edited line verbatim (only the trimmed core is edited,
+  `editCellCore`/`splitEdge`). Decision: editor-side instead of converter-side, because it keeps byte fidelity
+  for all corpora (ZBZ, Wenzelsbibel, SZD). Proof whitespace_edit_check.mjs 14/14, commit 8fd281c.
+- **Correctness audit (partly separate):** oekosystem-synthese.md falsely claims teiCrafter is the
+  Hersch demo (correct: EditionCrafter v0); zbz status figures (3 vs 4); szd fluctuating object counts
+  (authoritative 2,107). teiCrafter-side done: token prefix drift (`--color-*`), AI violet failure.
 
-## 11. Umsetzungs-Backlog (nächste Schritte, geordnet)
+## 11. Implementation Backlog (next steps, ordered)
 
-teiCrafter + SZD: die früheren Punkte 1 bis 7 dieses Backlogs (SZD-Abgleich und Kontrakt-Einfrieren,
-Whitespace, Batch-Konverter, Voll-Korpus, M7.2-SZD, Notiz/KI-Vorschlag/Live-Lookup, M5.2/M5.6) sind
-erledigt und in [goals.md](knowledge/goals.md) bzw. [paper-evidence.md](knowledge/paper-evidence.md)
-registriert; die Einzelnachweise mit Commits und Proof-Zahlen trägt die Git-History dieser Datei
-(Version 0.7). **M6.x** läuft (Wissensvaults werden je Session nachgezogen).
+teiCrafter + SZD: the earlier points 1 to 7 of this backlog (SZD reconciliation and contract freezing,
+whitespace, batch converter, full corpus, M7.2 SZD, note/AI suggestion/live lookup, M5.2/M5.6) are
+done and registered in [goals.md](knowledge/goals.md) and [paper-evidence.md](knowledge/paper-evidence.md);
+the individual proofs with commits and proof figures are carried by the git history of this file
+(version 0.7). **M6.x** is in progress (knowledge vaults are caught up per session).
 
-**Editor-Spur, Stand 2026-06-12:** eine Feedback-Session am neuen HSA-Brief-Demoprojekt
-(`docs/data/editor/hsa-7711`) brachte sechs abgenommene Pakete (Plaintext-Direktimport `.txt`/`.md`,
-`|N|`-Seitenmarker, Beispiele nur noch lokal sichtbar, Dokumentzeile plus Document-Panel,
-Reconciliation am Annotationsort mit Manifest-Opt-in, Entwurfs-Sicherung gegen Reload-Verlust,
-flaches filterbares Annotations-Popover mit Manifest-`attrField`) und definierte **Paket F**
-(Index-Deklaration als Manifest-Konsument, Empty-Project-Onboarding, Banner-Integration in die
-Dokumentzeile, Document-Panel-Befund). Details, Entscheidungen und offene Gates: `HANDOFF.md`
-und `knowledge/journal.md`.
+**Editor track, state 2026-06-12:** a feedback session on the new HSA letter demo project
+(`docs/data/editor/hsa-7711`) produced six accepted packages (plaintext direct import `.txt`/`.md`,
+`|N|` page marker, examples visible only locally, document line plus document panel,
+reconciliation at the annotation site with manifest opt-in, draft safeguarding against reload loss,
+flat filterable annotation popover with manifest `attrField`) and defined **package F**
+(index declaration as manifest consumer, empty-project onboarding, banner integration into the
+document line, document-panel finding). Details, decisions and open gates: `HANDOFF.md`
+and `knowledge/journal.md`.
 
-Separat (Autor, ZBZ): ZBZ-Bild-URL-Schema verifizieren, Live-ZBZ-Durchlauf, ZBZ-Worked-Example,
-oekosystem-synthese-Korrektur, ZBZ-Projektbericht.
+Separate (author, ZBZ): verify ZBZ image URL schema, live ZBZ run, ZBZ worked example,
+oekosystem-synthese correction, ZBZ project report.
 
-### Nächste Schritte (Stand 2026-06-10 nachts, nach den UI-Runden M2.7-M2.13)
+### Next steps (state 2026-06-10 at night, after the UI rounds M2.7-M2.13)
 
-**Beschlüsse 2026-06-10 (Operator, Definitionsfragen):** alle fünf Empfehlungen aus
-`Wenzelsbibel/knowledge/definitionsfragen-teicrafter-wenzelsbibel.md` ratifiziert.
-F1: Editopia-Anteil eingefroren auf laden, blättern, ein Wort korrigieren, No-Op-Save, Faksimile;
-Vertiefung läuft auf der Herbst-Schiene fürs PLUS-Team. F2: Kern jetzt Edit-Bestand;
-PAGE-XML->TEI-Import als **WB-AP5** registriert, Datenmodell (eine Datei vs. Datei je Buch)
-MIT Projektleitung. F3: Projekt first-class als deklaratives Manifest `teicrafter.project.json`;
-M2.9 entschieden als "Open project folder" über Verzeichnis-Handle (File System Access), NICHT OPFS.
-F4: Ansicht-Umschalter diplomatisch|normalisiert plus Zwei-Feld-Doppelklick-Edit mit attributgenauem
-Splice. F5: zweistufiges Abnahme-Gate W1 (Operator-Proxy, echtes Folio end-to-end) / W2
-(PLUS-Bearbeiterin ohne Einweisung); Vorbedingung ED.1-ED.7 schreiben.
+**Decisions 2026-06-10 (operator, definition questions):** all five recommendations from
+`Wenzelsbibel/knowledge/definitionsfragen-teicrafter-wenzelsbibel.md` ratified.
+F1: Editopia share frozen to load, page, correct one word, no-op save, facsimile;
+deepening runs on the autumn track for the PLUS team. F2: core now edit holdings;
+PAGE-XML->TEI import registered as **WB-AP5**, data model (one file vs. file per book)
+WITH project leadership. F3: project first-class as a declarative manifest `teicrafter.project.json`;
+M2.9 decided as "Open project folder" via directory handle (File System Access), NOT OPFS.
+F4: view switcher diplomatic|normalized plus two-field double-click edit with attribute-precise
+splice. F5: two-stage acceptance gate W1 (operator proxy, real folio end-to-end) / W2
+(PLUS editor without briefing); precondition write ED.1-ED.7.
 
-Gates zuerst (Operator):
-1. **Browser-Sichtprüfung** der fünf Feedback-Runden vom 10.06. an beiden Objektstrecken
-   (o_szd.1079, ZBZ Doc 1000): Editor-Paradigma, Annotations-Editor mit Normdaten am Text,
-   Index-Overlay, XML-Quellansicht mit Highlighting/Check, Home-Navigation. Danach Push-Freigabe
-   (lokale Commits auf session/2026-06-07-place-graphic) und Merge-Entscheidung.
+Gates first (operator):
+1. **Browser visual inspection** of the five feedback rounds from 06-10 on both object tracks
+   (o_szd.1079, ZBZ Doc 1000): editor paradigm, annotation editor with authority data at the text,
+   index overlay, XML source view with highlighting/check, home navigation. Then push approval
+   (local commits on session/2026-06-07-place-graphic) and merge decision.
 
-Wenzelsbibel (Auftrag `Wenzelsbibel/knowledge/auftrag-teicrafter-wenzelsbibel.md`, Daten lokal,
-NICHT committen; Machbarkeit am 10.06. headless bewiesen: codex-2759.xml 78 MB parst in 1,3 s,
-Round-Trip byte-identisch, 480 Folios, Wort-Profil):
-2. **WB-AP1 Lade-Pfad im Browser: engine-seitig erledigt 2026-06-10** (Validierungs-Cache je
-   Doc-Identität statt DOMParser pro Render; Source-View-Guard über 8 MB; Ladezeit im Status;
-   wb_codex_check.mjs 16/16: 82 MB parsen 1,8 s, No-Op-Save byte-identisch, Wort-Edit 2,0 s
-   Voll-Re-Parse). Offen: Operator öffnet codex-2759.xml via "Open TEI..." im Browser.
-3. **WB-AP2 IIIF-Resolver: engine-seitig erledigt 2026-06-10** (project-profiles.js: Profil via
-   PID `o:wen.*`, Dateiname -> ÖNB-info.json als OSD-Tile-Source, live verifiziert; Zonen-Bboxen
-   aus `@points` in readSurfaces, 34.363/34.363 innerhalb der Surface; keine Prozent-Umrechnung
-   nötig, Koordinatenraum == IIIF-Maße). Gate "Projekt lädt, Faksimile steht": Operator-Sichtprüfung.
-4. **WB-AP3 Projekt-Modul: engine-seitig erledigt 2026-06-10** (= M5.7-Anschluss): Manifest-Format v1
-   in `project-manifest.js` (eintrittsagnostisch, strikt validiert, normalisiert auf die Profil-Form),
-   WB-Manifest als erstes Profil committet (Ableitung der Editionsrichtlinien, offene Punkte bleiben
-   offen statt erfunden); Manifest vor PID-Fallback, `markup` ersetzt die eingebaute Wrap-Liste
-   projektweise; `indices`/`views` deklariert, Konsumenten folgen mit Index-Arbeit und F4.
-   `node test/tools/project_manifest_check.mjs` -> **62/62** (Stand 2026-06-11, seither um
-   Typ-Bindung und TEI-Scope gewachsen). [proof] Offen: Operator-Sichtprüfung
-   (WB-Beispiel lädt mit "project: ... (manifest)" in der Statuszeile); M2.9 als nächster Anschluss.
-5. **WB-neu Doppellesung (F4): Engine und UI erledigt 2026-06-11** (Commits ae0b6f5 Engine,
-   1ef4bfe UI; orchestriert in zwei Opus-Paketen auf disjunkten Dateimengen). Engine: atomarer
-   Mehrteil-Edit `editTextAndAttrs` (`tei-document.js`) plus `editCellReadings` (`edition.js`)
-   editieren diplomatischen Kern und `@norm` in EINEM Re-Parse, Verweigerung statt Teilanwendung;
-   Zell-Projektion `w`/`hasDualReadings`. UI: Umschalter diplomatisch|normalisiert in der Lesepane
-   (nur bei Doppellesung und außerhalb der Quellansicht, je Dokument persistiert), normalisierte
-   Ansicht als Anzeige-Projektion, Zwei-Feld-Doppelklick-Edit, Selektions-Annotation auf die
-   diplomatische Ansicht beschränkt. `node test/tools/dual_reading_check.mjs` -> **28/28** (atomarer
-   Edit byte-treu per Voll-Rekonstruktion, `@orig`-Sync, `@norm` add/remove, Verweigerung bei
-   Element-Kindern, Projektion, Real-Codex-Guard SKIPpt ohne lokalen Codex). [proof] Der
-   Umschalter bindet an die Dokument-Kodierung (hasDualReadings), nicht an das Manifest;
-   die deklarierten `views` bleiben ohne Konsument. Offen: Operator-Sichtprüfung im Browser
-   (Umschalter am echten Codex,
-   Zwei-Feld-Edit, Annotations-Hinweis in der normalisierten Ansicht).
-6. **WB-AP4 StandOff-Apparat**: `app from/to` auf die Inline-`<anchor>`-Paare auflösen und im
-   Lesetext markieren (Mechanik analog Textkritik-Schicht).
-7. **ED.1-ED.7 User Stories** schreiben (hängender Verweis im Project Overview; vier Arbeitsachsen),
-   dann **Gate W1** durchführen.
-8. **WB-AP5 PAGE-XML->TEI-Import** der Roh-HTR-Bücher (Muster SZD-Konverter); startet erst nach
-   der Datenmodell-Entscheidung mit der Projektleitung.
+Wenzelsbibel (order `Wenzelsbibel/knowledge/auftrag-teicrafter-wenzelsbibel.md`, data local,
+do NOT commit; feasibility proven headless on 06-10: codex-2759.xml 78 MB parses in 1.3 s,
+round-trip byte-identical, 480 folios, word profile):
+2. **WB-AP1 load path in the browser: engine-side done 2026-06-10** (validation cache per
+   doc identity instead of DOMParser per render; source-view guard above 8 MB; load time in the status;
+   wb_codex_check.mjs 16/16: 82 MB parse 1.8 s, no-op save byte-identical, word edit 2.0 s
+   full re-parse). Open: operator opens codex-2759.xml via "Open TEI..." in the browser.
+3. **WB-AP2 IIIF resolver: engine-side done 2026-06-10** (project-profiles.js: profile via
+   PID `o:wen.*`, file name -> ÖNB info.json as OSD tile source, verified live; zone bboxes
+   from `@points` in readSurfaces, 34,363/34,363 within the surface; no percent conversion
+   needed, coordinate space == IIIF dimensions). Gate "project loads, facsimile stands": operator visual inspection.
+4. **WB-AP3 project module: engine-side done 2026-06-10** (= M5.7 connection): manifest format v1
+   in `project-manifest.js` (entry-agnostic, strictly validated, normalized to the profile form),
+   WB manifest committed as the first profile (derivation of the editorial guidelines, open points stay
+   open instead of invented); manifest before PID fallback, `markup` replaces the built-in wrap list
+   project-wide; `indices`/`views` declared, consumers follow with index work and F4.
+   `node test/tools/project_manifest_check.mjs` -> **62/62** (state 2026-06-11, since then grown by
+   type binding and TEI scope). [proof] Open: operator visual inspection
+   (WB example loads with "project: ... (manifest)" in the status line); M2.9 as the next connection.
+5. **WB-new dual reading (F4): engine and UI done 2026-06-11** (commits ae0b6f5 engine,
+   1ef4bfe UI; orchestrated in two Opus packages on disjoint file sets). Engine: atomic
+   multi-part edit `editTextAndAttrs` (`tei-document.js`) plus `editCellReadings` (`edition.js`)
+   edit diplomatic core and `@norm` in ONE re-parse, refusal instead of partial application;
+   cell projection `w`/`hasDualReadings`. UI: switcher diplomatic|normalized in the reading pane
+   (only with dual reading and outside the source view, persisted per document), normalized
+   view as a display projection, two-field double-click edit, selection annotation restricted to the
+   diplomatic view. `node test/tools/dual_reading_check.mjs` -> **28/28** (atomic
+   edit byte-faithful by full reconstruction, `@orig` sync, `@norm` add/remove, refusal on
+   element children, projection, real-codex guard SKIPs without local codex). [proof] The
+   switcher binds to the document encoding (hasDualReadings), not to the manifest;
+   the declared `views` remain without a consumer. Open: operator visual inspection in the browser
+   (switcher at the real codex,
+   two-field edit, annotation hint in the normalized view).
+6. **WB-AP4 standOff apparatus**: resolve `app from/to` onto the inline `<anchor>` pairs and mark them in
+   the reading text (mechanism analogous to the textual-criticism layer).
+7. **Write ED.1-ED.7 user stories** (dangling reference in the Project Overview; four work axes),
+   then carry out **gate W1**.
+8. **WB-AP5 PAGE-XML->TEI import** of the raw HTR books (pattern SZD converter); starts only after
+   the data-model decision with the project leadership.
 
-Editor-Pfad, unabhängig von der Wenzelsbibel:
-9. **M2.9 Open project folder: engine-seitig erledigt 2026-06-10.** Verzeichnis-Handle (File
-   System Access), Projekt-Panel mit Dateiliste, "New project" schreibt ein Minimal-Manifest;
-   Korrektur am selben Tag (Operator): ein Projekt ist KEIN Editionstyp, das Manifest trägt
-   `documentTypes` + `files`, das Element-Inventar bindet an den Typ. Plaintext-Dateien öffnen
-   als deterministischer line-level-Entwurf (Transport, nicht Interpretation, bewusst nicht
-   violett); erster Save erzeugt die .xml im Ordner. Proofs project_manifest_check.mjs 62/62,
-   project_case_check.mjs 24/24 (der Operator-Test-Case headless: eigenes Projekt, ein TEI,
-   zwei Plaintexts). [proof] Offen: der Browser-Durchlauf genau dieses Test-Cases (Operator-Gate).
-10. **M5.7 Editionsrichtlinien der Quellprojekte** (SZD/GAMS, ZBZ Hersch) in die Wissensbasis.
+Editor path, independent of the Wenzelsbibel:
+9. **M2.9 Open project folder: engine-side done 2026-06-10.** Directory handle (File
+   System Access), project panel with file list, "New project" writes a minimal manifest;
+   correction the same day (operator): a project is NOT an edition type, the manifest carries
+   `documentTypes` + `files`, the element inventory binds to the type. Plaintext files open
+   as a deterministic line-level draft (transport, not interpretation, deliberately not
+   violet); the first save creates the .xml in the folder. Proofs project_manifest_check.mjs 62/62,
+   project_case_check.mjs 24/24 (the operator test case headless: own project, one TEI,
+   two plaintexts). [proof] Open: the browser run of exactly this test case (operator gate).
+10. **M5.7 Editorial guidelines of the source projects** (SZD/GAMS, ZBZ Hersch) into the knowledge base.
 
-(Commit, Deploy und Veröffentlichung sind bewusst nicht Teil dieses Plans.)
+(Commit, deploy and publication are deliberately not part of this plan.)
 
-## 12. Abnahme und Evaluation (einfach, je Ziel genau ein Beweis)
+## 12. Acceptance and Evaluation (simple, exactly one proof per goal)
 
-Die Methoden sind komplementär: jede beantwortet eine andere Frage und fängt einen anderen Fehler ab.
-Zusammen sind sie die Promptotyping-Verifikationskaskade (automatisch, kontextuell, visuell, fachlich).
-Echte Daten sind auf jeder Ebene die Regel (synthetisch nur Wenzelsbibel, Lizenz). Ausführliche Fassung:
-[testing.md](knowledge/testing.md), Abschnitt "Verifying the Project Goals".
+The methods are complementary: each answers a different question and catches a different error.
+Together they are the Promptotyping verification cascade (automatic, contextual, visual, expert).
+Real data is the rule at every level (synthetic only Wenzelsbibel, license). Detailed version:
+[testing.md](knowledge/testing.md), section "Verifying the Project Goals".
 
-**Ebene 1, maschinell (wiederholbar):**
-- Verlustfreiheit: `node test/tools/roundtrip_sweep.mjs` (alle Demo-Dateien byte-identisch).
-- Ladbarkeit: `node test/tools/hersch_loadability.mjs` (öffnet als Editor-Modell).
-- Feature-Proof: `node test/tools/szd_demo_check.mjs` (Bild-URL, Zonen, place/work, Normdaten-`<idno>`,
-  Mention-Linking, line-level, byte-identisch).
-- "Diff ist genau die Absicht": Datei öffnen, eine Entität (place + GND-`<idno>`) setzen, speichern, neu
-  einlesen; einzige Byte-Differenz ist genau dieser standOff/Markup-Eintrag.
-- SZD-Konvertier-Test: jede Handvoll-Datei konvertiert + round-trippt + lädt (Folios/Zellen > 0).
-- Schema: well-formed + TEI All RNG + Schematron (ZBZ zusätzlich `zbz_hersch.rng`).
+**Level 1, machine (repeatable):**
+- Losslessness: `node test/tools/roundtrip_sweep.mjs` (all demo files byte-identical).
+- Loadability: `node test/tools/hersch_loadability.mjs` (opens as editor model).
+- Feature proof: `node test/tools/szd_demo_check.mjs` (image URL, zones, place/work, authority `<idno>`,
+  mention linking, line-level, byte-identical).
+- "Diff is exactly the intent": open file, set one entity (place + GND `<idno>`), save, re-
+  read; the only byte difference is exactly this standOff/markup entry.
+- SZD conversion test: each handful file converts + round-trips + loads (folios/cells > 0).
+- Schema: well-formed + TEI All RNG + Schematron (ZBZ additionally `zbz_hersch.rng`).
 
-**Ebene 2, Frontend-Analyse (Checkliste je Demo-Objekt, das Erfolgskriterium als sechs Ja/Nein-Checks):**
-1. Öffnen (Folios/Zeilen sichtbar). 2. Bild (Faksimile sichtbar, Zone highlightet richtige Zeile).
-3. Korrigieren (Zeile editieren, bleibt). 4. Annotieren (Person/Ort/Werk + Normdaten-ID).
-5. KI-Vorschlag (M3.7: violett, nach Bestätigung normal). 6. Speichern (öffnet identisch wieder, nur
-bewusste Änderungen).
+**Level 2, frontend analysis (checklist per demo object, the success criterion as six yes/no checks):**
+1. Open (folios/lines visible). 2. Image (facsimile visible, zone highlights the right line).
+3. Correct (edit line, stays). 4. Annotate (person/place/work + authority id).
+5. AI suggestion (M3.7: violet, normal after confirmation). 6. Save (opens identical again, only
+deliberate changes).
 
-**Ebene 3, fachlich:** ein Domänenexperte bestätigt den Inhalt (Transkription/Annotation korrekt als
-Edition). Beide Korpora sind aktuell unreviewed; das ist fachliche Kuration, nicht Werkzeug-Abnahme.
+**Level 3, expert:** a domain expert confirms the content (transcription/annotation correct as
+an edition). Both corpora are currently unreviewed; that is expert curation, not tool acceptance.
 
-Zwölf visuelle Checks (zwei Objekte) plus die maschinellen Test-Befehle sind die Werkzeug-Abnahme. Jedes
-demo-kritische Feature wird zweimal belegt: headless-Proof im Harness UND Browser-Pfad auf dem echten
-Objekt.
+Twelve visual checks (two objects) plus the machine test commands are the tool acceptance. Every
+demo-critical feature is proven twice: headless proof in the harness AND browser path on the real
+object.
 
-## 13. Verifikationsprotokoll
+## 13. Verification Protocol
 
-Das Dokument ist fertig, wenn jede Aussage entweder maschinell belegt (Befehl/`datei:zeile`) oder als
-Entscheidung festgehalten ist. Mechanismen: Quellen-Tag je Aussage; wiederholbare Proofs für den
-faktischen Kern (siehe §4); adversariale Audit-Passage (Dokument gegen Quellen auf
-Auslassungen/Widersprüche/unbelegte Behauptungen); Widerspruchs-Scan gegen die jeweilige Single Source
-of Truth. Bei Konflikt gilt der Domänen-SSoT.
+The document is finished when every statement is either machine-proven (command/`file:line`) or recorded as
+a decision. Mechanisms: source tag per statement; repeatable proofs for the
+factual core (see §4); adversarial audit pass (document against sources for
+omissions/contradictions/unsupported claims); contradiction scan against the respective single source
+of truth. In case of conflict, the domain SSoT applies.
 
-## 14. Quellen und SSoT
+## 14. Sources and SSoT
 
-| Domäne | Single Source of Truth |
+| Domain | Single source of truth |
 |---|---|
-| Kontrakte, Gates | `teiCrafter/knowledge/integration.md` |
-| teiCrafter Ziele/Milestones (Register) | `teiCrafter/knowledge/goals.md`, von diesem Plan erweitert |
-| SZD-Konverter-Kontrakt | `teiCrafter/knowledge/converter-reference.md` |
-| teiCrafter Spec/Architektur/Tests/Design | `teiCrafter/knowledge/{specification,architecture,testing,design,data}.md` |
-| zbz Pipeline/Workflow/Qualität/Entscheidungen | `zbz-ocr-tei/knowledge/{pipeline,workflow,quality,decisions,methodik,projekt}.md` |
-| szd Pipeline/Daten/Verifikation, Konverter-Kontrakt | `szd-htr/knowledge/{data-overview,verification-concept,htr-interchange-format,teicrafter-integration}.md` |
-| Operativer Gesamtstand, Paper-Architektur | Obsidian-Vault `ACTIVE-WORK.md`; JOHD-Paper "The Static Proto-Edition as Editorial Workspace" |
+| Contracts, gates | `teiCrafter/knowledge/integration.md` |
+| teiCrafter goals/milestones (register) | `teiCrafter/knowledge/goals.md`, extended by this plan |
+| SZD converter contract | `teiCrafter/knowledge/converter-reference.md` |
+| teiCrafter spec/architecture/tests/design | `teiCrafter/knowledge/{specification,architecture,testing,design,data}.md` |
+| zbz pipeline/workflow/quality/decisions | `zbz-ocr-tei/knowledge/{pipeline,workflow,quality,decisions,methodik,projekt}.md` |
+| szd pipeline/data/verification, converter contract | `szd-htr/knowledge/{data-overview,verification-concept,htr-interchange-format,teicrafter-integration}.md` |
+| Operational overall state, paper architecture | Obsidian vault `ACTIVE-WORK.md`; JOHD paper "The Static Proto-Edition as Editorial Workspace" |
 
-## 15. Vault-Kontext (zur Einordnung)
+## 15. Vault Context (for orientation)
 
-- Editopia 02.-04.09.2026 Wuppertal; Vortrag 2026-09-02. Eingereichter Abstract ZBZ/Hersch-fokussiert,
-  These epistemische Infrastruktur; Demo-Form laut Vault: Live-Vorführung (Hersch-Korpus durch
-  EditionCrafter v0) plus auszuarbeitender Volltext. teiCrafter ist die Erweiterung um den Werkzeug-Fall.
-- Es existiert ein eigenes JOHD-Paper (Pollin/Zangerl/Hintersteiner), SZD-fokussiert, These "Three
-  Functions" eines statischen Codebase. Vom Editopia-Beitrag abgegrenzt.
-- teiCrafters primärer eigener Anwendungsfall ist die Wenzelsbibel-Edition (Wort-Ebene, FWF, Herbst
-  2026); der Bau-Backlog dafür wird im Wenzelsbibel-Projektdokument geführt.
-- Methodischer Rahmen Promptotyping: Repo als Agent-Interface, Verifikationskaskade
-  (automatisch -> kontextuell -> visuell -> fachlich), Critical Expert in the Loop (wer erzeugt != wer
-  prüft), epistemische Asymmetrie (LLMs erzeugen Plausibles, können es nicht selbst beurteilen).
+- Editopia 02.-04.09.2026 Wuppertal; talk 2026-09-02. Submitted abstract ZBZ/Hersch-focused,
+  thesis epistemic infrastructure; demo form per the vault: live demonstration (Hersch corpus through
+  EditionCrafter v0) plus a full text to be elaborated. teiCrafter is the extension by the tool case.
+- There is a separate JOHD paper (Pollin/Zangerl/Hintersteiner), SZD-focused, thesis "Three
+  Functions" of a static codebase. Demarcated from the Editopia contribution.
+- teiCrafter's primary in-house use case is the Wenzelsbibel edition (word-level, FWF, autumn
+  2026); the build backlog for it is kept in the Wenzelsbibel project document.
+- Methodological framework Promptotyping: repo as agent interface, verification cascade
+  (automatic -> contextual -> visual -> expert), Critical Expert in the Loop (who creates != who
+  checks), epistemic asymmetry (LLMs generate the plausible, cannot judge it themselves).
