@@ -37,6 +37,8 @@ import { createAnnotationUi } from "./annotation-ui.js";
 import { createEntityIndex } from "./entity-index.js";
 import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
+import { setupImageOnramp } from "./image-onramp.js";
+import { createPageImages } from "./page-images.js";
 import { FEATURES } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
@@ -72,9 +74,11 @@ const app = {
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   source: null,       // load provenance: { kind: "tei"|"draft"|"example", txtName?, label? } or null
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
+  pageImages: new Map(), // filename -> { url, blob, type }: in-memory page images (uploaded via the on-ramp or read back from the project folder), resolving a surface's <graphic url> to a displayable URL
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
   sourceMode: false,  // true while the left pane shows the editable XML source
   readingVariant: "dipl", // F4: "dipl" | "norm", which reading the pane shows (only meaningful when state.hasDualReadings)
+  viewMode: "paged",  // reading view: "paged" (one folio, pager) | "continuous" (all folios stacked); persisted per document
   project: null,      // active project: manifest-parsed or PID-detected, or null
   projectFolder: null, // open project folder: { dir, name, files[], project }, or null (M2.9)
   markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
@@ -219,7 +223,9 @@ function buildLegend() {
   }
   if (hasNote) chip("has-note", "note");
 
-  if (!chips.length) return;
+  // Nothing to legend (no mentions, criticism or notes in this document): hide
+  // the strip rather than leave an empty rule, like the other ambient surfaces.
+  if (!chips.length) { $("ed-legend").hidden = true; return; }
   host.appendChild(el("span", { class: "ed-legend-title", text: "legend" }));
   for (const c of chips) host.appendChild(c);
 }
@@ -319,15 +325,15 @@ function hideLoading() {
   if (o) o.hidden = true;
 }
 
-async function load(raw, name, handle, project) {
-  if (raw.length <= BIG_DOC_CHARS) { applyLoad(raw, name, handle, project); return; }
+async function load(raw, name, handle, project, opts) {
+  if (raw.length <= BIG_DOC_CHARS) { applyLoad(raw, name, handle, project, opts); return; }
   showLoading(name);
   await nextPaint();
-  try { applyLoad(raw, name, handle, project); }
+  try { applyLoad(raw, name, handle, project, opts); }
   finally { hideLoading(); }
 }
 
-function applyLoad(raw, name, handle, project) {
+function applyLoad(raw, name, handle, project, opts = {}) {
   const t0 = performance.now();
   app.state = parseEdition(raw);
   app.folio = 0;
@@ -337,6 +343,12 @@ function applyLoad(raw, name, handle, project) {
   // Default: no known page images. An example with an imageBase (loadExample)
   // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
+  // In-memory page images: revoke the previous document's, then adopt the set the
+  // caller hands in (the on-ramp builds one keyed by the surface <graphic url>).
+  // A document opened from a project folder resolves its filenames afterwards
+  // (pageImageStore.resolveFromFolder), so reopening a saved edition shows them.
+  pageImageStore.revoke();
+  if (opts.pageImages instanceof Map) app.pageImages = opts.pageImages;
   // Project: an explicit manifest (teicrafter.project.json, parsed by the
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
@@ -356,6 +368,8 @@ function applyLoad(raw, name, handle, project) {
   // F4: the reading variant resets to diplomatic per load; applyDocLayout then
   // restores the persisted value when this document had one.
   app.readingVariant = "dipl";
+  // Reading view defaults to paged; applyDocLayout restores a persisted choice.
+  app.viewMode = "paged";
   enableControls(true);
   applyDocLayout();
   if (handle) { recents.rememberRecent(handle, name); }
@@ -368,6 +382,9 @@ function applyLoad(raw, name, handle, project) {
   // draft paths re-show it afterwards. It must never linger over an opened .xml.
   documentFacts.hideDraftBanner();
   refreshAfterStandoffEdit();
+  // A folder-opened edition resolves its page-image filenames against the folder
+  // (async, best-effort); the on-ramp's in-memory images are already resolved.
+  pageImageStore.resolveFromFolder();
   const unit = app.state.profile === "word" ? "word" : "line";
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
   const docType = typeForFile(app.project, name);
@@ -389,18 +406,30 @@ function markGenerated(on) {
 // falls back to downloading the .xml. Only the project flow creates it in place.
 const RE_PLAINTEXT = /\.(txt|md)$/i;
 
-async function loadPlaintextDraft(text, txtName) {
-  const baseName = txtName.replace(RE_PLAINTEXT, "");
-  const xmlName = `${baseName}.xml`;
-  await load(teiFromPlaintext(text, baseName), xmlName, null);
-  // Mirror the project-flow wording; a direct draft has no save target, so Save
-  // downloads the TEI file (the project flow says "writes it into the folder").
+/**
+ * Load a freshly built plaintext draft and mark it as such: draft provenance,
+ * the neutral banner, the document strip, and the status line. Shared by the
+ * direct plaintext path and the text+image on-ramp (opts.pageImages flows the
+ * attached images through load). The caller sets dirty/saveTarget as it needs.
+ */
+async function adoptDraft({ tei, xmlName, txtName, project, pageImages, statusMsg }) {
+  await load(tei, xmlName, null, project || null, pageImages ? { pageImages } : undefined);
   app.source = { kind: "draft", txtName };
-  setStatus(`Drafted ${xmlName} deterministically from ${txtName} (text carried verbatim). `
-    + "Save downloads the TEI file.");
+  if (statusMsg) setStatus(statusMsg);
   documentFacts.showDraftBanner(txtName);
   documentFacts.updateDocStrip();
   renderActivePanel();
+}
+
+async function loadPlaintextDraft(text, txtName) {
+  const baseName = txtName.replace(RE_PLAINTEXT, "");
+  const xmlName = `${baseName}.xml`;
+  // A direct draft has no save target, so Save downloads the TEI file (the
+  // project flow's wording differs: "writes it into the folder").
+  await adoptDraft({
+    tei: teiFromPlaintext(text, baseName), xmlName, txtName,
+    statusMsg: `Drafted ${xmlName} deterministically from ${txtName} (text carried verbatim). Save downloads the TEI file.`,
+  });
 }
 
 async function openLocal() {
@@ -647,12 +676,34 @@ async function renderRecents() {
 
 function updateFolioButtons() {
   const n = app.state ? app.state.folios.length : 0;
+  const continuous = app.viewMode === "continuous";
+  // In continuous view the prev/next arrows have nothing to step through; the
+  // label states the total instead, and the view-mode toggle stays.
+  $("btn-prev").hidden = continuous;
+  $("btn-next").hidden = continuous;
   $("btn-prev").disabled = !app.state || app.folio <= 0;
   $("btn-next").disabled = !app.state || app.folio >= n - 1;
   const f = app.state ? app.state.folios[app.folio] : null;
-  $("ed-folio-label").textContent = f
-    ? `page ${app.folio + 1}/${n}${f.n ? ` (${f.n})` : ""}`
-    : "-";
+  $("ed-folio-label").textContent = !app.state ? "-"
+    : continuous ? `${n} page${n === 1 ? "" : "s"}`
+    : (f ? `page ${app.folio + 1}/${n}${f.n ? ` (${f.n})` : ""}` : "-");
+  const vm = $("btn-viewmode");
+  if (vm) {
+    // The toggle is meaningful only with more than one page.
+    vm.hidden = !app.state || n <= 1;
+    vm.textContent = continuous ? "▤" : "□"; // stacked vs single page
+    vm.title = continuous
+      ? "Continuous view (all pages). Click for page-by-page."
+      : "Page-by-page view. Click for continuous (all pages).";
+    vm.setAttribute("aria-pressed", String(continuous));
+  }
+}
+
+function setViewMode(mode) {
+  if (!app.state || (mode !== "paged" && mode !== "continuous") || app.viewMode === mode) return;
+  app.viewMode = mode;
+  saveDocLayout({ viewMode: mode });
+  render();
 }
 
 function gotoFolio(i) {
@@ -671,14 +722,26 @@ function clearLinks() {
 }
 
 // Reading line -> facsimile zone. Real link when the line carries an @facs zone id;
-// positional fallback (line index == zone index) for editions without it.
-function highlightLine(lineIndex) {
+// positional fallback (line index == zone index) for editions without it. The
+// folio index scopes the highlight so the continuous view (every folio in one
+// scroll) targets the right page; in the paged view it is always app.folio.
+function highlightLine(folioIndex, lineIndex) {
   clearLinks();
   if (lineIndex == null || lineIndex < 0) return;
-  for (const w of document.querySelectorAll(`#ed-reading [data-line="${lineIndex}"]`)) w.classList.add("linked");
+  const sel = app.viewMode === "continuous"
+    ? `#ed-reading [data-folio="${folioIndex}"][data-line="${lineIndex}"]`
+    : `#ed-reading [data-line="${lineIndex}"]`;
+  for (const w of document.querySelectorAll(sel)) w.classList.add("linked");
   // When the context pane is collapsed the @facs sync simply has no target.
   if (!facsimile || app.rightCollapsed) return;
-  const line = (app.currentLines || [])[lineIndex];
+  // Continuous view: the facsimile tracks the hovered line's page.
+  if (app.viewMode === "continuous" && folioIndex !== app.folio) {
+    app.folio = folioIndex;
+    app.currentLines = (app.state.folios[folioIndex] || {}).lines || [];
+    updateFolioButtons();
+    if (app.panel === "facs") renderActivePanel();
+  }
+  const line = ((app.state.folios[folioIndex] || {}).lines || [])[lineIndex];
   facsimile.highlightZone(line && line.facs ? line.facs : lineIndex);
 }
 
@@ -686,7 +749,7 @@ function highlightZone(zoneId, zoneIndex) {
   const lines = app.currentLines || [];
   let li = zoneId ? lines.findIndex((l) => l.facs === zoneId) : -1;
   if (li < 0) li = zoneIndex; // positional fallback
-  highlightLine(li);
+  highlightLine(app.folio, li);
 }
 
 // ---- reading text ----------------------------------------------------------
@@ -782,18 +845,66 @@ function renderReading() {
   if (!app.state) { host.classList.remove("src"); renderEmptyReading(host); return; }
   host.classList.toggle("src", app.sourceMode);
   if (app.sourceMode) { renderSourceView(host); return; }
-  const folio = app.state.folios[app.folio];
-  app.currentLines = folio ? folio.lines : [];
-  if (!folio || !folio.lines.length) {
-    host.appendChild(el("div", { class: "ed-empty", text: "This folio has no transcribed text." }));
+  const continuous = app.viewMode === "continuous";
+  host.classList.toggle("continuous", continuous);
+  const folios = app.state.folios;
+  if (!folios.length) {
+    app.currentLines = [];
+    host.appendChild(el("div", { class: "ed-empty", text: "This document has no transcribed text." }));
     return;
   }
   const mentions = entityMetaMap();
+  if (continuous) {
+    // All folios stacked under page separators. The "active" folio (which the
+    // facsimile tracks) stays app.folio and follows the hovered line.
+    app.currentLines = (folios[app.folio] || {}).lines || [];
+    folios.forEach((folio, fi) => {
+      host.appendChild(renderPageSeparator(folio, fi));
+      renderFolioInto(host, folio, fi, mentions);
+    });
+  } else {
+    const folio = folios[app.folio];
+    app.currentLines = folio ? folio.lines : [];
+    if (!folio || !folio.lines.length) {
+      host.appendChild(el("div", { class: "ed-empty", text: "This folio has no transcribed text." }));
+      return;
+    }
+    renderFolioInto(host, folio, app.folio, mentions);
+  }
+}
+
+/** A labelled rule between pages in the continuous view; a click activates that
+ *  page so the facsimile tracks it. */
+function renderPageSeparator(folio, fi) {
+  const label = folio.n != null ? `Page ${folio.n}` : `Page ${fi + 1}`;
+  const sep = el("div", { class: "ed-page-sep", dataset: { folio: String(fi) } },
+    [el("span", { class: "ed-page-sep-label", text: label })]);
+  sep.addEventListener("click", () => {
+    if (app.folio === fi) return;
+    app.folio = fi;
+    app.currentLines = (app.state.folios[fi] || {}).lines || [];
+    updateFolioButtons();
+    renderActivePanel();
+  });
+  return sep;
+}
+
+/** Render one folio's lines into host. folioIndex tags each row and cell so the
+ *  line<->facsimile link resolves the right page in the continuous view. */
+function renderFolioInto(host, folio, folioIndex, mentions) {
+  // The gutter shows the document's own line label (@n). When this folio numbers
+  // no line (e.g. a plaintext draft emits bare <lb/>), fall back to a display-only
+  // 1-based position so the gutter still aids navigation; it is rendered faint and
+  // never written to the document. A folio that numbers any line keeps the @n and
+  // leaves unnumbered lines blank, so a real label never mixes with a synthetic one.
+  const hasDocN = folio.lines.some((l) => l.n != null);
   folio.lines.forEach((line, lineIndex) => {
-    const row = el("div", { class: "ed-line", dataset: { line: String(lineIndex) } });
-    // The line label (the document's @n) sits in the gutter; the cells go into a
-    // body cell that wraps independently of the fixed-width number channel.
-    row.appendChild(el("span", { class: "ed-line-n", text: line.n != null ? line.n : "" }));
+    const row = el("div", { class: "ed-line", dataset: { folio: String(folioIndex), line: String(lineIndex) } });
+    // The line label sits in the gutter; the cells go into a body cell that wraps
+    // independently of the fixed-width number channel.
+    const docN = line.n != null;
+    const label = docN ? line.n : (hasDocN ? "" : String(lineIndex + 1));
+    row.appendChild(el("span", { class: "ed-line-n" + (!docN && !hasDocN ? " pos" : ""), text: label }));
     const body = el("span", { class: "ed-line-body" });
     line.cells.forEach((cell, k) => {
       if (k > 0) body.appendChild(document.createTextNode(" "));
@@ -825,7 +936,7 @@ function renderReading() {
       const baseTitle = critTitle(cell, note, meta, !!semWrap);
       const span = el("span", {
         class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + semClass,
-        dataset: { id: cell.id, line: String(lineIndex), start: String(cell.start) },
+        dataset: { id: cell.id, folio: String(folioIndex), line: String(lineIndex), start: String(cell.start) },
         text: display,
         title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
       });
@@ -842,7 +953,14 @@ function renderReading() {
         if (cell.gap) { beginCritic(span, cell); return; }
         if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
         if (semWrap) { annot.openAttrEditor(span, cell); return; }
-        // plain reading text: the click is just a cursor, not a command
+        // Line-level edits on a single click (operator: "einfach reinklicken"): a
+        // plain click on a line opens its text editor. Word-level keeps the
+        // cursor-only click (the scholarly paradigm); a drag still selects words to
+        // annotate in both, since a non-collapsed selection returned above.
+        if (app.state.profile === "line") {
+          const c = app.state.cellById.get(cell.id);
+          if (c) beginTextInput(span, c);
+        }
       });
       span.addEventListener("dblclick", (e) => {
         e.stopPropagation();
@@ -856,7 +974,7 @@ function renderReading() {
         if (c.w && c.node.parent === c.w.el) beginReadingsInput(span, c);
         else beginTextInput(span, c);
       });
-      span.addEventListener("mouseenter", () => highlightLine(lineIndex));
+      span.addEventListener("mouseenter", () => highlightLine(folioIndex, lineIndex));
       span.addEventListener("mouseleave", () => clearLinks());
       body.appendChild(span);
     });
@@ -1342,9 +1460,10 @@ function renderFacsimile() {
   if (!ctrl) return;
   const folio = app.state.folios[app.folio];
   const surface = folio && folio.surface;
-  // Prefer the hardcoded demo image base; otherwise fall back to a <graphic url>
-  // carried by the surface itself, so any opened TEI with facsimile images shows.
-  const imageUrl = imageUrlForFolio(app.folio) || (surface && surface.graphic) || null;
+  // Prefer the hardcoded demo image base; otherwise resolve the surface's
+  // <graphic url> (absolute URL, or a local filename via the page-image store),
+  // so opened TEI and on-ramp drafts with attached page images both show.
+  const imageUrl = imageUrlForFolio(app.folio) || pageImageStore.resolve(surface) || null;
   ctrl.showPage({
     imageUrl,
     surface,
@@ -1415,6 +1534,12 @@ async function save() {
   // Whether THIS document owns the recovery slot: only a draft's own save may
   // clear it; saving an unrelated document must not discard a stored draft.
   const wasDraft = documentFacts.isUnsavedDraft();
+  // Built before a folder was opened? Adopt the open folder as the save target
+  // so this first Save lands the .xml AND the pending page images together.
+  if (!app.fileHandle && !(app.saveTarget && app.saveTarget.dir)
+    && app.projectFolder && app.projectFolder.dir && pageImageStore.countUnpersisted() > 0) {
+    app.saveTarget = { dir: app.projectFolder.dir, name: app.docName };
+  }
   // A plaintext draft has no file yet: first save creates the .xml in the
   // project folder, then the normal in-place path takes over.
   await projectFolderUi.finalizeSaveTarget();
@@ -1425,7 +1550,11 @@ async function save() {
       await writable.close();
       setDirty(false);
       if (wasDraft) documentFacts.clearDraftRecovery(); // the draft now has a real file
-      setStatus(`Saved in place: ${app.docName}`);
+      // Attached page images live next to the TEI in the same folder.
+      const img = await pageImageStore.persist(app.projectFolder && app.projectFolder.dir);
+      const note = img.written ? `, ${img.written} page image(s)` : "";
+      const failNote = img.failed ? ` (${img.failed} image(s) could not be written)` : "";
+      setStatus(`Saved in place: ${app.docName}${note}${failNote}`);
       return;
     } catch (err) {
       setStatus(`Save in place failed (${err.message}); downloading instead`);
@@ -1436,6 +1565,12 @@ async function save() {
   // The download also produced the TEI file; the draft's recovery slot (and
   // only the draft's) is no longer the only copy.
   if (wasDraft) documentFacts.clearDraftRecovery();
+  // A plain download carries only the XML: attached page images stay behind.
+  const pending = pageImageStore.countUnpersisted();
+  if (pending) {
+    setStatus(`Downloaded ${app.docName || "edition.xml"}. ${pending} attached page image(s) are NOT in the download; `
+      + "open or create a project folder and Save to keep the images next to the TEI.");
+  }
 }
 
 function download() {
@@ -1505,6 +1640,10 @@ function setupSplitter() {
   const splitter = $("ed-splitter");
   const left = $("ed-pane-left");
   if (!main || !splitter || !left) return;
+  // The collapse handle lives on the splitter; its pointer/double-click events
+  // must not start a resize drag or trigger the reset (its own click toggles).
+  const toggle = $("ed-collapse-btn");
+  if (toggle) ["pointerdown", "dblclick"].forEach((ev) => toggle.addEventListener(ev, (e) => e.stopPropagation()));
   const widthPct = (px) => (px / (main.getBoundingClientRect().width || 1)) * 100;
   const clamp = (pct) => {
     const minPct = widthPct(SPLIT_MIN_PX);
@@ -1557,6 +1696,7 @@ function applyDocLayout() {
   // F4: only restore the reading variant for a document that carries dual
   // readings (it is meaningless otherwise, and the switcher stays hidden).
   if (L.reading === "norm" && app.state && app.state.hasDualReadings) app.readingVariant = "norm";
+  if (L.viewMode === "continuous" && app.state && app.state.folios.length > 1) app.viewMode = "continuous";
 }
 
 // ---- feature modules (M2.13 split) ------------------------------------------
@@ -1588,6 +1728,10 @@ const validationView = createValidationView({ app });
 const documentFacts = createDocumentFacts({
   app, setStatus, setDirty, load, render, renderActivePanel,
 });
+// Page-image store: resolves a surface <graphic url> to a displayable URL and
+// writes attached images next to the TEI on save (used by applyLoad, the
+// facsimile render, save, and the text+image on-ramp).
+const pageImageStore = createPageImages({ app, rerenderPanel: () => renderActivePanel() });
 // LLM on-ramp ("New from text"), hidden while the flag is off. The flag
 // restores the toolbar button and the #generate deep link.
 if (FEATURES.llmOnRamp) {
@@ -1597,6 +1741,32 @@ if (FEATURES.llmOnRamp) {
   // Deep link from the landing page: editor.html#generate opens the LLM entry.
   if (location.hash === "#generate") genModal.open();
 }
+
+/**
+ * Deterministic on-ramp build: the SAME plaintext->TEI draft, plus a <facsimile>
+ * whose surfaces bind by page order to the attached images. Page images are held
+ * in memory (object URLs) until a Save into a project folder writes them to disk;
+ * the on-ramp adopts the open folder as the save target so the first Save lands
+ * the .xml and the images together.
+ */
+async function buildFromTextAndImages({ text, title, images }) {
+  const pageImages = pageImageStore.fromUploads(images);
+  const tei = teiFromPlaintext(text, title, { images: images.map((im) => ({ name: im.name })) });
+  const xmlName = `${title}.xml`;
+  const inFolder = !!app.projectFolder;
+  await adoptDraft({
+    tei, xmlName, txtName: title,
+    project: inFolder ? app.projectFolder.project : null,
+    pageImages,
+    statusMsg: `Crafted ${xmlName} from text with ${images.length} page image(s) attached. `
+      + (inFolder
+        ? "Save writes the TEI and the images into the project folder."
+        : "Save downloads the TEI; open or create a project folder to keep the images with it."),
+  });
+  if (inFolder) app.saveTarget = { dir: app.projectFolder.dir, name: xmlName };
+  setDirty(true);
+}
+const imageOnramp = setupImageOnramp({ build: buildFromTextAndImages });
 
 // ---- wire-up ---------------------------------------------------------------
 
@@ -1635,6 +1805,10 @@ $("menu-new-project").addEventListener("click", () => {
   closeLoadMenu();
   projectFolderUi.newProject();
 });
+$("menu-new-from-text").addEventListener("click", () => {
+  closeLoadMenu();
+  imageOnramp.open();
+});
 // Built-in examples: shown during local development, removed on the public
 // deployment (FEATURES.examples), together with their menu separator.
 if (FEATURES.examples) {
@@ -1666,10 +1840,11 @@ $("variant-dipl").addEventListener("click", () => setReadingVariant("dipl"));
 $("variant-norm").addEventListener("click", () => setReadingVariant("norm"));
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
+$("btn-viewmode").addEventListener("click", () => setViewMode(app.viewMode === "continuous" ? "paged" : "continuous"));
 // Page turning where one expects it: arrow keys, unless typing in an input or
-// an inline chooser is open.
+// an inline chooser is open, or the continuous view (which has no pages to step).
 document.addEventListener("keydown", (e) => {
-  if (!app.state) return;
+  if (!app.state || app.viewMode === "continuous") return;
   if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;

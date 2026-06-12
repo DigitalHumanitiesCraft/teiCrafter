@@ -256,6 +256,31 @@ export function createAnnotationUi(ctx) {
       removeSelPopover();
       revealEntity(cell.mention);
     });
+    if (entity && meta) {
+      // Fix a wrong-type annotation in one step (e.g. "Wien" tagged person, but
+      // Q1741 is the city): move the entity to another list, keeping its id and
+      // authority ids; the mentions stay linked (they point at the xml:id).
+      const KIND_TO_TYPE = { pers: "person", plc: "place", org: "org", wrk: "work", evt: "event" };
+      const curType = KIND_TO_TYPE[meta.kind];
+      btn("change type...", "make this a different type (person, place, ...), keeping its id and authority ids", () => {
+        clear(row);
+        row.appendChild(el("span", { class: "ed-act-group", text: "change type to" }));
+        for (const [type, label] of [["person", "person"], ["place", "place"], ["org", "organisation"], ["work", "work"], ["event", "event"]]) {
+          if (type === curType) continue;
+          const b = el("button", { class: "ed-act-btn", text: label,
+            title: `Make this a ${label}; id and authority ids stay, mentions stay linked` });
+          b.addEventListener("click", (e) => {
+            e.stopPropagation();
+            commitAndReopen(
+              (doc) => standoff.retypeEntity(doc, entity.id, type),
+              `Changed ${entity.name || entity.id} to ${label}`,
+              cell.id,
+            );
+          });
+          row.appendChild(b);
+        }
+      });
+    }
     btn("relink...", "point this text at a different entity", () => {
       clear(row);
       buildEntityChoiceRows(row, cell.text.trim(), (entId) => {

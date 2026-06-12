@@ -46,6 +46,9 @@
                     <button class="ed-dd-item" id="menu-new-project" role="menuitem"
                             title="Write a teicrafter.project.json into a folder and open it as a project">New project...</button>
                     <span class="ed-dd-sep" role="separator"></span>
+                    <button class="ed-dd-item" id="menu-new-from-text" role="menuitem"
+                            title="Build a starting TEI from plaintext and attach page images, in page order, in one step">New from text and images...</button>
+                    <span class="ed-dd-sep" role="separator"></span>
                     <button class="ed-dd-item" data-example="wb" role="menuitem">Wenzelsbibel (Codex 2759, word-level)</button>
                     <button class="ed-dd-item" data-example="zbz" role="menuitem">ZBZ Jeanne Hersch (letter with page scans, line-level)</button>
                     <button class="ed-dd-item" data-example="szd" role="menuitem">Stefan Zweig Digital (letter with GAMS facsimile, line-level)</button>
@@ -58,13 +61,11 @@
             <button class="ed-btn ed-btn-primary" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
             <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
         </div>
+        <!-- Document identity: right-aligned in the toolbar, visible only while a
+             document is loaded; clicking it opens the Document context panel. -->
+        <button class="ed-docstrip" id="ed-docstrip" type="button" hidden
+                title="Open the Document panel with this document's facts"></button>
     </div>
-
-    <!-- Document strip: a slim factual line under the toolbar, visible only while
-         a document is loaded (the empty editor carries no dead chrome). Clicking
-         it activates the Document context panel. -->
-    <button class="ed-docstrip" id="ed-docstrip" type="button" hidden
-            title="Open the Document panel with this document's facts"></button>
 
     <!-- Dual view: two panes, always. The left
          pane is the text work surface (reading text or XML source); the right
@@ -82,6 +83,8 @@
                 <span class="ed-pane-head-right">
                     <button class="ed-val-chip" id="ed-val-chip" type="button" hidden></button>
                     <span class="ed-pager">
+                        <button class="ed-btn ed-pager-btn" id="btn-viewmode" type="button" hidden aria-pressed="false"
+                                title="Page-by-page view. Click for continuous (all pages).">&#9633;</button>
                         <button class="ed-btn ed-pager-btn" id="btn-prev" disabled title="Previous page (ArrowLeft)">&#8249;</button>
                         <span class="ed-folio-label" id="ed-folio-label">-</span>
                         <button class="ed-btn ed-pager-btn" id="btn-next" disabled title="Next page (ArrowRight)">&#8250;</button>
@@ -96,7 +99,6 @@
                         <button class="ed-btn ed-icon-btn" id="ed-zoom-out" type="button" title="Smaller text">A-</button>
                         <button class="ed-btn ed-icon-btn ed-zoom-level" id="ed-zoom-reset" type="button" title="Reset text size">100%</button>
                         <button class="ed-btn ed-icon-btn" id="ed-zoom-in" type="button" title="Larger text">A+</button>
-                        <button class="ed-btn ed-icon-btn" id="ed-collapse-btn" type="button" aria-pressed="false" title="Hide the context pane">&#8677;</button>
                     </span>
                 </span>
             </div>
@@ -109,7 +111,10 @@
 
         <div class="ed-splitter" id="ed-splitter" role="separator" aria-orientation="vertical"
              tabindex="0" aria-label="Resize panes"
-             title="Drag to resize; double-click to reset; arrow keys to nudge"></div>
+             title="Drag to resize; double-click to reset; arrow keys to nudge">
+            <button class="ed-splitter-toggle" id="ed-collapse-btn" type="button" aria-pressed="false"
+                    title="Hide the context pane">&#8677;</button>
+        </div>
 
         <section class="ed-pane" id="ed-pane-right">
             <div class="ed-pane-head">

@@ -91,11 +91,9 @@
 /* Document strip: a slim factual line under the toolbar, visible only while a
    document is loaded. Sunken band, small font, clear hierarchy, no shouting. */
 .ed-docstrip {
-  display: flex; align-items: baseline; gap: var(--space-xs); flex-wrap: wrap;
-  width: 100%; text-align: left; cursor: pointer;
-  padding: var(--space-xs) var(--space-md);
-  background: var(--color-surface-sunken); border: none;
-  border-bottom: 1px solid var(--color-border);
+  display: flex; align-items: baseline; gap: var(--space-xs);
+  margin-left: auto; min-width: 0; cursor: pointer; white-space: nowrap;
+  padding: 2px var(--space-sm); background: transparent; border: none;
   font-family: var(--font-ui); font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
@@ -144,6 +142,29 @@
 .ed-modal-status.err { color: var(--color-problem); }
 .ed-modal-status.busy { color: var(--color-ai); }
 
+/* Deterministic on-ramp (image-onramp.js): the page-image drop zone, the page
+   strip whose order is the page order, and the page/image reconciliation line. */
+.ed-field > span > .ed-btn { margin-left: var(--space-sm); padding: 0 var(--space-xs); font-weight: 400; }
+.onramp-drop {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  padding: var(--space-md); border: 1px dashed var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken); color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.onramp-drop.over { border-color: var(--color-ai); color: var(--color-ai); }
+.onramp-thumbs { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.onramp-thumbs:empty { display: none; }
+.onramp-thumb {
+  display: flex; flex-direction: column; gap: 2px; width: 7.5em; padding: var(--space-xs);
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-panel); }
+.onramp-thumb img { width: 100%; height: 5em; object-fit: contain; background: var(--color-surface-sunken); border-radius: 2px; }
+.onramp-thumb-page { font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-secondary); }
+.onramp-thumb-name { font-size: var(--font-size-xs); color: var(--color-text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.onramp-thumb-ctl { display: flex; gap: 2px; }
+.onramp-mini { flex: 1; padding: 0; min-width: 0; line-height: 1.6; }
+.onramp-reconcile { font-size: var(--font-size-xs); color: var(--color-text-secondary); min-height: 1.2em; }
+.onramp-reconcile.ok { color: var(--color-text-secondary); }
+.onramp-reconcile.warn { color: var(--color-review); }
+
 /* Dual view: two panes, always. Left is the text work surface (reading
    text or XML source, the view tabs switch it); right is the context panel
    (facsimile, entity index, project panels; the panel tabs switch it). */
@@ -153,9 +174,13 @@
   flex: 1; min-height: 0;
 }/* Collapsed: the context pane and the splitter fold away and the text pane
    takes the full width. The @facs click sync then has no visible target. */
-.ed-main.right-collapsed { grid-template-columns: 1fr; }
-.ed-main.right-collapsed > #ed-splitter,
+.ed-main.right-collapsed { grid-template-columns: 1fr 6px; }
 .ed-main.right-collapsed > #ed-pane-right { display: none; }
+/* Collapsed: the splitter stays as a thin right-edge rail carrying the restore
+   handle, so the collapse control lives on the boundary it acts on. The rail
+   itself is inert (nothing to resize), only its handle stays interactive. */
+.ed-main.right-collapsed > #ed-splitter { cursor: default; }
+.ed-main.right-collapsed > #ed-splitter:hover { background: var(--color-border); }
 /* min-height: 0 on the pane AND its body breaks the min-height:auto chain, so
    tall content (the XML source gutter) scrolls INSIDE the pane instead of
    growing the pane past the viewport. */
@@ -163,9 +188,23 @@
 /* Draggable splitter between the panes: a thin rule whose 6px column widens the
    hit area. Resizable by pointer drag, double-click reset, or arrow keys when
    focused; each pane stays at least 320px wide (clamped in editor-app.js). */
-.ed-splitter { background: var(--color-border); cursor: col-resize; }
+.ed-splitter { background: var(--color-border); cursor: col-resize; position: relative; }
 .ed-splitter:hover { background: var(--color-gold); }
 .ed-splitter:focus-visible { background: var(--color-gold); outline: 2px solid var(--color-gold); outline-offset: -1px; }
+/* Collapse/restore handle mounted on the splitter: a small tab sitting BESIDE the
+   rule (to its left), centred vertically, so it never covers the 6px rail and the
+   full rail stays draggable. Click toggles the context pane; the drag and the
+   double-click reset are suppressed on the tab itself (editor-app.js). */
+.ed-splitter-toggle {
+  position: absolute; top: 50%; right: 100%; transform: translateY(-50%);
+  width: 15px; height: 46px; padding: 0; cursor: pointer; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--color-border); border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: var(--color-panel); color: var(--color-text-secondary);
+  font-size: var(--font-size-xs); line-height: 1;
+}
+.ed-splitter-toggle:hover { border-color: var(--color-gold); color: var(--color-gold); }
+.ed-splitter-toggle:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
 /* Below 900px the panes stack vertically (a splitter makes no sense there): the
    text pane on top, the context pane beneath it. */
 @media (max-width: 900px) {
@@ -280,8 +319,11 @@
   background: var(--color-surface); position: relative; }
 /* Line rows carry an IDE-style gutter: the document's own line label (@n) in a
    fixed, right-aligned mono channel set off by a continuous rule, then the text.
-   The label is the edition's, not a running count, so an unnumbered line shows
-   an empty cell (nothing fabricated) and the rule still runs unbroken. */
+   The label is the edition's @n. When a folio numbers no line at all, the gutter
+   falls back to a display-only 1-based position (.pos), rendered faint and italic
+   so it reads as a navigation aid, not encoded data, and is never serialised. A
+   folio that does carry @n keeps it and leaves unnumbered lines blank, so a real
+   label never sits beside a synthetic one. The rule runs unbroken either way. */
 .ed-line { display: flex; align-items: stretch; }
 .ed-line.linked { background: var(--color-gold-light); border-radius: var(--radius-sm); }
 .ed-line-n { flex: 0 0 3.4em; text-align: right;
@@ -290,7 +332,18 @@
   font-family: var(--font-mono); font-size: var(--font-size-xs);
   line-height: calc(1.9 * var(--ed-read-size)); color: var(--color-text-muted);
   user-select: none; white-space: nowrap; }
+.ed-line-n.pos { font-style: italic; opacity: 0.55; }
 .ed-line-body { flex: 1 1 auto; min-width: 0; padding: 2px 0; }
+/* Continuous view: a labelled rule marks each page break; clicking it makes the
+   facsimile track that page. The first separator needs no top gap. */
+.ed-page-sep { display: flex; align-items: center; gap: var(--space-sm);
+  margin: var(--space-lg) 0 var(--space-sm); cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.ed-page-sep::before, .ed-page-sep::after { content: ""; flex: 1; height: 1px; background: var(--color-border); }
+.ed-page-sep:hover { color: var(--color-text-secondary); }
+.ed-page-sep:hover::before, .ed-page-sep:hover::after { background: var(--color-gold); }
+.ed-page-sep-label { white-space: nowrap; }
+.ed-reading.continuous > .ed-page-sep:first-child { margin-top: 0; }
 .ed-w { cursor: text; padding: 0 1px; border-radius: 2px; }
 .ed-w:hover { background: var(--color-blue-light); }
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }

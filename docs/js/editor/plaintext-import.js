@@ -21,15 +21,25 @@ function escapeText(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+/** Escape a string for use inside a double-quoted attribute (e.g. a filename). */
+function escapeAttr(s) {
+  return escapeText(s).replace(/"/g, "&quot;");
+}
+
 const MARKER = /\|(\d+)\|/g;
+
+// xml:id stem for the generated facsimile surfaces; @facs on each <pb> points here.
+const SURFACE_ID_PREFIX = "surface_";
 
 /**
  * Render one physical input line into TEI tokens. Without a marker this is
  * exactly "<lb/>" + escaped line (the historical shape). With markers the line
  * splits: each non-empty text segment opens an <lb/> line and each marker
- * becomes <pb n="N"/>. At most one space directly bordering a marker is trimmed.
+ * becomes a <pb>. pbTag(n) renders the page-break tag (it owns the running
+ * page index and the optional @facs). At most one space directly bordering a
+ * marker is trimmed.
  */
-function renderLine(line) {
+function renderLine(line, pbTag) {
   MARKER.lastIndex = 0;
   if (!MARKER.test(line)) return "<lb/>" + escapeText(line);
 
@@ -41,7 +51,7 @@ function renderLine(line) {
     let seg = line.slice(pos, m.index);
     if (seg.endsWith(" ")) seg = seg.slice(0, -1);
     if (seg !== "") result += "<lb/>" + escapeText(seg);
-    result += '<pb n="' + m[1] + '"/>';
+    result += pbTag(m[1]);
     pos = m.index + m[0].length;
     if (line[pos] === " ") pos += 1;
   }
@@ -54,10 +64,31 @@ function renderLine(line) {
  * Minimal line-level TEI from plaintext. `title` is the document title
  * (typically the file name without extension). Output newlines are LF;
  * input CRLF/CR are treated as line breaks, not content.
+ *
+ * options.images: page images in page order, e.g. [{ name: "IMG.1.jpg" }, ...].
+ * When given, each <pb> in document order binds by position to the image at the
+ * same index (the leading page is index 0, each |N| marker the next), gets a
+ * @facs pointer, and a matching <facsimile><surface><graphic url> is emitted.
+ * Page-break POSITIONS still come only from the text; the images merely attach.
+ * A page with no image gets no @facs; surplus images (more images than pages)
+ * are dropped here (the on-ramp UI reconciles the counts before calling).
  */
-export function teiFromPlaintext(text, title) {
+export function teiFromPlaintext(text, title, options = {}) {
   const safeTitle = escapeText(String(title || "Untitled"));
+  const images = Array.isArray(options.images)
+    ? options.images.filter((im) => im && im.name)
+    : [];
   const lines = String(text).split(/\r\n|\r|\n/);
+
+  // Each <pb> claims the next page index; an index within the image count also
+  // gets the @facs pointer to its surface. The closure keeps document order
+  // correct across the leading page break and every inline marker.
+  let pageSeq = 0;
+  const pbTag = (n) => {
+    const facs = pageSeq < images.length ? ` facs="#${SURFACE_ID_PREFIX}${pageSeq + 1}"` : "";
+    pageSeq++;
+    return `<pb n="${escapeAttr(String(n))}"${facs}/>`;
+  };
 
   // Group into paragraphs on blank lines (whitespace-only counts as blank).
   const paras = [];
@@ -71,9 +102,21 @@ export function teiFromPlaintext(text, title) {
   }
   if (current.length) paras.push(current);
 
+  // Emit the leading page break first so it claims page index 0, then the body
+  // (whose markers claim the following indices in document order).
+  const leadPb = pbTag(1);
   const body = paras.length
-    ? paras.map((p) => "        <p>" + p.map(renderLine).join("\n          ") + "</p>").join("\n")
+    ? paras.map((p) => "        <p>" + p.map((l) => renderLine(l, pbTag)).join("\n          ") + "</p>").join("\n")
     : "        <p/>";
+
+  // Only surfaces that a <pb> actually references (cap at the page count), so no
+  // orphan surface is written when more images than pages were handed in.
+  const bound = images.slice(0, pageSeq);
+  const facsimile = bound.length
+    ? "  <facsimile>\n"
+      + bound.map((im, i) => `    <surface xml:id="${SURFACE_ID_PREFIX}${i + 1}"><graphic url="${escapeAttr(im.name)}"/></surface>`).join("\n")
+      + "\n  </facsimile>\n"
+    : "";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
@@ -90,9 +133,9 @@ export function teiFromPlaintext(text, title) {
       </sourceDesc>
     </fileDesc>
   </teiHeader>
-  <text>
+${facsimile}  <text>
     <body>
-      <pb n="1"/>
+      ${leadPb}
 ${body}
     </body>
   </text>

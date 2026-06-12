@@ -27,7 +27,7 @@
 
 import { el, clear } from "./dom.js";
 import { serialize, xmlIdSet } from "./edition.js";
-import { firstByLocal, textOf } from "./tei-document.js";
+import { firstByLocal, textOf, textNodes } from "./tei-document.js";
 import { typeForFile } from "./project-manifest.js";
 import { saveDraft, loadDraft, clearDraft } from "./draft-recovery.js";
 import { requireCtx } from "./ctx.js";
@@ -58,7 +58,10 @@ export function createDocumentFacts(ctx) {
     if (!app.state) return null;
     const node = firstByLocal(app.state.doc.root, "title");
     if (!node) return null;
-    const t = textOf(app.state.doc, node).replace(/\s+/g, " ").trim();
+    // textOf is a text-node helper (slices raw by node.start/end); an element node
+    // has no start/end, so pass it the title's descendant text nodes, not the element.
+    const t = textNodes(node).map((tn) => textOf(app.state.doc, tn)).join("")
+      .replace(/\s+/g, " ").trim();
     return t || null;
   }
 

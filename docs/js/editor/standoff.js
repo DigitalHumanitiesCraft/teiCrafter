@@ -341,6 +341,47 @@ export function deleteEntity(doc, id) {
 }
 
 /**
+ * Change an entity's type (person <-> place <-> org <-> event <-> work), keeping
+ * its xml:id, authority idno children, AI marker and any other content, and
+ * moving it into the target list (created if absent). The mentions point at the
+ * unchanged xml:id, so they stay linked; only the entity tag and its name tag are
+ * renamed. Returns a NEW doc, or the SAME doc on a no-op or missing anchor.
+ */
+export function retypeEntity(doc, id, newType) {
+  const el = findEntityElement(doc, id);
+  if (!el || el.outerEnd == null) return doc;
+  const oldType = ENTITY_TO_TYPE[el.localName];
+  const newDesc = TYPE_MAP[newType];
+  if (!oldType || !newDesc || oldType === newType) return doc;
+  const oldDesc = TYPE_MAP[oldType];
+
+  // Transform only this element's own bytes: rename the entity tag and its name
+  // child tag; everything else (xml:id, resp, idno, attributes) is kept verbatim.
+  const qesc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const eq = qesc(el.qname);
+  let frag = doc.raw.slice(el.outerStart, el.outerEnd)
+    .replace(new RegExp("^<" + eq + "(?=[\\s/>])"), "<" + newDesc.entity)
+    .replace(new RegExp("</" + eq + "(\\s*)>$"), "</" + newDesc.entity + "$1>");
+  if (oldDesc.name !== newDesc.name) {
+    const nameEl = firstByLocal(el, oldDesc.name);
+    if (nameEl) {
+      const nq = qesc(nameEl.qname);
+      frag = frag
+        .replace(new RegExp("<" + nq + "(?=[\\s/>])", "g"), "<" + newDesc.name)
+        .replace(new RegExp("</" + nq + "(\\s*)>", "g"), "</" + newDesc.name + "$1>");
+    }
+  }
+
+  // Remove the old element, then insert the transformed one into the target list.
+  let next = spliceDocument(doc, el.outerStart, el.outerEnd, "");
+  const ensured = ensureList(next, newType);
+  next = ensured.doc;
+  if (!ensured.list) return doc; // no standOff anchor: abandon rather than lose the entity
+  const at = ensured.list.contentEnd != null ? ensured.list.contentEnd : ensured.list.stagEnd;
+  return spliceDocument(next, at, at, docNewline(next) + "      " + frag);
+}
+
+/**
  * Confirm an AI-proposed entity: drop its resp="#ai" marker so it reads as a
  * human-verified entity. Reject is just deleteEntity. Returns a NEW doc, or the
  * SAME doc when the entity is absent or carries no AI marker (no-op).

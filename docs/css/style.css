@@ -139,7 +139,13 @@ body {
 .site-head {
     display: flex; align-items: center; gap: var(--space-md);
     height: var(--header-height); padding: 0 var(--space-md);
-    background: var(--color-header); color: var(--color-text-inverse);
+    color: var(--color-text-inverse);
+    /* A barely-there vertical lift (top a hair lighter) and a crisp darker edge,
+       both derived from the header token: depth without gloss or animation. */
+    background: linear-gradient(180deg,
+        color-mix(in srgb, var(--color-header) 88%, white),
+        var(--color-header));
+    border-bottom: 1px solid color-mix(in srgb, var(--color-header) 72%, black);
 }
 .site-logo {
     font-family: var(--font-mono); font-size: var(--font-size-lg); font-weight: 600;
