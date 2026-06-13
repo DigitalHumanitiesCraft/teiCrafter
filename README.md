@@ -161,7 +161,7 @@ The editing core is proven headlessly by exit code; `node test/tools/run_all.mjs
 
 | Proof | Asserts | Result |
 |-------|---------|--------|
-| `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 295/295 |
+| `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 296/296 |
 | `test/tools/generic_roundtrip.mjs` | one engine reads Hersch/WB/SZD; surgical cell edit; model shape | all pass |
 | `test/tools/editor_roundtrip.mjs` | editor core identity + surgical word edit | 13/13 |
 | `test/tools/szd_worked_example.mjs` | real SZD object end-to-end (open, correct, annotate, criticize, save), every step a surgical splice | 38/38 |

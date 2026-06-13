@@ -6,10 +6,12 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, twenty commits ahead of `origin/main` and not yet pushed (this HANDOFF
-update is the tip). The recent commits are this lane's Phase 0 floor, Phase 1 frontend
-gate, landing, Editopia removal, Phase 2 / W3, Phase 3 / W2 and the browser-light W7 / W5
-slice on top of the prior editor commits:
+Branch `main`, pushed to `origin/main` (operator-authorized 2026-06-13), `origin/main` at
+the tip, 0 ahead / 0 behind. The finishing arc and its documentation pass are on the remote;
+GitHub Pages redeploys from `/docs`. The recent commits are this lane's Phase 0 floor, Phase 1
+frontend gate, landing, Editopia removal, Phase 2 / W3, Phase 3 / W2, the browser-light W7 / W5
+slice, the four refactors, and the knowledge/README documentation pass, on top of the prior
+editor commits:
 
 - `59ba247`: refresh the Anthropic model catalog (default claude-haiku-4-5, retired IDs
   dropped) and add SECURITY.md, with llm_catalog_check.
@@ -61,28 +63,15 @@ pure predicate, 7/7), `types_check.mjs` (the engine typing seam), `index_consume
 caret-to-raw-offset mapping), `facsimile_resolver_check.mjs` (the IIIF Presentation parser and
 coordScale, 30 checks), and `llm_catalog_check.mjs` (the model catalog is self-consistent).
 
-One proof is a SKIP-with-reason, which the runner counts as a pass:
-
-- `types_check.mjs` SKIPs. It runs `tsc --noEmit` (a global `tsc`, else
-  `npx -y -p typescript tsc`) over `jsconfig.json` and is a SEAM, not a hard gate. On
-  a clean typecheck it would PASS; when the toolchain is unavailable (no global tsc,
-  npx offline) it SKIPs so the offline gate never hard-FAILs; and it SKIPs when tsc
-  reports diagnostics, printing them for the record. It currently reports three
-  diagnostics over `tei-document.js` that come from TypeScript's structural inference
-  over existing executable engine code, not from the JSDoc: the dual element/text node
-  shape pushed into the root's children (the parse loop), the incrementally built
-  `surf` object literal in `readSurfaces`, and the empty-object accumulator in
-  `countLocals`. Closing them would require editing engine logic, which is out of
-  scope for a comments-only typing seam, so they are recorded and the gate stays
-  green. They are tracked under open threads.
+`types_check.mjs` now PASSES clean (1/1): refactor `ae9597c` closed the engine's typecheck
+under checkJs, including a JSDoc bug where an `@n` tag written inside a property description
+had been silently dropping the surface typedef. It runs `tsc --noEmit` (a global `tsc`, else
+`npx -y -p typescript tsc`) over `jsconfig.json` and stays a SEAM, not a hard gate: a missing
+toolchain (no global tsc, npx offline) or any residual structural-inference diagnostic is
+recorded and SKIPped (a SKIP-with-reason counts as a pass), so the offline gate never hard-FAILs.
 
 ## Open threads
 
-- Decide whether to close the three `types_check.mjs` diagnostics. Each needs a small
-  engine type or code touch (a shared node type for the dual element/text shape, an
-  up-front typed `surf` literal, a typed accumulator init in `countLocals`); none is a
-  behaviour change, but all touch executable code, so they were deliberately left for
-  a logic-owning lane rather than the comments-only seam.
 - Phase 2 / W3 is done and committed (the manifest-driven index panel, empty-project
   onboarding, the draft badge). Remaining in Phase 2 is W4: the validation honesty pass
   (the validation/landing lane is already in it, see handoffs) and on-demand in-browser
@@ -105,10 +94,11 @@ One proof is a SKIP-with-reason, which the runner counts as a pass:
 - The product gate is accumulating unrun browser checks across four integrator rounds (W3 x2, W2, W7):
   VC-1..12, VC-F-1..4, VC-AUTHOR-1..4, VC-RACE-*, VC-2 (facsimile). An operator Chromium pass and the
   validation lane committing its in-flight diff are the two steps that unblock most of the rest.
-- Frontend follow-up: now that the popover fix is committed, export `shouldDismissPopover`
-  from `annotation-ui.js` and import it into `interaction_check.mjs` so the proof and the
-  handler cannot drift; fold the interaction-surface map into `architecture.md` and
-  reference `BROWSER-CHECKS.md` from `testing.md` (knowledge docs are another lane's).
+- Frontend follow-up: the popover-dismiss predicate is now a shared module
+  (`interaction-rules.js`, refactor `fe540fa`), imported by both the handler and
+  `interaction_check.mjs` so they cannot drift, and `testing.md` now carries a
+  Frontend-verification floor section referencing `BROWSER-CHECKS.md`. Still owed: fold the
+  interaction-surface map into `architecture.md` (lane-owned, see the documentation debt below).
 - The hsa-7711 letter walkthrough end-to-end in the browser is the operator's product gate;
   the procedure is now written as `test/acceptance/BROWSER-CHECKS.md` (VC-HSA), pending the
   operator's dated pass.
@@ -138,6 +128,50 @@ live-validation neutral-info-row edits in `knowledge/architecture.md`, `design.m
   avoid clobbering. The W4 validation tooltip honesty (live = well-formed plus lossless;
   deeper TEI RelaxNG and Schematron run offline in the harness today) belongs in the same
   lane's validation-view.js, not here.
+
+## Documentation debt (audited 2026-06-13)
+
+An adversarial doc-coverage audit (five parallel auditors) confirmed the engine and editor code
+is committed and pushed, but `architecture.md`, `design.md` and `specification.md` predate most
+of the arc and carry both omissions and now-false statements. They are lane-owned (uncommitted
+validation edits in the working tree), so these writes must wait until the lane commits, to avoid
+clobbering. The audit yielded a concrete, ready-to-apply list:
+
+- **architecture.md** was last touched at the arc's second commit; the back half is unreflected
+  and three statements are now FALSE. Correct: the author-mode primitives are called "not yet
+  UI-wired" in three places (lines 57, 122, 189) though `d35a062` wired them into the reading
+  context menu (the neutral Structure group); `insertLb` is called a "bare `<lb/>`" though
+  `3c5b78f` made it namespace-faithful; the structural-proof pointer still reads
+  `tests/structural.test.mjs` though it moved to `test/tools/structural_check.mjs`. Add:
+  `edition.js cellRawOffset`, `interaction-rules.js` (shouldDismissPopover), the typing seam
+  (`jsconfig.json` + `types_check` + the tei-document JSDoc typedefs), the IIIF Presentation
+  resolver (`facsimile.js` coordScale, `project-manifest.js` `iiif-presentation` type + METS
+  rejection, `app.coordScale`), `project-profiles.js parseIiifPresentationManifest`. Move from
+  "future (Package F)" to built: manifest-driven index sections, empty-project onboarding, the
+  neutral draft badge (banner -> badge); drop the removed document-facts helpers; add the
+  `llm.js pickModel` fallback as a behavioural line.
+- **specification.md** predates the whole arc; seven audited decisions are unrecorded as built
+  and several are mis-framed as "future" or "open question" though shipped. Record as Key
+  Decisions / acceptance scenarios: the IIIF Presentation resolver + explicit METS deferral
+  (narrow the "future"/open-question lines to the live pre-resolution fetch only); the
+  author-mode structural ops (and revise line 191, which still lists element insertion as out of
+  scope); the model catalog refresh + `pickModel` fallback + SECURITY.md; the
+  frontend-verification floor as an acceptance principle; empty-project onboarding; the neutral
+  draft badge (line 40 still says "banner"); index sections from declared manifest indices
+  (correct lines 173/187/188 "consumers still to come"). Fix the stale round-trip count at
+  line 85: `295/295` -> `296/296`. Bump version and the updated date.
+- **design.md** reflects index-as-overview, the popover TEI-role colours and the draft-badge
+  neutral rule well; missing: the author-mode Structure gestures in the context-menu enumeration
+  (line 70) and their neutral colour family relative to blue=annotate / gold=write; the index's
+  manifest-driven and read-only sections; and the draft-badge passage (lines 79, 81), which still
+  frames the strip badge as a future "package F" merge though it shipped.
+- Repo-wide `version:` bump belongs with this pass (all knowledge docs move together;
+  `converter-reference.md` keeps its own scheme by design).
+
+The audit also caught one real overclaim in the committed docs, now FIXED in this lane's scope
+(`testing.md`, `README.md`, `INDEX.md`, `integration.md`): the round-trip sweep is `296/296`
+(6 synthetic), not `295/295` (5), because the dual-reading fixture was added without updating the
+count. Only `specification.md`'s copy of the stale figure remains, listed above.
 
 ## Working model
 

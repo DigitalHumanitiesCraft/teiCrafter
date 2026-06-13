@@ -31,7 +31,7 @@ The promise is "read arbitrary TEI and save it byte-losslessly". These prove it 
 
 | Proof | What it asserts | Result |
 |-------|-----------------|--------|
-| `test/tools/roundtrip_sweep.mjs` | Every real TEI file tokenizes contiguously and `serialize()` is byte-identical to the input | 295/295 byte-identical (285 Hersch, 5 SZD, 5 synthetic) |
+| `test/tools/roundtrip_sweep.mjs` | Every real TEI file tokenizes contiguously and `serialize()` is byte-identical to the input | 296/296 byte-identical (285 Hersch, 5 SZD, 6 synthetic) |
 | `test/tools/generic_roundtrip.mjs` | One engine reads Hersch (line-level), Wenzelsbibel (word-level) and SZD (catalog); recognizers find pb/lb/zones; a cell edit is a surgical splice; the editor model shape is correct | all checks pass |
 | `test/tools/editor_roundtrip.mjs` | The editor edition-core API: identity round-trip is byte-identical; a word edit is surgical; the harness localizes exactly that change | 13/13 |
 | `test/tools/edit_fidelity.mjs` | Edits stay byte-faithful over character/entity references (a no-op edit of a cell or attribute holding `&nbsp;`/`&#233;`/`&quot;`/`&apos;` is byte-identical, a real edit preserves a neighbouring entity); `addEntity` degrades gracefully on header-less or element-free TEI; relinking a mention retargets `@ref` without nesting `<name>`; the integrity baseline tracks real `@xml:id`, stable across a lossless line-emptying edit | 21/21 |
@@ -122,7 +122,7 @@ The verification methods are complementary, not alternatives: each answers a dif
 
 | Question | Method | Level | Proof |
 |----------|--------|-------|-------|
-| Was everything processed? | Coverage sweep: counts over the whole corpus | automatic | 285/285 Hersch load, 295/295 round-trip, every SZD demo file converts |
+| Was everything processed? | Coverage sweep: counts over the whole corpus | automatic | 285/285 Hersch load, 296/296 round-trip, every SZD demo file converts |
 | Is the output valid TEI? | Well-formedness + schema (TEI All RNG + Schematron; ZBZ also `zbz_hersch.rng`) | automatic | L2, green/red |
 | Is nothing lost, and is the only change the intended one? | Round-trip byte-identity + L1 text + L3 counts + diff-is-exactly-intent | contextual | byte-identical (`roundtrip_sweep.mjs`, `edit_fidelity.mjs`) |
 | Does the intended use actually work for a human? | Walk each demo-critical acceptance scenario as a concrete path in the browser on a real object | visual | observed; the part headless tests cannot cover (the Browser-check scenarios in [specification](specification.md)) |
@@ -168,7 +168,7 @@ Real third-party files (Hersch, SZD, any ONB codex slice) live only under the gi
 
 ```
 node test/tools/run_all.mjs                # THE regression gate: every proof below in one run (--list, name filter)
-node test/tools/roundtrip_sweep.mjs        # 295/295 byte-identical (reads source repos)
+node test/tools/roundtrip_sweep.mjs        # 296/296 byte-identical (reads source repos)
 node test/tools/generic_roundtrip.mjs      # one engine over Hersch / WB / SZD
 node test/tools/editor_roundtrip.mjs       # editor core vs harness, 13/13
 node test/tools/edit_fidelity.mjs          # entity-faithful edits + standOff guard, 21/21

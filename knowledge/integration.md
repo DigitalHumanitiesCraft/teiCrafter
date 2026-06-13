@@ -113,8 +113,8 @@ The five entity types are person, place, org, work, event.
 loaded baseline (xml:id set, tag counts). Offline harness: L1 text/word fidelity (gating),
 L2 RelaxNG (tei_all) + Schematron (reported, non-gating), L3 element-count / namespace /
 pointer integrity (gating). MVP gate = well-formed AND L1 AND L3. Engine proofs (Node,
-re-runnable): `test/tools/roundtrip_sweep.mjs` (295/295 byte-identical: 285 Hersch, 5 SZD,
-5 synthetic), `test/tools/hersch_loadability.mjs` (285/285 usable editor view), plus
+re-runnable): `test/tools/roundtrip_sweep.mjs` (296/296 byte-identical: 285 Hersch, 5 SZD,
+6 synthetic), `test/tools/hersch_loadability.mjs` (285/285 usable editor view), plus
 generic/editor/edit-fidelity/selftest harnesses.
 
 **Corpus.** Hersch line-level (reads directly), Wenzelsbibel word-level (reads directly),
