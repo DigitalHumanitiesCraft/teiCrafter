@@ -353,8 +353,8 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
   app.project = project || detectProject(app.state.doc);
-  // Load provenance for the Document panel's Source row. Default: an opened TEI
-  // file. The plaintext and example paths override this after load() returns.
+  // Load provenance for the draft badge in the document strip. Default: an opened
+  // TEI file. The plaintext and example paths override this after load() returns.
   app.source = { kind: "tei" };
   app.markup = resolveMarkup(app.project, name, guidelinesNow());
   maybePrefetchGuidelines(name);
@@ -378,8 +378,10 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // silently discard a stored draft. It clears only when the draft itself is
   // saved or the operator discards the offer; a new draft overwrites the slot.
   markGenerated(false); // opening a real file clears the AI-generated flag
-  // The plaintext-draft banner belongs to a draft only; any load hides it, the
-  // draft paths re-show it afterwards. It must never linger over an opened .xml.
+  // The draft badge is derived from app.source, which this load already reset to
+  // { kind: "tei" }; refreshing the strip clears any draft badge from a prior
+  // document. The draft paths re-set app.source afterwards. It must never linger
+  // over an opened .xml.
   documentFacts.hideDraftBanner();
   refreshAfterStandoffEdit();
   // A folder-opened edition resolves its page-image filenames against the folder
@@ -416,8 +418,7 @@ async function adoptDraft({ tei, xmlName, txtName, project, pageImages, statusMs
   await load(tei, xmlName, null, project || null, pageImages ? { pageImages } : undefined);
   app.source = { kind: "draft", txtName };
   if (statusMsg) setStatus(statusMsg);
-  documentFacts.showDraftBanner(txtName);
-  documentFacts.updateDocStrip();
+  documentFacts.updateDocStrip(); // app.source set above; the strip derives the draft badge
   renderActivePanel();
 }
 
@@ -992,9 +993,9 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
 function renderEmptyReading(host) {
   const box = el("div", { class: "ed-empty-start" });
   box.appendChild(el("p", { class: "ed-empty-lead",
-    text: "Open a TEI document or a project folder to start editing." }));
+    text: "Open a TEI document, open a project folder, or start from a plaintext file." }));
   box.appendChild(el("p", { class: "ed-empty-hint",
-    text: "Use the Load... menu above, or drop a .xml, .txt or .md file anywhere on this page. Plaintext opens as a line-level draft; saving produces the TEI file." }));
+    text: "Use the Load... menu above (Open TEI or text, Open project folder, New project), or drop a .xml, .txt or .md file anywhere on this page. A plaintext file opens as a line-level draft; saving produces the TEI file." }));
   documentFacts.renderDraftRecovery(box);
   const recent = el("div", { class: "ed-recent", id: "ed-recent" });
   recent.hidden = true;
@@ -1438,7 +1439,12 @@ function updatePanels() {
   }
   clear(tabsHost);
   for (const p of panels) {
-    const avail = !!app.state && (!p.available || p.available());
+    // Panels need a loaded document, except the project panel: an adopted folder
+    // (with or without an openable file) enables its tab so the empty-project
+    // onboarding note is reachable before any document is open.
+    const avail = p.id === "project"
+      ? !!app.projectFolder
+      : !!app.state && (!p.available || p.available());
     const active = p.id === app.panel;
     const tab = el("button", {
       class: "ed-tab" + (active ? " active" : ""), type: "button", role: "tab",
@@ -1462,9 +1468,11 @@ function showPanel(id) {
 
 /** Render the active panel's content (called by render() and showPanel()). */
 function renderActivePanel() {
-  if (!app.state) return;
+  // The project panel renders before any document is loaded (empty-project
+  // onboarding): an adopted folder with no openable file shows its own note.
   const p = activePanels().find((x) => x.id === app.panel);
   if (!p) return;
+  if (p.id !== "project" && !app.state) return;
   if (p.render) p.render();
   else if (p.mount) p.mount(panelHost(p));
 }
@@ -1749,9 +1757,9 @@ const projectFolderUi = createProjectFolder({
   app, setStatus, setDirty, confirmDiscard, load,
   showPanel, updatePanels, teiVocabularyLine,
   getProjectPanelHost: () => panelHost(activePanels().find((p) => p.id === "project")),
-  // Project-flow plaintext draft: same neutral banner and Source provenance as
-  // the direct draft path (the wording differs: a project draft saves in place).
-  onPlaintextDraft: (txtName) => { app.source = { kind: "draft", txtName }; documentFacts.showDraftBanner(txtName); },
+  // Project-flow plaintext draft: same neutral draft badge and Source provenance
+  // as the direct draft path (the wording differs: a project draft saves in place).
+  onPlaintextDraft: (txtName) => { app.source = { kind: "draft", txtName }; documentFacts.updateDocStrip(); },
 });
 const validationView = createValidationView({ app });
 const documentFacts = createDocumentFacts({
@@ -1883,10 +1891,6 @@ document.addEventListener("keydown", (e) => {
 });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
-
-// The document strip displays the loaded document's facts inline; its Dismiss
-// button hides the plaintext-draft banner until the next draft.
-$("ed-draftbanner-dismiss").addEventListener("click", documentFacts.hideDraftBanner);
 
 // View controls: text zoom (a global preference) and the context-pane collapse
 // toggle. Ctrl/Cmd+\ mirrors the collapse button; the splitter resizes the panes.

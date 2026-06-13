@@ -50,7 +50,15 @@ export function createProjectFolder(ctx) {
     const vocab = teiVocabularyLine();
     if (vocab) host.appendChild(el("div", { class: "ed-proj-vocab", text: vocab }));
     if (!pf.files.length) {
-      host.appendChild(el("p", { class: "ed-proj-empty", text: "No .xml, .txt or .md files in this folder yet." }));
+      // Onboarding for an adopted but empty project: state the two ways to get a
+      // document into the editor, in plain terms. Reuses the project-panel tones.
+      host.appendChild(el("p", { class: "ed-proj-empty",
+        text: "This project folder has no .xml, .txt or .md files yet." }));
+      host.appendChild(el("p", { class: "ed-proj-empty",
+        text: "Add a TEI .xml or a plaintext .txt/.md file to the folder on disk, then reopen "
+          + "the folder (Load... > Open project folder). A plaintext file opens as a line-level "
+          + "draft and the first save writes the .xml next to it. You can also start from text "
+          + "now with Load... > Open TEI or text, then save into this folder." }));
       return;
     }
     const list = el("div", { class: "ed-proj-list" });
@@ -115,7 +123,13 @@ export function createProjectFolder(ctx) {
     const teiCount = files.filter((x) => x.kind === "tei").length;
     setStatus(`Project folder "${app.projectFolder.name}": ${files.length} file(s) (${teiCount} TEI, ${files.length - teiCount} plaintext).${note}`);
     if (files.length) await openProjectFile(files[0]);
-    else updatePanels();
+    else {
+      // No openable document: surface the project panel so its onboarding note
+      // (how to add a document or start from text) is what the operator sees,
+      // not the bare empty reading pane.
+      updatePanels();
+      showPanel("project");
+    }
   }
 
   async function openProjectFolder() {

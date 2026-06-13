@@ -2,11 +2,11 @@
  * teiCrafter Editor -- document-identity surfaces.
  *
  * The factual, no-invented-data views of the loaded document: the slim strip
- * under the toolbar (#ed-docstrip), the small derivations it shares (editing
- * unit, title, source wording, save target), the plaintext-draft banner
- * (#ed-draftbanner), and the unsaved-draft recovery wiring (persist a handle-less
- * plaintext draft to localStorage on the first dirty change, offer to restore it
- * in the empty reading pane).
+ * under the toolbar (#ed-docstrip), including the neutral plaintext-draft badge;
+ * the small derivations it shares (editing unit, title, source wording, save
+ * target); and the unsaved-draft recovery wiring (persist a handle-less plaintext
+ * draft to localStorage on the first dirty change, offer to restore it in the
+ * empty reading pane).
  *
  * Contract:
  *   createDocumentFacts(ctx) -> {
@@ -83,7 +83,8 @@ export function createDocumentFacts(ctx) {
 
   /**
    * The slim document strip under the toolbar: factual, dot-separated, no invented
-   * data. Visible only while a document is loaded; a click opens the Document panel.
+   * data. Visible only while a document is loaded. It also carries the draft status
+   * as a neutral badge (see draftBadgeText); there is no separate Document panel.
    */
   function updateDocStrip() {
     const strip = $("ed-docstrip");
@@ -96,6 +97,19 @@ export function createDocumentFacts(ctx) {
       text: app.docName || "" });
     if (app.dirty) name.title = "Unsaved changes";
     strip.appendChild(name);
+
+    // Draft badge: a plaintext-derived, machine-transport, unsaved draft. Neutral
+    // by construction (the strip-fact tone, --color-text-secondary), never the
+    // violet --color-ai: a deterministic line-by-line transport is not AI output.
+    if (isUnsavedDraft()) {
+      strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
+      const badge = el("span", { class: "ed-docstrip-fact",
+        text: draftBadgeText(),
+        title: "A draft built from a plaintext file: each line became an editable "
+          + "line and the text was carried over verbatim, no model involved. Your "
+          + "source file is untouched; saving produces the TEI file. Not yet saved." });
+      strip.appendChild(badge);
+    }
 
     const facts = [];
     const project = activeProject();
@@ -111,23 +125,28 @@ export function createDocumentFacts(ctx) {
     }
   }
 
-  // ---- plaintext-draft banner -----------------------------------------------
-  // Deterministic transport, not AI: neutral surface family, never the violet
-  // --color-ai. Shown after any plaintext draft creation; dismissible; re-shown
-  // only on the next draft. Never shown for an opened .xml.
+  /** The draft badge wording, naming the plaintext source when it is known. */
+  function draftBadgeText() {
+    const src = app.source && app.source.txtName ? app.source.txtName : null;
+    return src ? `Draft from ${src} (unsaved)` : "Draft from text (unsaved)";
+  }
+
+  // ---- plaintext-draft status -----------------------------------------------
+  // The draft status lives in the document strip as a neutral badge (updateDocStrip),
+  // derived from app.source; there is no standalone banner. These two remain as the
+  // call-site contract: a draft load records its source and refreshes the strip, any
+  // other load clears the source so the badge disappears. Deterministic transport,
+  // not AI: the badge is neutral, never the violet --color-ai.
 
   function showDraftBanner(txtName) {
-    const banner = $("ed-draftbanner");
-    const text = $("ed-draftbanner-text");
-    if (!banner || !text) return;
-    text.textContent = `Drafted from ${txtName}: each line became an editable line, the text was `
-      + "carried over verbatim. Your source file is untouched; saving produces the TEI file.";
-    banner.hidden = false;
+    if (txtName && (!app.source || app.source.kind !== "draft")) {
+      app.source = { kind: "draft", txtName };
+    }
+    updateDocStrip();
   }
 
   function hideDraftBanner() {
-    const banner = $("ed-draftbanner");
-    if (banner) banner.hidden = true;
+    updateDocStrip();
   }
 
   // ---- unsaved-draft recovery -----------------------------------------------
