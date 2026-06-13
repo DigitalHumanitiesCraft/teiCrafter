@@ -6,11 +6,15 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, seventeen commits ahead of `origin/main` and not yet pushed (this HANDOFF
+Branch `main`, twenty commits ahead of `origin/main` and not yet pushed (this HANDOFF
 update is the tip). The recent commits are this lane's Phase 0 floor, Phase 1 frontend
-gate, landing, Editopia removal, Phase 2 / W3 and Phase 3 / W2 work on top of the prior
-editor commits:
+gate, landing, Editopia removal, Phase 2 / W3, Phase 3 / W2 and the browser-light W7 / W5
+slice on top of the prior editor commits:
 
+- `59ba247`: refresh the Anthropic model catalog (default claude-haiku-4-5, retired IDs
+  dropped) and add SECURITY.md, with llm_catalog_check.
+- `b9e21fd`: IIIF Presentation manifest resolver (v2/v3 parser), facsimile coordScale, METS
+  rejected, with facsimile_resolver_check; the live manifest pre-resolution is deferred.
 - `bb20878`: browser-acceptance checks VC-AUTHOR-1..4 (split, merge, insert lb, delete-empty).
 - `d35a062`: author-mode structural acts in the reading context menu (split/merge/insert/delete
   through commitStandoff, each re-finding its target by raw outerStart, no node held across the
@@ -49,12 +53,13 @@ the validation/landing lane (`docs/css/editor.css`, `docs/js/editor/standoff.js`
 
 ## Proof state (run 2026-06-13)
 
-`node test/tools/run_all.mjs` discovers 33 proofs, all 33 pass. This lane added
+`node test/tools/run_all.mjs` discovers 35 proofs, all 35 pass. This lane added
 `structural_check.mjs` (the structural-primitives proof, now in the gate, with insertLb
 milestone-fidelity assertions), `interaction_check.mjs` (the popover-dismissal invariant as a
 pure predicate, 7/7), `types_check.mjs` (the engine typing seam), `index_consumer_check.mjs`
-(the manifest-driven index sections), and `author_caret_check.mjs` (the entity-aware
-caret-to-raw-offset mapping).
+(the manifest-driven index sections), `author_caret_check.mjs` (the entity-aware
+caret-to-raw-offset mapping), `facsimile_resolver_check.mjs` (the IIIF Presentation parser and
+coordScale, 30 checks), and `llm_catalog_check.mjs` (the model catalog is self-consistent).
 
 One proof is a SKIP-with-reason, which the runner counts as a pass:
 
@@ -86,11 +91,20 @@ One proof is a SKIP-with-reason, which the runner counts as a pass:
 - Phase 3 / W2 author-mode is done and committed (context-menu split/merge/insert-lb/delete-empty
   through commitStandoff, namespace-faithful insertLb, the caret helper). Its browser behavior
   (context menu, caretPositionFromPoint, live split/merge) is operator-gated: VC-AUTHOR-1..4.
-- Phase 4 next: W7 (IIIF Presentation-manifest resolver, coordScale, read corresp range() pointers)
-  and W8 (measure large-document performance first, then a size guard for continuous view).
-- The product gate is accumulating unrun browser checks across three integrator rounds
-  (W3 x2 + W2): VC-1..12, VC-F-1..4, VC-AUTHOR-1..4, VC-RACE-*. An operator Chromium pass is the
-  next real de-risking step before more is stacked on editor-app.js.
+- Phase 4 / W7 partial: the IIIF Presentation parser, coordScale and METS rejection are done and
+  committed. DEFERRED: the live async manifest pre-resolution on project load (editor-app.js, more
+  than a small change), per-page coordScale on showPage, and the corresp range() pointer read
+  (standoff.js, lane-owned, blocked).
+- W5 catalog refresh and SECURITY.md done; the AI in-text proposals (standoff.js proposeEntitiesInText)
+  are blocked on standoff.js (lane-owned).
+- Remaining open work, each with a gate: W8 streaming (needs the local WB codex and an operator call
+  on whether per-edit latency is felt; the continuous-view size guard is codex-independent), W4
+  Schematron (operator decision: vendor the ISO XSLT vs a documented subset), the W4 validation tooltip
+  honesty (validation-view.js, lane-owned), and the W3/W2/W7 knowledge-doc updates
+  (architecture.md/specification.md, lane-owned).
+- The product gate is accumulating unrun browser checks across four integrator rounds (W3 x2, W2, W7):
+  VC-1..12, VC-F-1..4, VC-AUTHOR-1..4, VC-RACE-*, VC-2 (facsimile). An operator Chromium pass and the
+  validation lane committing its in-flight diff are the two steps that unblock most of the rest.
 - Frontend follow-up: now that the popover fix is committed, export `shouldDismissPopover`
   from `annotation-ui.js` and import it into `interaction_check.mjs` so the proof and the
   handler cannot drift; fold the interaction-surface map into `architecture.md` and
