@@ -35,6 +35,29 @@ export function searchUrl(authority, query, opts = {}) {
   }
 }
 
+/**
+ * Resolve an authority id (the bare value stored in <idno type="...">) to the
+ * register's public record page, so an attached id can be verified in one click.
+ * Pure: no fetch. Returns null for an unknown register or an empty value; a value
+ * that is already an http(s) URI is returned unchanged (some editions store the
+ * full URI rather than the bare id).
+ */
+export function recordUrl(authority, value) {
+  const v = String(value == null ? "" : value).trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  switch (authority) {
+    case "GND":
+      return "https://d-nb.info/gnd/" + encodeURIComponent(v);
+    case "Wikidata":
+      return "https://www.wikidata.org/wiki/" + encodeURIComponent(v);
+    case "GeoNames":
+      return "https://www.geonames.org/" + encodeURIComponent(v);
+    default:
+      return null;
+  }
+}
+
 function gndDescription(hit) {
   const bio = hit.biographicalOrHistoricalInformation;
   if (Array.isArray(bio) && bio.length) return String(bio[0]);

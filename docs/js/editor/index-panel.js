@@ -66,16 +66,17 @@ export function createIndexPanel(hostEl, hooks = {}) {
   // ---- one entity row ------------------------------------------------------
 
   function buildRow(entity) {
-    const row = el("div", {
-      class: "ed-idx-row" + (entity.ai ? " ed-idx-row-ai" : ""),
-      dataset: { id: entity.id, name: entity.name || "" },
-    });
-
     // Editorial-gap flags (categorical, never violet): an entry with no authority
     // id yet, or with no in-text mention (an orphan), so a reviewer can see the
-    // work left without opening each entry.
+    // work left without opening each entry. Also mirrored onto the row dataset so
+    // the integrator's "needs work" filter can select them without re-deriving.
     const noId = !(Array.isArray(entity.authorities) && entity.authorities.length);
     const orphan = typeof entity.count === "number" && entity.count === 0;
+
+    const row = el("div", {
+      class: "ed-idx-row" + (entity.ai ? " ed-idx-row-ai" : ""),
+      dataset: { id: entity.id, name: entity.name || "", noid: noId ? "1" : "", orphan: orphan ? "1" : "" },
+    });
 
     // Body: name + faded id + mention count. Clicking it selects the entity
     // (the integrator jumps to its first in-text mention).

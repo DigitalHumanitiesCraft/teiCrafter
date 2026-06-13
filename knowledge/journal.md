@@ -23,6 +23,14 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
 
+## 2026-06-13 (continued): the index panel leans toward overview
+
+Trigger: an operator review of the Index panel against a real annotated letter, asking honestly what to optimise. The diagnosis named the root: the panel had not committed to being an overview, so every row carried the full edit apparatus and read as a dense form, while design.md positions it as overview with the real editing living in the annotation popovers. Three changes follow from that one decision, each using data already computed:
+
+- **Authority-id chips became verify links.** An attached id (GND, Wikidata, GeoNames) now opens its register record in a new tab from where it is shown. The reason is the point of authority control itself: attaching an id you cannot check from where you see it leaves the verification loop open. A pure `recordUrl` resolver (proof-covered, the DOM-free inverse of the lookup URL builder) keeps the deterministic part testable; the link family is the accessible orange, because this is navigation, not the gold action.
+- **A "needs work" filter** (All / Missing id / No mention) restricts the index to the entries still lacking an authority id or an in-text mention. The categorical gap flags already existed per row but were not actionable as a worklist; the panel's real job is reconciliation, so the unfinished entries are now one click away. It combines with the text filter and reads the per-row flags rather than re-deriving them.
+- **Row actions rest quiet**, coming forward on hover or keyboard focus, so the resting panel scans as an overview instead of competing three buttons per row with the data. Reachable by tab through `focus-within`, so the quieting never costs keyboard access.
+
 ## 2026-06-13: line/paragraph editing fixed, editing and annotation separated into two modes
 
 Trigger: the real-letter session continued at a long paragraph. Editing it opened a single-line field that clipped the text off-screen, and the attempt to also annotate from inside that field exposed a deeper conflict; then iterating on the selection highlight by single CSS values regressed it to invisible. The decisions:

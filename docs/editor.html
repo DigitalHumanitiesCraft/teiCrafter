@@ -127,6 +127,14 @@
                 <div class="ed-panel" id="ed-panel-index" hidden>
                     <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter by name or id..."
                            title="Filter entities by name or id; matches are highlighted, Escape clears" />
+                    <div class="ed-idx-workfilter" id="idx-workfilter" role="group" aria-label="Show only entries that still need editorial work">
+                        <button type="button" class="ed-idx-wfbtn" data-mode="all" aria-pressed="true"
+                                title="Show all index entries">All</button>
+                        <button type="button" class="ed-idx-wfbtn" data-mode="noid" aria-pressed="false"
+                                title="Show only entries without an authority id (GND, GeoNames, Wikidata)">Missing id</button>
+                        <button type="button" class="ed-idx-wfbtn" data-mode="orphan" aria-pressed="false"
+                                title="Show only entries not linked to any mention in the text">No mention</button>
+                    </div>
                     <span class="ed-idx-filter-count" id="idx-filter-count" hidden></span>
                     <div id="ed-index-host">
                         <div class="ed-empty">Entity index appears after a document is loaded.</div>

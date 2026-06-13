@@ -486,6 +486,21 @@
 }
 .ed-idx-occ { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
+/* "Needs work" segmented filter: restrict the index to the entries still missing
+   an authority id or a mention. Single-select; the active button reads as pressed. */
+.ed-idx-workfilter { display: flex; gap: 2px; margin: 0 0 var(--space-sm); }
+.ed-idx-wfbtn {
+  font-family: var(--font-ui); font-size: var(--font-size-xs); cursor: pointer;
+  padding: 1px var(--space-sm); border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text-secondary);
+}
+.ed-idx-wfbtn:hover { border-color: var(--color-gold); color: var(--color-text); }
+.ed-idx-wfbtn:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-idx-wfbtn[aria-pressed="true"] {
+  border-color: var(--color-gold); color: var(--color-text);
+  background: var(--color-gold-light); font-weight: 600;
+}
+
 /* Entity index list (persons / places / organisations / works / events),
    rendered by index-panel.js inside the index panel. */
 .ed-idx { display: flex; flex-direction: column; gap: var(--space-md); }
@@ -545,7 +560,11 @@
   color: var(--color-text); background: var(--color-panel);
   border: none; outline: 2px solid var(--color-gold); border-radius: 2px; padding: 0 2px;
 }
-.ed-idx-actions { display: flex; gap: 2px; flex-shrink: 0; }
+/* Row actions rest quiet so the panel scans as an overview, and come forward on
+   hover or keyboard focus (focus-within keeps them reachable by tab). */
+.ed-idx-actions { display: flex; gap: 2px; flex-shrink: 0; opacity: .4; transition: opacity .12s ease; }
+.ed-idx-row:hover .ed-idx-actions,
+.ed-idx-row:focus-within .ed-idx-actions { opacity: 1; }
 .ed-idx-btn {
   font-family: var(--font-ui); font-size: var(--font-size-xs); cursor: pointer;
   padding: 1px var(--space-xs); border-radius: var(--radius-sm);
@@ -575,6 +594,10 @@
   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 0 var(--space-xs);
 }
 .ed-idx-authtype { color: var(--color-text-muted); }
+/* The id value verifies against the register record: a link in the accessible
+   orange link family, underlined on hover/focus (navigation, never gold action). */
+.ed-idx-authlink { color: var(--color-link); text-decoration: none; cursor: pointer; }
+.ed-idx-authlink:hover, .ed-idx-authlink:focus-visible { text-decoration: underline; }
 .ed-idx-authdel {
   border: none; background: none; cursor: pointer;
   color: var(--color-text-muted); padding: 0 2px; font-size: var(--font-size-xs);

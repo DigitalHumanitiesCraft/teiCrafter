@@ -37,6 +37,10 @@ export function createEntityIndex(ctx) {
     ["setStatus", "commitStandoff", "gotoFolio", "highlightMentions", "entityUsage", "showPanel"], ["app"]);
   const { app, setStatus, commitStandoff, gotoFolio, highlightMentions, entityUsage, showPanel } = ctx;
   let indexPanel = null;
+  // "needs work" view: all entries, or only those still missing an authority id
+  // ("noid") or not linked to any in-text mention ("orphan"). Combines with the
+  // text filter. The per-row flags are emitted as dataset by index-panel.js.
+  let workMode = "all";
 
   /** Lazily create the single index panel bound to the panel host, with its hooks. */
   function ensureIndexPanel() {
@@ -135,12 +139,17 @@ export function createEntityIndex(ctx) {
    */
   function applyFilter(q) {
     const f = (q || "").trim().toLowerCase();
+    const filtering = !!f || workMode !== "all";
     let shown = 0, total = 0;
     for (const row of document.querySelectorAll("#ed-index-host .ed-idx-row")) {
       total++;
       const name = (row.dataset.name || "").toLowerCase();
       const id = (row.dataset.id || "").toLowerCase();
-      const hit = !f || name.includes(f) || id.includes(f);
+      const textHit = !f || name.includes(f) || id.includes(f);
+      const workHit = workMode === "all"
+        || (workMode === "noid" && row.dataset.noid === "1")
+        || (workMode === "orphan" && row.dataset.orphan === "1");
+      const hit = textHit && workHit;
       row.hidden = !hit;
       if (hit) shown++;
       highlightName(row, f);
@@ -148,7 +157,7 @@ export function createEntityIndex(ctx) {
     for (const sec of document.querySelectorAll("#ed-index-host .ed-idx-section")) {
       const body = sec.querySelector(".ed-idx-section-body");
       const vis = sec.querySelectorAll(".ed-idx-row:not([hidden])").length;
-      if (f) {
+      if (filtering) {
         sec.hidden = vis === 0;
         if (body && vis > 0) body.hidden = false;                 // reveal matches in a collapsed section
       } else {
@@ -158,11 +167,15 @@ export function createEntityIndex(ctx) {
       const count = sec.querySelector(".ed-idx-count");
       if (count) {
         const declared = count.dataset.total || String(sec.querySelectorAll(".ed-idx-row").length);
-        count.textContent = f ? `${vis} / ${declared}` : declared;
+        count.textContent = filtering ? `${vis} / ${declared}` : declared;
       }
     }
     const cl = $("idx-filter-count");
-    if (cl) { cl.textContent = f ? `${shown} of ${total} shown` : ""; cl.hidden = !f; }
+    if (cl) {
+      const label = workMode === "noid" ? " missing an id" : workMode === "orphan" ? " without a mention" : "";
+      cl.textContent = filtering ? `${shown} of ${total} shown${label}` : "";
+      cl.hidden = !filtering;
+    }
   }
 
   /** Re-render an entity's name span with the filter match wrapped in <mark>. */
@@ -227,6 +240,17 @@ export function createEntityIndex(ctx) {
   $("idx-filter").addEventListener("input", (e) => applyFilter(e.target.value));
   $("idx-filter").addEventListener("keydown", (e) => {
     if (e.key === "Escape") { e.target.value = ""; applyFilter(""); }
+  });
+
+  const workFilter = $("idx-workfilter");
+  if (workFilter) workFilter.addEventListener("click", (e) => {
+    const btn = e.target.closest(".ed-idx-wfbtn");
+    if (!btn) return;
+    workMode = btn.dataset.mode || "all";
+    for (const b of workFilter.querySelectorAll(".ed-idx-wfbtn")) {
+      b.setAttribute("aria-pressed", String(b === btn));
+    }
+    applyFilter($("idx-filter") ? $("idx-filter").value : "");
   });
 
   return { renderIndex, open, revealEntity, runLookup };

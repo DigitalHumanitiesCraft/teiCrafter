@@ -7,7 +7,7 @@
  * Run: node test/tools/authority_lookup_check.mjs   (exit 0 = all pass)
  */
 
-import { searchUrl, parseResults, lookup, LOOKUP_AUTHORITIES } from "../../docs/js/services/authority-lookup.js";
+import { searchUrl, parseResults, lookup, recordUrl, LOOKUP_AUTHORITIES } from "../../docs/js/services/authority-lookup.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -85,6 +85,25 @@ try { await lookup("GeoNames", "Wien"); } catch (_e) { threw = true; }
 check(threw, "GeoNames lookup without a username throws a clear error before fetching");
 
 check(LOOKUP_AUTHORITIES.length === 3, "three registers are offered for lookup");
+
+// --- record URL resolver (verify an attached id) -----------------------------
+
+check(recordUrl("GND", "117037486") === "https://d-nb.info/gnd/117037486",
+  "GND id resolves to its d-nb.info record");
+check(recordUrl("GND", "4066009-6") === "https://d-nb.info/gnd/4066009-6",
+  "GND id keeps its hyphen in the record URL");
+check(recordUrl("Wikidata", "Q68483") === "https://www.wikidata.org/wiki/Q68483",
+  "Wikidata id resolves to its wiki page");
+check(recordUrl("GeoNames", "2761369") === "https://www.geonames.org/2761369",
+  "GeoNames id resolves to its geonames.org page");
+check(recordUrl("Wikidata", "https://www.wikidata.org/entity/Q71") === "https://www.wikidata.org/entity/Q71",
+  "a value that is already an http URI is returned unchanged");
+check(recordUrl("GND", "  117037486  ") === "https://d-nb.info/gnd/117037486",
+  "the value is trimmed before resolving");
+check(recordUrl("GND", "") === null && recordUrl("GND", "   ") === null,
+  "an empty value yields no URL");
+check(recordUrl("Nonsense", "x") === null,
+  "an unknown register yields no URL");
 
 // --- summary -----------------------------------------------------------------
 

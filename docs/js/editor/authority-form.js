@@ -21,6 +21,7 @@
 
 import { el } from "./dom.js";
 import { AUTHORITIES } from "./standoff.js";
+import { recordUrl } from "../services/authority-lookup.js";
 
 export function buildAuthorityForm(entity, hooks = {}) {
   const onSet = typeof hooks.onSet === "function" ? hooks.onSet : () => {};
@@ -29,9 +30,20 @@ export function buildAuthorityForm(entity, hooks = {}) {
   const list = el("div", { class: "ed-idx-authlist" });
   const auths = Array.isArray(entity.authorities) ? entity.authorities : [];
   for (const a of auths) {
+    // The id value links to the register's record, so an attached id can be
+    // verified in one click; falls back to plain text for an unknown register.
+    const url = recordUrl(a.type, a.value);
+    const valNode = url
+      ? el("a", {
+          class: "ed-idx-authval ed-idx-authlink", text: a.value,
+          href: url, target: "_blank", rel: "noopener noreferrer",
+          title: `Open this ${a.type || "id"} record in a new tab`,
+          onclick: (e) => e.stopPropagation(),
+        })
+      : el("span", { class: "ed-idx-authval", text: a.value });
     list.appendChild(el("span", { class: "ed-idx-authid", title: `${a.type || "id"}: ${a.value}` }, [
       el("span", { class: "ed-idx-authtype", text: a.type || "id" }),
-      el("span", { class: "ed-idx-authval", text: a.value }),
+      valNode,
       el("button", {
         class: "ed-idx-btn ed-idx-authdel", type: "button",
         title: "Remove this id", "aria-label": "Remove id", text: "x",
