@@ -50,8 +50,10 @@ const PROVIDER_CONFIGS = Object.freeze({
     [LLM_PROVIDERS.ANTHROPIC]: {
         name: 'Anthropic',
         endpoint: 'https://api.anthropic.com/v1/messages',
-        defaultModel: 'claude-sonnet-4-5-20250929',
-        models: ['claude-sonnet-4-5-20250929', 'claude-haiku-3-5-20241022'],
+        // claude-fable-5 is deliberately omitted: its API behaviour differs
+        // (thinking always-on, different refusal handling and data retention).
+        defaultModel: 'claude-haiku-4-5',
+        models: ['claude-opus-4-8', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
         authType: 'x-api-key',
         buildRequest(prompt, model) {
             return {
@@ -203,6 +205,12 @@ export function getProviderConfigs() {
     }
     return configs;
 }
+
+// Anthropic model catalog, exported in a testable form. The values mirror the
+// PROVIDER_CONFIGS entry above and exist so a proof can assert the catalog
+// without reaching into the frozen private object.
+export const ANTHROPIC_MODELS = PROVIDER_CONFIGS[LLM_PROVIDERS.ANTHROPIC].models;
+export const ANTHROPIC_DEFAULT_MODEL = PROVIDER_CONFIGS[LLM_PROVIDERS.ANTHROPIC].defaultModel;
 
 /**
  * Send a prompt to the current LLM provider.
