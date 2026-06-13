@@ -1,8 +1,8 @@
 // Headless proof for the Author-mode structural primitives (structural.js).
-// Run: node tests/structural.test.mjs
+// Run: node test/tools/structural_check.mjs
 import assert from "node:assert";
-import { parseDocument, walk, getAttr } from "../docs/js/editor/tei-document.js";
-import { splitElement, mergeElements, insertLb, deleteElement } from "../docs/js/editor/structural.js";
+import { parseDocument, walk, getAttr } from "../../docs/js/editor/tei-document.js";
+import { splitElement, mergeElements, insertLb, deleteElement } from "../../docs/js/editor/structural.js";
 
 const find = (doc, local) => {
   const hits = [];

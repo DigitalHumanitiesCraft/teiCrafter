@@ -3,6 +3,7 @@
 output/
 __pycache__/
 *.pyc
+*.stackdump
 
 # Real ZBZ Hersch example (rights: not redistributable) -- local-only demo data.
 # Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
