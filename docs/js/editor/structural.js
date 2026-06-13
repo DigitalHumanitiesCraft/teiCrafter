@@ -15,7 +15,7 @@
  * that stays out, behind a later flag).
  */
 
-import { spliceDocument, getAttrObj, decodeEntities } from "./tei-document.js";
+import { spliceDocument, getAttrObj, decodeEntities, walk } from "./tei-document.js";
 import { uniquify, collectIds } from "./standoff.js";
 
 /** The whitespace+newline that indents `el` (reused so a split line lines up). */
@@ -66,10 +66,54 @@ export function mergeElements(doc, firstEl, secondEl) {
   return spliceDocument(doc, firstEl.contentEnd, secondEl.contentStart, "");
 }
 
-/** Insert a bare <lb/> milestone at an absolute raw offset (matches the draft shape). */
-export function insertLb(doc, rawOffset) {
+/** The innermost element whose content span encloses an absolute raw offset, or
+ *  null when the offset is not inside any element's content (e.g. top level). */
+function enclosingElement(doc, rawOffset) {
+  let best = null;
+  walk(doc.root, (n) => {
+    if (n.type !== "element" || n.contentStart == null || n.contentEnd == null) return;
+    if (rawOffset >= n.contentStart && rawOffset <= n.contentEnd) best = n; // deepest wins
+  });
+  return best;
+}
+
+/** First self-closing <lb> milestone already in the document, or null. Its exact
+ *  serialized start-tag is the form a new milestone reuses verbatim. */
+function existingLbForm(doc) {
+  let found = null;
+  walk(doc.root, (n) => {
+    if (found) return false;
+    if (n.type === "element" && n.localName === "lb" && n.selfClosing) { found = n; return false; }
+  });
+  return found ? doc.raw.slice(found.stagStart, found.stagEnd) : null;
+}
+
+/** The qualified <lb> form for an element's prefix: `<tei:lb/>` when prefixed,
+ *  `<lb/>` when the element is unprefixed (default namespace) or absent. */
+function lbFormFor(el) {
+  return el && el.prefix ? `<${el.prefix}:lb/>` : "<lb/>";
+}
+
+/**
+ * Insert an <lb/> milestone at an absolute raw offset in the host document's own
+ * form. The form is derived (in order): (a) reuse the exact serialized self-closing
+ * form of an <lb> the document already contains (same prefix, same spacing/slash
+ * convention); else (b) take the namespace prefix from `likeEl` if given, otherwise
+ * from the element enclosing the offset, otherwise from the root element, so a
+ * tei:-prefixed document gets <tei:lb/> and a default-namespace document gets <lb/>.
+ * One spliceDocument; no-op (SAME doc) when the offset is out of range.
+ * @param {TeiDocument} doc The document.
+ * @param {number} rawOffset Absolute raw byte offset to insert at.
+ * @param {{ likeEl?: TeiNode }} [opts] `likeEl`: the enclosing element to take the
+ *   prefix from when the document has no existing <lb> to mirror.
+ * @returns {TeiDocument} A new document, or the same one when the offset is invalid.
+ */
+export function insertLb(doc, rawOffset, { likeEl } = {}) {
   if (!Number.isInteger(rawOffset) || rawOffset < 0 || rawOffset > doc.raw.length) return doc;
-  return spliceDocument(doc, rawOffset, rawOffset, "<lb/>");
+  const form =
+    existingLbForm(doc) ||
+    lbFormFor(likeEl || enclosingElement(doc, rawOffset) || (doc.root.children || []).find((c) => c.type === "element"));
+  return spliceDocument(doc, rawOffset, rawOffset, form);
 }
 
 /**

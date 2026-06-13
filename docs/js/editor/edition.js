@@ -112,6 +112,40 @@ export function rawOffsetForDisplay(rawSlice, dOff) {
   }
 }
 
+/**
+ * Map a caret offset expressed in a CELL's displayed text to an ABSOLUTE raw
+ * offset in doc.raw, suitable as the rawCaret of splitElement / the rawOffset of
+ * insertLb. This is the cell-level, document-absolute companion to
+ * rawOffsetForDisplay: it scans the cell's own raw slice (so an entity reference
+ * such as &amp; shown as a single display char counts as its full raw byte run),
+ * then adds the cell's raw start so the result lands on a real boundary in
+ * doc.raw.
+ *
+ * The integrator path is: document.caretPositionFromPoint(x, y) yields a DOM
+ * (textNode, domOffset); domOffset is a UTF-16 index into the DECODED text the
+ * cell renders, i.e. exactly the same units as cell.text. Resolve which cell that
+ * DOM node belongs to (the renderer already tags each reading cell with its cell
+ * id), then call cellRawOffset(cell, domOffset). The returned integer is fed
+ * straight to splitElement(doc, lineEl, offset) or insertLb(doc, offset) inside
+ * the commitStandoff callback, where lineEl is re-found against the doc the
+ * callback receives.
+ *
+ * A text cell carries cell.start (the text node's raw start) and cell.rawText
+ * (doc.raw.slice(start, end)); both are taken from the parsed text node, so the
+ * absolute offset is start + the slice-relative raw offset. The display offset is
+ * clamped into [0, decoded length] so a caret reported at the very end of the
+ * rendered text maps to cell.end, not null. Gap cells (no editable text node)
+ * and out-of-range/non-integer offsets return null.
+ */
+export function cellRawOffset(cell, displayOffset) {
+  if (!cell || cell.gap || cell.start == null || typeof cell.rawText !== "string") return null;
+  if (!Number.isInteger(displayOffset) || displayOffset < 0) return null;
+  const dispLen = decodeEntities(cell.rawText).length;
+  const clamped = displayOffset > dispLen ? dispLen : displayOffset;
+  const rel = rawOffsetForDisplay(cell.rawText, clamped);
+  return rel == null ? null : cell.start + rel;
+}
+
 /** Count tracked element tags in a raw TEI string (namespace-agnostic, regex).
  *  Kept string-based because the harness calls it on a serialized candidate. */
 export function countTags(raw) {
