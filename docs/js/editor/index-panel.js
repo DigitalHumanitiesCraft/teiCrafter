@@ -32,9 +32,15 @@
 import { el, clear as clearNode } from "./dom.js";
 import { buildAuthorityForm } from "./authority-form.js";
 
-// The three sections, in render order. label is the section heading; type is the
-// value handed back to onAdd; key is the property read off the entities object.
-const SECTIONS = [
+// The built-in sections, in render order. A section descriptor:
+//   { type, key, label, addLabel, readOnly?, readOnlyNote? }
+// label is the section heading; type is the value handed back to onAdd; key is
+// the property read off the entities object. A readOnly section is one whose
+// entities the editor cannot edit in place (e.g. a project index with no
+// matching editable entity type): it stays visible, but its add action is
+// disabled and readOnlyNote explains why. render() falls back to this list when
+// the caller passes no sections (documents without declared manifest indices).
+export const DEFAULT_SECTIONS = [
   { type: "person", key: "persons", label: "Persons", addLabel: "add person" },
   { type: "place", key: "places", label: "Places", addLabel: "add place" },
   { type: "org", key: "orgs", label: "Organisations", addLabel: "add organisation" },
@@ -65,7 +71,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
 
   // ---- one entity row ------------------------------------------------------
 
-  function buildRow(entity) {
+  function buildRow(entity, readOnly = false) {
     // Editorial-gap flags (categorical, never violet): an entry with no authority
     // id yet, or with no in-text mention (an orphan), so a reviewer can see the
     // work left without opening each entry. Also mirrored onto the row dataset so
@@ -200,15 +206,37 @@ export function createIndexPanel(hostEl, hooks = {}) {
 
     const main = el("div", { class: "ed-idx-rowmain" });
     main.appendChild(body);
-    main.appendChild(actions);
-    row.appendChild(main);
-    row.appendChild(authForm);
+    // A read-only section's entries cannot be edited in place: keep the body
+    // (jump-to-mention stays useful), drop the mutation actions and authority
+    // add form so nothing offers an edit the editor cannot carry out.
+    if (!readOnly) {
+      main.appendChild(actions);
+      row.appendChild(main);
+      row.appendChild(authForm);
+    } else {
+      row.appendChild(main);
+    }
     return row;
   }
 
   // ---- the "+ add" row -----------------------------------------------------
 
   function buildAddRow(section) {
+    // Read-only section: no add control, only an explanation of why this index
+    // is shown but cannot be edited here. The note is descriptive, not a slogan.
+    if (section.readOnly) {
+      return el("div", { class: "ed-idx-addrow ed-idx-addrow-readonly" }, [
+        el("button", {
+          class: "ed-idx-btn ed-idx-add", type: "button", text: "+",
+          disabled: "", "aria-disabled": "true", "aria-label": "Add (disabled)",
+          title: section.readOnlyNote || "This index is read-only here",
+        }),
+        el("span", {
+          class: "ed-idx-readonly-note",
+          text: section.readOnlyNote || "This index is read-only in this editor.",
+        }),
+      ]);
+    }
     const input = el("input", {
       class: "ed-idx-add-input", type: "text", placeholder: section.addLabel,
     });
@@ -241,7 +269,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
     const collapsed = explicitCollapse.has(section.type) ? explicitCollapse.get(section.type) : items.length === 0;
     const list = el("div", { class: "ed-idx-list" });
     for (const entity of items) {
-      const row = buildRow(entity);
+      const row = buildRow(entity, !!section.readOnly);
       rowById.set(entity.id, row);
       list.appendChild(row);
     }
@@ -253,8 +281,9 @@ export function createIndexPanel(hostEl, hooks = {}) {
     }, [el("span", { class: "ed-idx-heading-label", text: section.label }), count]);
     const sectionBody = el("div", { class: "ed-idx-section-body" }, [list, buildAddRow(section)]);
     sectionBody.hidden = collapsed;
-    const sec = el("section", { class: "ed-idx-section",
-      dataset: { type: section.type, collapsed: collapsed ? "1" : "0" } }, [heading, sectionBody]);
+    const sec = el("section", { class: "ed-idx-section" + (section.readOnly ? " ed-idx-section-readonly" : ""),
+      dataset: { type: section.type, collapsed: collapsed ? "1" : "0", readonly: section.readOnly ? "1" : "" } },
+      [heading, sectionBody]);
     heading.addEventListener("click", () => {
       const willCollapse = !sectionBody.hidden;
       explicitCollapse.set(section.type, willCollapse);
@@ -267,16 +296,20 @@ export function createIndexPanel(hostEl, hooks = {}) {
 
   // ---- public API ----------------------------------------------------------
 
-  function render(entities = {}) {
+  // render(entities, sections?) draws one section per descriptor. When sections
+  // is omitted (or not a non-empty array) the built-in DEFAULT_SECTIONS apply,
+  // so documents without declared manifest indices are unaffected.
+  function render(entities = {}, sections) {
+    const useSections = Array.isArray(sections) && sections.length ? sections : DEFAULT_SECTIONS;
     clearNode(hostEl);
     rowById = new Map();
     const root = el("div", { class: "ed-idx" });
-    const total = SECTIONS.reduce((n, s) => n + (Array.isArray(entities[s.key]) ? entities[s.key].length : 0), 0);
+    const total = useSections.reduce((n, s) => n + (Array.isArray(entities[s.key]) ? entities[s.key].length : 0), 0);
     if (total === 0) {
       root.appendChild(el("div", { class: "ed-idx-allempty",
         text: "No index entities yet. Select text in the reading view to create one, or add it in a section below." }));
     }
-    for (const section of SECTIONS) {
+    for (const section of useSections) {
       const items = Array.isArray(entities[section.key]) ? entities[section.key] : [];
       root.appendChild(buildSection(section, items));
     }

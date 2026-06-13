@@ -25,12 +25,57 @@
  */
 
 import { el, clear } from "./dom.js";
-import { createIndexPanel } from "./index-panel.js";
+import { createIndexPanel, DEFAULT_SECTIONS } from "./index-panel.js";
 import * as standoff from "./standoff.js";
 import { requireCtx } from "./ctx.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 
 const $ = (id) => document.getElementById(id);
+
+// The editable entity types the editor can add/rename/delete in place, keyed by
+// the names a manifest index may use to point at one: its entities-object key
+// (the property standoff.readEntities returns, e.g. "persons") and the bare type
+// ("person"). A manifest index whose key matches one of these is editable; any
+// other index (e.g. a Wenzelsbibel "peoples"/Voelker index, no editable entity
+// element) becomes a read-only section: shown, but with adding disabled.
+const EDITABLE_BY_INDEX_KEY = (() => {
+  const map = new Map();
+  for (const s of DEFAULT_SECTIONS) {
+    map.set(s.key.toLowerCase(), s);   // entities-object key, e.g. "persons"
+    map.set(s.type.toLowerCase(), s);  // bare type, e.g. "person"
+  }
+  return map;
+})();
+
+/**
+ * Derive the index panel's section descriptors from a project's manifest
+ * indices (project.indices, the parseManifest output). Returns one descriptor
+ * per declared index, in declaration order, using the manifest's own label as
+ * the heading; a non-mappable index becomes a read-only descriptor (visible,
+ * add disabled, with an explanation), never dropped. With no declared indices
+ * (undefined, not an array, or empty) it returns null so the caller falls back
+ * to the panel's built-in DEFAULT_SECTIONS. Pure: no DOM, no project imports.
+ */
+export function sectionsForIndices(indices) {
+  if (!Array.isArray(indices) || indices.length === 0) return null;
+  return indices.map((idx) => {
+    const key = (idx && idx.key ? String(idx.key) : "").toLowerCase();
+    const label = idx && idx.label ? String(idx.label) : (idx && idx.key ? String(idx.key) : "Index");
+    const editable = EDITABLE_BY_INDEX_KEY.get(key);
+    if (editable) {
+      // Keep the editor's canonical type/key (so add/read still work), take the
+      // heading from the manifest so a project can name its own section.
+      return { type: editable.type, key: editable.key, label, addLabel: editable.addLabel };
+    }
+    // Non-mappable index: read-only, shown for completeness. Its type doubles as
+    // the entities-object key, so render() finds no rows for it and it stays empty.
+    return {
+      type: key || "index", key: key || "index", label, addLabel: "",
+      readOnly: true,
+      readOnlyNote: `The "${label}" index has no editable entity type in this editor; it is shown read-only.`,
+    };
+  });
+}
 
 export function createEntityIndex(ctx) {
   requireCtx("createEntityIndex", ctx,
@@ -121,7 +166,12 @@ export function createEntityIndex(ctx) {
     for (const k of ["persons", "places", "orgs", "works", "events"]) {
       for (const e of all[k] || []) e.count = (usage.get(e.id) || {}).count || 0;
     }
-    panel.render(all);
+    // Sections follow the project's declared manifest indices when it has any;
+    // otherwise sectionsForIndices returns null and the panel falls back to its
+    // built-in default (the five entity sections), so non-project documents and
+    // PID-detected profiles are unaffected.
+    const sections = sectionsForIndices(app.project ? app.project.indices : null);
+    panel.render(all, sections);
     applyFilter($("idx-filter") ? $("idx-filter").value : "");
   }
 
