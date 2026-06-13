@@ -370,8 +370,31 @@
 .ed-page-sep:hover::before, .ed-page-sep:hover::after { background: var(--color-gold); }
 .ed-page-sep-label { white-space: nowrap; }
 .ed-reading.continuous > .ed-page-sep:first-child { margin-top: 0; }
+/* Reading-text interaction: two modes, two gestures, two colour families.
+     - READ / ANNOTATE (default): hover gives a faint blue affordance (the text is
+       live and selectable); selecting it tints in the strong blue annotation
+       family and opens the annotate popover. Blue is the reading-text interaction
+       family throughout (this hover and selection, mentions, semantic wraps).
+     - EDIT (double-click): the cell becomes the gold-outlined .ed-w-input field
+       below. Gold is the action/edit family, so blue reads "annotate", gold "write".
+   The gesture pair is named in each cell's tooltip (critTitle), since help is
+   tooltip-only. A line-level cell is one span, so a whole line tints uniformly. */
 .ed-w { cursor: text; padding: 0 1px; border-radius: 2px; }
 .ed-w:hover { background: var(--color-blue-light); }
+.ed-w::selection { background: var(--color-selection-read); }
+.ed-w::-moz-selection { background: var(--color-selection-read); }
+/* Persistent annotate highlight (CSS Custom Highlight API, set in annotation-ui).
+   The native selection stops painting once the popover takes focus, so the marked
+   range is repainted here, focus-independent: a blue fill plus a solid blue
+   underline mark the exact region while the popover is open, cleared on close or
+   commit. The fill matches the live selection so the marking does not jump. */
+::highlight(ed-annotate) {
+  background-color: var(--color-selection-read);
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-blue);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
 .ed-w.linked { background: var(--color-gold-light); }
 
@@ -396,6 +419,11 @@
   color: var(--color-text); background: var(--color-panel);
   border: none; outline: 2px solid var(--color-gold); border-radius: 2px;
   padding: 0 1px; margin: 0; min-width: 2ch; }
+/* Line/paragraph cell edit: a wrapping textarea grown to its content, so a whole
+   paragraph stays visible at once instead of scrolling past a single-line field. */
+.ed-line-input { display: block; width: 100%; box-sizing: border-box;
+  resize: vertical; white-space: pre-wrap; overflow-wrap: break-word;
+  overflow: hidden; padding: 0 var(--space-xs); }
 
 /* Two-field dual-reading edit: the diplomatic core and the normalized
    reading side by side, quiet labels, inputs sized like .ed-w-input, inline so
@@ -646,6 +674,17 @@
 .ed-act-btn:hover, .ed-act-btn:focus-visible { border-color: var(--color-gold); color: var(--color-text); background: var(--color-gold-light); }
 .ed-act-group { width: 100%; font-family: var(--font-ui); font-size: var(--font-size-xs);
   color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .08em; }
+/* Annotate popover, TEI-role colour logic: its actions create TEI elements, so
+   they carry the blue family (AI proposals keep their violet, untouched); an
+   attribute field for a markup wrap's @attr carries the gold/attribute accent. The
+   group headings stay neutral grey (structure and navigation, not an action). The
+   gold default of .ed-act-btn is left for the attribute-side surfaces. */
+.ed-annotate-pop .ed-act-btn:not(.ed-btn-ai) { border-color: var(--color-blue); color: var(--color-blue); }
+.ed-annotate-pop .ed-act-btn:not(.ed-btn-ai):hover,
+.ed-annotate-pop .ed-act-btn:not(.ed-btn-ai):focus-visible {
+  background: var(--color-blue-light); border-color: var(--color-blue); color: var(--color-blue); }
+.ed-annotate-pop .ed-attr-input { border-color: var(--color-gold); }
+.ed-annotate-pop .ed-attr-input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
 .ed-act-empty { font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
 /* Selection-annotate popover: select words in a line, annotate exactly

@@ -940,12 +940,14 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
         text: display,
         title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
       });
-      // Editor paradigm (operator decision 2026-06-10): a plain click only sets
-      // the cursor. Clicking an ANNOTATED element opens its editor: an entity
-      // mention its annotation editor, a scholarly inline wrap (date, ref, ...)
-      // its attribute editor, so the @when normalization sits one click from the
-      // marked text. A gap opens its remove chooser; double-click edits the text
-      // directly; right-click opens the context menu; selecting text annotates it.
+      // Editor paradigm (M2.10): a plain click only sets the cursor. Clicking an
+      // ANNOTATED element opens its editor: an entity mention its annotation
+      // editor, a scholarly inline wrap (date, ref, ...) its attribute editor, so
+      // the @when normalization sits one click from the marked text. A gap opens
+      // its remove chooser. Double-click edits the text directly (word- and
+      // line-level alike); selecting text annotates it; right-click opens the menu.
+      // Text editing and annotation are thus distinct modes reached by distinct
+      // gestures: a click never traps the line in an edit field.
       span.addEventListener("click", (e) => {
         if (e.detail > 1) return; // second click of a double-click
         const sel = window.getSelection();
@@ -953,14 +955,6 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
         if (cell.gap) { beginCritic(span, cell); return; }
         if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
         if (semWrap) { annot.openAttrEditor(span, cell); return; }
-        // Line-level edits on a single click (operator: "einfach reinklicken"): a
-        // plain click on a line opens its text editor. Word-level keeps the
-        // cursor-only click (the scholarly paradigm); a drag still selects words to
-        // annotate in both, since a non-collapsed selection returned above.
-        if (app.state.profile === "line") {
-          const c = app.state.cellById.get(cell.id);
-          if (c) beginTextInput(span, c);
-        }
       });
       span.addEventListener("dblclick", (e) => {
         e.stopPropagation();
@@ -1058,12 +1052,28 @@ function beginTextInput(span, cell) {
   // formatting. Word-level <w> nodes have no edge whitespace (core === cell.text).
   const [, core] = splitEdge(cell.text);
 
-  const inp = el("input", { class: "ed-w-input", type: "text", value: core });
-  inp.style.width = `${Math.min(60, Math.max(2, core.length + 1))}ch`;
-  inp.style.maxWidth = "100%";
-  span.replaceWith(inp);
-  inp.focus();
-  inp.select();
+  // A word-level <w> cell is short and edits inline in a single-line input. A
+  // line-level cell can be a whole paragraph, so it edits in a wrapping textarea
+  // that grows to its content; a single-line input would clip the text off-screen.
+  const multiline = app.state.profile !== "word";
+  let inp;
+  if (multiline) {
+    inp = el("textarea", { class: "ed-w-input ed-line-input", rows: "1" });
+    inp.value = core;
+    const autosize = () => { inp.style.height = "auto"; inp.style.height = `${inp.scrollHeight}px`; };
+    inp.addEventListener("input", autosize);
+    span.replaceWith(inp);
+    inp.focus();
+    inp.select();
+    autosize();
+  } else {
+    inp = el("input", { class: "ed-w-input", type: "text", value: core });
+    inp.style.width = `${Math.min(60, Math.max(2, core.length + 1))}ch`;
+    inp.style.maxWidth = "100%";
+    span.replaceWith(inp);
+    inp.focus();
+    inp.select();
+  }
 
   let done = false;
   const commit = () => {
@@ -1086,7 +1096,8 @@ function beginTextInput(span, cell) {
     render();
   };
   inp.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); commit(); }
+    // Enter commits; in the multiline textarea Shift+Enter inserts a real newline.
+    if (e.key === "Enter" && !(multiline && e.shiftKey)) { e.preventDefault(); commit(); }
     else if (e.key === "Escape") { e.preventDefault(); cancel(); }
   });
   inp.addEventListener("blur", commit);
@@ -1251,8 +1262,8 @@ function critTitle(cell, note, meta, semWrap) {
       : `normalized: ${cell.w.norm}`);
   }
   parts.push(cell.mention ? "click to edit the annotation"
-    : semWrap ? "click to edit attributes; double-click to edit text; right-click for actions"
-    : "double-click to edit; right-click for actions");
+    : semWrap ? "click to edit attributes; select text to annotate; double-click to edit; right-click for actions"
+    : "select text to annotate; double-click to edit; right-click for actions");
   return parts.join("; ");
 }
 

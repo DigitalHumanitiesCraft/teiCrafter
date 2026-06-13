@@ -24,6 +24,11 @@
        textarea over a coloured <pre>; an opaque selection would hide the text,
        so selection uses this alpha tint and the coloured text shows through. */
     --color-selection: rgba(247, 168, 36, 0.30);
+    /* Reading-text selection: selecting reading text IS the annotation gesture, so
+       it tints in the TEI blue interaction family (hover, mentions, tokens), kept
+       clearly stronger than the pale --color-blue-light hover and set apart from
+       the gold edit-field outline, so blue reads "annotate" and gold reads "write". */
+    --color-selection-read: rgba(0, 89, 168, 0.33);
     /* Text-link orange: a darker tone for orange TEXT on a light background
        (WCAG AA 5.0:1 on white). Fills and buttons keep the brighter --color-gold
        (dark text on gold is 8.8:1), so only orange text links use this. */

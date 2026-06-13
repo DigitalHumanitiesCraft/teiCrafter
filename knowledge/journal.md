@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-12
+updated: 2026-06-13
 language: en
 version: 0.15
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
@@ -22,6 +22,15 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-13: line/paragraph editing fixed, editing and annotation separated into two modes
+
+Trigger: the real-letter session continued at a long paragraph. Editing it opened a single-line field that clipped the text off-screen, and the attempt to also annotate from inside that field exposed a deeper conflict; then iterating on the selection highlight by single CSS values regressed it to invisible. The decisions:
+
+- **A line-level cell edits in a wrapping field that grows to its content.** A line can be a whole paragraph, and a single-line input showed one line and scrolled the rest away; the field now wraps and auto-sizes, Shift+Enter for a literal newline.
+- **Editing and annotation are two distinct modes reached by distinct gestures, unified across word and line level; the line-level single-click-to-edit is withdrawn.** That single-click rule (operator request 2026-06-10, "einfach reinklicken") trapped every click in an edit field, so the selection-to-annotate gesture was unreachable. The lesson is the reason: text editing treats the content as a mutable buffer while annotation treats it as a fixed string with stable offsets, so the two cannot share one surface and an attempt to annotate from inside the live edit field could not hold both at once. They are separated as double-click-edits versus select-annotates, the documented M2.10 paradigm.
+- **The reading text reads its mode off one colour language: blue interacts and annotates, gold acts and writes.** Blue carries the hover affordance and the strong annotation selection, gold the edit-field outline, violet stays AI-only. This replaced an attempt to fix the highlight by nudging single values, which kept producing contradictions because no shared language held them: the language is fixed once and documented, with each cell's tooltip naming its gestures since help is tooltip-only.
+- **The annotate popover follows a TEI-role colour logic, and the marked text stays visible while it is open.** Its actions create TEI elements, so they carry the blue family; an attribute field carries the gold accent, AI proposals stay violet, the group headings stay neutral grey, replacing a mix that read without a rule. The selected range is repainted by a focus-independent highlight (blue fill plus a solid underline) because the native selection stops being drawn once the popover takes focus, so the editor no longer hides what one is about to annotate. The decision behind both: colour carries one consistent meaning (element vs attribute vs machine vs navigation), and a selection one cannot see is a selection one cannot trust. Scope was deliberately the popover and the selection; the editor-wide chrome (tabs, pager, panel headings) is a separate consistency pass.
 
 ## 2026-06-12 (continued): documentation split public/internal, knowledge base consolidated
 

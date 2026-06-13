@@ -71,6 +71,21 @@ function allEntityIds(doc) {
     .flatMap((k) => (all[k] || []).map((e) => e.id));
 }
 
+// Persistent annotate highlight. The native selection stops being painted the
+// moment the popover takes focus, so a focus-independent CSS Custom Highlight
+// keeps the selected range visible (blue fill + underline, see ::highlight in
+// editor.css) for as long as the popover is open. Cleared when the popover closes
+// or a real change re-renders. Degrades silently where the API is absent (the
+// Chromium target supports it); the range is cloned so it survives focus moving.
+const HL_ANNOTATE = "ed-annotate";
+function setAnnotateHighlight(range) {
+  if (!range || typeof Highlight === "undefined" || !window.CSS || !CSS.highlights) return;
+  try { CSS.highlights.set(HL_ANNOTATE, new Highlight(range)); } catch { /* unsupported range */ }
+}
+function clearAnnotateHighlight() {
+  if (window.CSS && CSS.highlights) CSS.highlights.delete(HL_ANNOTATE);
+}
+
 export function createAnnotationUi(ctx) {
   requireCtx("createAnnotationUi", ctx,
     ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage",
@@ -96,6 +111,7 @@ export function createAnnotationUi(ctx) {
   }
 
   function removeSelPopover() {
+    clearAnnotateHighlight();
     const old = document.getElementById("ed-sel-pop");
     if (old) old.remove();
   }
@@ -717,8 +733,14 @@ export function createAnnotationUi(ctx) {
       setStatus("This text already sits inside a link; click it to edit the annotation.");
       return;
     }
+    // Capture the selection range now (before focus moves to the filter) and paint
+    // it with the persistent highlight, so the marked region stays visible while
+    // the popover is open. Reused as the popover's anchor rect.
+    const sel = window.getSelection();
+    const range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    setAnnotateHighlight(range);
     const host = reading();
-    const pop = el("div", { class: "ed-sel-pop", id: "ed-sel-pop" });
+    const pop = el("div", { class: "ed-sel-pop ed-annotate-pop", id: "ed-sel-pop" });
 
     // Title row: the selection label and a top-right close button. Cancel only
     // removes the popover (no reading-pane re-render), so look-and-cancel keeps
@@ -941,7 +963,7 @@ export function createAnnotationUi(ctx) {
       }
     });
 
-    anchorPopAt(pop, window.getSelection().getRangeAt(0).getBoundingClientRect(), host);
+    anchorPopAt(pop, (range || window.getSelection().getRangeAt(0)).getBoundingClientRect(), host);
     filter.focus();
   }
 
