@@ -141,7 +141,7 @@
         <section class="lp-hero">
             <div class="lp-wrap">
                 <h1>A browser editor for TEI-XML</h1>
-                <p class="lp-lede">teiCrafter opens a TEI document, whether an edition, a dictionary or a language corpus, and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). Where the document links a facsimile, text and page image appear side by side. It runs in the browser; the file stays a local file on your computer.</p>
+                <p class="lp-lede">teiCrafter opens any TEI document and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). Where a facsimile is linked, text and page image appear side by side. It runs in the browser; your file stays local.</p>
                 <div class="lp-cta-group">
                     <a class="lp-btn lp-open" href="editor.html" title="Open the editor to load a TEI document or a project folder">Open the editor</a>
                     <a class="lp-btn lp-ghost" href="#examples" id="lp-try-example" hidden>Try an example</a>
@@ -160,24 +160,18 @@
                 <div class="lp-cards">
                     <!-- The same three examples as in the editor's welcome state; the
                          #example deep link loads them directly. The LLM card returns
-                         here with FEATURES.llmOnRamp.
-                         The "Editing unit" badge reports a detected fact, not a fixed
-                         category: the editor reads the unit from the document, so any
-                         TEI unit (entries, sentences, ...) fits the same pattern. -->
+                         here with FEATURES.llmOnRamp. -->
                     <a class="lp-card" href="editor.html#example=wb">
-                        <span class="lp-badge" title="The editor reads the editing unit from the document. Edits in this example apply per word.">Editing unit: words</span>
                         <h3>Wenzelsbibel</h3>
                         <p>Codex 2759 of the Austrian National Library: word-level encoding with IIIF facsimile. Where the licence-restricted file is not present, a structurally identical sample file loads instead.</p>
                         <span class="lp-cta">Load example</span>
                     </a>
                     <a class="lp-card" href="editor.html#example=zbz">
-                        <span class="lp-badge" title="The editor reads the editing unit from the document. Edits in this example apply per line.">Editing unit: lines</span>
                         <h3>ZBZ Jeanne Hersch</h3>
                         <p>A letter from the Jeanne Hersch papers at the Zentralbibliothek Z&uuml;rich: line-level OCR-derived TEI with page scans. Where the rights-restricted original is not present, a structurally identical sample file loads instead.</p>
                         <span class="lp-cta">Load example</span>
                     </a>
                     <a class="lp-card" href="editor.html#example=szd">
-                        <span class="lp-badge" title="The editor reads the editing unit from the document. Edits in this example apply per line.">Editing unit: lines</span>
                         <h3>Stefan Zweig Digital</h3>
                         <p>A letter by Stefan Zweig (1901): line-level transcription with the facsimile from the GAMS repository.</p>
                         <span class="lp-cta">Load example</span>
@@ -196,11 +190,11 @@
                     </div>
                     <div class="lp-feature">
                         <h3>No configuration needed</h3>
-                        <p>The editing unit is read from the document itself: words where the edition encodes <code>&lt;w&gt;</code>, lines otherwise. Image zones and text are linked through <code>@facs</code> in both directions.</p>
+                        <p>The editing unit is read from the document itself: words where the edition encodes <code>&lt;w&gt;</code>, lines otherwise. Image zones and text are linked through <code>@facs</code>, so selecting one highlights the other.</p>
                     </div>
                     <div class="lp-feature">
                         <h3>Validated while you type</h3>
-                        <p>As you edit, the editor checks that the XML stays well-formed and that no text content is lost, and reports the result next to the text. How machine-generated content is handled is described in <a href="about.html">About</a>.</p>
+                        <p>As you edit, the editor checks that the XML stays well-formed and that its structure is preserved (identifiers and element counts unchanged), and reports the result next to the text. How machine-generated content is handled is described in <a href="about.html">About</a>.</p>
                     </div>
                 </div>
             </div>
