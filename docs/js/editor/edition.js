@@ -29,6 +29,7 @@ import {
   ancestorWithXmlId,
   isReadingContext,
   CRITICAL_LOCALS,
+  MILESTONE_LOCALS,
   editTextNode,
   editTextAndAttrs,
   hasAttrQName,
@@ -56,6 +57,13 @@ const RE_ENTITY_TOKEN = /&(?:lt|gt|quot|apos|amp|#x[0-9a-fA-F]+|#\d+);/y;
 // first (bare, <lb>-less) line of a paragraph does not merge with the previous
 // block's last line. <l> is already a line trigger; <lb/> marks breaks within.
 const BLOCK_LINE = new Set(["p", "head", "lg", "ab"]);
+
+// Structural reading containers / blocks that are NOT annotation layers: the
+// ancestor walk for cell.layers skips them but keeps climbing past them, while
+// it stops dead at the reading-unit boundary (p/head/note/body, see mentionRef).
+// Combined with MILESTONE_LOCALS (empty segmenting markers) and <w> (the dual-
+// reading token, not an annotation), this is the complete non-layer exclusion.
+const STRUCTURAL_LOCALS = new Set(["p", "head", "lg", "ab", "l", "div", "body", "text"]);
 
 /**
  * Map a DISPLAY range (offsets into the decoded text the renderer shows, i.e.
@@ -227,6 +235,34 @@ function buildState(doc) {
     return null;
   };
 
+  // F5: read-only overlap projection. Collect every inline annotation element that
+  // wraps the cell's text node, INNERMOST-FIRST, up to the same reading-unit
+  // boundary as mentionRef (stop at p/head/note/body). Structural blocks
+  // (STRUCTURAL_LOCALS), milestones (MILESTONE_LOCALS), and the dual-reading token
+  // <w> are skipped (climb past), so nested annotations on one text (e.g.
+  // <seg><persName>x</persName></seg>) are all representable, not just the innermost.
+  // Each entry is { kind, localName, ref }: kind "mention" for a <name> carrying
+  // @ref (ref = @ref without a leading '#'), "critical" for CRITICAL_LOCALS, else
+  // "markup"; ref is null unless a mention. Pure: no offsets, no serialize() change.
+  const cellLayers = (node) => {
+    const out = [];
+    let p = node.parent;
+    while (p && p.type === "element") {
+      const ln = p.localName;
+      if (ln === "p" || ln === "head" || ln === "note" || ln === "body") break;
+      if (!(STRUCTURAL_LOCALS.has(ln) || MILESTONE_LOCALS.has(ln) || ln === "w")) {
+        const ref = getAttr(p, "ref");
+        // el is the parsed element node, so a consumer (the overlap inspector) can
+        // target THIS layer's element, not only the cell's innermost wrapper.
+        if (ln === "name" && ref != null) out.push({ kind: "mention", localName: ln, ref: stripHash(ref), el: p });
+        else if (CRITICAL_LOCALS.has(ln)) out.push({ kind: "critical", localName: ln, ref: null, el: p });
+        else out.push({ kind: "markup", localName: ln, ref: null, el: p });
+      }
+      p = p.parent;
+    }
+    return out;
+  };
+
   // A cell id is the nearest ancestor xml:id, made unique against ids already used
   // for cells (synthetic positional fallback otherwise). Shared by text and gap cells.
   const makeCellId = (node) => {
@@ -268,6 +304,8 @@ function buildState(doc) {
         critSole: false,
         mention: null,
         w: null,
+        // The <gap/> itself is the annotation; mirror crit's single "gap" layer.
+        layers: [{ kind: "critical", localName: "gap", ref: null, el: e.el }],
       });
       continue;
     }
@@ -294,6 +332,7 @@ function buildState(doc) {
       critSole: critParent ? (critParent.children.length === 1 && critParent.children[0] === e.node) : false,
       mention: mentionRef(e.node),
       w,
+      layers: cellLayers(e.node),
     });
   }
 

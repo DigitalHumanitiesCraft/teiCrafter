@@ -17,7 +17,12 @@
 }
 .ed-toolbar .group { display: flex; align-items: center; gap: var(--space-xs); }
 .ed-toolbar .sep { width: 1px; height: 22px; background: var(--color-border); margin: 0 var(--space-xs); }
-.ed-folio-label { font-size: var(--font-size-sm); color: var(--color-text-secondary); font-family: var(--font-mono); }
+/* Page-position label in the pane head: navigation chrome, on the neutral
+   control scale (secondary weight 500, font-ui), so it never reads bolder or
+   greyer than the tabs beside it. It carries prose ("page", "pages"), not a
+   bare identifier, so it is not mono. */
+.ed-folio-label { font-family: var(--font-ui); font-size: var(--font-size-sm);
+  font-weight: 500; color: var(--color-text-secondary); }
 
 .ed-btn {
   font-family: var(--font-ui); font-size: var(--font-size-sm); cursor: pointer;
@@ -457,7 +462,7 @@
 
 /* Validation / info side pane */
 .ed-section { margin-bottom: var(--space-md); }
-.ed-section h4 { margin: 0 0 var(--space-xs); font-size: var(--font-size-sm); color: var(--color-text); }
+.ed-section h4 { margin: 0 0 var(--space-xs); font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text); }
 .ed-kv { display: flex; justify-content: space-between; font-size: var(--font-size-sm);
   padding: 2px 0; color: var(--color-text-secondary); }
 .ed-kv b { color: var(--color-text); font-family: var(--font-mono); }
@@ -490,7 +495,7 @@
 .ed-idx-heading {
   display: flex; align-items: center; gap: var(--space-xs); width: 100%;
   margin: 0; padding: 2px 0; text-align: left; cursor: pointer;
-  font-family: var(--font-ui); font-size: var(--font-size-sm); color: var(--color-text);
+  font-family: var(--font-ui); font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text);
   background: none; border: none;
 }
 .ed-idx-heading:hover { color: var(--color-gold-hover); }
@@ -630,6 +635,12 @@
    the mention background), with the element and its attributes in the tooltip.
    Underline only, so it adds no bold and changes no text metrics. */
 .ed-w.ed-w-sem { text-decoration: underline dotted var(--color-blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+/* Overlapping / nested annotations (cell.layers >= 2, e.g. a persName inside a
+   seg): two stacked underline bands in the blue interaction family say "more than
+   one annotation here". The exact stack and its per-layer actions live in the
+   inspector (a click opens it). The compound selector outweighs the single
+   .mention band so the stack shows through; an entity background, if any, stays. */
+.ed-w.ed-w-stacked { box-shadow: inset 0 -2px 0 var(--color-blue), inset 0 -5px 0 var(--color-blue); padding-bottom: 3px; }
 
 /* Temporary "show this entity's mentions" highlight (index-panel selection).
    Its own class, so clearing it never strips the permanent visibility layer.
@@ -685,6 +696,14 @@
   background: var(--color-blue-light); border-color: var(--color-blue); color: var(--color-blue); }
 .ed-annotate-pop .ed-attr-input { border-color: var(--color-gold); }
 .ed-annotate-pop .ed-attr-input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+/* Overlap inspector: the stack of annotations on one text, innermost first. Each
+   row reads by colour family (entity and markup are TEI elements -> blue,
+   criticism -> review), names the element, and carries the per-layer actions.
+   Reuses the popover surface (.ed-sel-pop). */
+.ed-layers-row { display: flex; align-items: baseline; gap: var(--space-xs); padding: 2px 0; }
+.ed-layer-label { font-family: var(--font-mono); font-size: var(--font-size-xs); flex: 1 1 auto; min-width: 0; }
+.ed-layer-mention .ed-layer-label, .ed-layer-markup .ed-layer-label { color: var(--color-blue); }
+.ed-layer-critical .ed-layer-label { color: var(--color-review); }
 .ed-act-empty { font-family: var(--font-ui); font-size: var(--font-size-xs); color: var(--color-text-muted); }
 
 /* Selection-annotate popover: select words in a line, annotate exactly
@@ -844,9 +863,14 @@
 .ed-proj-head { font-size: var(--font-size-sm); color: var(--color-text); font-weight: 600; margin-bottom: var(--space-xs); }
 .ed-proj-vocab { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-bottom: var(--space-sm); }
 .ed-attr-row { display: flex; align-items: center; gap: var(--space-xs); }
-.ed-attr-name { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); min-width: 7ch; }
+/* Attributes carry the gold accent (attributes = gold), matching the gold border
+   the annotate popover already gives its attribute field. The name is an
+   identifier, so it stays mono, in the legible small-text gold (the bright
+   --color-gold is fill/border only). */
+.ed-attr-name { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-gold-hover); min-width: 7ch; }
 .ed-attr-input { flex: 1 1 auto; min-width: 6ch; font-family: var(--font-mono); font-size: var(--font-size-xs);
-  padding: 2px 4px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+  padding: 2px 4px; border: 1px solid var(--color-gold); border-radius: var(--radius-sm); }
+.ed-attr-input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
 .ed-attr-key { flex: 0 1 12ch; }
 .ed-attr-caption { font-size: var(--font-size-xs); color: var(--color-text-muted); max-width: 36ch; }
 .ed-attr-warn { font-size: var(--font-size-xs); color: var(--color-problem); max-width: 36ch; }

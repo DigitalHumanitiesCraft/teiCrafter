@@ -931,11 +931,16 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
       // gets a subtle dotted underline and a tooltip naming the element and its
       // attributes, so the markup is visible without changing text metrics.
       const semWrap = semanticWrapFor(cell);
-      const semClass = semWrap ? " ed-w-sem" : "";
+      // Stacked annotations (e.g. a persName inside a seg): cell.layers carries the
+      // full nesting. When two or more layers overlap one text, show the stacked
+      // underline and route a click to the inspector instead of a single editor;
+      // the single dotted semantic-wrap underline is suppressed to avoid clutter.
+      const stacked = cell.layers && cell.layers.length >= 2;
+      const semClass = semWrap && !stacked ? " ed-w-sem" : "";
       const semTitlePart = semWrap ? semanticWrapTitle(semWrap) : null;
       const baseTitle = critTitle(cell, note, meta, !!semWrap);
       const span = el("span", {
-        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + semClass,
+        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + semClass + (stacked ? " ed-w-stacked" : ""),
         dataset: { id: cell.id, folio: String(folioIndex), line: String(lineIndex), start: String(cell.start) },
         text: display,
         title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
@@ -953,6 +958,9 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
         if (cell.gap) { beginCritic(span, cell); return; }
+        // Overlapping annotations: a click on stacked layers opens the inspector,
+        // which lists every layer and routes per layer, rather than guessing one.
+        if (stacked) { annot.openLayersInspector(span, cell); return; }
         if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
         if (semWrap) { annot.openAttrEditor(span, cell); return; }
       });
@@ -1261,7 +1269,9 @@ function critTitle(cell, note, meta, semWrap) {
       ? `as written: ${cell.text.trim()}`
       : `normalized: ${cell.w.norm}`);
   }
-  parts.push(cell.mention ? "click to edit the annotation"
+  const stacked = cell.layers && cell.layers.length >= 2;
+  parts.push(stacked ? `click to inspect the ${cell.layers.length} annotations here; double-click to edit`
+    : cell.mention ? "click to edit the annotation"
     : semWrap ? "click to edit attributes; select text to annotate; double-click to edit; right-click for actions"
     : "select text to annotate; double-click to edit; right-click for actions");
   return parts.join("; ");

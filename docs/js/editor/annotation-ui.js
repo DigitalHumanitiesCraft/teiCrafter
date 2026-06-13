@@ -384,10 +384,13 @@ export function createAnnotationUi(ctx) {
   // description; it never enforces anything, and without it the editor is a
   // fully working free-text attribute editor (the degradation contract).
 
-  function openAttrEditor(span, cell) {
+  function openAttrEditor(span, cell, targetEl) {
     removeMenu();
     removeSelPopover();
-    const target = attrTargetForCell(cell);
+    // Default to the cell's innermost wrapping element; the overlap inspector passes
+    // an explicit element to edit the attributes of an OUTER layer (e.g. the seg
+    // around a persName), not just the innermost wrapper.
+    const target = targetEl || attrTargetForCell(cell);
     if (!target) return;
     const host = reading();
     const g = guidelinesNow();
@@ -399,6 +402,10 @@ export function createAnnotationUi(ctx) {
     // on the same cell id so several attribute edits stay one gesture.
     const commitAttr = (fn, opts) => {
       if (!commitStandoff(fn, opts)) return;
+      // Reopening on the same cell keeps several attribute edits one gesture, but
+      // only for the innermost target: an outer layer's element node is stale after
+      // the re-parse, so an explicit-target edit is one-shot (re-inspect to chain).
+      if (targetEl) return;
       const c = app.state.cellById.get(cell.id);
       const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
       if (c && s) openAttrEditor(s, c);
@@ -510,6 +517,56 @@ export function createAnnotationUi(ctx) {
 
     anchorPopAt(pop, span.getBoundingClientRect(), host);
     nameInput.focus();
+  }
+
+  /**
+   * Overlap inspector: a click on a cell whose text carries two or more nested
+   * annotation layers (cell.layers, innermost-first) opens this list instead of
+   * guessing one editor. Each row names the element (and the linked entity for a
+   * mention) and routes: the innermost mention to its annotation editor, any layer
+   * to the attribute editor TARGETING that layer's own element. This is how the
+   * editor answers "what is here" for overlapping/nested markup.
+   */
+  function openLayersInspector(span, cell) {
+    removeMenu();
+    removeSelPopover();
+    const host = reading();
+    const meta = entityMetaMap();
+    const pop = el("div", { class: "ed-sel-pop ed-layers-pop", id: "ed-sel-pop" });
+
+    const titleRow = el("div", { class: "ed-sel-pop-titlerow" });
+    const short = cell.text.trim();
+    titleRow.appendChild(el("span", { class: "ed-sel-pop-title",
+      text: `annotations on "${short.length > 32 ? short.slice(0, 32) + "..." : short}"` }));
+    const closeBtn = el("button", { class: "ed-sel-pop-close", text: "×", title: "close", "aria-label": "close", type: "button" });
+    closeBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+    titleRow.appendChild(closeBtn);
+    pop.appendChild(titleRow);
+
+    const KIND_LABEL = { mention: "entity", critical: "criticism", markup: "markup" };
+    (cell.layers || []).forEach((layer, i) => {
+      const row = el("div", { class: "ed-layers-row ed-layer-" + layer.kind });
+      const m = layer.kind === "mention" && layer.ref ? meta.get(layer.ref) : null;
+      const label = layer.kind === "mention"
+        ? `<${layer.localName}> ${m ? (m.name || "(unnamed)") : layer.ref}`
+        : `<${layer.localName}>`;
+      row.appendChild(el("span", { class: "ed-layer-label", text: label,
+        title: `${KIND_LABEL[layer.kind] || "markup"}${i === 0 ? ", innermost" : ""}` }));
+      const c = () => app.state.cellById.get(cell.id);
+      if (layer.kind === "mention" && i === 0 && cell.mention) {
+        const b = el("button", { class: "ed-act-btn", text: "edit link", title: "edit this entity annotation" });
+        b.addEventListener("click", (e) => { e.stopPropagation(); const cc = c(); if (cc) openAnnotationEditor(span, cc); });
+        row.appendChild(b);
+      }
+      if (layer.el) {
+        const b = el("button", { class: "ed-act-btn", text: "edit attributes", title: `edit the attributes of <${layer.localName}>` });
+        b.addEventListener("click", (e) => { e.stopPropagation(); const cc = c(); if (cc) openAttrEditor(span, cc, layer.el); });
+        row.appendChild(b);
+      }
+      pop.appendChild(row);
+    });
+
+    anchorPopAt(pop, span.getBoundingClientRect(), host);
   }
 
   // ---- selection annotation (M2.8) ----------------------------------------
@@ -1004,6 +1061,7 @@ export function createAnnotationUi(ctx) {
 
   return {
     openContextMenu, openSelPopover, openAnnotationEditor,
-    openAnnotationEditorFor, openAttrEditor, removeSelPopover, removeMenu,
+    openAnnotationEditorFor, openAttrEditor, openLayersInspector,
+    removeSelPopover, removeMenu,
   };
 }
