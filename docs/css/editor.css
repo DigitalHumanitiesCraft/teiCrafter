@@ -40,7 +40,7 @@
 
 /* Keyboard focus is always visible (triple-coding stance: never hover-only). */
 :is(.ed-btn, .ed-dd-item, .ed-crit-btn, .ed-act-btn, .ed-menu-item,
-    .ed-idx-btn, .ed-idx-rowbody, .ed-recent-row, .ed-logo, .ed-val-chip):focus-visible {
+    .ed-idx-btn, .ed-idx-rowbody, .ed-idx-authlink, .ed-recent-row, .ed-logo, .ed-val-chip):focus-visible {
   outline: 2px solid var(--color-gold); outline-offset: 1px;
 }
 .ed-btn-ai:focus-visible { outline-color: var(--color-ai); }
@@ -595,9 +595,10 @@
 }
 .ed-idx-authtype { color: var(--color-text-muted); }
 /* The id value verifies against the register record: a link in the accessible
-   orange link family, underlined on hover/focus (navigation, never gold action). */
+   orange link family, underlined on hover; keyboard focus takes the shared gold
+   outline above (navigation, never the gold action fill). */
 .ed-idx-authlink { color: var(--color-link); text-decoration: none; cursor: pointer; }
-.ed-idx-authlink:hover, .ed-idx-authlink:focus-visible { text-decoration: underline; }
+.ed-idx-authlink:hover { text-decoration: underline; }
 .ed-idx-authdel {
   border: none; background: none; cursor: pointer;
   color: var(--color-text-muted); padding: 0 2px; font-size: var(--font-size-xs);
