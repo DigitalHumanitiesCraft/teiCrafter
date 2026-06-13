@@ -6,10 +6,18 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, thirteen commits ahead of `origin/main` and not yet pushed (this HANDOFF
+Branch `main`, seventeen commits ahead of `origin/main` and not yet pushed (this HANDOFF
 update is the tip). The recent commits are this lane's Phase 0 floor, Phase 1 frontend
-gate, landing, Editopia removal and Phase 2 / W3 work on top of the prior editor commits:
+gate, landing, Editopia removal, Phase 2 / W3 and Phase 3 / W2 work on top of the prior
+editor commits:
 
+- `bb20878`: browser-acceptance checks VC-AUTHOR-1..4 (split, merge, insert lb, delete-empty).
+- `d35a062`: author-mode structural acts in the reading context menu (split/merge/insert/delete
+  through commitStandoff, each re-finding its target by raw outerStart, no node held across the
+  re-parse).
+- `3c5b78f`: namespace-faithful insertLb (the document's own lb form, no hardcoded `<lb/>`) and a
+  DOM-free entity-aware absolute-caret helper, with structural_check (milestone fidelity) and
+  author_caret_check.
 - `0504c49`: browser-acceptance checks VC-F-1..4 (index, onboarding, draft badge).
 - `2b2ac45`: empty-project onboarding and a neutral draft badge in the document strip
   (the standalone draft banner retired; the dead dismiss listener removed so the editor
@@ -41,11 +49,12 @@ the validation/landing lane (`docs/css/editor.css`, `docs/js/editor/standoff.js`
 
 ## Proof state (run 2026-06-13)
 
-`node test/tools/run_all.mjs` discovers 32 proofs, all 32 pass. This lane added
-`structural_check.mjs` (the structural-primitives proof, now in the gate),
-`interaction_check.mjs` (the popover-dismissal invariant as a pure predicate, 7/7),
-`types_check.mjs` (the engine typing seam), and `index_consumer_check.mjs` (the
-manifest-driven index sections, on a synthetic fixture).
+`node test/tools/run_all.mjs` discovers 33 proofs, all 33 pass. This lane added
+`structural_check.mjs` (the structural-primitives proof, now in the gate, with insertLb
+milestone-fidelity assertions), `interaction_check.mjs` (the popover-dismissal invariant as a
+pure predicate, 7/7), `types_check.mjs` (the engine typing seam), `index_consumer_check.mjs`
+(the manifest-driven index sections), and `author_caret_check.mjs` (the entity-aware
+caret-to-raw-offset mapping).
 
 One proof is a SKIP-with-reason, which the runner counts as a pass:
 
@@ -74,10 +83,14 @@ One proof is a SKIP-with-reason, which the runner counts as a pass:
   (the validation/landing lane is already in it, see handoffs) and on-demand in-browser
   Schematron, gated on an operator decision about vendoring the ISO Schematron XSLT
   (third-party code into the repo) versus a documented subset.
-- Phase 3 (W2 author-mode) is unblocked next: wire the proven structural primitives
-  (split, merge, insert lb, delete-empty) into the reading surface as context-menu actions
-  through commitStandoff, with a namespace-faithful insertLb and an edition.js absolute-caret
-  helper proven by a new check.
+- Phase 3 / W2 author-mode is done and committed (context-menu split/merge/insert-lb/delete-empty
+  through commitStandoff, namespace-faithful insertLb, the caret helper). Its browser behavior
+  (context menu, caretPositionFromPoint, live split/merge) is operator-gated: VC-AUTHOR-1..4.
+- Phase 4 next: W7 (IIIF Presentation-manifest resolver, coordScale, read corresp range() pointers)
+  and W8 (measure large-document performance first, then a size guard for continuous view).
+- The product gate is accumulating unrun browser checks across three integrator rounds
+  (W3 x2 + W2): VC-1..12, VC-F-1..4, VC-AUTHOR-1..4, VC-RACE-*. An operator Chromium pass is the
+  next real de-risking step before more is stacked on editor-app.js.
 - Frontend follow-up: now that the popover fix is committed, export `shouldDismissPopover`
   from `annotation-ui.js` and import it into `interaction_check.mjs` so the proof and the
   handler cannot drift; fold the interaction-surface map into `architecture.md` and
