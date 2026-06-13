@@ -28,7 +28,10 @@ import {
   xmlIdSet,
   countTags,
   attrTargetForCell,
+  cellRawOffset,
 } from "./edition.js";
+import { splitElement, mergeElements, insertLb, deleteElement } from "./structural.js";
+import { walk, decodeEntities } from "./tei-document.js";
 import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
@@ -1207,6 +1210,140 @@ function commitStandoff(fn, { label, failPrefix = "Edit", noopLabel = null } = {
   }
 }
 
+// ---- Author-mode structural acts (context menu) ----------------------------
+// Four thin handlers that each run ONE structural primitive (structural.js)
+// through commitStandoff. Each re-finds its target element inside the callback
+// against the doc commitStandoff passes, keyed by the element's raw outerStart
+// (a stable, unique offset in the unchanged pre-mutation doc), so no parsed node
+// is held across the re-parse. Context-menu only; no key bindings.
+
+// Block-level reading containers an <lb/>-driven line lives inside, so a split on
+// an lb line targets the enclosing block (the empty milestone is not a container).
+const STRUCT_BLOCK_LOCALS = new Set(["p", "head", "lg", "ab", "div", "body"]);
+
+/** The render line a cell belongs to, or null. */
+function lineForCell(cell) {
+  if (!cell || !app.state) return null;
+  for (const line of app.state.lines) {
+    if (line.cells.some((c) => c.id === cell.id)) return line;
+  }
+  return null;
+}
+
+/** Find the element in `doc` whose start tag begins at outerStart and whose
+ *  localName matches, or null. The pre-mutation doc is unchanged, so outerStart
+ *  is a unique key; this is the re-find that avoids holding a stale node. */
+function elByOuterStart(doc, outerStart, localName) {
+  if (outerStart == null) return null;
+  let found = null;
+  walk(doc.root, (n) => {
+    if (found) return false;
+    if (n.type === "element" && n.outerStart === outerStart &&
+        (localName == null || n.localName === localName)) { found = n; return false; }
+  });
+  return found;
+}
+
+/** The structural element a split/merge/delete acts on for a cell's line:
+ *  the verse <l> itself, or the block enclosing an <lb/>-driven line. Returns
+ *  { outerStart, localName } as a re-find key, or null. */
+function structTargetKey(cell) {
+  const line = lineForCell(cell);
+  if (!line || !line.el) return null;
+  if (line.kind === "l") return { outerStart: line.el.outerStart, localName: line.el.localName };
+  // lb-driven line: climb the milestone's ancestors to the enclosing block.
+  let p = line.el.parent;
+  while (p && p.type === "element" && !STRUCT_BLOCK_LOCALS.has(p.localName)) p = p.parent;
+  if (!p || p.type !== "element") return null;
+  return { outerStart: p.outerStart, localName: p.localName };
+}
+
+/** Absolute raw caret offset at the menu's click point, mapped through the cell's
+ *  display text, or null. Falls back to the cell end when the caret does not land
+ *  in the cell's own text node (e.g. on the inter-cell space). */
+function caretRawOffset(x, y, cell) {
+  let node = null, offset = 0;
+  if (document.caretPositionFromPoint) {
+    const cp = document.caretPositionFromPoint(x, y);
+    if (cp) { node = cp.offsetNode; offset = cp.offset; }
+  } else if (document.caretRangeFromPoint) {
+    const r = document.caretRangeFromPoint(x, y);
+    if (r) { node = r.startContainer; offset = r.startOffset; }
+  }
+  const span = node && (node.nodeType === Node.TEXT_NODE ? node.parentElement : node);
+  const w = span && span.closest && span.closest("#ed-reading .ed-w");
+  // Use the caret offset only when it lands inside this very cell's text; otherwise
+  // act at the cell's end so split/insert still has a sensible boundary.
+  const disp = (w && w.dataset.id === cell.id) ? offset : decodeEntities(cell.rawText || "").length;
+  return cellRawOffset(cell, disp);
+}
+
+/** Author-mode: split the cell's line element into two siblings at the caret. */
+function authorSplitLine(x, y, cell) {
+  const key = structTargetKey(cell);
+  const abs = caretRawOffset(x, y, cell);
+  if (!key || abs == null) { setStatus("Cannot split here."); return; }
+  commitStandoff(
+    (doc) => { const el = elByOuterStart(doc, key.outerStart, key.localName); return el ? splitElement(doc, el, abs) : doc; },
+    { label: `Split <${key.localName}> at the caret`, failPrefix: "Split",
+      noopLabel: "Nothing split (caret outside the line)" },
+  );
+}
+
+/** Author-mode: merge the cell's line element with its previous same-name sibling. */
+function authorMergePrev(cell) {
+  const key = structTargetKey(cell);
+  if (!key) { setStatus("Cannot merge here."); return; }
+  commitStandoff(
+    (doc) => {
+      const second = elByOuterStart(doc, key.outerStart, key.localName);
+      if (!second || !second.parent) return doc;
+      const sibs = (second.parent.children || []).filter((c) => c.type === "element" && c.localName === second.localName);
+      const i = sibs.indexOf(second);
+      const first = i > 0 ? sibs[i - 1] : null;
+      return first ? mergeElements(doc, first, second) : doc;
+    },
+    { label: `Merged <${key.localName}> into the previous one`, failPrefix: "Merge",
+      noopLabel: "No previous same-kind line to merge with" },
+  );
+}
+
+/** Author-mode: insert the document's own <lb/> milestone at the caret. */
+function authorInsertLb(x, y, cell) {
+  const abs = caretRawOffset(x, y, cell);
+  if (abs == null) { setStatus("Cannot insert here."); return; }
+  commitStandoff(
+    (doc) => insertLb(doc, abs),
+    { label: "Inserted a line break", failPrefix: "Insert line break",
+      noopLabel: "Nothing inserted (caret out of range)" },
+  );
+}
+
+/** True when the cell's structural element carries no non-whitespace content. */
+function structIsEmpty(cell) {
+  const line = lineForCell(cell);
+  if (!line || !line.el) return false;
+  const el = line.el;
+  if (el.selfClosing) return true; // an empty <lb/> milestone
+  if (el.contentStart == null || el.contentEnd == null) return false;
+  return decodeEntities(app.state.doc.raw.slice(el.contentStart, el.contentEnd)).trim() === "";
+}
+
+/** Author-mode: delete the cell's line element, only when it is empty. */
+function authorDeleteElement(cell) {
+  const line = lineForCell(cell);
+  if (!line || !line.el) { setStatus("Nothing to delete here."); return; }
+  const key = { outerStart: line.el.outerStart, localName: line.el.localName };
+  commitStandoff(
+    (doc) => {
+      const el = elByOuterStart(doc, key.outerStart, key.localName);
+      return el ? deleteElement(doc, el) : doc;
+    },
+    { label: `Deleted empty <${key.localName}>`, failPrefix: "Delete",
+      noopLabel: "Not deleted (the element is not empty)" },
+  );
+}
+
 // ---- editorial notes (M3.5) ------------------------------------------------
 
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
@@ -1752,6 +1889,14 @@ const annot = createAnnotationUi({
   revealEntity: overlay.revealEntity,
   highlightMentions, beginTextInput, beginNote, beginCritic,
   ensureGuidelines, guidelinesNow,
+  // Author-mode structural acts, surfaced in the reading context menu.
+  author: {
+    splitLine: authorSplitLine,
+    mergePrev: authorMergePrev,
+    insertLb: authorInsertLb,
+    deleteElement: authorDeleteElement,
+    isEmpty: structIsEmpty,
+  },
 });
 const projectFolderUi = createProjectFolder({
   app, setStatus, setDirty, confirmDiscard, load,

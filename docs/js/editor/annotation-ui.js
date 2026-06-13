@@ -90,12 +90,12 @@ export function createAnnotationUi(ctx) {
   requireCtx("createAnnotationUi", ctx,
     ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage",
      "revealEntity", "highlightMentions", "beginTextInput", "beginNote", "beginCritic",
-     "ensureGuidelines", "guidelinesNow"], ["app"]);
+     "ensureGuidelines", "guidelinesNow"], ["app", "author"]);
   const {
     app, setStatus, commitStandoff,
     entityMetaMap, entityUsage, revealEntity,
     highlightMentions, beginTextInput, beginNote, beginCritic,
-    ensureGuidelines, guidelinesNow,
+    ensureGuidelines, guidelinesNow, author,
   } = ctx;
 
   const reading = () => document.getElementById("ed-reading");
@@ -141,9 +141,10 @@ export function createAnnotationUi(ctx) {
     removeMenu();
     removeSelPopover();
     const menu = el("div", { class: "ed-menu", id: "ed-menu" });
-    const item = (label, fn) => {
+    const item = (label, fn, opts = {}) => {
       const b = el("button", { class: "ed-menu-item", text: label });
-      b.addEventListener("click", (e) => { e.stopPropagation(); removeMenu(); fn(); });
+      if (opts.disabled) { b.disabled = true; if (opts.title) b.title = opts.title; }
+      else b.addEventListener("click", (e) => { e.stopPropagation(); removeMenu(); fn(); });
       menu.appendChild(b);
     };
 
@@ -172,6 +173,23 @@ export function createAnnotationUi(ctx) {
         item("Remove gap...", () => { if (c()) beginCritic(span, c()); });
       }
     }
+
+    // Structure (Author mode): element-structure acts on the cell's line, kept as
+    // a visually separated group of neutral chrome (never the violet --color-ai).
+    // Split and insert act at the right-click point; merge and delete on the line.
+    // Delete is enabled only when the line element is empty (deleteElement refuses
+    // non-empty content). Absent when there is no structural cell to act on.
+    if (cell && !cell.gap && author) {
+      const c = () => app.state.cellById.get(cell.id);
+      menu.appendChild(el("div", { class: "ed-menu-sep ed-menu-group", text: "Structure" }));
+      item("Split line here", () => { const cc = c(); if (cc) author.splitLine(x, y, cc); });
+      item("Merge with previous", () => { const cc = c(); if (cc) author.mergePrev(cc); });
+      item("Insert line break", () => { const cc = c(); if (cc) author.insertLb(x, y, cc); });
+      const canDelete = author.isEmpty(cell);
+      item("Delete", () => { const cc = c(); if (cc) author.deleteElement(cc); },
+        canDelete ? {} : { disabled: true, title: "only an empty element can be deleted" });
+    }
+
     if (!menu.childElementCount) return;
 
     document.body.appendChild(menu);
