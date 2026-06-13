@@ -42,7 +42,7 @@
 /**
  * @typedef {Object} TeiNode
  * @property {string} type Node kind ("element", "text", "root", or a token kind).
- * @property {string} localName Local-name for elements, "#root" for the root.
+ * @property {string} [localName] Local-name for elements, "#root" for the root (absent on text/leaf nodes).
  * @property {string} [qname] Qualified element name as written.
  * @property {string|null} [prefix] Namespace prefix, or null when unprefixed.
  * @property {Attr[]} [attrs] Parsed attributes (elements only).
@@ -79,9 +79,9 @@
  */
 
 /**
- * @typedef {Object} Surface
+ * @typedef {Object} TeiSurface
  * @property {string|null} id The surface's xml:id, or null.
- * @property {string|null} n The surface's @n, or null.
+ * @property {string|null} n The surface's n attribute, or null.
  * @property {number|null} ulx Upper-left x coordinate.
  * @property {number|null} uly Upper-left y coordinate.
  * @property {number|null} lrx Lower-right x coordinate.
@@ -306,6 +306,7 @@ function mkElement(raw, tk, empty) {
  */
 export function parseDocument(raw) {
   const toks = tokenize(raw);
+  /** @type {TeiNode} */
   const root = { type: "root", localName: "#root", children: [], parent: null, start: 0, end: raw.length };
   const stack = [root];
 
@@ -665,7 +666,7 @@ export function facsPointer(el) {
 
 /** Collect surfaces and their zones with numeric coordinates, generically.
  * @param {TeiDocument} doc The document.
- * @returns {{ surfaces: Surface[], byId: Map<string, Surface> }} The surfaces and an id index.
+ * @returns {{ surfaces: TeiSurface[], byId: Map<string, TeiSurface> }} The surfaces and an id index.
  */
 export function readSurfaces(doc) {
   const surfaces = [];
@@ -675,6 +676,7 @@ export function readSurfaces(doc) {
     // A surface may carry a <graphic url="..."> page image; expose its url so the
     // facsimile viewer can show an opened file's image without a hardcoded base.
     const graphicEl = elementsByLocal(s, "graphic")[0] || null;
+    /** @type {TeiSurface} */
     const surf = {
       id,
       n: getAttr(s, "n"),
@@ -721,8 +723,8 @@ function applyPointsBbox(zone) {
 }
 
 /** Zones indexed by their own xml:id (for direct @facs -> zone resolution).
- * @param {Surface[]} surfaces The surfaces to index.
- * @returns {Map<string, { surface: Surface, zone: Zone|null }>} The id-to-target index.
+ * @param {TeiSurface[]} surfaces The surfaces to index.
+ * @returns {Map<string, { surface: TeiSurface, zone: Zone|null }>} The id-to-target index.
  */
 export function indexZonesById(surfaces) {
   const map = new Map();
@@ -772,6 +774,7 @@ function num(v) {
  * @returns {Object<string, number>} A map from local-name to its count.
  */
 export function countLocals(doc, locals) {
+  /** @type {Object<string, number>} */
   const out = {};
   for (const l of locals) out[l] = 0;
   walk(doc.root, (n) => {
