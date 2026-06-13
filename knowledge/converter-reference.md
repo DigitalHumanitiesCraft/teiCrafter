@@ -345,7 +345,7 @@ first (M1.3).
 
 teiCrafter's own per-feature proof for the engine side of this contract (graphic url,
 zones in pixels, place/work entities, authority idno, line-level model, byte-identical
-round-trip) is `node test/tools/szd_demo_check.mjs` (32/32).
+round-trip) is `node test/tools/szd_demo_check.mjs`.
 
 Port parity (this port produces byte-identical output to the reference prototype over the
 handful, so the Python output round-trips through the engine exactly as the prototype's

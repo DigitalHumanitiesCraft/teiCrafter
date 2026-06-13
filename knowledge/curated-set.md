@@ -62,17 +62,12 @@ authority on purpose, to be resolved via the live lookup (M3.3).
 
 ## 2. The set
 
-| Object | Pipeline | Status (2026-06-09) | Curation steps | Engine splices | Diff lines | Rights |
-|--------|----------|---------------------|----------------|----------------|-----------|--------|
-| zbz-1000 | zbz-ocr-tei | generated and verified | 8 | 11 | +17/-5 | local-only pending the ZBZ rights answer |
-| o_szd.1079 | szd-htr | generated and verified | 9 | 12 | +18/-5 | CC-BY, redistributable |
-| zbz-1540 | zbz-ocr-tei | proposed, awaits operator sign-off | | | | local-only pending the ZBZ rights answer |
-| 2 or 3 SZD prompt-group objects | szd-htr | proposed, awaits operator sign-off | | | | GAMS, CC-BY |
-
-"Curation steps" counts the human-visible actions in the step log (an entity
-add bundles its authority assignments); "engine splices" counts the distinct
-byte-level edits as reported by the corresponding worked-example proof
-(`zbz_worked_example.mjs`, `szd_worked_example.mjs`).
+| Object | Pipeline | Status | Rights |
+|--------|----------|--------|--------|
+| zbz-1000 | zbz-ocr-tei | generated and verified | local-only pending the ZBZ rights answer |
+| o_szd.1079 | szd-htr | generated and verified | CC-BY, redistributable |
+| zbz-1540 | zbz-ocr-tei | proposed, awaits operator sign-off | local-only pending the ZBZ rights answer |
+| 2 or 3 SZD prompt-group objects | szd-htr | proposed, awaits operator sign-off | GAMS, CC-BY |
 
 What each generated pair contains, per the recipes:
 

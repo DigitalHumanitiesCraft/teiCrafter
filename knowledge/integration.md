@@ -73,12 +73,9 @@ any pipeline's TEI byte-losslessly), the facsimile-image flow, the verification 
 and the corpus.
 
 **Reading contract (how it consumes any TEI).** The editor reads any TEI generically by
-local-name (`<pb>` folios, `<lb>`/`<l>` lines, reading-text cells word-level only with
-`<w xml:id>`, `<facsimile>`/`<surface>`/`<zone>` overlays with `@facs` line-to-zone,
-`<standOff>`/`<note target>` for entities and apparatus) and preserves uninterpreted
-markup verbatim; the raw string is canonical and `serialize()` is byte-identical. The
-single home of this contract is "The Engine Reading Contract" in
-[architecture.md](architecture.md).
+local-name, preserves uninterpreted markup verbatim, and keeps the raw string canonical so
+`serialize()` is byte-identical. The single home of this contract, with the full recogniser
+list, is "The Engine Reading Contract" in [architecture.md](architecture.md).
 
 **Facsimile image (verified, M2.2 done).** The viewer renders with a `surface` and an
 image URL. The engine reads `<graphic url>` from each `<surface>` via `readSurfaces`
@@ -113,9 +110,9 @@ The five entity types are person, place, org, work, event.
 loaded baseline (xml:id set, tag counts). Offline harness: L1 text/word fidelity (gating),
 L2 RelaxNG (tei_all) + Schematron (reported, non-gating), L3 element-count / namespace /
 pointer integrity (gating). MVP gate = well-formed AND L1 AND L3. Engine proofs (Node,
-re-runnable): `test/tools/roundtrip_sweep.mjs` (296/296 byte-identical: 285 Hersch, 5 SZD,
-6 synthetic), `test/tools/hersch_loadability.mjs` (285/285 usable editor view), plus
-generic/editor/edit-fidelity/selftest harnesses.
+re-runnable): `test/tools/roundtrip_sweep.mjs` (every real file byte-identical),
+`test/tools/hersch_loadability.mjs` (every Hersch file yields a usable editor view),
+plus generic/editor/edit-fidelity/selftest harnesses. The proof results live in testing.md.
 
 **Corpus.** Hersch line-level (reads directly), Wenzelsbibel word-level (reads directly),
 SZD catalog + Page-JSON (needs the converter). The committed Wenzelsbibel is a synthetic

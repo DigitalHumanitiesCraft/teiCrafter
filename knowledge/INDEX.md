@@ -55,7 +55,7 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Epistemic asymmetry | Models produce plausible TEI but cannot judge their own correctness; the human verifies in the deterministic editor | project, design |
 | Hybrid validation | Browser-light live (well-formed + structural integrity) plus harness-heavy offline (RelaxNG + Schematron) | specification, testing |
 | MVP gate | Well-formed AND L1 word fidelity AND L3 counts preserved; L2 reported as new-errors-vs-input, non-gating | testing |
-| Byte-identical round-trip | The proven property: every TEI file in the sweep serializes back unchanged (296/296) | testing |
+| Byte-identical round-trip | The proven property: every TEI file in the sweep serializes back unchanged | testing |
 | Lossless / byte-identical / byte-faithful | One concept, three precisions. **Lossless** is the product promise: saving changes nothing the human did not edit. **Byte-identical** is the no-edit case: the saved file equals the opened file in every byte. **Byte-faithful** is the with-edits case: outside the deliberately edited spans every byte is unchanged (whitespace, attribute order, comments, entity spellings included); the only difference between input and output is exactly the edit. ("Byte-exact" in older passages means byte-faithful.) | testing, specification |
 | Editorial annotation layer | standOff entities + authority `<idno>` + mention linking + notes + AI proposal (`resp="#ai"`) + live lookup + inline textual criticism (`unclear`/`del`/`add`/`gap`), all lossless | architecture, specification |
 | Dual reading | A Wenzelsbibel `<w>` encodes the diplomatic reading as its text (mirrored in `@orig`) and the normalized reading in `@norm`; the reading pane projects a normalized display view, and a two-field double-click edits the diplomatic core and `@norm` atomically in one re-parse | architecture, specification |
@@ -66,6 +66,6 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 
 ## Lineage
 
-teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed as an independent browser tool. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
+Lineage and positioning are in [project.md](project.md): the shared design system with coOCR HTR, the relation to EditionCrafter, and the FORGE 2023 origin of the LLM on-ramp.
 
 The version history is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.

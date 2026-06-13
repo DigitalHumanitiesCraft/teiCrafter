@@ -375,8 +375,8 @@ others: round-trip byte-identical on open and on save; the GitHub-Pages
 "inadaptation" correction is a pure two-byte insertion proven by full
 reconstruction; `addEntity` plus `setAuthority` round-trip and read back (Hersch
 GND, Genève Wikidata/GeoNames, a work); a Genève mention links via `<name ref>`;
-and `unclear` and `gap` markup round-trip. 38 checks, 11 surgical edits, exit 0 is
-a pass (first green run 2026-06-09). The proof gates like the SZD one: it prefers
+and `unclear` and `gap` markup round-trip, every step a byte-faithful splice and
+the proof exits 0. The proof gates like the SZD one: it prefers
 the materialized local file, else builds the object in memory from the zbz sibling
 checkout, else SKIPs with exit 0. The PASS line reads: "PASS:
 ZBZ doc 1000 went open -> correct -> annotate (person/place/work + authority +

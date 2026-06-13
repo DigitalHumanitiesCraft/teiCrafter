@@ -158,8 +158,9 @@ clobbering. The audit yielded a concrete, ready-to-apply list:
   scope); the model catalog refresh + `pickModel` fallback + SECURITY.md; the
   frontend-verification floor as an acceptance principle; empty-project onboarding; the neutral
   draft badge (line 40 still says "banner"); index sections from declared manifest indices
-  (correct lines 173/187/188 "consumers still to come"). Fix the stale round-trip count at
-  line 85: `295/295` -> `296/296`. Bump version and the updated date.
+  (correct lines 173/187/188 "consumers still to come"). Per the counts-out convention (below),
+  remove the round-trip count from E.5 (state it qualitatively) and the proof counts from
+  acceptance scenarios I.3/I.4/I.5 (cite each proof by name). Bump version and the updated date.
 - **design.md** reflects index-as-overview, the popover TEI-role colours and the draft-badge
   neutral rule well; missing: the author-mode Structure gestures in the context-menu enumeration
   (line 70) and their neutral colour family relative to blue=annotate / gold=write; the index's
@@ -168,10 +169,26 @@ clobbering. The audit yielded a concrete, ready-to-apply list:
 - Repo-wide `version:` bump belongs with this pass (all knowledge docs move together;
   `converter-reference.md` keeps its own scheme by design).
 
-The audit also caught one real overclaim in the committed docs, now FIXED in this lane's scope
-(`testing.md`, `README.md`, `INDEX.md`, `integration.md`): the round-trip sweep is `296/296`
-(6 synthetic), not `295/295` (5), because the dual-reading fixture was added without updating the
-count. Only `specification.md`'s copy of the stale figure remains, listed above.
+## Documentation hygiene (decided 2026-06-13)
+
+A second read-only audit (quantities, cross-document redundancy, non-functional wording) drove a
+hygiene pass, applied across the freely-editable documents (`testing.md`, `INDEX.md`,
+`integration.md`, `project.md`, `converter-reference.md`, `worked-examples.md`, `curated-set.md`,
+`README.md`) and locked into CLAUDE.md:
+
+- **Test and proof counts are out of the knowledge base.** testing.md's proof table shows a
+  qualitative result, not N/N; the copies in the glossary, the integration and converter
+  references are gone; the run output is the source. Frozen synthetic-fixture word counts stay.
+- **Single-ownership for duplicated prose**: the lineage paragraph, the engine reading contract
+  and the licence boundary now point to their owner instead of restating it.
+
+Still owed in the lane-held documents (apply the same convention when they commit): specification.md
+removes the round-trip count from E.5 and the proof counts from I.3/I.4/I.5; the L1/L2/L3 plus
+MVP-gate table is single-sourced to testing.md (specification states the requirement and links);
+the undefined-shorthand terms the style rule forbids by name are removed from architecture.md
+("by construction", "first-class") and design.md (the "precision instrument" and "scans rather than
+shouts" metaphors); and OpenSeadragon's version plus the pixel/size constants live in one owner, not
+restated across architecture.md, data.md, specification.md and design.md.
 
 ## Working model
 
