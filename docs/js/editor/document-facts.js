@@ -3,14 +3,13 @@
  *
  * The factual, no-invented-data views of the loaded document: the slim strip
  * under the toolbar (#ed-docstrip), including the neutral plaintext-draft badge;
- * the small derivations it shares (editing unit, title, source wording, save
- * target); and the unsaved-draft recovery wiring (persist a handle-less plaintext
- * draft to localStorage on the first dirty change, offer to restore it in the
- * empty reading pane).
+ * the editing-unit derivation it shares; and the unsaved-draft recovery wiring
+ * (persist a handle-less plaintext draft to localStorage on the first dirty
+ * change, offer to restore it in the empty reading pane).
  *
  * Contract:
  *   createDocumentFacts(ctx) -> {
- *     editingUnit, docTitle, sourceLabel, saveTargetLabel,
+ *     editingUnit,
  *     updateDocStrip,
  *     showDraftBanner, hideDraftBanner,
  *     isUnsavedDraft, persistDraftIfNeeded, clearDraftRecovery,
@@ -27,7 +26,6 @@
 
 import { el, clear } from "./dom.js";
 import { serialize } from "./edition.js";
-import { firstByLocal, textOf, textNodes } from "./tei-document.js";
 import { typeForFile } from "./project-manifest.js";
 import { saveDraft, loadDraft, clearDraft } from "./draft-recovery.js";
 import { requireCtx } from "./ctx.js";
@@ -51,34 +49,6 @@ export function createDocumentFacts(ctx) {
   function editingUnit(plural = true) {
     const word = app.state && app.state.profile === "word";
     return plural ? (word ? "words" : "lines") : (word ? "word" : "line");
-  }
-
-  /** The teiHeader <title> text, trimmed, or null when there is none. */
-  function docTitle() {
-    if (!app.state) return null;
-    const node = firstByLocal(app.state.doc.root, "title");
-    if (!node) return null;
-    // textOf is a text-node helper (slices raw by node.start/end); an element node
-    // has no start/end, so pass it the title's descendant text nodes, not the element.
-    const t = textNodes(node).map((tn) => textOf(app.state.doc, tn)).join("")
-      .replace(/\s+/g, " ").trim();
-    return t || null;
-  }
-
-  /** The Source-row wording, shared by the strip context and the Document panel. */
-  function sourceLabel() {
-    const s = app.source;
-    if (!s) return null;
-    if (s.kind === "draft") return s.txtName ? `Drafted from ${s.txtName}` : "Drafted from a plaintext file";
-    if (s.kind === "example") return s.label || "Loaded example";
-    return "Opened TEI file";
-  }
-
-  /** Where Save sends the bytes: in place when a target exists, else a download. */
-  function saveTargetLabel() {
-    if (app.fileHandle) return `in place: ${app.docName}`;
-    if (app.saveTarget && app.saveTarget.name) return `in place: ${app.saveTarget.name}`;
-    return "download";
   }
 
   /**
@@ -235,7 +205,7 @@ export function createDocumentFacts(ctx) {
   }
 
   return {
-    editingUnit, docTitle, sourceLabel, saveTargetLabel,
+    editingUnit,
     updateDocStrip,
     showDraftBanner, hideDraftBanner,
     isUnsavedDraft, persistDraftIfNeeded, clearDraftRecovery,
