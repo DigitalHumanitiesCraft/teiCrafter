@@ -235,6 +235,81 @@ unambiguous).
   the badge is missing from the document strip, or the standalone draft banner
   still appears alongside or instead of the strip badge.
 
+## Author-mode structural gestures
+
+These exercise the author-mode primitives (`docs/js/editor/structural.js`) as the
+operator drives them. The gesture model is context-menu-only: right-click on the
+reading surface opens the menu, and the structural acts are menu items there.
+There is no Enter or Backspace structural editing yet, so do not expect a
+keystroke path. The menu is neutral chrome, never the violet AI family
+(`--color-ai`). Each act is one offset splice over the parser's recorded offsets,
+so the byte-faithful core holds: only the bytes the act inserts or removes change,
+and a save-reopen is byte-faithful to the intended change (the VC-6 contract).
+Drive these on a line-level document (the ZBZ Hersch example,
+`editor.html#example=zbz`, whose lines are `<l>` elements with `xml:id`s).
+
+### VC-AUTHOR-1 Split a line at the caret
+
+- Gesture: place the caret inside a line at a point between two words, right-click
+  there, and choose Split (split the line at the caret).
+- Expected: the one line becomes two sibling elements of the same kind (an `<l>`
+  splits into two `<l>` siblings); the text before the caret stays in the first
+  element, which keeps its original id; the text after the caret moves into a new
+  following sibling that carries a fresh, unique id. The new sibling lines up with
+  the original's indentation. A save-reopen is byte-faithful to the intended change
+  (two lines where there was one, every other byte unchanged).
+- Failure signature: the line is not split, the split produces an element of a
+  different kind, the first element loses its id or the new sibling reuses the same
+  id (a duplicate `xml:id`), text is dropped or reordered across the boundary, or a
+  save-reopen diffs at a byte the split did not touch. A split with the caret
+  outside the line's content must be a no-op, not a malformed document.
+
+### VC-AUTHOR-2 Merge with previous
+
+- Gesture: right-click a line that has a previous sibling of the same kind, and
+  choose Merge with previous.
+- Expected: the line joins the previous sibling of the same element; the previous
+  element keeps its id and this line's id is dropped; the two contents join inside
+  the previous element with their reading order preserved (the previous content
+  first, then this line's content). The inter-element whitespace between the two is
+  removed so the contents are contiguous. A save-reopen is byte-faithful to the
+  intended change.
+- Failure signature: the merge keeps both ids (a duplicate or orphaned id), drops
+  the previous element's id instead of this one's, reorders or loses content across
+  the join, leaves a stray empty element behind, or merges across two elements of
+  different kinds. A merge offered on a line with no same-kind previous sibling
+  must be a no-op (or the item disabled), not a malformed document.
+
+### VC-AUTHOR-3 Insert a line break
+
+- Gesture: place the caret at a point inside a line, right-click there, and choose
+  Insert line break.
+- Expected: the document's own line-break milestone form is inserted at the caret.
+  A document whose elements carry the `tei:` prefix gets `<tei:lb/>`; a
+  default-namespace document gets `<lb/>`. No other bytes change: only the
+  milestone string is inserted at the caret offset, and a save-reopen is
+  byte-faithful to the intended change.
+- Failure signature: the wrong milestone form is inserted (a bare `<lb/>` into a
+  `tei:`-prefixed document, or a `<tei:lb/>` into a default-namespace document), a
+  different element is inserted, bytes other than the inserted milestone change, or
+  a save-reopen diffs outside the inserted span.
+
+### VC-AUTHOR-4 Delete only an empty element
+
+- Gesture: right-click an empty line (one with no non-whitespace reading text) and
+  read the Delete item; then right-click a line that still carries text and read
+  the Delete item.
+- Expected: on the empty line the Delete item is enabled, and choosing it removes
+  the whole element losslessly (its entire outer span, leaving no stray tag or
+  dangling whitespace island); a save-reopen is byte-faithful to the intended
+  change. On the non-empty line the Delete item is disabled (the refuse-non-empty
+  contract in `deleteElement`), so reading content can never be silently dropped
+  through Delete.
+- Failure signature: Delete is enabled on a non-empty line and removes content,
+  Delete on an empty line leaves a fragment (a half tag, an orphaned whitespace
+  run, or a broken parse), the disabled Delete throws on click, or a delete diffs
+  a save-reopen at a byte outside the removed element.
+
 ### VC-HSA hsa-7711 letter end-to-end
 
 - Gesture: open the folder `docs/data/editor/hsa-7711/` as a project, open its
