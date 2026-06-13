@@ -14,7 +14,7 @@ created: 2026-06-08
 updated: 2026-06-12
 language: en
 version: 0.15
-topics: ["[[Promptotyping]]", "[[Method]]", "[[Project Status]]", "[[Editopia]]"]
+topics: ["[[Promptotyping]]", "[[Method]]", "[[Project Status]]"]
 related: [project, journal, integration]
 ---
 
@@ -27,7 +27,7 @@ here; it is the operator's to complete.
 
 ## 1. What the case is
 
-teiCrafter is the third Promptotyping case in the Editopia talk and paper, alongside the
+teiCrafter is the third Promptotyping case in the talk and paper, alongside the
 SZD and ZBZ input pipelines: the tool case, where a human verifies and curates machine
 output in a deterministic editor. The Promptotyping argument is not made only by the
 running tool; it is made by the tool together with its provenance, which is fully on disk:

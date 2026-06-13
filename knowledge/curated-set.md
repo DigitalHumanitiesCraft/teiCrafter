@@ -14,7 +14,7 @@ created: 2026-06-09
 updated: 2026-06-12
 language: en
 version: 0.15
-topics: ["[[Editopia]]", "[[Curation]]", "[[Evaluation]]"]
+topics: ["[[Curation]]", "[[Evaluation]]"]
 related: [worked-examples, testing]
 ---
 
@@ -23,7 +23,7 @@ related: [worked-examples, testing]
 The paper's empirical partial result (operator decision 2026-06-09): persisted
 before/after pairs of fully curated TEIs from both pipelines, each pair with a
 unified diff and a per-object step log. The set is the on-disk demonstration of
-the Editopia success criterion (operator 2026-06-09): from the unverified pipeline
+the project's success criterion (operator 2026-06-09): from the unverified pipeline
 TEI of a real object, curation in teiCrafter produces a demonstrably better TEI
 while preserving the pipeline output byte-exactly.
 

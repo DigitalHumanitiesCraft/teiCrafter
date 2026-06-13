@@ -1,8 +1,8 @@
 # Milestone evaluation: MS-C, full text draft (TP7)
 
 Date: 2026-06-09. Milestone: the Rohfassung of all nine sections of the
-Editopia full text. The deliverable lives in the Obsidian vault per the
-standing working arrangement (`Projects/zbz-ocr-tei/2026-06-09 - Editopia
+full text. The deliverable lives in the Obsidian vault per the
+standing working arrangement (`Projects/zbz-ocr-tei/2026-06-09 -
 Volltext Rohfassung.md`, marked claude-code-worker); this report and the
 journal entry are the repo-side record.
 

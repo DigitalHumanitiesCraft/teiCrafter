@@ -1,7 +1,7 @@
 # Milestone evaluation: MS-A, curated example set (M7.4)
 
 Date: 2026-06-09. Milestone: the paper's empirical partial result (Teilprojekt 4
-of the Editopia master plan). Evaluator: this lane, self-evaluation against the
+of the master plan). Evaluator: this lane, self-evaluation against the
 milestone's own acceptance criteria; every claim below is backed by a
 re-runnable command.
 

@@ -4,7 +4,7 @@
  *   - confirm drops the marker (entity becomes verified), keeping name + idno;
  *   - reject (deleteEntity) removes the entity entirely;
  *   - every step round-trips byte-identically.
- * This is the "AI assists, human decides" mechanism the Editopia thesis rests on.
+ * This is the "AI assists, human decides" mechanism the expert-in-the-loop thesis rests on.
  *
  * Run: node test/tools/ai_proposal_check.mjs   (exit 0 = all pass)
  */

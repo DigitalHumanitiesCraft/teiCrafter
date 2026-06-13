@@ -1,8 +1,8 @@
 # Milestone evaluation: MS-B, epistemic infrastructure chapter draft (TP5)
 
 Date: 2026-06-09. Milestone: the paper's section 4 (Begriffskapitel), the
-largest piece of original writing in the contribution (TP5 of the Editopia
-master plan). The deliverable lives in the Obsidian vault per the standing
+largest piece of original writing in the contribution (TP5 of the master
+plan). The deliverable lives in the Obsidian vault per the standing
 working arrangement (paper text in the vault, tool work in the repo); this
 report and the journal entry are the repo-side record.
 
@@ -16,7 +16,7 @@ is explicitly not part of the milestone (it is the operator's gate).
 
 ## 2. What was delivered
 
-`Projects/zbz-ocr-tei/2026-06-09 - Editopia Begriffskapitel epistemische
+`Projects/zbz-ocr-tei/2026-06-09 - Begriffskapitel epistemische
 Infrastruktur (Entwurf).md` (vault, frontmatter `author: claude-code-worker`,
 `human-reviewed: false`), containing the chapter draft (nine paragraphs), a
 three-point update proposal for the concept note (deliberately NOT applied to

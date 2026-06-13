@@ -27,9 +27,9 @@ Vault (all marked claude-code-worker, human-reviewed false):
 
 - New: chapter draft (TP5), nine-section Rohfassung (TP7), provenance page
   (M7.1).
-- Updated: Editopia Gesamtplan (TP4 to TP7 status paragraphs), zbz-lane order
+- Updated: the Gesamtplan (TP4 to TP7 status paragraphs), zbz-lane order
   (new point 4, warnings-figure reconciliation), ACTIVE-WORK (teiCrafter night
-  addendum and reworked arrow lines; zbz Editopia arrow updated to the
+  addendum and reworked arrow lines; zbz arrow updated to the
   Rohfassung), Erledigt-Log (one line for the round).
 
 ## 2. Verification
