@@ -122,52 +122,24 @@ live-validation neutral-info-row edits in `knowledge/architecture.md`, `design.m
   ```
 - editor.css, the now-dead `.ed-draftbanner` and `.ed-draftbanner-dismiss` rules can be
   deleted: the standalone banner element and its listener are gone.
-- knowledge `architecture.md` (panel and data flow) and `specification.md` (the
-  manifest-driven index sections decision) need the W3 update, but they carry the lane's
-  uncommitted validation edits; the W3 knowledge write must come after the lane commits, to
-  avoid clobbering. The W4 validation tooltip honesty (live = well-formed plus lossless;
+- The knowledge write for `architecture.md`, `design.md` and `specification.md` is done (see
+  Documentation debt, resolved 2026-06-13): the manifest-driven index sections and the rest of
+  the arc are recorded, and each document's single uncommitted validation-honesty line was
+  preserved and folded in. The W4 validation tooltip honesty (live = well-formed plus lossless;
   deeper TEI RelaxNG and Schematron run offline in the harness today) belongs in the same
-  lane's validation-view.js, not here.
+  lane's validation-view.js, the remaining code-side item alongside the editor.css rules above.
 
-## Documentation debt (audited 2026-06-13)
+## Documentation debt (resolved 2026-06-13)
 
 An adversarial doc-coverage audit (five parallel auditors) confirmed the engine and editor code
-is committed and pushed, but `architecture.md`, `design.md` and `specification.md` predate most
-of the arc and carry both omissions and now-false statements. They are lane-owned (uncommitted
-validation edits in the working tree), so these writes must wait until the lane commits, to avoid
-clobbering. The audit yielded a concrete, ready-to-apply list:
-
-- **architecture.md** was last touched at the arc's second commit; the back half is unreflected
-  and three statements are now FALSE. Correct: the author-mode primitives are called "not yet
-  UI-wired" in three places (lines 57, 122, 189) though `d35a062` wired them into the reading
-  context menu (the neutral Structure group); `insertLb` is called a "bare `<lb/>`" though
-  `3c5b78f` made it namespace-faithful; the structural-proof pointer still reads
-  `tests/structural.test.mjs` though it moved to `test/tools/structural_check.mjs`. Add:
-  `edition.js cellRawOffset`, `interaction-rules.js` (shouldDismissPopover), the typing seam
-  (`jsconfig.json` + `types_check` + the tei-document JSDoc typedefs), the IIIF Presentation
-  resolver (`facsimile.js` coordScale, `project-manifest.js` `iiif-presentation` type + METS
-  rejection, `app.coordScale`), `project-profiles.js parseIiifPresentationManifest`. Move from
-  "future (Package F)" to built: manifest-driven index sections, empty-project onboarding, the
-  neutral draft badge (banner -> badge); drop the removed document-facts helpers; add the
-  `llm.js pickModel` fallback as a behavioural line.
-- **specification.md** predates the whole arc; seven audited decisions are unrecorded as built
-  and several are mis-framed as "future" or "open question" though shipped. Record as Key
-  Decisions / acceptance scenarios: the IIIF Presentation resolver + explicit METS deferral
-  (narrow the "future"/open-question lines to the live pre-resolution fetch only); the
-  author-mode structural ops (and revise line 191, which still lists element insertion as out of
-  scope); the model catalog refresh + `pickModel` fallback + SECURITY.md; the
-  frontend-verification floor as an acceptance principle; empty-project onboarding; the neutral
-  draft badge (line 40 still says "banner"); index sections from declared manifest indices
-  (correct lines 173/187/188 "consumers still to come"). Per the counts-out convention (below),
-  remove the round-trip count from E.5 (state it qualitatively) and the proof counts from
-  acceptance scenarios I.3/I.4/I.5 (cite each proof by name). Bump version and the updated date.
-- **design.md** reflects index-as-overview, the popover TEI-role colours and the draft-badge
-  neutral rule well; missing: the author-mode Structure gestures in the context-menu enumeration
-  (line 70) and their neutral colour family relative to blue=annotate / gold=write; the index's
-  manifest-driven and read-only sections; and the draft-badge passage (lines 79, 81), which still
-  frames the strip badge as a future "package F" merge though it shipped.
-- Repo-wide `version:` bump belongs with this pass (all knowledge docs move together;
-  `converter-reference.md` keeps its own scheme by design).
+is committed and pushed. The debt it found in `architecture.md`, `design.md` and `specification.md`
+(now-false "not yet wired" statements, missing built features, items mis-framed as "future") is
+RESOLVED as of 2026-06-13: the three documents were updated in place to record the author-mode
+structure edits, the IIIF Presentation resolver and coordScale, the typing seam, `interaction-rules.js`,
+`cellRawOffset`, the manifest-driven index sections, empty-project onboarding, the neutral draft badge
+and the dissolved Document panel, and the `llm.js pickModel` fallback. Each lane document carried one
+uncommitted validation-honesty line; that line is preserved and folded into the same commit. The
+repo-wide `version:` was bumped to 0.16 (`converter-reference.md` keeps its own scheme by design).
 
 ## Documentation hygiene (decided 2026-06-13)
 
@@ -182,13 +154,12 @@ hygiene pass, applied across the freely-editable documents (`testing.md`, `INDEX
 - **Single-ownership for duplicated prose**: the lineage paragraph, the engine reading contract
   and the licence boundary now point to their owner instead of restating it.
 
-Still owed in the lane-held documents (apply the same convention when they commit): specification.md
-removes the round-trip count from E.5 and the proof counts from I.3/I.4/I.5; the L1/L2/L3 plus
-MVP-gate table is single-sourced to testing.md (specification states the requirement and links);
-the undefined-shorthand terms the style rule forbids by name are removed from architecture.md
-("by construction", "first-class") and design.md (the "precision instrument" and "scans rather than
-shouts" metaphors); and OpenSeadragon's version plus the pixel/size constants live in one owner, not
-restated across architecture.md, data.md, specification.md and design.md.
+Applied to the lane-held documents too (2026-06-13): specification.md dropped the round-trip
+count from E.5 and the proof counts from I.3/I.4/I.5 and single-sources the L1/L2/L3 plus
+MVP-gate table to testing.md; the undefined-shorthand terms the style rule forbids by name are
+gone from architecture.md ("by construction", "first-class") and design.md ("precision
+instrument", "scans rather than shouts"); and OpenSeadragon's version is single-sourced to
+architecture.md, the pixel/size constants stated qualitatively elsewhere.
 
 ## Working model
 

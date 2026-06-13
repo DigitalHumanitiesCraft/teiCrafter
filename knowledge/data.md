@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-06-12
+updated: 2026-06-13
 language: en
-version: 0.15
+version: 0.16
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:

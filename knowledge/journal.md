@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-13
 language: en
-version: 0.15
+version: 0.16
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
