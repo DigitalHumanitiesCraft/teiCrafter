@@ -12,6 +12,7 @@ import {
   ANTHROPIC_MODELS,
   ANTHROPIC_DEFAULT_MODEL,
   getProviderConfigs,
+  pickModel,
 } from "../../docs/js/services/llm.js";
 
 let passed = 0, failed = 0;
@@ -63,6 +64,18 @@ check(
     cfg.models.every((m, i) => m === ANTHROPIC_MODELS[i]),
   "getProviderConfigs() exposes the same default and model list",
 );
+
+// --- a stale or unknown stored model never reaches the API -------------------
+
+const cfgPick = { models: ANTHROPIC_MODELS, defaultModel: ANTHROPIC_DEFAULT_MODEL };
+check(pickModel(cfgPick, RETIRED) === ANTHROPIC_DEFAULT_MODEL,
+  "a retired stored model falls back to the default");
+check(pickModel(cfgPick, "claude-sonnet-4-6") === "claude-sonnet-4-6",
+  "a listed stored model is honored");
+check(pickModel(cfgPick, null) === ANTHROPIC_DEFAULT_MODEL,
+  "no stored model uses the default");
+check(pickModel(cfgPick, "made-up-model") === ANTHROPIC_DEFAULT_MODEL,
+  "an unknown stored model falls back to the default");
 
 // --- summary -----------------------------------------------------------------
 

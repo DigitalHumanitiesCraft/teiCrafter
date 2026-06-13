@@ -185,7 +185,8 @@ export function setModel(model) {
  * @returns {string}
  */
 export function getModel() {
-    return currentModel || PROVIDER_CONFIGS[currentProvider]?.defaultModel || '';
+    const config = PROVIDER_CONFIGS[currentProvider];
+    return config ? pickModel(config, currentModel) : '';
 }
 
 /**
@@ -213,6 +214,20 @@ export const ANTHROPIC_MODELS = PROVIDER_CONFIGS[LLM_PROVIDERS.ANTHROPIC].models
 export const ANTHROPIC_DEFAULT_MODEL = PROVIDER_CONFIGS[LLM_PROVIDERS.ANTHROPIC].defaultModel;
 
 /**
+ * The model id to actually send for a provider: the stored/active model only when
+ * the provider still lists it, else the provider default. A model dropped from the
+ * catalog (a retired id, or one left in storage from another provider) thus never
+ * reaches the API; the default is used instead.
+ * @param {{ models?: string[], defaultModel: string }} config
+ * @param {string|null|undefined} stored
+ * @returns {string}
+ */
+export function pickModel(config, stored) {
+    return stored && Array.isArray(config.models) && config.models.includes(stored)
+        ? stored : config.defaultModel;
+}
+
+/**
  * Send a prompt to the current LLM provider.
  * @param {string} prompt
  * @param {Object} [options]
@@ -225,7 +240,7 @@ export async function complete(prompt, options = {}) {
     const config = PROVIDER_CONFIGS[currentProvider];
     if (!config) throw new Error('Unknown provider: ' + currentProvider);
 
-    const model = currentModel || config.defaultModel;
+    const model = pickModel(config, currentModel);
     const key = apiKeys.get(currentProvider) || '';
 
     // Auth check (except for Ollama)
