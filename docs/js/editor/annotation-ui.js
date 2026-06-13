@@ -38,6 +38,7 @@ import { elementByName, isW3cDateAttr, w3cDateReason } from "./tei-guidelines.js
 import { buildAuthorityForm } from "./authority-form.js";
 import { runAuthorityLookup } from "./authority-picker.js";
 import { requireCtx } from "./ctx.js";
+import { shouldDismissPopover } from "./interaction-rules.js";
 
 const ENTITY_TYPE_LABELS = [
   ["person", "person"], ["place", "place"], ["org", "organisation"],
@@ -1057,19 +1058,28 @@ export function createAnnotationUi(ctx) {
     // one, so a collapsed-selection click never kills the popover it just opened
     // (openAnnotationEditor replaces #ed-sel-pop with a fresh node).
     const popAtUp = document.getElementById("ed-sel-pop");
-    const dismissStale = () => { if (document.getElementById("ed-sel-pop") === popAtUp) removeSelPopover(); };
     setTimeout(() => {
-      if (!inReading) { dismissStale(); return; }
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed) { dismissStale(); return; }
-      // The normalized display text does not map to raw offsets, so a selection
-      // wrap would splice the wrong bytes: annotate in the diplomatic view.
-      if (app.readingVariant === "norm") {
-        removeSelPopover();
-        setStatus("Select in the diplomatic view to annotate.");
+      const selectionCollapsed = !sel || sel.isCollapsed;
+      // A drag selection inside the reading pane opens the annotate popover (or, in
+      // the normalized view, declines with a hint, since normalized display offsets
+      // do not map to raw bytes). Every other case is a dismissal decision the pure
+      // shouldDismissPopover predicate makes, identity-guarded and proven headlessly.
+      if (inReading && !selectionCollapsed) {
+        if (app.readingVariant === "norm") {
+          removeSelPopover();
+          setStatus("Select in the diplomatic view to annotate.");
+          return;
+        }
+        openSelPopover();
         return;
       }
-      openSelPopover();
+      if (shouldDismissPopover({
+        popoverIdAtMouseup: popAtUp,
+        currentPopoverId: document.getElementById("ed-sel-pop"),
+        inReading: !!inReading,
+        selectionCollapsed,
+      })) removeSelPopover();
     }, 0);
   });
   document.addEventListener("keydown", (e) => {

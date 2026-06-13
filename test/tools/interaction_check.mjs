@@ -15,15 +15,14 @@
  * (TAP '# manual:' comments) pointing at test/acceptance/BROWSER-CHECKS.md, never
  * silently dropped.
  *
- * shouldDismissPopover MIRRORS the dismissStale + deferred-mouseup logic at
- * docs/js/editor/annotation-ui.js:1030-1056. It is a copy, not an import: the
- * source lives in a contested, uncommitted file and exports nothing. The
- * follow-up is to export the predicate from annotation-ui.js and import it here so
- * the two cannot drift; until then this file pins the intended contract and any
- * change to the real branch order will surface as a divergence in manual VC-RACE.
+ * shouldDismissPopover is imported from docs/js/editor/interaction-rules.js, the
+ * same pure module the deferred mouseup handler in annotation-ui.js uses, so the
+ * proof and the handler cannot drift.
  *
  * Run: node test/tools/interaction_check.mjs   (exit 0 = all pass)
  */
+
+import { shouldDismissPopover } from "../../docs/js/editor/interaction-rules.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -34,39 +33,13 @@ function check(cond, label) {
 console.log("\nInteraction-layer invariant proof (selection popover lifecycle)");
 console.log("=".repeat(64));
 
-// --- shouldDismissPopover: pure mirror of dismissStale + deferred mouseup -----
-//
-// state fields, all read at the FIRE moment of the deferred handler:
-//   popoverIdAtMouseup  identity of #ed-sel-pop captured at mouseup SCHEDULE time
-//                       (the popAtUp const); null when no popover was showing.
-//   currentPopoverId    identity of #ed-sel-pop NOW, at fire time. A span-click
-//                       handler may have opened a FRESH popover between schedule
-//                       and fire, giving this a new identity.
-//   inReading           whether the mouseup target was inside #ed-reading
-//                       (captured at schedule time as a const).
-//   selectionCollapsed  window.getSelection().isCollapsed read live at fire time;
-//                       true for a plain caret click, false for a real drag range.
-//
-// The real handler returns nothing; it either calls removeSelPopover() (dismiss),
-// calls openSelPopover() (open a new one), or does neither. This predicate answers
-// only the dismissal question: does the popover that was showing at mouseup get
-// torn down? That is the decision the identity guard exists to make safe.
-function shouldDismissPopover(state) {
-  const { popoverIdAtMouseup, currentPopoverId, inReading, selectionCollapsed } = state;
-  // The identity guard: dismissStale only removes when the popover showing NOW is
-  // the SAME node captured at mouseup. A freshly opened popover (new identity)
-  // must survive, even though a stale collapsed mouseup is still in flight.
-  const sameIdentity = currentPopoverId !== null && currentPopoverId === popoverIdAtMouseup;
-  if (!sameIdentity) return false;
-  // Outside the reading pane: the stale popover is dismissed.
-  if (!inReading) return true;
-  // Inside the reading pane with a real (non-collapsed) range: this is a drag that
-  // OPENS a popover, it does not dismiss. Only a collapsed selection dismisses.
-  if (!selectionCollapsed) return false;
-  // Inside the reading pane, collapsed, unchanged identity: a genuinely stale
-  // dismissal.
-  return true;
-}
+// shouldDismissPopover is imported from the editor module above; this proof pins
+// its contract. State fields, all read at the FIRE moment of the deferred handler:
+//   popoverIdAtMouseup  identity of #ed-sel-pop captured at mouseup schedule time
+//   currentPopoverId    identity of #ed-sel-pop now, at fire time (a span click may
+//                       have opened a fresh popover with a new identity in between)
+//   inReading           whether the mouseup landed inside #ed-reading
+//   selectionCollapsed  whether the live selection is collapsed (caret vs drag)
 
 // 1. The bug this guard prevents: a late collapsed-selection mouseup arriving
 //    AFTER a span click opened a fresh popover (different identity) must NOT
