@@ -77,6 +77,7 @@ const app = {
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   source: null,       // load provenance: { kind: "tei"|"draft"|"example", txtName?, label? } or null
   imageBase: null,    // base dir for per-folio page images, or null (no known images)
+  coordScale: 1,      // zone-to-image scale for the facsimile (1 = no scaling). Becomes > 1 only when a IIIF Presentation manifest declares a canvas size different from the served image's pixel size; the live manifest pre-resolution that computes it is deferred (W7), so today it stays 1.
   pageImages: new Map(), // filename -> { url, blob, type }: in-memory page images (uploaded via the on-ramp or read back from the project folder), resolving a surface's <graphic url> to a displayable URL
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
   sourceMode: false,  // true while the left pane shows the editable XML source
@@ -346,6 +347,10 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // Default: no known page images. An example with an imageBase (loadExample)
   // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
+  // No zone-to-image scaling until a project source declares one (deferred IIIF
+  // Presentation pre-resolution). Reset per load so a prior document's scale
+  // never lingers.
+  app.coordScale = 1;
   // In-memory page images: revoke the previous document's, then adopt the set the
   // caller hands in (the on-ramp builds one keyed by the surface <graphic url>).
   // A document opened from a project folder resolves its filenames afterwards
@@ -1489,8 +1494,13 @@ function ensureFacsimile() {
   if (!host) return null;
   // A project profile may rewrite a bare <graphic url> filename to a IIIF
   // info.json tile source (deep zoom); otherwise the plain image loads as-is.
+  // coordScale is fixed at controller creation: it is 1 unless a project source
+  // (a IIIF Presentation manifest) declares a canvas size different from the
+  // served image's pixel size. The live pre-resolution that would compute a
+  // non-1 value is deferred (W7), so this is a no-op for template/plain pages.
   facsimile = createFacsimile(host, {
     tileSourceFor: (url) => projectTileSource(app.project, url) || plainImageTileSource(url),
+    coordScale: app.coordScale ?? 1,
   });
   return facsimile;
 }

@@ -26,6 +26,8 @@
  *     "name": "...",
  *     "schema": "https://...rng",
  *     "imageResolver": { "type": "iiif-image-template", "template": "...{stem}..." },
+ *       // or { "type": "iiif-presentation", "manifest": "https://.../manifest.json" }
+ *       // ("mets" is recognized but explicitly deferred, not yet supported)
  *     "markup":  [ { "element": "hi", "label": "...", "attributes": { "rend": "inkRed" } } ],
  *     "teiModules":  [ "core", "namesdates" ],
  *     "teiElements": [ "persName", "supplied" ],
@@ -209,12 +211,27 @@ export function parseManifest(input) {
   if (typeof m.name !== "string" || !m.name.trim()) fail('"name" is missing');
 
   let iiifImageTemplate = null;
+  let iiifPresentationManifest = null;
   if (m.imageResolver !== undefined) {
     const r = m.imageResolver;
     if (!r || typeof r !== "object") fail('"imageResolver" is not an object');
-    if (r.type !== "iiif-image-template") fail(`unknown imageResolver type ${JSON.stringify(r.type)}`);
-    if (typeof r.template !== "string" || !r.template.includes("{stem}")) fail('imageResolver.template must contain "{stem}"');
-    iiifImageTemplate = r.template;
+    if (r.type === "iiif-image-template") {
+      if (typeof r.template !== "string" || !r.template.includes("{stem}")) fail('imageResolver.template must contain "{stem}"');
+      iiifImageTemplate = r.template;
+    } else if (r.type === "iiif-presentation") {
+      // A IIIF Presentation manifest enumerates canvases (page image + size).
+      // The manifest is fetched and parsed at load time (project-profiles.js);
+      // here only the manifest URL is validated and carried.
+      if (typeof r.manifest !== "string" || !r.manifest.trim()) fail('imageResolver.manifest must be a non-empty URL string');
+      iiifPresentationManifest = r.manifest.trim();
+    } else if (r.type === "mets") {
+      // Recognized but deliberately deferred: a METS/MODS resolver is not yet
+      // implemented. Reject explicitly so a project that declares one fails
+      // loudly rather than silently dropping its facsimile binding.
+      fail('imageResolver type "mets" is not supported yet');
+    } else {
+      fail(`unknown imageResolver type ${JSON.stringify(r.type)}`);
+    }
   }
 
   if (m.markup !== undefined && !Array.isArray(m.markup)) fail('"markup" is not an array');
@@ -251,6 +268,7 @@ export function parseManifest(input) {
     name: m.name.trim(),
     schema: typeof m.schema === "string" && m.schema.trim() ? m.schema.trim() : null,
     iiifImageTemplate,
+    iiifPresentationManifest,
     markup: Array.isArray(m.markup) && m.markup.length ? m.markup.map(markupWrap) : null,
     teiScope: teiScopeDef(m, ""),
     documentTypes,

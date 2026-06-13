@@ -14,7 +14,12 @@
  *
  * Coordinate model: zone coords are in image pixels and a surface's lrx/lry equal
  * the page image size, so a zone maps to imageToViewportRectangle(z.ulx, z.uly,
- * z.lrx - z.ulx, z.lry - z.uly) directly, with no percentage scaling.
+ * z.lrx - z.ulx, z.lry - z.uly) directly, with no percentage scaling. When a
+ * project resolves images through a IIIF Presentation manifest the served image
+ * may differ in pixel size from the canvas the zones were authored against;
+ * opts.coordScale (default 1) multiplies every zone rect to bridge that gap. The
+ * template and plain-image paths declare no canvas size, so their coordScale is 1
+ * and their behavior is unchanged.
  *
  * Contract:
  *   export function plainImageTileSource(url) -> { type:'image', url }
@@ -45,9 +50,14 @@ export function plainImageTileSource(url) {
  * opts.tileSourceFor(imageUrl) is an optional hook so a IIIF info.json or
  * manifest-backed source can be injected later; it defaults to
  * plainImageTileSource so the editor works against plain page images today.
+ *
+ * opts.coordScale (default 1) multiplies zone rectangles before they are placed,
+ * for the case where the served image differs in pixel size from the canvas the
+ * zones were authored against (a IIIF Presentation manifest). 1 is a no-op.
  */
 export function createFacsimile(hostEl, opts = {}) {
   const tileSourceFor = typeof opts.tileSourceFor === "function" ? opts.tileSourceFor : plainImageTileSource;
+  const coordScale = Number.isFinite(opts.coordScale) && opts.coordScale > 0 ? opts.coordScale : 1;
   const hasOSD = typeof window !== "undefined" && window.OpenSeadragon;
 
   // Per-controller state. The OSD instance is reused across pages when possible
@@ -100,10 +110,13 @@ export function createFacsimile(hostEl, opts = {}) {
     if (!viewer || !surface || !Array.isArray(surface.zones)) return;
     const vp = viewer.viewport;
     surface.zones.forEach((z, index) => {
-      const x = z.ulx ?? 0;
-      const y = z.uly ?? 0;
-      const w = (z.lrx ?? x) - x;
-      const h = (z.lry ?? y) - y;
+      // Zone coords are authored against the canvas; coordScale (1 unless a IIIF
+      // Presentation manifest reports a differently sized served image) maps them
+      // into the loaded image's pixel space before imageToViewportRectangle.
+      const x = (z.ulx ?? 0) * coordScale;
+      const y = (z.uly ?? 0) * coordScale;
+      const w = ((z.lrx ?? (z.ulx ?? 0)) - (z.ulx ?? 0)) * coordScale;
+      const h = ((z.lry ?? (z.uly ?? 0)) - (z.uly ?? 0)) * coordScale;
       if (!(w > 0) || !(h > 0)) return; // skip degenerate zones, do not crash
       const element = el("div", {
         class: "ed-osd-zone",
