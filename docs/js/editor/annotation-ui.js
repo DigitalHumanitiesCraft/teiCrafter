@@ -1033,10 +1033,17 @@ export function createAnnotationUi(ctx) {
     const inReading = e.target instanceof Element && e.target.closest("#ed-reading");
     const inPop = e.target instanceof Element && (e.target.closest("#ed-sel-pop") || e.target.closest("#ed-menu"));
     if (inPop) return;
+    // A plain click on an annotated element opens its popover from the span's
+    // own click handler, which fires after this mouseup but before the deferred
+    // check below. Capture the popover showing now and only dismiss that same
+    // one, so a collapsed-selection click never kills the popover it just opened
+    // (openAnnotationEditor replaces #ed-sel-pop with a fresh node).
+    const popAtUp = document.getElementById("ed-sel-pop");
+    const dismissStale = () => { if (document.getElementById("ed-sel-pop") === popAtUp) removeSelPopover(); };
     setTimeout(() => {
-      if (!inReading) { removeSelPopover(); return; }
+      if (!inReading) { dismissStale(); return; }
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed) { removeSelPopover(); return; }
+      if (!sel || sel.isCollapsed) { dismissStale(); return; }
       // The normalized display text does not map to raw offsets, so a selection
       // wrap would splice the wrong bytes: annotate in the diplomatic view.
       if (app.readingVariant === "norm") {
