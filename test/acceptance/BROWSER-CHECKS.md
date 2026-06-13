@@ -181,6 +181,60 @@ unambiguous).
 - Failure signature: the tooltip claims validity the tool did not establish,
   reports findings with no basis, or shows stale findings after an edit.
 
+### VC-F-1 Index panel reflects the document's declared indices
+
+- Gesture: open the folder `docs/data/editor/wb-codex/` as a project (its
+  `teicrafter.project.json` declares the `indices`: `persons`, `places`, and
+  `peoples`), then open its document. Open the index panel.
+- Expected: the panel's sections are exactly the indices the manifest declares
+  for this document, in the declared order, with the declared labels (here
+  Persons, Places, and Peoples (Völker)); the sections are derived from the
+  manifest, not from a fixed built-in list. A project that declares a different
+  set yields a different set of sections.
+- Failure signature: the panel shows the fixed built-in sections regardless of
+  the manifest (for example a Works or Events section the manifest does not
+  declare), omits a declared index, drops a declared label, or orders the
+  sections other than as declared.
+
+### VC-F-2 Non-mappable index is read-only
+
+- Gesture: with the Wenzelsbibel project open (VC-F-1), look at the `peoples`
+  index in the panel. This index declares no `listType`, so the editor cannot
+  map it onto an editable standOff list in place.
+- Expected: the `peoples` section appears in the panel rather than being hidden;
+  it is marked read-only; its add action is disabled (not absent in a way that
+  looks like a bug), and a short explanation states that this index cannot be
+  edited in place because the document declares no mappable list type for it.
+- Failure signature: the non-mappable index is hidden from the panel, its add
+  action is enabled and produces a broken or dangling entry, the read-only state
+  carries no explanation, or the disabled add action throws on click.
+
+### VC-F-3 Empty-project onboarding
+
+- Gesture: adopt an empty project folder (a folder with no `.xml`, `.txt`, or
+  `.md` document), or open the editor with no document loaded.
+- Expected: the editor shows a factual onboarding state that explains how to
+  open a single TEI document, how to open a project folder, and how to start
+  from a plaintext source; no error is shown for the empty state and no pane is
+  blank or broken.
+- Failure signature: a blank or broken reading pane, a console error on the
+  empty state, onboarding text that names an action the UI does not offer, or no
+  onboarding text at all for an empty project.
+
+### VC-F-4 Draft badge in the document strip
+
+- Gesture: open a plaintext source (`.txt` or `.md`) as a line-level draft (the
+  hsa-7711 `.txt`, from the project panel or by drop). Look at the document strip
+  (`#ed-docstrip`) under the toolbar.
+- Expected: the draft is marked by a neutral draft badge in the document strip
+  itself; the badge uses neutral tokens, never the violet AI family
+  (`--color-ai`), and never implies machine-generated or AI content (a plaintext
+  draft is deterministic transport, not AI). The former standalone draft banner
+  is gone; the draft state is carried only by the strip badge.
+- Failure signature: the draft badge is violet or otherwise reads as AI content,
+  the badge is missing from the document strip, or the standalone draft banner
+  still appears alongside or instead of the strip badge.
+
 ### VC-HSA hsa-7711 letter end-to-end
 
 - Gesture: open the folder `docs/data/editor/hsa-7711/` as a project, open its
