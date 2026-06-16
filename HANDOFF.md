@@ -6,9 +6,8 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`. Local `main` is **ahead of `origin/main`** by the 2026-06-16 work and not
-pushed (the working model is local commits, no push without word; `origin/main` was last
-advanced 2026-06-13). GitHub Pages redeploys from `/docs` once pushed. The 2026-06-16
+Branch `main`, pushed to `origin/main` (operator-authorized 2026-06-16); `origin/main`
+at the tip, 0 ahead / 0 behind. GitHub Pages redeploys from `/docs`. The 2026-06-16
 commits, oldest first:
 
 - A status pass: live checks report editor-caused id/count changes as neutral info (not
