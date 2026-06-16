@@ -58,6 +58,8 @@ Output is the same TEI, edited byte-losslessly (only edited text runs change), s
 
 The editor additionally ships one reference dataset: a vendored, version-pinned copy of the TEI P5 Guidelines compilation (`docs/data/tei/p5subset_en.json`; source, SHA-256, dual license and update procedure in the NOTICE.md next to it). It backs markup and attribute suggestions and is data the tool consults, never content it writes into an edition.
 
+A project may additionally carry an **LLM mapping document**: a Markdown file (named by the manifest's `llm.mapping`, sitting next to the manifest, type-aware so a project's several document types can each declare their own) whose prose maps the project's text phenomena to TEI. It is ingested next to the manifest, fed to the model as the project's guidance, and is project configuration the tool reads, never edition content; absent, the on-ramp falls back to the built-in per-source-type mapping. The system prompt that accompanies it lives inline in the manifest's `llm` block. This is distinct from the plaintext ingest above (a deterministic, model-free transport).
+
 ## How the Engine Reads TEI
 
 The editor requires no particular TEI profile: it recognises the structural markup (`<pb>`, `<lb>`/`<l>`, `<w xml:id>`, `<facsimile>`/`<surface>`/`<zone>`, `<standOff>`, `<note target>`) generically by local-name and preserves everything it does not interpret verbatim on save. The single home of how the engine reads TEI is the Engine Reading Contract in [architecture](architecture.md); this document carries only the format-level facts of what the tool consumes and produces.

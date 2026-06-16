@@ -94,6 +94,10 @@ The landing page (`index.html`) is the public front door. Its parts: a serif her
 
 Violet appears exclusively on AI-origin content: the generated-and-unreviewed banner, the on-ramp's own controls, AI-proposed (unverified) index entries, and mentions of such entities in the reading text. Deterministic, human-driven work is shown in the neutral and gold families; no other token may sit in the violet hue range (which is why the organisation family moved to olive). AI mentions additionally carry a dashed outline, so machine origin never hangs on hue alone. This keeps the boundary between what the human did and what a model proposed visible at all times.
 
+**The provenance contract (one marker, three channels).** Every model-produced construct, of ANY kind (an entity mention, a markup wrap, a textual-critical wrapper, an editorial note), carries a `@resp` responsibility id (`#ai` by default), declared by a real `<respStmt>` so it is savable TEI, not a transient UI flag. The reading text reads a cell's provenance off that data (its linked entity, or any wrapping layer's `@resp`) and marks it in three channels: the violet colour, a dashed outline, and the one canonical label "AI-proposed, unverified" (the same wording in the tooltip, the index row, and the legend chip; label consistency is a rule). The visible transition is the workflow: confirm drops `@resp` and the construct becomes ordinary human work; reject removes it. A deterministic plaintext draft is deliberately NOT violet (its badge stays neutral), because transport is not model output.
+
+**The standalone (no-LLM) mode.** AI is one capability behind a single gate (`llmEnabled()`: a build default plus a per-user toggle in the Load menu). With it off there are no AI surfaces at all (no on-ramp, no proposal action, no provider or key UI) and the editor is a fully deterministic TEI editor; the LLM is purely additive. A current configuration (AI on or off) is never presented as the tool's identity.
+
 ## UI Conventions
 
 - **Label consistency is a rule, not a freedom.** The same field or term carries the same label everywhere; inconsistency is a bug.
