@@ -18,7 +18,7 @@ const IS_LOCAL_DEV = typeof location !== "undefined" &&
 // on the public deployment. This gates UI only; committed files under
 // docs/data/ remain fetchable by URL.
 export const FEATURES = Object.freeze({
-  llmOnRamp: false,
+  llmOnRamp: true,
   examples: IS_LOCAL_DEV,
 });
 

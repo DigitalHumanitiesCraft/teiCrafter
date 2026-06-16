@@ -59,6 +59,10 @@
         /* Ghost: dark text on transparent with a neutral border (high contrast). */
         .lp-ghost { color: var(--color-text); background: transparent; border-color: var(--color-border); }
         .lp-ghost:hover { background: var(--color-secondary); border-color: var(--color-gold); }
+        /* AI on-ramp: violet ghost, the page's reserved AI accent, so the entry
+           that leads to machine-drafted TEI reads as the AI family from the start. */
+        .lp-ai { color: var(--color-ai); background: transparent; border-color: var(--color-ai); }
+        .lp-ai:hover { background: var(--color-ai-tint); border-color: var(--color-ai); }
 
         /* Hero screenshot slot (placeholder image until the next build). */
         .lp-shot { margin: var(--space-2xl) 0 0; }
@@ -144,6 +148,7 @@
                 <p class="lp-lede">teiCrafter opens any TEI document and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). Where a facsimile is linked, text and page image appear side by side. It runs in the browser; your file stays local.</p>
                 <div class="lp-cta-group">
                     <a class="lp-btn lp-open" href="editor.html" title="Open the editor to load a TEI document or a project folder">Open the editor</a>
+                    <a class="lp-btn lp-ai" href="editor.html#generate" id="lp-llm-onramp" hidden title="Draft an initial TEI from plaintext with a language model, then review and correct it in the editor">New from text (LLM)</a>
                     <a class="lp-btn lp-ghost" href="#examples" id="lp-try-example" hidden>Try an example</a>
                 </div>
                 <figure class="lp-shot">
@@ -159,8 +164,7 @@
                 <h2 class="lp-section-title">Example projects</h2>
                 <div class="lp-cards">
                     <!-- The same three examples as in the editor's welcome state; the
-                         #example deep link loads them directly. The LLM card returns
-                         here with FEATURES.llmOnRamp. -->
+                         #example deep link loads them directly. -->
                     <a class="lp-card" href="editor.html#example=wb">
                         <h3>Wenzelsbibel</h3>
                         <p>Codex 2759 of the Austrian National Library: word-level encoding with IIIF facsimile. Where the licence-restricted file is not present, a structurally identical sample file loads instead.</p>
@@ -224,6 +228,11 @@
         if (FEATURES.examples) {
             document.getElementById("examples").hidden = false;
             document.getElementById("lp-try-example").hidden = false;
+        }
+        // The LLM on-ramp entry is product-facing (not a local-dev example), so it
+        // shows on the public deployment whenever the flag is on.
+        if (FEATURES.llmOnRamp) {
+            document.getElementById("lp-llm-onramp").hidden = false;
         }
     </script>
 </body>
