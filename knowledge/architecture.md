@@ -31,7 +31,7 @@ index.html   (landing: hero + three example cards + feature strip)
   +-- editor.html ............. open existing TEI or plaintext, edit, save  (deterministic)
   +-- editor.html#example=KEY . loads that example directly     (landing cards)
   +-- editor.html#generate .... New from text (LLM) -> same editor  (LLM on-ramp,
-                                hidden behind FEATURES.llmOnRamp, currently off)
+                                behind FEATURES.llmOnRamp, on since 2026-06-16)
 ```
 
 The example surfaces (landing cards, the Load... menu entries, the `#example` deep link) show only on local development hosts (`FEATURES.examples`, computed from the hostname in `constants.js`); the public deployment hides them. This gates UI only: committed files under `docs/data/` remain fetchable by URL. Plaintext (`.txt`/`.md`) opens from every entry the same way a TEI file does: picker, input fallback and drag-and-drop all route it through `plaintext-import.js` into the same deterministic line-level draft the project-folder flow produces; a directly opened draft has no save target, so its first save downloads the `.xml`.
@@ -72,7 +72,7 @@ The engine is three pure-then-UI layers. The lower two are DOM-free, so the exac
 | `js/editor/validation-view.js` | The live validation surface (browser-light half of the hybrid): well-formedness via DOMParser, xml:id integrity and tag-count drift against the load-time baseline, rendered as the pane-head chip with a detail popover; the popover carries the term definitions (well-formed, lossless) as readable rows, not only the tooltip, and labels the cell count by the document's editing unit (Words at word level, Lines otherwise). Results cached by doc identity so page turns in a large edition do not re-validate. |
 | `js/editor/tei-guidelines.js` | DOM-free, fetch-free reader of the vendored TEI P5 Guidelines compilation (`docs/data/tei/p5subset_en.json`, see its NOTICE.md): `parseGuidelines`, `elementByName` (gloss/desc as plain text, attributes resolved RECURSIVELY through the attribute-class graph with first-wins dedup; one level would miss inherited attributes such as `@facs`), `elementsByModule`, `moduleList`, `elementsForScope` (union, unknown names skipped), `guidelinesVersion`. It contributes no conformance validator (content models stay with the schema harness): it is an authoring aid that says what markup exists and what it means. The one value-level check it does carry is a non-blocking date hint, `isW3cDateAttr` and `w3cDateReason`, for the `teidata.temporal.w3c` attributes: the lexical form by regex (the canonical form for the XSD-union datatype) plus a numeric calendar check (month range, day-per-month, leap year); the attribute editor uses it to warn, never to block. The compilation carries no version string of its own, so the pinned version is metadata of the vendored copy. |
 | `js/editor/ctx.js` | `requireCtx(who, ctx, fnKeys, objKeys)`: the feature factories' construction-time contract check, so a missing ctx key fails at boot with the factory and key named instead of as an undefined call when the feature is first used. |
-| `js/editor/gen-modal.js` | The LLM on-ramp modal ("New from text"): provider/model/type selectors, in-memory key handling via llm.js, the minimal annotate prompt, response XML extraction, and its own modal wiring. Wired only when `FEATURES.llmOnRamp` is on (currently off). |
+| `js/editor/gen-modal.js` | The LLM on-ramp modal ("New from text"): provider/model/type selectors, in-memory key handling via llm.js, the minimal annotate prompt, response XML extraction, and its own modal wiring. Wired when `FEATURES.llmOnRamp` is on. |
 | `js/editor/recent-files.js` | Persisted recent files for the editor's empty state: FileSystemFileHandle records in IndexedDB (`listRecents`/`rememberRecent`/`forgetRecent`, max 5, keyed by name so reopening refreshes instead of duplicating). Chromium-only by nature; `supported` is false elsewhere and the Recent section simply does not render. Reopening re-requests permission inside the click (a user gesture); a dead handle removes its own row. |
 
 ### Why an offset-splice core, not the DOM
@@ -109,7 +109,7 @@ The LLM on-ramp builds a minimal annotate prompt in `editor-app.js`, calls `llm.
 
 ```
 docs/
-  index.html              Landing: entry card into the editor (LLM card hidden, flag off)
+  index.html              Landing: entry into the editor; the LLM on-ramp hero CTA shows when the flag is on
   editor.html             The editor: dual-view shell (left text surface, right context panels) + LLM modal; loads OpenSeadragon 5.0.1 from CDN
   css/
     style.css             Design tokens (--color-*, --space-*, --font-*, --radius-*) + base + shared site chrome (header bar, identity footer)

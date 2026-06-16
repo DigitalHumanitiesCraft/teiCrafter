@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-06-13
+updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
@@ -39,7 +39,7 @@ What teiCrafter consumes and produces, and which TEI proves the engine. teiCraft
 |-------|-------|-------|
 | Existing TEI edition | Editor | Any TEI; opened from local disk, edited losslessly, saved back |
 | Plaintext (`.txt`/`.md`) | Editor (picker, drop) or project folder | Opens as minimal line-level TEI by the fixed conventions below: transport, not interpretation, so the same input always yields the same output and the draft is never AI-marked. In a project folder the first save creates the `.xml` next to its source; opened directly, the draft has no save target and downloads its `.xml` |
-| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Hidden behind `FEATURES.llmOnRamp` (currently off) |
+| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Behind `FEATURES.llmOnRamp` (on since 2026-06-16) |
 
 ### Plaintext conventions (deterministic ingest rules)
 

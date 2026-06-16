@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-06-13
+updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
@@ -21,7 +21,7 @@ related: [project, data, specification, architecture, design, journal, testing, 
 
 # teiCrafter Knowledge Base
 
-Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. Plaintext also enters the editor: a `.txt` or `.md`, opened directly (picker, drop) or from a project folder, becomes a line-level TEI draft by a fixed, deterministic rule (paragraphs on blank lines, a `<lb/>` between the lines of a paragraph with the first line bare, a `|N|` token as a page break; never AI-marked). Separately, an optional LLM on-ramp drafts an initial TEI from plaintext into the same editor (currently switched off behind a feature flag). Client-only, no backend, no build step; the built-in examples show only on local development hosts.
+Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. Plaintext also enters the editor: a `.txt` or `.md`, opened directly (picker, drop) or from a project folder, becomes a line-level TEI draft by a fixed, deterministic rule (paragraphs on blank lines, a `<lb/>` between the lines of a paragraph with the first line bare, a `|N|` token as a page break; never AI-marked). Separately, an optional LLM on-ramp drafts an initial TEI from plaintext into the same editor, an optional model-assisted entry the human then verifies deterministically. Client-only, no backend, no build step; the built-in examples show only on local development hosts.
 
 This knowledge base follows the [Promptotyping Documents convention](https://dhcraft.org/Promptotyping/), function-separated as in the ancestor tool coOCR HTR.
 
@@ -51,7 +51,7 @@ Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and
 | Generic lossless reader | The core: the raw TEI string is canonical, edits are offset splices, `serialize()` is byte-identical; reads arbitrary TEI without a per-project profile | architecture, specification |
 | Editing unit from the document | TEI encodes its own structure, so the editable unit is read from the encoding: word-level if `<w>` present, else line-level; no configuration, no branching (formerly "emergent granularity", renamed 2026-06-10) | architecture, project |
 | Cells / folios / lines | The model `edition.js` projects: folios split by `<pb>`, lines by `<lb>`/`<l>`, cells are editable reading-text nodes | architecture |
-| LLM on-ramp | The optional entry: a model drafts an initial TEI from plaintext that opens in the same editor, marked machine-generated and unreviewed. Hidden since 2026-06-10 behind `FEATURES.llmOnRamp`; code in place | specification, design |
+| LLM on-ramp | The optional entry: a model drafts an initial TEI from plaintext that opens in the same editor, marked machine-generated and unreviewed. Behind `FEATURES.llmOnRamp` (on since 2026-06-16); the model assists, the human verifies | specification, design |
 | Epistemic asymmetry | Models produce plausible TEI but cannot judge their own correctness; the human verifies in the deterministic editor | project, design |
 | Hybrid validation | Browser-light live (well-formed + structural integrity) plus harness-heavy offline (RelaxNG + Schematron) | specification, testing |
 | MVP gate | Well-formed AND L1 word fidelity AND L3 counts preserved; L2 reported as new-errors-vs-input, non-gating | testing |

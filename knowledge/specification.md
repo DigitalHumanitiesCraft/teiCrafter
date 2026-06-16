@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: active
 created: 2026-02-05
-updated: 2026-06-13
+updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
@@ -109,7 +109,7 @@ The acceptance case for this section (operator, 2026-06-10): create an own proje
 
 ### LLM on-ramp
 
-All L stories are built but currently hidden behind `FEATURES.llmOnRamp` (off since 2026-06-10); the modal and provider client stay in the codebase.
+All L stories are built and reachable behind `FEATURES.llmOnRamp` (on since 2026-06-16); the model drafts, the human verifies in the deterministic editor.
 
 - **L.1** As an editor I want to paste plaintext and have a model draft an initial TEI that opens in the editor so that I have a starting point to refine. *Built* (the "New from text (LLM)" modal).
 - **L.2** As an editor I want generated content clearly marked as machine-made and unreviewed so that I never mistake a draft for finished work. *Built* (violet marking, unreviewed banner).
@@ -132,7 +132,7 @@ All L stories are built but currently hidden behind `FEATURES.llmOnRamp` (off si
 
 ## LLM On-Ramp
 
-Currently switched off behind the feature flag `FEATURES.llmOnRamp` (`docs/js/utils/constants.js`, operator decision 2026-06-10): the deterministic editor path is proven, the on-ramp is not yet, so its entries (toolbar button, landing card, `#generate` deep link) are hidden. The modal, prompt and provider client remain in the codebase.
+Reachable behind the feature flag `FEATURES.llmOnRamp` (`docs/js/utils/constants.js`, on since the 2026-06-16 operator decision; the 2026-06-10 hide is reversed): its entries are the toolbar button, the landing hero CTA (the violet AI family the flag reveals), and the `#generate` deep link. The modal, prompt and provider client live in the codebase.
 
 "New from text (LLM)" accepts plaintext, a source type (which selects default mapping rules), a provider and model, and an API key (held in memory only). It builds a minimal annotate prompt, calls the provider, extracts the XML, and opens the draft in the same editor, flagged as machine-generated and unreviewed (violet banner). The human then verifies and corrects it deterministically. The model assists; the human decides.
 
@@ -149,7 +149,7 @@ Graduated levels rather than binary valid/invalid: L1 text/word fidelity (must a
 - **The editing unit is read from the document.** TEI encodes its own structure, so the editor takes the unit from the encoding: word-level if `<w>` present, else line-level; one rule, no per-project branching. (Formerly labelled "emergent granularity"; the label was dropped 2026-06-10 because nothing emerges, a one-line rule reads the unit off the markup.)
 - **Hybrid validation.** Browser-light live, harness-heavy offline (Node + Python/lxml).
 - **LLM output is marked.** Generated TEI is violet and unreviewed; keys in memory only.
-- **LLM on-ramp hidden for now** (2026-06-10, operator). All "New from text (LLM)" entries are behind `FEATURES.llmOnRamp` (off); the code stays in place and the flag restores them. The landing-page card is static HTML and changes with the flag.
+- **LLM on-ramp re-enabled** (2026-06-16, operator). `FEATURES.llmOnRamp` is on: the "New from text (LLM)" entries (toolbar button, `#generate` deep link, landing hero CTA) are reachable again, the model drafts and the human verifies in the deterministic editor. This reverses the 2026-06-10 hide, which had kept the entries behind the flag while only the deterministic editor path was proven; nothing was deleted in between, so re-enabling was a flag flip plus the static landing entry. The landing entry is a hero CTA in the violet AI family the flag reveals, product-facing (shown on the public deployment), not a local-dev example.
 - **Licence boundary.** Real third-party TEI never committed; synthetic twins only. A rights-restricted example (Wenzelsbibel, ZBZ Hersch) ships a committed synthetic structural twin that the example registry falls back to on a 404; the real object loads only where present (local). (The earlier rule "every public example card must still load on the deployment" is superseded since 2026-06-12: the example surfaces are hidden on the public deployment altogether; the fallback chain remains for local hosts.)
 - **Built-in examples are local-development surfaces** (2026-06-12, operator). The landing cards, the Load... menu entries and the `#example` deep link show only on local hosts (`FEATURES.examples`, hostname-computed). Reason: the public deployment is the tool, not a demo shelf. This gates UI, not data; committed demo files remain fetchable by URL.
 - **Plaintext opens directly; conventions are transport only** (2026-06-12, operator session). `.txt` and `.md` open directly (picker, drop) as the same deterministic draft the project flow produces. A plaintext convention resolves at ingest ONLY where it encodes structure the text itself carries: blank line = paragraph, `|N|` = page break. Semantics (entities, dates, normalizations) is never pseudo-syntax in the source file: a typo there would produce silently wrong TEI with none of the editor's verification, lookup or validation, and a growing pseudo-syntax converges toward a worse XML. New conventions are added only when real material carries them, and each is documented in [data](data.md).
