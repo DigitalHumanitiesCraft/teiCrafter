@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-13
+updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
@@ -22,6 +22,17 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-16: a status pass closes the clearly-actionable findings
+
+Trigger: a status review run as a concrete use case (a plaintext letter taken open, corrected, annotated and downloaded), with the brief to execute whatever was unambiguous. The use case itself ran clean; the open points sat beside it, in finishing and in writing down. The decisions:
+
+- **The uncommitted live-validation change was finished and committed.** Editor-caused additions and element-count changes are reported as neutral information, not warnings, because they are the expected consequence of editing and not a loss signal; the genuine loss signals (the XML parses, no baseline id is lost) keep the chip honest. This brought the code in line with the wording the knowledge base already carried.
+- **The id-generation rule got the proof it was missing before it was committed.** A change to how a generated id collapses separator runs had shipped without a safety net, which contradicts the test-first discipline; a dedicated proof now pins the contract (NCName-safe, no surviving separator run, idempotent) and was confirmed to fail on the prior behaviour, so it guards the change rather than merely describing it.
+- **Two engine properties known only to a scratch probe were written into the reading contract and pinned by a real proof.** Losslessness holds even on not-well-formed input, while the structure projection can diverge there because the ancestor walk closes the nearest match (the live well-formedness check is the separate safety net); and the editing profile is a single global property, one word token anywhere setting the whole document to word with no per-folio detection. The reason: an honest contract names its boundaries, and a behaviour only a throwaway probe knew is a latent surprise. The probe was retired once its observations were both documented and asserted.
+- **A documentation cross-reference that pointed into a removed figure was corrected.** The project overview still promised a round-trip count in testing.md that the prior hygiene pass had taken out.
+
+One finding was left open by design: the dormant model on-ramp still carries a maintenance cost (its model catalog must stay current behind a closed flag), which is a keep-or-freeze decision for the operator, not a mechanical fix.
 
 ## 2026-06-13 (documentation hygiene): counts leave the knowledge base
 

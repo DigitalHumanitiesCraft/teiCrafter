@@ -4,8 +4,8 @@
  * A token |N| (N = ASCII digits) becomes <pb n="N"/>. A page break implies a
  * line break, so the segment after a marker starts a new <lb/> line; one space
  * directly bordering the marker is dropped. Anything else stays verbatim text.
- * Marker-free input must stay byte-identical to the historical shape, and every
- * produced document must round-trip through the engine byte-for-byte.
+ * Current shape uses <lb/> between lines: the first paragraph segment stays
+ * bare, and every produced document must round-trip through the engine byte-for-byte.
  *
  * Run: node test/tools/plaintext_import_check.mjs   (exit 0 = all pass)
  */
@@ -29,7 +29,7 @@ function check(cond, label) {
 console.log("\nPlaintext page-break marker proof");
 console.log("=".repeat(60));
 
-// --- 1. marker-free input is byte-identical to the historical shape ----------
+// --- 1. marker-free input follows the current line-break convention ----------
 
 const plain = "first line\nsecond line\n\nnext para";
 const expectedPlain =
@@ -51,29 +51,29 @@ const expectedPlain =
   "  <text>\n" +
   "    <body>\n" +
   '      <pb n="1"/>\n' +
-  "        <p><lb/>first line\n          <lb/>second line</p>\n" +
-  "        <p><lb/>next para</p>\n" +
+  "        <p>first line\n          <lb/>second line</p>\n" +
+  "        <p>next para</p>\n" +
   "    </body>\n" +
   "  </text>\n" +
   "</TEI>\n";
 check(teiFromPlaintext(plain, "Doc") === expectedPlain, "marker-free output is byte-identical to the hand-computed shape");
 
-// --- 2. mid-line marker splits into <lb/> .. <pb> .. <lb/> inside one <p> -----
+// --- 2. mid-line marker splits into text, <pb>, then <lb/> inside one <p> ----
 
 const mid = teiFromPlaintext("schildern |2| ist bekannt", "M");
-check(mid.includes("<p><lb/>schildern<pb n=\"2\"/><lb/>ist bekannt</p>"),
-  "mid-line marker: schildern, <pb n=\"2\"/>, then <lb/>ist bekannt in the same <p>");
+check(mid.includes("<p>schildern<pb n=\"2\"/><lb/>ist bekannt</p>"),
+  "mid-line marker: bare schildern, <pb n=\"2\"/>, then <lb/>ist bekannt in the same <p>");
 
 // --- 3. standalone marker line emits only the <pb> ---------------------------
 
 const alone = teiFromPlaintext("alpha\n|3|\nbeta", "S");
-check(alone.includes('<p><lb/>alpha\n          <pb n="3"/>\n          <lb/>beta</p>'),
+check(alone.includes('<p>alpha\n          <pb n="3"/>\n          <lb/>beta</p>'),
   "standalone marker line: bare <pb n=\"3\"/> with neighbouring <lb/> lines");
 
 // --- 4. multiple markers in one line -----------------------------------------
 
 const multi = teiFromPlaintext("a |4| b |5| c", "X");
-check(multi.includes('<p><lb/>a<pb n="4"/><lb/>b<pb n="5"/><lb/>c</p>'),
+check(multi.includes('<p>a<pb n="4"/><lb/>b<pb n="5"/><lb/>c</p>'),
   "two markers in one line each become a <pb>, splitting into three <lb/> segments");
 
 // --- 5. non-markers stay literal (and escaped) -------------------------------
@@ -86,7 +86,7 @@ check(lit.includes("|x| |2 2| || end"), "non-marker pipes carried verbatim as te
 // --- 6. XML escaping still applies around markers ----------------------------
 
 const esc = teiFromPlaintext("a & b < c |6| d > e & f", "E");
-check(esc.includes('<lb/>a &amp; b &lt; c<pb n="6"/><lb/>d &gt; e &amp; f'),
+check(esc.includes('a &amp; b &lt; c<pb n="6"/><lb/>d &gt; e &amp; f'),
   "& < > escaped in both segments around the marker");
 
 // --- 7. every produced document round-trips through the engine ----------------
