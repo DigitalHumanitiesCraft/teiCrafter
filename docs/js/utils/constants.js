@@ -6,6 +6,8 @@
  * default TEI mapping rules per source type that seed the generation prompt.
  */
 
+import { getSetting } from "../services/storage.js";
+
 // True on a local development host (loopback or a file: URL).
 const IS_LOCAL_DEV = typeof location !== "undefined" &&
   (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) ||
@@ -21,6 +23,16 @@ export const FEATURES = Object.freeze({
   llmOnRamp: true,
   examples: IS_LOCAL_DEV,
 });
+
+// The single LLM capability gate, read at every AI entry point. AI is on only
+// when the build allows it (FEATURES.llmOnRamp, the deployment default) AND the
+// per-user runtime preference is not switched off. "Off" is therefore a coherent
+// standalone editor: no AI surfaces at all, everything else deterministic and
+// unchanged. getSetting is headless-safe (no localStorage yields the default), so
+// this also evaluates outside the browser for the proofs.
+export function llmEnabled() {
+  return FEATURES.llmOnRamp && getSetting("llmEnabled", true) !== false;
+}
 
 // LLM provider ids (keys of the provider catalog in services/llm.js).
 export const LLM_PROVIDERS = Object.freeze({

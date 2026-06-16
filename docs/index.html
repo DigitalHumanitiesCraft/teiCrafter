@@ -224,14 +224,16 @@
     <script type="module">
         // Example surfaces show only during local development; the public
         // deployment keeps them hidden (flag computed in constants.js).
-        import { FEATURES } from "./js/utils/constants.js";
+        import { FEATURES, llmEnabled } from "./js/utils/constants.js";
         if (FEATURES.examples) {
             document.getElementById("examples").hidden = false;
             document.getElementById("lp-try-example").hidden = false;
         }
         // The LLM on-ramp entry is product-facing (not a local-dev example), so it
-        // shows on the public deployment whenever the flag is on.
-        if (FEATURES.llmOnRamp) {
+        // shows on the public deployment whenever AI is enabled. llmEnabled() honours
+        // both the build flag and the per-user runtime toggle, so switching AI off in
+        // the editor also removes the entry here.
+        if (llmEnabled()) {
             document.getElementById("lp-llm-onramp").hidden = false;
         }
     </script>

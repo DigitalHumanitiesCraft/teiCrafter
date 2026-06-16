@@ -42,7 +42,7 @@ import { mountSourceView } from "./source-view.js";
 import { setupGenModal } from "./gen-modal.js";
 import { setupImageOnramp } from "./image-onramp.js";
 import { createPageImages } from "./page-images.js";
-import { FEATURES } from "../utils/constants.js";
+import { FEATURES, llmEnabled } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
 import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile } from "./project-manifest.js";
@@ -1924,15 +1924,18 @@ const documentFacts = createDocumentFacts({
 // writes attached images next to the TEI on save (used by applyLoad, the
 // facsimile render, save, and the text+image on-ramp).
 const pageImageStore = createPageImages({ app, rerenderPanel: () => renderActivePanel() });
-// LLM on-ramp ("New from text"), hidden while the flag is off. The flag
-// restores the toolbar button and the #generate deep link.
-if (FEATURES.llmOnRamp) {
-  const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
-  $("btn-generate").hidden = false;
-  $("btn-generate").addEventListener("click", genModal.open);
-  // Deep link from the landing page: editor.html#generate opens the LLM entry.
-  if (location.hash === "#generate") genModal.open();
+// LLM on-ramp ("New from text"). The modal is always wired (its DOM exists either
+// way); llmEnabled() (the build flag AND the per-user runtime preference) controls
+// whether the AI entry points are visible, so turning AI off leaves a fully
+// deterministic editor with no AI surfaces. applyLlmGate() re-runs on the toggle.
+const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
+function applyLlmGate() {
+  $("btn-generate").hidden = !llmEnabled();
 }
+$("btn-generate").addEventListener("click", genModal.open);
+applyLlmGate();
+// Deep link from the landing page: editor.html#generate opens the LLM entry.
+if (llmEnabled() && location.hash === "#generate") genModal.open();
 
 /**
  * Deterministic on-ramp build: the SAME plaintext->TEI draft, plus a <facsimile>
@@ -2014,6 +2017,28 @@ if (FEATURES.examples) {
   for (const node of document.querySelectorAll("#ed-load-menu [data-example], #ed-load-menu .ed-dd-sep")) {
     node.remove();
   }
+}
+// Runtime AI on/off toggle in the Load menu: present only when the build allows AI
+// at all (else there is nothing to toggle). Persists per browser and re-applies the
+// gate without a reload, so the operator can work in a deterministic standalone mode.
+const aiToggle = $("menu-toggle-ai");
+if (aiToggle && FEATURES.llmOnRamp) {
+  const syncAiToggle = () => {
+    const on = getSetting("llmEnabled", true) !== false;
+    aiToggle.setAttribute("aria-checked", String(on));
+    aiToggle.textContent = on ? "AI assistance: on" : "AI assistance: off";
+  };
+  syncAiToggle();
+  aiToggle.addEventListener("click", () => {
+    closeLoadMenu();
+    setSetting("llmEnabled", getSetting("llmEnabled", true) === false);
+    syncAiToggle();
+    applyLlmGate();
+  });
+} else if (aiToggle) {
+  const sep = aiToggle.previousElementSibling;
+  if (sep && sep.classList && sep.classList.contains("ed-dd-sep")) sep.remove();
+  aiToggle.remove();
 }
 setupDragDrop();
 // Left pane view switcher: reading text or XML source, one always active.
