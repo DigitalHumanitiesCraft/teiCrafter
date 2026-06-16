@@ -45,7 +45,7 @@ import { createPageImages } from "./page-images.js";
 import { FEATURES, llmEnabled } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
-import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile } from "./project-manifest.js";
+import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFiles } from "./project-manifest.js";
 import { createProjectFolder } from "./project-folder.js";
 import { createValidationView } from "./validation-view.js";
 import { createDocumentFacts } from "./document-facts.js";
@@ -550,7 +550,22 @@ async function loadExample(key) {
     if (ex.manifest) {
       try {
         const mres = await fetch(ex.manifest, { cache: "no-store" });
-        if (mres.ok) project = parseManifest(await mres.text());
+        if (mres.ok) {
+          project = parseManifest(await mres.text());
+          // Ingest any Markdown mapping files the manifest references, next to it.
+          // A missing mapping degrades to the built-in fallback, never blocks.
+          const base = ex.manifest.replace(/[^/]+$/, "");
+          const names = mappingFiles(project);
+          if (names.length) {
+            project.llmMappings = {};
+            for (const name of names) {
+              try {
+                const fr = await fetch(base + name, { cache: "no-store" });
+                if (fr.ok) project.llmMappings[name] = await fr.text();
+              } catch { /* leave it out; gen-modal falls back to the built-in mapping */ }
+            }
+          }
+        }
       } catch (err) {
         manifestNote = ` ${err.message}; built-in detection used instead.`;
       }
@@ -1928,7 +1943,7 @@ const pageImageStore = createPageImages({ app, rerenderPanel: () => renderActive
 // way); llmEnabled() (the build flag AND the per-user runtime preference) controls
 // whether the AI entry points are visible, so turning AI off leaves a fully
 // deterministic editor with no AI surfaces. applyLlmGate() re-runs on the toggle.
-const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus });
+const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus, app });
 function applyLlmGate() {
   $("btn-generate").hidden = !llmEnabled();
 }

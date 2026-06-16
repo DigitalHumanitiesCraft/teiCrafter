@@ -36,8 +36,18 @@
  *     "files":   { "brief-001.xml": "letter" },
  *     "indices": [ { "key": "peoples", "label": "...", "listType": "...", "registers": ["GND"] } ],
  *     "views":   [ { "key": "diplomatic", "label": "..." } ],
- *     "reconciliation": { "registers": ["Wikidata", "GND"], "auto": true }
+ *     "reconciliation": { "registers": ["Wikidata", "GND"], "auto": true },
+ *     "llm": { "systemPrompt": "...", "mapping": "mapping.md", "responsibility": "#ai" }
  *   }
+ *
+ * "llm" (optional) is the project's model-assistance config: a systemPrompt (the
+ * project's editorial instructions for the model), a mapping (a Markdown filename,
+ * next to the manifest, whose text maps the project's text phenomena to TEI), and a
+ * responsibility @resp id (default "#ai"). It is type-aware: a documentTypes[] entry
+ * may carry its own "llm" that overrides the project default per field, so a project
+ * holding several kinds of TEI (an edition, a dictionary, a corpus) gives each its
+ * own voice and mapping. The mapping file is ingested by the loader (mappingFiles +
+ * llmForFile), not here; this module stays fetch-free.
  *
  * "reconciliation" (optional) opts a project into authority reconciliation at
  * the point of annotation: "registers" are the registers (GND | Wikidata |
@@ -187,6 +197,46 @@ function reconciliationDef(value) {
   return { registers, auto };
 }
 
+/**
+ * The optional "llm" block -> the project's (or a type's) model-assistance config,
+ * or null when absent. All fields optional:
+ *   systemPrompt   the project's editorial instructions prepended to the model prompt
+ *   mapping        a filename (a Markdown document next to the manifest) whose text
+ *                  maps the project's text phenomena to TEI; ingested by the loader,
+ *                  NOT here (this module stays fetch-free, so only the name is carried)
+ *   responsibility the @resp id marking model output (default "#ai", applied by the
+ *                  consumer, not stored here)
+ *   defaultProvider / defaultModel  preferred LLM provider/model for this project
+ * The block is type-aware: it may sit at the project level (the default) and inside
+ * each documentTypes[] entry (the type override), resolved by llmForFile.
+ */
+function llmDef(value, where = "") {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail(`${where}"llm" is not an object`);
+  const out = {};
+  if (value.systemPrompt !== undefined) {
+    if (typeof value.systemPrompt !== "string") fail(`${where}llm.systemPrompt is not a string`);
+    out.systemPrompt = value.systemPrompt;
+  }
+  if (value.mapping !== undefined) {
+    if (typeof value.mapping !== "string" || !value.mapping.trim()) fail(`${where}llm.mapping is not a filename string`);
+    out.mapping = value.mapping.trim();
+  }
+  if (value.responsibility !== undefined) {
+    if (typeof value.responsibility !== "string" || !value.responsibility.trim()) fail(`${where}llm.responsibility is not a string`);
+    out.responsibility = value.responsibility.trim();
+  }
+  if (value.defaultProvider !== undefined) {
+    if (typeof value.defaultProvider !== "string") fail(`${where}llm.defaultProvider is not a string`);
+    out.defaultProvider = value.defaultProvider;
+  }
+  if (value.defaultModel !== undefined) {
+    if (typeof value.defaultModel !== "string") fail(`${where}llm.defaultModel is not a string`);
+    out.defaultModel = value.defaultModel;
+  }
+  return out;
+}
+
 function viewDef(entry, i) {
   if (typeof entry === "string") return { key: entry, label: entry };
   if (!entry || typeof entry !== "object") fail(`views[${i}] is not an object or string`);
@@ -249,6 +299,7 @@ export function parseManifest(input) {
           label: typeof t.label === "string" && t.label.trim() ? t.label.trim() : t.key.trim(),
           markup: Array.isArray(t.markup) && t.markup.length ? t.markup.map(markupWrap) : null,
           teiScope: teiScopeDef(t, `documentTypes[${i}].`),
+          llm: llmDef(t.llm, `documentTypes[${i}].`),
         };
       })
     : [];
@@ -276,6 +327,7 @@ export function parseManifest(input) {
     indices: Array.isArray(m.indices) ? m.indices.map(indexDef) : [],
     views: Array.isArray(m.views) ? m.views.map(viewDef) : [],
     reconciliation: reconciliationDef(m.reconciliation),
+    llm: llmDef(m.llm),
   };
 }
 
@@ -312,6 +364,39 @@ export function teiScopeForFile(project, fileName) {
     return type.teiScope;
   }
   return project.teiScope || empty;
+}
+
+/**
+ * The effective LLM-assistance config for a file: the project-level "llm" block as
+ * the default, with the file's document-type "llm" override winning per field (the
+ * same precedence as markupForFile / teiScopeForFile). Returns the merged config, or
+ * null when neither level declares one (so the on-ramp falls back to the built-in
+ * per-source-type mapping). The mapping's TEXT is not here (this module is
+ * fetch-free); `mapping` is the filename the loader ingested into project.llmMappings.
+ */
+export function llmForFile(project, fileName) {
+  if (!project) return null;
+  const type = typeForFile(project, fileName);
+  const base = project.llm || null;
+  const typeLlm = type && type.llm ? type.llm : null;
+  if (!base && !typeLlm) return null;
+  return { ...(base || {}), ...(typeLlm || {}) };
+}
+
+/**
+ * The de-duplicated list of mapping filenames declared anywhere in the project
+ * (project-level llm.mapping plus each document type's llm.mapping). The loader
+ * reads these files (next to the manifest) into project.llmMappings; this stays a
+ * pure name list so the fetch/handle read lives in the entry-specific loaders.
+ */
+export function mappingFiles(project) {
+  if (!project) return [];
+  const set = new Set();
+  if (project.llm && project.llm.mapping) set.add(project.llm.mapping);
+  for (const t of project.documentTypes || []) {
+    if (t.llm && t.llm.mapping) set.add(t.llm.mapping);
+  }
+  return [...set];
 }
 
 /**

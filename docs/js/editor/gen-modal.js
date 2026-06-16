@@ -13,7 +13,12 @@
  *     load(raw, name, handle),  // open the generated TEI in the editor
  *     markGenerated(on),        // flag the edition as machine-made, unreviewed
  *     setDirty(d), setStatus(msg),
+ *     app,                      // shared state, for the open project's llm voice
  *   }
+ * The prompt is assembled by the shared, pure llm-prompt.js so the on-ramp and any
+ * future model-assisted step compose identically. When a project declares an "llm"
+ * block (system prompt + a Markdown mapping, type-aware), that voice is used; bare
+ * files fall back to the built-in per-source-type mapping.
  *   Wires its own modal listeners (close, cancel, provider change, run,
  *   backdrop click, Escape); the integrator wires the toolbar button and the
  *   #generate deep link to open().
@@ -22,39 +27,13 @@
 import { el, clear } from "./dom.js";
 import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "../services/llm.js";
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
+import { buildGenerationPrompt, extractXml } from "./llm-prompt.js";
+import { llmForFile } from "./project-manifest.js";
 
 const $ = (id) => document.getElementById(id);
 
-// Self-contained prompt + response parsing (the old transform.js pipeline depends
-// on a missing prompt.js, so the editor builds its own minimal annotate prompt and
-// calls the LLM service directly via complete()).
-function buildPrompt(text, mappingRules) {
-  return [
-    "You are a TEI-XML assistant. Convert the source text into a well-formed TEI P5 document.",
-    "Rules:",
-    '1. Output a complete <TEI xmlns="http://www.tei-c.org/ns/1.0"> with a minimal <teiHeader> and <text><body>.',
-    "2. Preserve every character of the source text exactly. Do not paraphrase, translate, or omit anything.",
-    "3. Apply the mapping rules below where they fit; do not invent markup beyond them.",
-    "4. Return ONLY the XML inside a single ```xml code block, with no commentary.",
-    "",
-    mappingRules || "",
-    "",
-    "Source text:",
-    text,
-  ].join("\n");
-}
-
-function extractXml(resp) {
-  if (!resp) return null;
-  const fenced = resp.match(/```xml\s*([\s\S]*?)```/i) || resp.match(/```\s*([\s\S]*?)```/);
-  let xml = (fenced ? fenced[1] : resp).trim();
-  const lt = xml.indexOf("<");
-  if (lt > 0) xml = xml.slice(lt);
-  return xml.startsWith("<") ? xml : null;
-}
-
 export function setupGenModal(ctx) {
-  const { load, markGenerated, setDirty, setStatus } = ctx;
+  const { load, markGenerated, setDirty, setStatus, app } = ctx;
   const gen = { key: "", provider: "anthropic", model: "", type: "generic" };
 
   function fillSelect(sel, entries, current) {
@@ -116,7 +95,15 @@ export function setupGenModal(ctx) {
     status.className = "ed-modal-status busy";
     status.textContent = `Contacting ${cfg ? cfg.name : provider}...`;
     try {
-      const response = await complete(buildPrompt(text, getDefaultMapping(type)));
+      // The project's own voice when it declares one (system prompt + a Markdown
+      // mapping, resolved type-aware for the open document); otherwise the built-in
+      // per-source-type mapping. One assembler for both, in llm-prompt.js.
+      const eff = app && app.project ? llmForFile(app.project, app.docName) : null;
+      const systemPrompt = eff && eff.systemPrompt ? eff.systemPrompt : "";
+      const projMapping = eff && eff.mapping && app.project.llmMappings
+        ? app.project.llmMappings[eff.mapping] : "";
+      const mapping = projMapping && projMapping.trim() ? projMapping : getDefaultMapping(type);
+      const response = await complete(buildGenerationPrompt({ text, systemPrompt, mapping }));
       const xml = extractXml(response);
       if (!xml) throw new Error("The model response contained no XML.");
       await load(xml, `generated-${type}.xml`, null);

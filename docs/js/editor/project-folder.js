@@ -24,7 +24,7 @@
  */
 
 import { el, clear } from "./dom.js";
-import { parseManifest, typeForFile, MANIFEST_FILENAME } from "./project-manifest.js";
+import { parseManifest, typeForFile, mappingFiles, MANIFEST_FILENAME } from "./project-manifest.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { requireCtx } from "./ctx.js";
 
@@ -106,9 +106,11 @@ export function createProjectFolder(ctx) {
 
   async function adoptProjectFolder(dir) {
     const files = [];
+    const handles = new Map(); // name -> handle, to read manifest-referenced files
     let manifestText = null;
     for await (const entry of dir.values()) {
       if (entry.kind !== "file") continue;
+      handles.set(entry.name, entry);
       if (entry.name === MANIFEST_FILENAME) manifestText = await (await entry.getFile()).text();
       else if (/\.xml$/i.test(entry.name)) files.push({ name: entry.name, kind: "tei", handle: entry });
       else if (/\.(txt|md)$/i.test(entry.name)) files.push({ name: entry.name, kind: "text", handle: entry });
@@ -118,6 +120,24 @@ export function createProjectFolder(ctx) {
     if (manifestText !== null) {
       try { project = parseManifest(manifestText); }
       catch (err) { note = ` ${err.message}; the folder opened without project settings.`; }
+    }
+    // Ingest any Markdown mapping files the manifest references: they are project
+    // configuration (the model's phenomenon-to-TEI guidance), not openable drafts,
+    // so read them into project.llmMappings and drop them from the file list. A
+    // missing one degrades to the built-in fallback, never blocks.
+    if (project) {
+      const names = mappingFiles(project);
+      if (names.length) {
+        project.llmMappings = {};
+        for (const name of names) {
+          const h = handles.get(name);
+          if (!h) continue;
+          try { project.llmMappings[name] = await (await h.getFile()).text(); } catch { /* fall back */ }
+        }
+        for (let i = files.length - 1; i >= 0; i--) {
+          if (names.includes(files[i].name)) files.splice(i, 1);
+        }
+      }
     }
     app.projectFolder = { dir, name: project ? project.name : dir.name, files, project };
     const teiCount = files.filter((x) => x.kind === "tei").length;
