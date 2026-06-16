@@ -23,5 +23,10 @@
     "brief-benndorf-1879.xml": "letter",
     "letter.txt": "letter",
     "letter.xml": "letter"
+  },
+  "llm": {
+    "systemPrompt": "You annotate 19th-century scholarly correspondence from the Hugo Schuchardt Archiv. Mark only what is actually present in the text; never paraphrase, translate, or omit anything; preserve every character. Stay within this project's TEI vocabulary.",
+    "mapping": "mapping.md",
+    "responsibility": "#ai"
   }
 }
