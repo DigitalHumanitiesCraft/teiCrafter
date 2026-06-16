@@ -68,6 +68,11 @@ export function markCritical(doc, textNode, kind, opts = {}) {
   const rawSlice = doc.raw.slice(textNode.start, textNode.end);
   const [lead, core, trail] = splitEdge(rawSlice);
 
+  // opts.resp marks the wrapper as model-proposed (the project responsibility id,
+  // "#ai" by default), so a proposed criticism reads as the AI provenance family
+  // and confirm/reject can act on it. Absent for human-authored criticism.
+  const respAttr = opts.resp ? ' resp="' + escapeAttr(String(opts.resp)) + '"' : "";
+
   if (desc.wraps) {
     if (!core) return doc; // nothing to wrap (whitespace-only node)
     // No-op when the node's immediate parent is already exactly this wrapper, so
@@ -75,13 +80,13 @@ export function markCritical(doc, textNode, kind, opts = {}) {
     // wrapper holds more than this one node (mixed content).
     const p = textNode.parent;
     if (p && p.type === "element" && p.localName === desc.tag) return doc;
-    const wrapped = lead + "<" + desc.tag + ">" + core + "</" + desc.tag + ">" + trail;
+    const wrapped = lead + "<" + desc.tag + respAttr + ">" + core + "</" + desc.tag + ">" + trail;
     return spliceDocument(doc, textNode.start, textNode.end, wrapped);
   }
 
   // gap: replace the core with an empty element, edge whitespace preserved.
   const reason = opts.reason ? ' reason="' + escapeAttr(String(opts.reason)) + '"' : "";
-  const replaced = lead + "<gap" + reason + "/>" + trail;
+  const replaced = lead + "<gap" + reason + respAttr + "/>" + trail;
   return spliceDocument(doc, textNode.start, textNode.end, replaced);
 }
 

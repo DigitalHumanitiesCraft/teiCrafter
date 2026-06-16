@@ -218,6 +218,30 @@ export function ensureStandOff(doc) {
 }
 
 /**
+ * Ensure a <respStmt> declaring the responsibility that @resp points to exists, so
+ * a resp="#ai" marker on model output is a real, non-dangling pointer rather than a
+ * bare flag. respId is the @resp value (e.g. "#ai"); the id without the hash becomes
+ * the respStmt's xml:id. No-op (SAME doc) when an element already carries that
+ * xml:id, or when there is no <titleStmt> to anchor to (degrade, do not scaffold a
+ * whole header). One offset splice, so the round-trip stays byte-faithful.
+ */
+export function ensureRespStmt(doc, respId = AI_RESP) {
+  const id = String(respId == null ? "" : respId).replace(/^#/, "").trim();
+  if (!id) return doc;
+  let found = false;
+  walk(doc.root, (n) => { if (!found && n.type === "element" && getAttr(n, "id") === id) found = true; });
+  if (found) return doc;
+  const titleStmt = firstByLocal(doc.root, "titleStmt");
+  if (!titleStmt || titleStmt.contentEnd == null) return doc;
+  const nl = docNewline(doc);
+  const snippet = nl + '        <respStmt xml:id="' + escapeAttr(id) + '">'
+    + nl + "          <resp>Machine-generated draft, unreviewed (teiCrafter LLM on-ramp)</resp>"
+    + nl + "          <name>AI</name>"
+    + nl + "        </respStmt>";
+  return spliceDocument(doc, titleStmt.contentEnd, titleStmt.contentEnd, snippet);
+}
+
+/**
  * Ensure the list element for a type exists just inside <standOff>.
  * Returns { doc, list } where list is the (re-parsed) list element.
  * Always returns a list element; inserts one if missing.
@@ -588,7 +612,7 @@ export function ensureXmlId(doc, el, base) {
  * when you only have a reading-text node). Empty text is a no-op (SAME doc).
  * Returns a NEW doc otherwise.
  */
-export function addNote(doc, targetId, text) {
+export function addNote(doc, targetId, text, opts = {}) {
   const body = String(text == null ? "" : text).trim();
   if (!body) return doc;
   const ensured = ensureStandOff(doc);
@@ -597,7 +621,10 @@ export function addNote(doc, targetId, text) {
   if (!standOff) return doc; // element-free input: nothing to anchor to
   const nl = docNewline(doc);
   const ref = targetId ? ' target="#' + escapeAttr(targetId) + '"' : "";
-  const snippet = nl + "    <note" + ref + ">" + escapeText(body) + "</note>";
+  // opts.resp marks a model-proposed note (the project responsibility id, "#ai" by
+  // default); absent for a human-authored note.
+  const respAttr = opts.resp ? ' resp="' + escapeAttr(opts.resp) + '"' : "";
+  const snippet = nl + "    <note" + ref + respAttr + ">" + escapeText(body) + "</note>";
   const at = standOff.contentEnd != null ? standOff.contentEnd : standOff.stagEnd;
   return spliceDocument(doc, at, at, snippet);
 }
@@ -608,7 +635,7 @@ export function addNote(doc, targetId, text) {
  * freshly injected xml:id on the node's enclosing element. Returns a NEW doc (or
  * the SAME doc when text is empty / there is nothing to anchor to).
  */
-export function addNoteForNode(doc, textNode, fallbackFacs, text) {
+export function addNoteForNode(doc, textNode, fallbackFacs, text, opts = {}) {
   const body = String(text == null ? "" : text).trim();
   if (!body || !textNode || textNode.type !== "text") return doc;
   let targetId = null;
@@ -622,7 +649,7 @@ export function addNoteForNode(doc, textNode, fallbackFacs, text) {
     doc = r.doc;
     targetId = r.id;
   }
-  return addNote(doc, targetId, body);
+  return addNote(doc, targetId, body, opts);
 }
 
 /**

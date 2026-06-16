@@ -275,9 +275,13 @@ function buildState(doc) {
   // (STRUCTURAL_LOCALS), milestones (MILESTONE_LOCALS), and the dual-reading token
   // <w> are skipped (climb past), so nested annotations on one text (e.g.
   // <seg><persName>x</persName></seg>) are all representable, not just the innermost.
-  // Each entry is { kind, localName, ref }: kind "mention" for a <name> carrying
-  // @ref (ref = @ref without a leading '#'), "critical" for CRITICAL_LOCALS, else
-  // "markup"; ref is null unless a mention. Pure: no offsets, no serialize() change.
+  // Each entry is { kind, localName, ref, el, resp }: kind "mention" for a <name>
+  // carrying @ref (ref = @ref without a leading '#'), "critical" for CRITICAL_LOCALS,
+  // else "markup"; ref is null unless a mention. resp is the layer element's @resp
+  // value or null: it carries provenance (a model-proposed construct is marked with
+  // the project's responsibility id, "#ai" by default), so the renderer can show ANY
+  // AI-proposed construct, not only entity mentions, without re-reading the tree.
+  // Pure: no offsets, no serialize() change.
   const cellLayers = (node) => {
     const out = [];
     let p = node.parent;
@@ -286,11 +290,12 @@ function buildState(doc) {
       if (ln === "p" || ln === "head" || ln === "note" || ln === "body") break;
       if (!(STRUCTURAL_LOCALS.has(ln) || MILESTONE_LOCALS.has(ln) || ln === "w")) {
         const ref = getAttr(p, "ref");
+        const resp = getAttr(p, "resp") || null;
         // el is the parsed element node, so a consumer (the overlap inspector) can
         // target THIS layer's element, not only the cell's innermost wrapper.
-        if (ln === "name" && ref != null) out.push({ kind: "mention", localName: ln, ref: stripHash(ref), el: p });
-        else if (CRITICAL_LOCALS.has(ln)) out.push({ kind: "critical", localName: ln, ref: null, el: p });
-        else out.push({ kind: "markup", localName: ln, ref: null, el: p });
+        if (ln === "name" && ref != null) out.push({ kind: "mention", localName: ln, ref: stripHash(ref), el: p, resp });
+        else if (CRITICAL_LOCALS.has(ln)) out.push({ kind: "critical", localName: ln, ref: null, el: p, resp });
+        else out.push({ kind: "markup", localName: ln, ref: null, el: p, resp });
       }
       p = p.parent;
     }
@@ -339,7 +344,7 @@ function buildState(doc) {
         mention: null,
         w: null,
         // The <gap/> itself is the annotation; mirror crit's single "gap" layer.
-        layers: [{ kind: "critical", localName: "gap", ref: null, el: e.el }],
+        layers: [{ kind: "critical", localName: "gap", ref: null, el: e.el, resp: getAttr(e.el, "resp") || null }],
       });
       continue;
     }
