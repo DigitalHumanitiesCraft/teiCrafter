@@ -470,6 +470,7 @@
   padding: 3px var(--space-xs); border-radius: var(--radius-sm); margin-bottom: 2px; }
 .ed-val-ok { background: var(--color-confident-tint); color: var(--color-confident); }
 .ed-val-warn { background: var(--color-review-tint); color: var(--color-review); }
+.ed-val-info { background: var(--color-secondary); color: var(--color-text-secondary); }
 .ed-val-err { background: var(--color-problem-tint); color: var(--color-problem); }
 .ed-val-icon { font-family: var(--font-mono); }
 

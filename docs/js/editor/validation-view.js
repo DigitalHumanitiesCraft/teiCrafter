@@ -59,7 +59,7 @@ export function createValidationView(ctx) {
         : `All ${base.wordCount} ${unit}(s) preserved (no xml:id to lose)`]);
     } else {
       if (missing.length) rows.push(["err", `${missing.length} xml:id(s) lost: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "..." : ""}`]);
-      if (added) rows.push(["warn", `${added} new xml:id(s) added`]);
+      if (added) rows.push(["info", `${added} new xml:id(s) added by your edits`]);
     }
 
     // Tag-count drift vs baseline
@@ -68,7 +68,7 @@ export function createValidationView(ctx) {
       if (summary.counts[t] !== base.counts[t]) drift.push(`${t}: ${base.counts[t]} -> ${summary.counts[t]}`);
     }
     rows.push(drift.length
-      ? ["warn", `Tag counts changed: ${drift.join("; ")}`]
+      ? ["info", `Element counts changed by your edits: ${drift.join("; ")}`]
       : ["ok", "Element counts unchanged"]);
 
     valCache = { doc: app.state.doc, rows, summary };
@@ -117,8 +117,8 @@ export function createValidationView(ctx) {
   }
 
   function valRow(kind, text) {
-    const cls = kind === "ok" ? "ed-val-ok" : kind === "warn" ? "ed-val-warn" : "ed-val-err";
-    const icon = kind === "ok" ? "OK" : kind === "warn" ? "!" : "x";
+    const cls = kind === "ok" ? "ed-val-ok" : kind === "warn" ? "ed-val-warn" : kind === "info" ? "ed-val-info" : "ed-val-err";
+    const icon = kind === "ok" ? "OK" : kind === "warn" ? "!" : kind === "info" ? "i" : "x";
     return el("div", { class: `ed-val-row ${cls}` }, [
       el("span", { class: "ed-val-icon", text: icon }),
       el("span", { text }),
