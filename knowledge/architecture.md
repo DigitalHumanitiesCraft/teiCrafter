@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-06-13
+updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
@@ -85,12 +85,14 @@ This is the single home of how the engine reads TEI; [data](data.md) and [integr
 
 - `<pb>` (folio break, with `@facs` to a surface) splits the document into folios;
 - `<lb>`/`<l>` split a folio into lines; a block-container start (`<p>`/`<head>`/`<lg>`/`<ab>`) also begins a new render line, so the bare first line of a paragraph (no leading `<lb/>`) does not merge with the previous block;
-- reading-text nodes become editable cells; the cells are words only when `<w xml:id>` word tokens are present, otherwise whole lines;
+- reading-text nodes become editable cells; the editing profile is a single property read once for the whole document (word if any `<w xml:id>` is present anywhere, else line), with no per-folio detection, so a `<w>`-free folio inside an otherwise word-tokenized document is edited as whole-line cells, not words;
 - `<facsimile>`/`<surface>`/`<zone>` with `ulx/uly/lrx/lry` drive the OpenSeadragon viewer as `<zone>` overlays; a line's `@facs` links it bidirectionally to its zone;
 - `<standOff>` entities and `<note target>` carry the entity and apparatus layers, anchored by xml:id;
 - uninterpreted markup is preserved verbatim on save.
 
 The raw string is canonical, every edit is an offset splice over the parser's recorded offsets, and `serialize()` returns that raw string, so a no-op round-trip is byte-identical: the output is the string that was parsed.
+
+Losslessness holds unconditionally, including on input that is not well-formed: the tokenizer keeps the raw string canonical and edits it by offset, so `serialize()` is byte-identical even when nesting is malformed. The derived projection is the part that can diverge there: the ancestor walk closes the nearest matching ancestor, so a mis-nested element's scope (a mention's reach, a critical wrapper, an attribute target) may not match the author's intent. The browser's live well-formedness check (DOMParser, a read-only check separate from serialization) is the safety net that flags such input. Both properties are pinned by `test/tools/reading_contract_check.mjs`.
 
 ## Services
 

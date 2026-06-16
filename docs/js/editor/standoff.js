@@ -82,7 +82,7 @@ export function slugify(s) {
     .replace(/[̀-ͯ]/g, "") // strip combining marks
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "_") // collapse non-NCName runs to underscore
-    .replace(/_+/g, "_")
+    .replace(/[._-]{2,}/g, "_") // collapse mixed/repeated separator runs (e.g. "victorg._5") to one underscore
     .replace(/^[._-]+/, "") // a leading '.', '-' is not a valid NCName start
     .replace(/[._-]+$/, "");
   // An NCName may not start with a digit; prefix an underscore if it would.

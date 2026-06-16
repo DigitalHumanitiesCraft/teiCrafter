@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-06-13
+updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
@@ -35,6 +35,7 @@ The promise is "read arbitrary TEI and save it byte-losslessly". These prove it 
 | `test/tools/generic_roundtrip.mjs` | One engine reads Hersch (line-level), Wenzelsbibel (word-level) and SZD (catalog); recognizers find pb/lb/zones; a cell edit is a surgical splice; the editor model shape is correct | all checks pass |
 | `test/tools/editor_roundtrip.mjs` | The editor edition-core API: identity round-trip is byte-identical; a word edit is surgical; the harness localizes exactly that change | PASS |
 | `test/tools/edit_fidelity.mjs` | Edits stay byte-faithful over character/entity references (a no-op edit of a cell or attribute holding `&nbsp;`/`&#233;`/`&quot;`/`&apos;` is byte-identical, a real edit preserves a neighbouring entity); `addEntity` degrades gracefully on header-less or element-free TEI; relinking a mention retargets `@ref` without nesting `<name>`; the integrity baseline tracks real `@xml:id`, stable across a lossless line-emptying edit | PASS |
+| `test/tools/reading_contract_check.mjs` | Two stated reading-contract properties: `serialize()` is byte-identical even on not-well-formed input (lossless unconditionally) while the projection's ancestor walk may diverge on mis-nested markup (the live DOMParser check is the separate safety net); and the editing profile is one global property, a single `<w>` anywhere sets the whole document to word and a `<w>`-free folio within it stays whole-line cells | PASS |
 
 The sweep reads directly from the source repos (nothing copied or committed) plus the committed synthetic fixtures; override the source dirs with `HERSCH_DIR` / `SZD_DIR`.
 
@@ -50,6 +51,7 @@ Each demo-critical feature added since the core engine proofs carries its own he
 | `test/tools/note_index_check.mjs` | `standoff.noteIndex` reads notes by tree walk, not regex: single- AND double-quoted `@target` (the former regex reader missed single quotes), multi-id targets, child markup in the body (tags fall away, text stays), entity decoding, notes without `@target` skipped | PASS |
 | `test/tools/commit_invariants_check.mjs` | `standoff.applyMutation` (the DOM-free core of the editor's single mutation path) holds for every mutating op: a real change reports `changed` true, re-parses byte-identically and rebuilds the note index without throwing; an idempotent repeat reports `changed` false with the SAME doc carried through; a multi-step sequence stays consistent | PASS |
 | `test/tools/attr_edit_check.mjs` | Generic attribute editing on a cell's innermost wrapping element (engine `addAttr`/`editAttrValue`/`removeAttr`): every edit is an exact offset splice, no-op-safe, the inserted value XML-escaped, reversible, and targeted by exact qname so `xml:id` and `id` stay distinct | PASS |
+| `test/tools/slugify_check.mjs` | `slugify` (the seed for every generated `xml:id`: entity ids from a name, split-sibling line ids) yields an NCName-safe fragment or `""`: no run of two or more separators (`.`/`-`/`_`) survives, a single internal separator is kept, empty/whitespace/null/undefined give `""`, a leading digit gets an underscore prefix, diacritics fold to base letters, and `slugify` is idempotent | PASS |
 | `test/tools/guidelines_check.mjs` | The TEI Guidelines reader (`tei-guidelines.js`) answers the authoring questions offline against the vendored compilation: pinned module count, persName resolves RECURSIVELY to its pinned attribute count incl. `@facs` from the nested class (the recursion proof), dedup, module/scope filters with silent skips, tag stripping, malformed input rejected, no `validate` export, pinned version reported | PASS |
 | `test/tools/ai_proposal_check.mjs` | AI-proposed entities (M3.7) carry a lossless `resp="#ai"` marker, read as unverified, and the human gate works: confirm drops the marker, reject removes the entity, every step round-trips byte-identically | PASS |
 | `test/tools/ai_suggest_parse_check.mjs` | The LLM reply parser (`docs/js/editor/ai-suggest.js`) tolerates a code fence and prose, normalises free-form type labels to the teiCrafter types, drops malformed/unknown items, de-duplicates, and never throws (M3.7) | PASS |
@@ -148,9 +150,9 @@ Documentation is itself part of acceptance: the per-fixture JSON reports and the
 - `test/harness/validate.py`: the validator (L1, L2 via lxml, L3), JSON report.
 - `test/harness/run.mjs`: orchestrator over every fixture.
 - `test/harness/selftest.mjs`: negative test (identity passes, corruption fails).
-- `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`: the engine proofs above.
+- `test/tools/roundtrip_sweep.mjs`, `generic_roundtrip.mjs`, `editor_roundtrip.mjs`, `edit_fidelity.mjs`, `reading_contract_check.mjs`: the engine proofs above.
 - `test/tools/run_all.mjs`: the aggregate regression gate (glob-discovered proofs, sequential, exit 1 on any failure).
-- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `note_index_check.mjs`, `commit_invariants_check.mjs`, `guidelines_check.mjs`, `attr_edit_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`, `project_manifest_check.mjs`, `project_case_check.mjs`, `depcha_demo_check.mjs`, `dual_reading_check.mjs`, `structural_check.mjs`, `author_caret_check.mjs`, `index_consumer_check.mjs`, `facsimile_resolver_check.mjs`, `llm_catalog_check.mjs`, `szd_worked_example.mjs`, `zbz_worked_example.mjs`: the per-milestone feature proofs above.
+- `test/tools/szd_demo_check.mjs`, `authority_lookup_check.mjs`, `note_create_check.mjs`, `note_index_check.mjs`, `commit_invariants_check.mjs`, `guidelines_check.mjs`, `attr_edit_check.mjs`, `ai_proposal_check.mjs`, `ai_suggest_parse_check.mjs`, `whitespace_edit_check.mjs`, `criticism_check.mjs`, `project_manifest_check.mjs`, `project_case_check.mjs`, `depcha_demo_check.mjs`, `dual_reading_check.mjs`, `structural_check.mjs`, `author_caret_check.mjs`, `index_consumer_check.mjs`, `facsimile_resolver_check.mjs`, `llm_catalog_check.mjs`, `slugify_check.mjs`, `szd_worked_example.mjs`, `zbz_worked_example.mjs`: the per-milestone feature proofs above.
 - `test/tools/interaction_check.mjs`, `types_check.mjs`: the frontend-verification floor (the pure popover-dismiss predicate and the engine typing seam), paired with the named manual checks in `test/acceptance/BROWSER-CHECKS.md`.
 - `test/tools/make_zbz1000_demo.mjs`: materializes the local-only ZBZ worked-example object (doc 1000 plus deterministic `<graphic url>` injection, M2.4 scheme) from the zbz sibling checkout.
 - `test/tools/make_depcha_demo.mjs`: materializes the local-only DEPCHA Wheaton demo project (two day-book volumes) by fetching the unchanged TEI from the public DEPCHA repository.
@@ -172,6 +174,8 @@ node test/tools/roundtrip_sweep.mjs # byte-identical (reads source repos)
 node test/tools/generic_roundtrip.mjs # one engine over Hersch / WB / SZD
 node test/tools/editor_roundtrip.mjs # editor core vs harness
 node test/tools/edit_fidelity.mjs # entity-faithful edits + standOff guard
+node test/tools/reading_contract_check.mjs # lossless on malformed input + single global editing profile
+node test/tools/slugify_check.mjs # generated-id fragment contract (NCName-safe, idempotent)
 node test/tools/szd_demo_check.mjs # SZD demo path: graphic url, place/work, authority idno
 node test/tools/authority_lookup_check.mjs # M3.3 lookup URLs + response parsing (Wikidata/GND/GeoNames)
 node test/tools/note_create_check.mjs # M3.5 editorial notes, stable @target
