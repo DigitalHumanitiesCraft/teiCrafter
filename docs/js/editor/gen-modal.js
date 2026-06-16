@@ -29,10 +29,12 @@ import { complete, setProvider, setModel, setApiKey, getProviderConfigs } from "
 import { SOURCE_LABELS, getDefaultMapping } from "../utils/constants.js";
 import { buildGenerationPrompt, extractXml } from "./llm-prompt.js";
 import { llmForFile } from "./project-manifest.js";
+import { requireCtx } from "./ctx.js";
 
 const $ = (id) => document.getElementById(id);
 
 export function setupGenModal(ctx) {
+  requireCtx("setupGenModal", ctx, ["load", "markGenerated", "setDirty", "setStatus"], ["app"]);
   const { load, markGenerated, setDirty, setStatus, app } = ctx;
   const gen = { key: "", provider: "anthropic", model: "", type: "generic" };
 

@@ -16,15 +16,14 @@
 import { parseEdition, rawRangeForDisplay } from "./edition.js";
 import { wrapRange, addNoteForNode, AI_RESP } from "./standoff.js";
 import { markCritical } from "./criticism.js";
+import { escapeAttr } from "./tei-document.js";
 
 // Entity type -> the TEI name element a proposed mention is wrapped in. A proposed
 // entity is an inline, resp-marked name wrap (not a standOff entry): lossless, shows
 // violet, confirmable by dropping @resp, and promotable to a standOff entity later.
 const ENTITY_ELEMENT = { person: "persName", place: "placeName", org: "orgName", work: "title", event: "name" };
 
-function escA(s) {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
+const escA = (s) => escapeAttr(String(s));
 
 /** Find the first cell whose displayed text contains the span, with the raw range. */
 function locate(state, span) {

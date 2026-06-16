@@ -192,6 +192,14 @@ function setReadingVariant(variant) {
  * selection highlight (mention-hit) is announced by the status line instead.
  * Help is tooltip-only (operator decision 2026-06-10): no ambient hint text.
  */
+// One source for "does this cell carry a model-proposed (AI) wrapping layer": the
+// projection records each layer's @resp, and the active responsibility id is
+// app.aiResp (the project's, or the default). Shared by the render, the legend and
+// the tooltip so the three cannot drift, and so a custom responsibility id is honoured.
+function cellHasAiLayer(cell) {
+  return !!(cell && cell.layers && cell.layers.some((l) => l.resp === app.aiResp));
+}
+
 function buildLegend() {
   const host = $("ed-legend-chips");
   if (!host) return;
@@ -210,7 +218,7 @@ function buildLegend() {
     if (cell.crit) crits.add(cell.crit);
     // A proposed construct of any kind (markup/criticism/note) carries the AI mark
     // on a wrapping layer, so the legend shows the AI chip beyond entity mentions.
-    if (cell.layers && cell.layers.some((l) => l.resp === standoff.AI_RESP)) ai = true;
+    if (cellHasAiLayer(cell)) ai = true;
     if (cell.gap || !cell.mention) continue;
     const m = meta.get(cell.mention);
     if (!m) { dangling = true; continue; }
@@ -371,6 +379,10 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // TEI file. The plaintext and example paths override this after load() returns.
   app.source = { kind: "tei" };
   app.markup = resolveMarkup(app.project, name, guidelinesNow());
+  // The active AI responsibility id for this document: a project may set its own via
+  // the llm block (type-aware), else the default "#ai". The provenance render reads
+  // this, so a proposed construct shows violet whatever the configured id.
+  app.aiResp = (llmForFile(app.project, name) || {}).responsibility || standoff.AI_RESP;
   maybePrefetchGuidelines(name);
   app.saveTarget = null;
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
@@ -953,7 +965,7 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
       // Unified provenance: a cell reads as the AI family when its linked entity is
       // AI-proposed OR any wrapping layer carries the responsibility id, so a proposed
       // markup/criticism/note construct (not only an entity mention) shows violet.
-      const aiProv = (meta && meta.ai) || (cell.layers && cell.layers.some((l) => l.resp === standoff.AI_RESP));
+      const aiProv = (meta && meta.ai) || cellHasAiLayer(cell);
       const provClass = aiProv ? " ed-w-ai" : "";
       // F4: the normalized variant shows @norm where a word carries one, the
       // text as written otherwise; gap cells keep their marker. The diplomatic
@@ -1433,7 +1445,7 @@ function critTitle(cell, note, meta, semWrap) {
   if (note) parts.push(`note: ${note}`);
   // A proposed markup/criticism construct (a wrapping layer marked with the
   // responsibility id) reads as unverified AI, the same label as an AI mention.
-  const layerAi = cell.layers && cell.layers.some((l) => l.resp === standoff.AI_RESP);
+  const layerAi = cellHasAiLayer(cell);
   if (layerAi && !(meta && meta.ai)) parts.push("AI-proposed, unverified");
   // F4: a dual-reading cell names the other reading, so the variant not on
   // screen is still visible in the tooltip.
