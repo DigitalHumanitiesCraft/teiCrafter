@@ -45,7 +45,10 @@ import { createPageImages } from "./page-images.js";
 import { FEATURES, llmEnabled } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
-import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFiles } from "./project-manifest.js";
+import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFiles, llmForFile } from "./project-manifest.js";
+import { complete } from "../services/llm.js";
+import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
+import { applyProposals } from "./proposal-apply.js";
 import { createProjectFolder } from "./project-folder.js";
 import { createValidationView } from "./validation-view.js";
 import { createDocumentFacts } from "./document-facts.js";
@@ -205,6 +208,9 @@ function buildLegend() {
   let ai = false, dangling = false;
   for (const cell of app.state.cells) {
     if (cell.crit) crits.add(cell.crit);
+    // A proposed construct of any kind (markup/criticism/note) carries the AI mark
+    // on a wrapping layer, so the legend shows the AI chip beyond entity mentions.
+    if (cell.layers && cell.layers.some((l) => l.resp === standoff.AI_RESP)) ai = true;
     if (cell.gap || !cell.mention) continue;
     const m = meta.get(cell.mention);
     if (!m) { dangling = true; continue; }
@@ -944,6 +950,11 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
       const mentionClass = !cell.gap && cell.mention
         ? " mention" + (meta ? ` mention-${meta.kind}${meta.ai ? " mention-ai" : ""}` : "")
         : "";
+      // Unified provenance: a cell reads as the AI family when its linked entity is
+      // AI-proposed OR any wrapping layer carries the responsibility id, so a proposed
+      // markup/criticism/note construct (not only an entity mention) shows violet.
+      const aiProv = (meta && meta.ai) || (cell.layers && cell.layers.some((l) => l.resp === standoff.AI_RESP));
+      const provClass = aiProv ? " ed-w-ai" : "";
       // F4: the normalized variant shows @norm where a word carries one, the
       // text as written otherwise; gap cells keep their marker. The diplomatic
       // variant always shows the text as written.
@@ -964,7 +975,7 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
       const semTitlePart = semWrap ? semanticWrapTitle(semWrap) : null;
       const baseTitle = critTitle(cell, note, meta, !!semWrap);
       const span = el("span", {
-        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + semClass + (stacked ? " ed-w-stacked" : ""),
+        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + provClass + semClass + (stacked ? " ed-w-stacked" : ""),
         dataset: { id: cell.id, folio: String(folioIndex), line: String(lineIndex), start: String(cell.start) },
         text: display,
         title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
@@ -1420,6 +1431,10 @@ function critTitle(cell, note, meta, semWrap) {
     parts.push(cell.critSole ? critLabel : `${critLabel} (shared markup)`);
   }
   if (note) parts.push(`note: ${note}`);
+  // A proposed markup/criticism construct (a wrapping layer marked with the
+  // responsibility id) reads as unverified AI, the same label as an AI mention.
+  const layerAi = cell.layers && cell.layers.some((l) => l.resp === standoff.AI_RESP);
+  if (layerAi && !(meta && meta.ai)) parts.push("AI-proposed, unverified");
   // F4: a dual-reading cell names the other reading, so the variant not on
   // screen is still visible in the tooltip.
   if (cell.w && cell.w.norm != null) {
@@ -1945,9 +1960,58 @@ const pageImageStore = createPageImages({ app, rerenderPanel: () => renderActive
 // deterministic editor with no AI surfaces. applyLlmGate() re-runs on the toggle.
 const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus, app });
 function applyLlmGate() {
-  $("btn-generate").hidden = !llmEnabled();
+  const on = llmEnabled();
+  $("btn-generate").hidden = !on;
+  const propose = $("btn-propose");
+  if (propose) propose.hidden = !on;
 }
+
+// In-context proposal flow: ask the model for annotations on the current page, in
+// the project's voice, and apply them as lossless, resp-marked (violet, unverified)
+// constructs the human confirms or rejects. The provider/model/key are the ones the
+// on-ramp set (in memory); without a key the call fails with a clear hint.
+async function proposeOnFolio() {
+  if (!app.state || !llmEnabled()) return;
+  const folio = app.state.folios[app.folio];
+  if (!folio) return;
+  const folioText = folio.lines.map((l) => l.cells.map((c) => c.text).join("")).join("\n").trim();
+  if (!folioText) { setStatus("Nothing to propose on this page."); return; }
+  const eff = app.project ? llmForFile(app.project, app.docName) : null;
+  const systemPrompt = eff && eff.systemPrompt ? eff.systemPrompt : "";
+  const mapping = eff && eff.mapping && app.project && app.project.llmMappings
+    ? (app.project.llmMappings[eff.mapping] || "") : "";
+  const vocabulary = (app.markup || []).map((w) => w[2]).filter(Boolean);
+  const resp = (eff && eff.responsibility) || standoff.AI_RESP;
+  const btn = $("btn-propose");
+  if (btn) btn.disabled = true;
+  setStatus("Asking the model for annotation proposals on this page...");
+  try {
+    const reply = await complete(buildSuggestPrompt(folioText, { systemPrompt, mapping, vocabulary }));
+    const proposals = parseSuggestions(reply);
+    if (!proposals.length) { setStatus("The model proposed no annotations for this page."); return; }
+    const result = applyProposals(app.state, proposals, { resp });
+    if (!result.applied.length) {
+      setStatus(`None of the ${proposals.length} proposal(s) could be placed on this page.`);
+      return;
+    }
+    // Make the @resp a real pointer, then adopt the proposed doc through the single
+    // mutation path so it renders violet, marks dirty, and stays reviewable.
+    const marked = standoff.ensureRespStmt(result.state.doc, resp);
+    const skip = result.skipped.length ? ` ${result.skipped.length} could not be placed.` : "";
+    commitStandoff(() => marked, {
+      label: `Proposed ${result.applied.length} annotation(s): violet and unverified, confirm or reject each.${skip}`,
+      failPrefix: "Propose",
+    });
+  } catch (err) {
+    setStatus(`Proposal failed: ${err.message}. Set a provider and API key via "New from text (LLM)" first.`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
 $("btn-generate").addEventListener("click", genModal.open);
+const proposeBtn = $("btn-propose");
+if (proposeBtn) proposeBtn.addEventListener("click", proposeOnFolio);
 applyLlmGate();
 // Deep link from the landing page: editor.html#generate opens the LLM entry.
 if (llmEnabled() && location.hash === "#generate") genModal.open();

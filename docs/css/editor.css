@@ -648,10 +648,13 @@
 :is(.ed-w, .ed-legend-chip).mention-org { background: var(--color-orgName-bg); box-shadow: inset 0 -2px 0 var(--color-orgName); }
 :is(.ed-w, .ed-legend-chip).mention-wrk { background: var(--color-workName-bg); box-shadow: inset 0 -2px 0 var(--color-workName); }
 :is(.ed-w, .ed-legend-chip).mention-evt { background: var(--color-eventName-bg); box-shadow: inset 0 -2px 0 var(--color-eventName); }
-/* AI-proposed mention: violet family plus a dashed outline as the second,
+/* AI-proposed construct: violet family plus a dashed outline as the second,
    non-colour channel, so machine origin never hangs on hue alone (design.md
-   triple-coding rule; the tooltip is the third channel). */
-:is(.ed-w, .ed-legend-chip).mention-ai { background: var(--color-ai-tint); box-shadow: inset 0 -2px 0 var(--color-ai);
+   triple-coding rule; the tooltip is the third channel). mention-ai marks an
+   AI-proposed entity mention; ed-w-ai is the general case (any proposed construct,
+   markup or criticism, carrying the @resp responsibility id) so all AI output reads
+   as one family. */
+:is(.ed-w, .ed-legend-chip).mention-ai, .ed-w.ed-w-ai { background: var(--color-ai-tint); box-shadow: inset 0 -2px 0 var(--color-ai);
   outline: 1px dashed var(--color-ai); outline-offset: -1px; }
 
 /* Semantic-wrap visibility: text inside a scholarly inline element (date, ref,
