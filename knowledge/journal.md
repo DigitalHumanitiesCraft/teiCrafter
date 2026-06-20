@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-16
+updated: 2026-06-20
 language: en
 version: 0.16
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
@@ -22,6 +22,17 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-20: per-construct confirm/reject, the human gate generalised beyond entities
+
+Trigger: the lane was asked to implement whatever needs no further decision. The decided-next-step from the 2026-06-16 layer was the candidate: every model construct is applied carrying @resp and rendered violet, but only a proposed standOff entity could be confirmed (drop the marker) or rejected (delete) through the annotation editor. A proposed markup wrap, an inline entity name-wrap, an `<unclear>`/`<del>`/`<add>`, a `<gap/>` and a standOff note had no clean accept-or-remove. Built engine-first with its own headless proof; the browser wiring is held as the open UI step, since the operator gates the visible surfaces and chose to walk the UI before more is built. The decisions, each ratifiable:
+
+- **Confirm is dropping the @resp marker, uniformly for every construct kind.** A confirmed construct stays as ordinary, human-accepted markup and every byte of reading text is untouched. This generalises the existing `confirmEntity` (which already did exactly this for a standOff entity) to any construct element the `cell.layers` projection surfaces. The reason: the provenance marker is the one thing separating machine-proposed from human-accepted, so accepting is removing the marker and nothing else.
+- **Reject is removing the construct, by three behaviours keyed on what it is.** A reading-text wrapper is unwrapped, restoring the surrounded text verbatim, so reject is the exact inverse of the wrap; a standOff `<note>` is removed with the one line of indentation appended for it; a self-closing reading element (`<gap/>`) is removed in place with its edge whitespace kept. The reason: a wrap surrounds reading text that must survive, a note's body should vanish with the note, and a gap already discarded its text at apply time.
+- **The gate refuses human markup by default.** Confirm and reject act only on a construct carrying the project's responsibility id (default `#ai`); an explicit override is needed to touch unmarked markup. The reason: a review gate must never delete a human's own annotation through a mis-click.
+- **A new focused module, `proposal-review.js`, the complement of `proposal-apply.js`, reusing only the generic engine ops.** No new engine primitive: confirm is the existing `removeAttr`, reject is an unwrap splice or a block removal. The reason: cohesion and provability, the same apply/review split the layer already reads as.
+
+Two boundaries are stated rather than hidden. Rejecting a `<gap/>` does not bring back the text the gap replaced, because a gap carries no text by TEI design; and rejecting a note that had to inject a target xml:id leaves that id behind. The open UI step is the review surface itself: routing an AI-marked cell to the overlap inspector and offering confirm/reject per AI layer, with the note surface (a note is not a reading cell) and the gap surface (a gap routes to the criticism menu) still to design. That wiring is the operator-gated, browser-verified part, and per the operator (2026-06-20) it is a Forschungsleitstelle decision, not a lane decision.
 
 ## 2026-06-16 (continued): the LLM-assistance layer, built out as one general capability
 
