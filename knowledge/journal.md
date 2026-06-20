@@ -23,6 +23,15 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
 
+## 2026-06-20 (continued): the confirm/reject UI wired into the overlap inspector
+
+Trigger: the operator ordered work toward the next milestone, which is completing the per-construct confirm/reject feature whose engine the entry below delivered. The visible half was wired:
+
+- **An AI-marked cell now opens the overlap inspector.** The reading-text click routing sent a single semantic wrap to the attribute editor and only a two-or-more-layer stack to the inspector, so a lone AI proposal had no review surface; now any cell carrying the project @resp opens the inspector (an AI `<gap/>` too, diverted from the criticism menu), and the inspector is the one place every AI construct on a cell is listed.
+- **Each AI layer carries confirm and reject, the same per-layer pattern as the existing edit-attributes action.** Both route through the integrator's commitStandoff over `proposal-review.js`, so the lossless splice, the no-op contract and the single re-render hold by construction; the buttons appear only on a layer whose element actually carries the project @resp, so a human wrap shows none.
+
+The engine is proven headless; the buttons themselves are the browser-verified part, recorded as VC-13 in `test/acceptance/BROWSER-CHECKS.md` (operator pass pending). One review surface stays open: a proposed standOff `<note>` is not a reading-cell layer, so it does not appear in the inspector; confirming or rejecting a proposed note needs its own affordance at the note marker, the next UI remainder. The reason the inspector was the right home: it already exists to answer "what is here" for a cell's markup and to route per layer, so the human gate for a proposal is one more per-layer action, not a new surface.
+
 ## 2026-06-20: per-construct confirm/reject, the human gate generalised beyond entities
 
 Trigger: the lane was asked to implement whatever needs no further decision. The decided-next-step from the 2026-06-16 layer was the candidate: every model construct is applied carrying @resp and rendered violet, but only a proposed standOff entity could be confirmed (drop the marker) or rejected (delete) through the annotation editor. A proposed markup wrap, an inline entity name-wrap, an `<unclear>`/`<del>`/`<add>`, a `<gap/>` and a standOff note had no clean accept-or-remove. Built engine-first with its own headless proof; the browser wiring is held as the open UI step, since the operator gates the visible surfaces and chose to walk the UI before more is built. The decisions, each ratifiable:

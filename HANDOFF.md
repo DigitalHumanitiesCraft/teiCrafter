@@ -7,7 +7,7 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 ## State
 
 Branch `main`, pushed to `origin/main` (operator-authorized 2026-06-16); `origin/main`
-at the tip. One local commit ahead since 2026-06-20 (the per-construct confirm/reject engine, its proof, this snapshot and the journal entry), not pushed (push to main stays operator-gated). GitHub Pages redeploys from `/docs`. The 2026-06-16
+at the tip. Two local commits ahead since 2026-06-20 (first the per-construct confirm/reject engine + proof, then the confirm/reject UI wiring into the overlap inspector), not pushed (push to main stays operator-gated). GitHub Pages redeploys from `/docs`. The 2026-06-16
 commits, oldest first:
 
 - A status pass: live checks report editor-caused id/count changes as neutral info (not
@@ -51,13 +51,16 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
   and run "New from text (LLM)" in the project voice; (3) "Propose (AI)" on a page -> violet
   proposals -> save -> reopen byte-faithful. Steps 2-3 need a provider key set once via the
   on-ramp (kept in memory).
-- **Per-construct confirm/reject for non-entity proposals**: the engine is built and
-  headless-proven (`proposal-review.js`, `proposal_review_check`). `confirmConstruct` drops the
-  `@resp` marker; `rejectConstruct` unwraps a reading-text wrapper (restoring the exact text),
-  removes a standOff note, or removes a `<gap/>`, refusing human markup by default. OPEN and
-  operator-gated is the UI wiring: routing an AI-marked cell to the overlap inspector with
-  confirm/reject per AI layer, plus the note and gap review surfaces still to design. Per the
-  operator (2026-06-20) the wiring is a Forschungsleitstelle decision, not a lane decision.
+- **Per-construct confirm/reject for non-entity proposals**: built (engine + UI). The engine
+  is headless-proven (`proposal-review.js`, `proposal_review_check`): `confirmConstruct` drops
+  the `@resp` marker; `rejectConstruct` unwraps a reading-text wrapper (restoring the exact
+  text), removes a standOff note, or removes a `<gap/>`, refusing human markup by default. The
+  UI is wired: an AI-marked cell opens the overlap inspector and each AI layer carries
+  confirm/reject through `commitStandoff` (`annotation-ui.js` `openLayersInspector`, plus the
+  `editor-app.js` click routing). OPEN: the operator browser sight-check (VC-13 in
+  `test/acceptance/BROWSER-CHECKS.md`, pass pending), and the one remaining review surface, a
+  proposed standOff `<note>` is not a reading-cell layer and needs its own affordance at the
+  note marker.
 - **The offline evaluation harness** (Phase 4) is designed in full in `testing.md`
   ("Evaluating LLM output") but built after the UI walk: L1/L2/L3 scoring of model output
   against the committed CC-BY gold object plus type-diverse samples, an optional model-as-judge,

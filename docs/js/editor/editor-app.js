@@ -1004,10 +1004,10 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
         if (e.detail > 1) return; // second click of a double-click
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
-        if (cell.gap) { beginCritic(span, cell); return; }
+        if (cell.gap && !cellHasAiLayer(cell)) { beginCritic(span, cell); return; }
         // Overlapping annotations: a click on stacked layers opens the inspector,
         // which lists every layer and routes per layer, rather than guessing one.
-        if (stacked) { annot.openLayersInspector(span, cell); return; }
+        if (stacked || cellHasAiLayer(cell)) { annot.openLayersInspector(span, cell); return; }
         if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
         if (semWrap) { annot.openAttrEditor(span, cell); return; }
       });
@@ -1455,7 +1455,9 @@ function critTitle(cell, note, meta, semWrap) {
       : `normalized: ${cell.w.norm}`);
   }
   const stacked = cell.layers && cell.layers.length >= 2;
+  const aiCell = cellHasAiLayer(cell);
   parts.push(stacked ? `click to inspect the ${cell.layers.length} annotations here; double-click to edit`
+    : aiCell ? "click to review the AI proposal (confirm or reject); double-click to edit"
     : cell.mention ? "click to edit the annotation"
     : semWrap ? "click to edit attributes; select text to annotate; double-click to edit; right-click for actions"
     : "select text to annotate; double-click to edit; right-click for actions");

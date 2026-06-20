@@ -181,6 +181,27 @@ unambiguous).
 - Failure signature: the tooltip claims validity the tool did not establish,
   reports findings with no basis, or shows stale findings after an edit.
 
+### VC-13 Confirm or reject an AI proposal per construct
+
+- Gesture: with an AI proposal present on a non-entity construct (a markup wrap such
+  as `<date>`, an `<unclear>`/`<del>`/`<add>`, an inline AI entity name-wrap, or a
+  `<gap/>`), click the violet construct. It opens the layers inspector. Use the
+  per-layer "confirm" or "reject".
+- Expected: the inspector lists the construct's layer(s); a layer carrying the project
+  `@resp` shows a "confirm" and a "reject". Confirm drops the violet `@resp` marker and
+  keeps the markup (it reads as ordinary, human-accepted markup afterwards); reject
+  removes the construct (a reading-text wrapper restores the exact surrounded text, a
+  `<gap/>` marker is removed). A human-authored, unmarked construct shows no
+  confirm/reject. A save-reopen is byte-faithful to the intended change (VC-6). The
+  engine behind this is proven headless (`proposal_review_check`).
+- Failure signature: confirm removes the construct instead of only its marker, reject
+  loses or changes neighbouring reading text, confirm/reject appears on human markup,
+  the violet persists after confirm, the inspector does not open on a single AI
+  construct, or a save-reopen diffs outside the intended span.
+- Not yet covered (engine ready, UI surface pending): confirming or rejecting a
+  proposed standOff `<note>`, which is not a reading-cell layer and so does not appear
+  in the inspector; its review surface is the open remainder.
+
 ### VC-F-1 Index panel reflects the document's declared indices
 
 - Gesture: open the folder `docs/data/editor/wb-codex/` as a project (its

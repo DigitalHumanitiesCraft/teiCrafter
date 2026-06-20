@@ -39,6 +39,7 @@ import { buildAuthorityForm } from "./authority-form.js";
 import { runAuthorityLookup } from "./authority-picker.js";
 import { requireCtx } from "./ctx.js";
 import { shouldDismissPopover } from "./interaction-rules.js";
+import { confirmConstruct, rejectConstruct } from "./proposal-review.js";
 
 const ENTITY_TYPE_LABELS = [
   ["person", "person"], ["place", "place"], ["org", "organisation"],
@@ -554,7 +555,7 @@ export function createAnnotationUi(ctx) {
     const pop = el("div", { class: "ed-sel-pop ed-layers-pop", id: "ed-sel-pop" });
 
     const titleRow = el("div", { class: "ed-sel-pop-titlerow" });
-    const short = cell.text.trim();
+    const short = cell.text.trim() || (cell.gap ? "gap" : "this mark");
     titleRow.appendChild(el("span", { class: "ed-sel-pop-title",
       text: `annotations on "${short.length > 32 ? short.slice(0, 32) + "..." : short}"` }));
     const closeBtn = el("button", { class: "ed-sel-pop-close", text: "×", title: "close", "aria-label": "close", type: "button" });
@@ -581,6 +582,29 @@ export function createAnnotationUi(ctx) {
         const b = el("button", { class: "ed-act-btn", text: "edit attributes", title: `edit the attributes of <${layer.localName}>` });
         b.addEventListener("click", (e) => { e.stopPropagation(); const cc = c(); if (cc) openAttrEditor(span, cc, layer.el); });
         row.appendChild(b);
+      }
+      // An AI-proposed layer (its element carries the project @resp) gets the human
+      // gate here: confirm drops the marker and keeps the markup, reject removes the
+      // construct (a wrap restores the exact text). Engine in proposal-review.js,
+      // proven headless; this is the per-layer review surface.
+      const aiResp = app.aiResp || standoff.AI_RESP;
+      if (layer.el && layer.resp && layer.resp === aiResp) {
+        const cb = el("button", { class: "ed-act-btn ed-btn-ai", text: "confirm", title: "accept this AI proposal: drop the violet marker, keep the markup" });
+        cb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeSelPopover();
+          commitStandoff((doc) => confirmConstruct(doc, layer.el, { resp: aiResp }),
+            { label: `Confirmed <${layer.localName}>`, failPrefix: "Confirm", noopLabel: "Already confirmed" });
+        });
+        row.appendChild(cb);
+        const rb = el("button", { class: "ed-act-btn", text: "reject", title: "remove this AI proposal (a wrap restores the text it surrounded)" });
+        rb.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeSelPopover();
+          commitStandoff((doc) => rejectConstruct(doc, layer.el, { resp: aiResp }),
+            { label: `Rejected <${layer.localName}>`, failPrefix: "Reject", noopLabel: "Nothing to reject" });
+        });
+        row.appendChild(rb);
       }
       pop.appendChild(row);
     });
