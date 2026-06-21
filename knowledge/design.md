@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-06-16
+updated: 2026-06-21
 language: en
 version: 0.16
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
@@ -118,7 +118,7 @@ Everything annotated is visible in the reading text; provenance and validation s
 - Tooltips, legend and choosers use one human label per critical kind ("deleted", "added"), never the raw TEI localName.
 - Token pairs `--color-workName(-bg)` (bibl hue: a work is a bibliographic entity) and `--color-eventName(-bg)` (date hue: an event is a datable occurrence) are independent tokens, so either family can diverge later.
 - In-place UI (choosers, popovers) cancels by restoring the clicked element, not by re-rendering, so reading-pane scroll and facsimile zoom survive a look-and-cancel.
-- **Overlapping / nested annotations are shown, not hidden (2026-06-13).** When two or more annotation layers wrap one text (a `persName` inside a `seg`, a mention inside a `date`), the cell carries a stacked underline (two bands in the blue interaction family) instead of only the innermost marker, and a click opens an overlap inspector listing every layer innermost-first (the element, and the linked entity for a mention), routing each to its editor. The stacked underline is the hint, the inspector the full truth; arbitrary depth is not drawn band-by-band but read in the inspector. This rests on the `cell.layers` projection; per-layer band colouring and true (non-nesting) overlap are the next steps.
+- **Overlapping / nested annotations are shown, not hidden (2026-06-13).** When two or more annotation layers wrap one text (a `persName` inside a `seg`, a mention inside a `date`), the cell carries a stacked underline (two bands in the blue interaction family) instead of only the innermost marker, and a click opens an overlap inspector listing every layer innermost-first (the element, and the linked entity for a mention), routing each to its editor. The stacked underline is the hint, the inspector the full truth; arbitrary depth is not drawn band-by-band but read in the inspector. This rests on the `cell.layers` projection; per-layer band colouring and true (non-nesting) overlap are the next steps. Since 2026-06-20 the inspector is also where an AI proposal is gated: any cell carrying the project `@resp` opens it (a lone AI proposal and an AI `<gap/>` included), and each AI layer carries confirm and reject next to its edit action, so the human gate is one more per-layer action rather than a new surface. The one construct outside this, a proposed standOff `<note>` (not a reading-cell layer, so it never reaches the inspector), gets its own confirm/reject at the note marker (F2, scoped 2026-06-21, with a violet note marker so the AI-is-always-violet invariant holds for notes too).
 
 The M2.6 inline cell action chooser that accompanied this layer was superseded the same day by the M2.10 editor paradigm (context menu and gestures, see Layout above); the index-initiated link flow was retired with M2.11 (selection-initiated linking covers it).
 
