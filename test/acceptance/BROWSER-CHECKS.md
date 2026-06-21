@@ -436,4 +436,4 @@ Record each operator pass: date, browser, and which checks passed or failed.
 | Run | Result |
 |-----|--------|
 | Run 2026-06-13 | pending operator pass |
-| VC-15 inline-GND export (2026-06-21) | pending operator pass |
+| VC-15 inline-GND export (2026-06-21, Chrome) | lane partial pass: positive gate verified (the "Export inline-GND" button shows for the zbz interchange opt-in document, click fires with no console error, the in-editor document stays valid); negative gate (button absent for Wenzelsbibel) and exported-file re-open still pending |
