@@ -6,7 +6,7 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, synced to `origin/main`, working tree clean. Tip `5960d51`. GitHub Pages
+Branch `main`, synced to `origin/main`, working tree clean. Tip `0e97282`. GitHub Pages
 redeploys from `/docs`.
 
 Newest (2026-06-21, milestone round): the **inline-GND export profile** for ZBZ Hersch is
@@ -19,8 +19,12 @@ Reading text round-trips byte-for-byte. Two shapes were fixed against the refere
 guessed: all three types take `@ref="GND:..."` (the gold uses `@ref` on `bibl` 53x vs `@corresp`
 2x, and the schema permits a `GND:` value on `bibl`'s loose `anyURI` `@ref`), and places are
 unannotated. Same commit consolidated the bounded mention-walk, copied in three `standoff.js`
-functions, into one `enclosingName` helper (behaviour-preserving). The export affordance in the
-editor UI is the open next step (a download entry; needs an operator browser trace before live).
+functions, into one `enclosingName` helper (behaviour-preserving). The inverse re-open path is
+now built too (`fromInlineGND`, `0e97282`): a handed-back inline-GND file reads back into the
+register model (entities deduplicated by GND else text, mentions rewrapped as `<name ref>`,
+places not recovered), so the interchange file is a fixed point, `toInlineGND(fromInlineGND(file))`
+equals the file (proof `inline_gnd_reopen_check`). The export affordance in the editor UI remains
+the open next step (a download entry; needs an operator browser trace before live).
 
 Earlier on 2026-06-21, the two confirm/reject commits from 2026-06-20 (the per-construct engine
 + proof `302836e`, then the UI wiring into the overlap inspector `4c56fa2`) were secured to
@@ -57,7 +61,8 @@ The working tree is clean.
 inline-GND export's structural contract on a synthetic register fixture) and
 `inline_gnd_schema_check` (a real pipeline file annotated through the engine and exported is
 RNG-valid against the real `zbz_hersch.rng` via the lxml harness, zero errors; sibling- and
-lxml-gated, SKIPs when absent). Earlier this arc: `slugify_check`,
+lxml-gated, SKIPs when absent), and `inline_gnd_reopen_check` (the inverse `fromInlineGND` and
+the round-trip fixed point, `toInlineGND(fromInlineGND(file))` equals the file). Earlier this arc: `slugify_check`,
 `reading_contract_check`, `llm_gate_check`, `llm_prompt_check`, `llm_config_check`,
 `provenance_check`, `proposal_apply_check` (and `ai_suggest_parse_check` updated for the
 generalized parser). The whole LLM-assistance engine (gate, prompt assembly, manifest
@@ -91,9 +96,11 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
   zbz-profile document. The engine is proven; only the wiring remains. It is a public surface,
   so it needs an operator browser trace (new VC-15 in `test/acceptance/BROWSER-CHECKS.md`) and
   that the exported file re-opens.
-- **An inline-GND re-open/import path** (the inverse of `toInlineGND`): read an already
-  inline-GND `_final.xml` back into the register model so a partially annotated object can be
-  edited further. Not built; needed for iterative editing of handed-back objects.
+- **The inline-GND re-open engine is built** (`fromInlineGND`, `0e97282`): a handed-back
+  inline-GND `_final.xml` reads back into the register model, proven a round-trip fixed point
+  (`inline_gnd_reopen_check`). The remaining step is the load-time wiring (apply `fromInlineGND`
+  when a zbz-profile inline file is opened), grouped with the export affordance as the same
+  public surface awaiting the operator browser trace.
 - **The offline evaluation harness** (Phase 4) is designed in full in `testing.md`
   ("Evaluating LLM output") but built after the UI walk: L1/L2/L3 scoring of model output
   against the committed CC-BY gold object plus type-diverse samples, an optional model-as-judge,
