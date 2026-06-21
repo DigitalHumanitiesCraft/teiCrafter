@@ -6,7 +6,7 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, synced to `origin/main`, working tree clean. Tip `f940ff8`. GitHub Pages
+Branch `main`, synced to `origin/main`, working tree clean. Tip `725fa90`. GitHub Pages
 redeploys from `/docs`.
 
 Newest (2026-06-21, milestone round): the **inline-GND export profile** for ZBZ Hersch is
@@ -69,7 +69,10 @@ inline-GND export's structural contract on a synthetic register fixture) and
 `inline_gnd_schema_check` (a real pipeline file annotated through the engine and exported is
 RNG-valid against the real `zbz_hersch.rng` via the lxml harness, zero errors; sibling- and
 lxml-gated, SKIPs when absent), and `inline_gnd_reopen_check` (the inverse `fromInlineGND` and
-the round-trip fixed point, `toInlineGND(fromInlineGND(file))` equals the file). Earlier this arc: `slugify_check`,
+the round-trip fixed point, `toInlineGND(fromInlineGND(file))` equals the file), and
+`inline_gnd_export_wiring_check` (the editor's export PATH through the edition layer: the bytes the
+button transforms ARE the canonical document `serialize(state) === state.doc.raw`, an in-editor
+edit is reflected in a re-export, and `inlineGndFilename` names `{base}_final.xml`). Earlier this arc: `slugify_check`,
 `reading_contract_check`, `llm_gate_check`, `llm_prompt_check`, `llm_config_check`,
 `provenance_check`, `proposal_apply_check` (and `ai_suggest_parse_check` updated for the
 generalized parser). The whole LLM-assistance engine (gate, prompt assembly, manifest
@@ -103,7 +106,9 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
   project-manifest field; the shipped ZBZ manifest opts in). It runs `toInlineGND(app.state.doc)`
   and downloads `inlineGndFilename(docName)` = `{base}_final.xml`, leaving the in-editor document
   untouched. Gated declaratively and absent from the public deployment (no opt-in project ships),
-  so the push exposes nothing casually live. OPEN: the operator browser trace, VC-15 in
+  so the push exposes nothing casually live. The export path is pinned headless by
+  `inline_gnd_export_wiring_check` (it serializes the engine result over the canonical document and
+  reflects an in-editor edit). OPEN: the operator browser trace, VC-15 in
   `test/acceptance/BROWSER-CHECKS.md` (the button shows only for the opt-in, the export drops the
   standOff/inlines mentions, reading text byte-identical, the exported file re-opens).
 - **The inline-GND re-open engine is built** (`fromInlineGND`): a handed-back inline-GND
