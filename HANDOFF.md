@@ -6,12 +6,26 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, synced to `origin/main`. The two confirm/reject commits from 2026-06-20
-(first the per-construct engine + proof `302836e`, then the UI wiring into the overlap
-inspector `4c56fa2`) were secured to `origin/main` on 2026-06-21 under the decoupled-securing
-policy: pushes to main run autonomously, tags and releases stay operator-gated. `origin/main`
-is at the tip. GitHub Pages redeploys from `/docs`. The 2026-06-16
-commits, oldest first:
+Branch `main`, synced to `origin/main`, working tree clean. Tip `5960d51`. GitHub Pages
+redeploys from `/docs`.
+
+Newest (2026-06-21, milestone round): the **inline-GND export profile** for ZBZ Hersch is
+built (`5960d51`). The general standOff model stays the editing model; inline GND is a one-way
+export (`toInlineGND` in `docs/js/editor/inline-gnd.js`) that rewrites each `<name ref="#id">`
+mention to its typed element (`persName`/`orgName`/`bibl` with `@ref="GND:<value>"`, or the
+typed element bare when the entity has no GND), unwraps a place/event/missing/anchorless mention
+to plain text, and drops the register, so `{id}_final.xml` validates against `zbz_hersch.rng`.
+Reading text round-trips byte-for-byte. Two shapes were fixed against the reference corpus, not
+guessed: all three types take `@ref="GND:..."` (the gold uses `@ref` on `bibl` 53x vs `@corresp`
+2x, and the schema permits a `GND:` value on `bibl`'s loose `anyURI` `@ref`), and places are
+unannotated. Same commit consolidated the bounded mention-walk, copied in three `standoff.js`
+functions, into one `enclosingName` helper (behaviour-preserving). The export affordance in the
+editor UI is the open next step (a download entry; needs an operator browser trace before live).
+
+Earlier on 2026-06-21, the two confirm/reject commits from 2026-06-20 (the per-construct engine
++ proof `302836e`, then the UI wiring into the overlap inspector `4c56fa2`) were secured to
+`origin/main` under the decoupled-securing policy: pushes to main run autonomously, tags and
+releases stay operator-gated. The 2026-06-16 commits, oldest first:
 
 - A status pass: live checks report editor-caused id/count changes as neutral info (not
   warnings); a `slugify` id-rule proof; two engine properties pinned by
@@ -39,7 +53,11 @@ The working tree is clean.
 
 ## Proof state
 
-`node test/tools/run_all.mjs`: **43 proofs, all pass.** New this session: `slugify_check`,
+`node test/tools/run_all.mjs`: **all proofs pass.** New 2026-06-21: `inline_gnd_check` (the
+inline-GND export's structural contract on a synthetic register fixture) and
+`inline_gnd_schema_check` (a real pipeline file annotated through the engine and exported is
+RNG-valid against the real `zbz_hersch.rng` via the lxml harness, zero errors; sibling- and
+lxml-gated, SKIPs when absent). Earlier this arc: `slugify_check`,
 `reading_contract_check`, `llm_gate_check`, `llm_prompt_check`, `llm_config_check`,
 `provenance_check`, `proposal_apply_check` (and `ai_suggest_parse_check` updated for the
 generalized parser). The whole LLM-assistance engine (gate, prompt assembly, manifest
@@ -67,6 +85,15 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
   target ids whose note carries `@resp`, plus a locator resolving that note element) feeding a
   cell-context-menu confirm/reject and a violet note marker; the engine is already proven by
   `proposal_review_check`. Implementation pending, no code written yet.
+- **The inline-GND export affordance in the editor UI** is the next build step: a download
+  entry beside the existing Save/Download (`editor-app.js download()`) that runs
+  `toInlineGND(app.state.doc)`, serializes and downloads `{id}_final.xml`, shown for a
+  zbz-profile document. The engine is proven; only the wiring remains. It is a public surface,
+  so it needs an operator browser trace (new VC-15 in `test/acceptance/BROWSER-CHECKS.md`) and
+  that the exported file re-opens.
+- **An inline-GND re-open/import path** (the inverse of `toInlineGND`): read an already
+  inline-GND `_final.xml` back into the register model so a partially annotated object can be
+  edited further. Not built; needed for iterative editing of handed-back objects.
 - **The offline evaluation harness** (Phase 4) is designed in full in `testing.md`
   ("Evaluating LLM output") but built after the UI walk: L1/L2/L3 scoring of model output
   against the committed CC-BY gold object plus type-diverse samples, an optional model-as-judge,

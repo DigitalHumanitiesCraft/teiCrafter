@@ -45,7 +45,7 @@ Plaintext is a first-class entry: a `.txt` or `.md`, opened directly (file picke
 Two paths lead into the same editor:
 
 - **Open and edit existing TEI** -- the deterministic path. Open a local edition, correct word or line text, manage an index, link facsimile zones, and save losslessly. No LLM is involved.
-- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides. *Currently switched off* behind the feature flag `FEATURES.llmOnRamp`; the code remains in place.
+- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides. Enabled by the feature flag `FEATURES.llmOnRamp` (on since 2026-06-16) plus a per-user toggle in the Load menu; turning it off leaves a fully deterministic editor with no AI surfaces.
 
 The tool occupies a specific position in the digital scholarly editing pipeline:
 
@@ -89,7 +89,7 @@ Annotation happens at the text: select words and pick from one flat, filterable 
 | **In-browser index management** | An overview of the `<standOff>` (persons, places, organisations, works, events) with mention linking via `<name ref>`; the panel's sections follow the project's declared indices, and a declared index with no editable entity type stays visible as read-only. |
 | **Authority reconciliation** | Live candidate lookup (Wikidata, GND, GeoNames) at the point of annotation; automatic querying only by per-project opt-in; applying a candidate is always a human click. |
 | **Live validation and structure** | Integrity checks (well-formed, lossless) with their definitions readable in the editor, alongside the reading text. |
-| **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. Currently switched off (feature flag). |
+| **LLM on-ramp** | Optional "New from text" drafts an initial TEI into the same editor, marked violet and unreviewed. Enabled (feature flag `FEATURES.llmOnRamp`) plus a per-user toggle. |
 | **Runs in the browser** | No server and no build step; static files deployed from `/docs`. Editions are read from and saved to local files. |
 | **API keys (on-ramp only)** | Keys are held in memory for the session and never persisted. |
 
@@ -104,7 +104,7 @@ Annotation happens at the text: select words and pick from one flat, filterable 
 5. Select text to annotate it; switch the right pane to **Index** to manage persons, places, organisations, works, and events.
 6. Save the edition back losslessly.
 
-The LLM on-ramp ("New from text (LLM)") is currently switched off in the preview. When enabled, it accepts plaintext and an API key, and the drafted TEI opens in the same editor, marked violet and unreviewed for you to verify.
+The LLM on-ramp ("New from text (LLM)") is enabled. It accepts plaintext and an API key, and the drafted TEI opens in the same editor, marked violet and unreviewed for you to verify; a per-user toggle in the Load menu turns all AI surfaces off for a fully deterministic editor.
 
 ---
 
@@ -149,7 +149,7 @@ For the complete technical specification, see the [knowledge base](knowledge/).
 
 ## LLM Integration (on-ramp only)
 
-The optional "New from text" path supports multiple providers through a unified client; you bring your own model, whether a locally hosted LLM (e.g. via Ollama) or a commercial provider. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key. The on-ramp is currently switched off behind the feature flag `FEATURES.llmOnRamp` (in `docs/js/utils/constants.js`); the modal, prompt, and provider client remain in the codebase.
+The optional "New from text" path supports multiple providers through a unified client; you bring your own model, whether a locally hosted LLM (e.g. via Ollama) or a commercial provider. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key. The on-ramp is enabled by the feature flag `FEATURES.llmOnRamp` (in `docs/js/utils/constants.js`, on since 2026-06-16) together with a per-user runtime toggle in the Load menu; turning it off leaves a fully deterministic standalone editor with no AI surfaces.
 
 AI-generated drafts open in the editor marked in the violet token family (`--color-ai`) and are counted as unreviewed until a human confirms them.
 
