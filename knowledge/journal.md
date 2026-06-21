@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-21
 language: en
-version: 0.17
+version: 0.18
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,18 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-21 (milestone round): the inline-GND export built, the mention walk consolidated
+
+Trigger: the round turned the standing decision (the zbz Hersch output model is inline GND, not a standOff register) from documentation into code, since the order rules a decided point as work to do, not to restate.
+
+The export profile. The editor keeps editing in the general standOff model; inline GND is a one-way export (`toInlineGND` in a new `inline-gnd.js`), not a second editing model. The reason it is an export and not a live model switch: the index, the per-construct confirm/reject and the authority lookup all read the register, so making the live document register-less would strip three built surfaces, while an export keeps them and writes the schema-shaped artifact only at the end; and because the file the editor opens (the pipeline `_final.xml`) carries no annotations, there is no round-trip cost on the input side. The transform rewrites each mention to its typed element (person to `persName`, org to `orgName`, work to `bibl`) with `@ref="GND:<value>"` where the entity has a GND and the typed element bare otherwise, unwraps a place/event/missing/anchorless mention to plain reading text, and removes the register; reading text round-trips byte-for-byte.
+
+Two shape questions were settled by the reference corpus rather than guessed, the discipline this project already holds for claims. All three types take `@ref="GND:..."`: the gold uses `@ref` on `bibl` 53 times against `@corresp` twice, and the schema permits a `GND:` value on `bibl`'s loose `anyURI` `@ref`, so the earlier guess that `bibl` needs `@corresp` was dropped against the data. Places are unannotated, because the gold carries no `placeName`.
+
+Verification kept honest about what it measures. The structural contract is a synthetic, committable proof (`inline_gnd_check`). The project goal itself, validity against `zbz_hersch.rng`, is a second proof (`inline_gnd_schema_check`) that annotates a real pipeline file through the engine, exports it, and validates the result against the real schema with the lxml harness; it is sibling- and lxml-gated and SKIPs cleanly, the established stance for rights-restricted objects. The open remainder is the export affordance in the editor UI, a download entry, which is a public surface and waits for the operator browser trace.
+
+Consolidation. The bounded ancestor walk that finds a mention's enclosing `<name>` was copied verbatim in three standOff functions (`linkMention`, `linkMentionRange`, `unwrapMention`); it is now one `enclosingName` helper, behaviour-preserving under the gate. Reason: projection and mutation must agree on "already linked", and three copies of that rule are three places for it to drift.
 
 ## 2026-06-21: the standOff-note review surface scoped (F2), the milestone secured
 

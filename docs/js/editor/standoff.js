@@ -471,6 +471,22 @@ export function setAuthority(doc, id, authority, value) {
 // ---- mentions --------------------------------------------------------------
 
 /**
+ * The enclosing <name> mention of a text node, found by the bounded ancestor walk
+ * the M2.5 projection (edition.js mentionRef) uses: up through intermediate
+ * wrappers (e.g. <unclear>, <hi>), stopping at the reading-unit level (p/head/
+ * note/body). Projection and mutation must agree on "already linked", or relinking
+ * a critically-wrapped mention would nest <name> inside <name> with conflicting
+ * refs. Returns the <name> element or null.
+ */
+function enclosingName(textNode) {
+  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
+    if (p.localName === "name") return p;
+    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
+  }
+  return null;
+}
+
+/**
  * Wrap a reading-text node's content in <name ref="#entityId">...</name> via a
  * splice over [node.start, node.end]. Lossless. If the node is already the sole
  * content of a <name> that already carries this ref, this is a no-op (SAME doc).
@@ -479,16 +495,7 @@ export function setAuthority(doc, id, authority, value) {
 export function linkMention(doc, textNode, entityId) {
   if (!textNode || textNode.type !== "text") return doc;
   const want = "#" + entityId;
-  // Find the enclosing <name> with the SAME bounded ancestor walk the M2.5
-  // projection (edition.js mentionRef) uses: through intermediate wrappers
-  // (e.g. <unclear>, <hi>), stopping at the reading-unit level. Projection and
-  // mutation must agree on "already linked", or relinking a critically-wrapped
-  // mention would nest <name> inside <name> with conflicting refs.
-  let nameEl = null;
-  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
-    if (p.localName === "name") { nameEl = p; break; }
-    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
-  }
+  const nameEl = enclosingName(textNode);
   // The mention text is already inside a <name>: retarget its @ref rather than
   // wrapping a second <name> (which would nest invalidly). A no-op if it already
   // points at this entity.
@@ -514,12 +521,8 @@ export function linkMention(doc, textNode, entityId) {
  */
 export function linkMentionRange(doc, textNode, relFrom, relTo, entityId) {
   if (!textNode || textNode.type !== "text") return doc;
-  // Same bounded ancestor walk as linkMention/mentionRef: inside a <name>,
-  // refuse (SAME doc) instead of producing nested conflicting refs.
-  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
-    if (p.localName === "name") return doc;
-    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
-  }
+  // Inside a <name> already: refuse (SAME doc) instead of nesting conflicting refs.
+  if (enclosingName(textNode)) return doc;
   const len = textNode.end - textNode.start;
   if (!Number.isInteger(relFrom) || !Number.isInteger(relTo)) return doc;
   if (relFrom < 0 || relTo > len || relFrom >= relTo) return doc;
@@ -563,11 +566,7 @@ export function wrapRange(doc, textNode, relFrom, relTo, build) {
  */
 export function unwrapMention(doc, textNode) {
   if (!textNode || textNode.type !== "text") return doc;
-  let nameEl = null;
-  for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
-    if (p.localName === "name") { nameEl = p; break; }
-    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
-  }
+  const nameEl = enclosingName(textNode);
   if (!nameEl) return doc;
   if (nameEl.outerStart == null || nameEl.outerEnd == null) return doc;
   if (nameEl.contentStart == null || nameEl.contentEnd == null) return doc;
