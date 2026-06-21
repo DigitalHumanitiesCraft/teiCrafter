@@ -25,6 +25,15 @@
  * This is an export profile, not a second editing model: the editor keeps editing in
  * the register model (index, confirm/reject, authority lookup all read the register);
  * the inline-GND document is the artifact handed to the ZBZ pipeline.
+ *
+ * fromInlineGND(doc) is the inverse: it reads an inline-GND document back into the
+ * register model so a handed-back object can be edited further. Each inline
+ * <persName>/<orgName>/<bibl> in the reading text becomes a <standOff> entity
+ * (deduplicated by GND, else by text), carrying <idno type="GND"> when a
+ * ref="GND:.." was present, and the mention is rewrapped as <name ref="#id">. Reading
+ * text is again preserved byte-for-byte. Places are not recovered (the format does not
+ * annotate them), so the interchange file is a fixed point of the round-trip:
+ * toInlineGND(fromInlineGND(file)) === file, byte-for-byte.
  */
 
 import {
@@ -35,8 +44,17 @@ import {
   textOf,
   spliceDocument,
   escapeAttr,
+  readingRoot,
+  isReadingContext,
 } from "./tei-document.js";
-import { readEntities } from "./standoff.js";
+import {
+  readEntities,
+  addEntity,
+  setAuthority,
+  slugify,
+  uniquify,
+  collectIds,
+} from "./standoff.js";
 
 // Entity type -> the inline element that carries it in the ZBZ format. Types absent
 // here (place, event) are outside the GND annotation scope and unwrap to text.
@@ -135,4 +153,86 @@ export function toInlineGND(doc) {
     doc = rewriteMention(doc, m, byId);
   }
   return dropStandOff(doc);
+}
+
+// ---- import (the inverse: inline-GND -> register model) --------------------
+
+// Inline element -> register type key, and the type key -> generated-id prefix
+// (mirrors standoff.js ID_PREFIX, which is module-private there).
+const INLINE_KIND = Object.freeze({ persName: "person", orgName: "org", bibl: "work" });
+const KIND_PREFIX = Object.freeze({ person: "pers", org: "org", work: "wrk" });
+
+// A @ref carrying an authority pointer in the interchange shape: GND:<value>.
+const GND_REF = /^GND:([0-9A-Za-z-]+)$/;
+
+/** kind, GND (or null) and reading text of one inline mention element. */
+function mentionInfo(doc, el) {
+  const m = GND_REF.exec(getAttr(el, "ref") || "");
+  return {
+    kind: INLINE_KIND[el.localName],
+    gnd: m ? m[1] : null,
+    name: textNodes(el).map((t) => textOf(doc, t)).join("").trim(),
+  };
+}
+
+// One register entity per distinct authority, else per distinct text within a kind.
+function mentionKey(info) {
+  return info.gnd ? info.kind + "#GND:" + info.gnd : info.kind + "#t:" + info.name;
+}
+
+/** The first inline person/org/work mention in the reading text, or null. */
+function firstInlineMention(doc) {
+  const root = readingRoot(doc);
+  let hit = null;
+  walk(root, (n) => {
+    if (hit) return false;
+    if (n.type === "element" && INLINE_KIND[n.localName] && isReadingContext(n)) {
+      hit = n;
+      return false;
+    }
+  });
+  return hit;
+}
+
+/**
+ * Read an inline-GND interchange document back into the register model. Returns a
+ * NEW doc, or the SAME doc when there is no inline mention to lift (so a register-
+ * model document, whose mentions are already <name>, is a no-op and the import is
+ * idempotent). Reading text is byte-preserved; only markup changes.
+ */
+export function fromInlineGND(doc) {
+  if (!firstInlineMention(doc)) return doc;
+
+  // 1. Plan the register: one entity per distinct (kind, GND|text), id pre-minted
+  //    and uniquified against existing ids so the later addEntity keeps it verbatim.
+  const taken = collectIds(doc);
+  const plan = new Map(); // key -> { id, kind, gnd, name }
+  walk(readingRoot(doc), (n) => {
+    if (n.type !== "element" || !INLINE_KIND[n.localName] || !isReadingContext(n)) return;
+    const info = mentionInfo(doc, n);
+    const key = mentionKey(info);
+    if (plan.has(key)) return;
+    const id = uniquify(KIND_PREFIX[info.kind] + "_" + (slugify(info.name) || "1"), taken);
+    taken.add(id);
+    plan.set(key, { id, kind: info.kind, gnd: info.gnd, name: info.name });
+  });
+
+  // 2. Rewrite each inline mention to <name ref="#id">, inner reading text verbatim.
+  for (;;) {
+    const m = firstInlineMention(doc);
+    if (!m) break;
+    const id = plan.get(mentionKey(mentionInfo(doc, m))).id;
+    const inner = doc.raw.slice(m.contentStart, m.contentEnd);
+    doc = spliceDocument(doc, m.outerStart, m.outerEnd,
+      '<name ref="#' + escapeAttr(id) + '">' + inner + "</name>");
+  }
+
+  // 3. Build the standOff register from the plan, in person/org/work order.
+  const order = ["person", "org", "work"];
+  const entries = [...plan.values()].sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind));
+  for (const e of entries) {
+    doc = addEntity(doc, e.kind, { id: e.id, name: e.name });
+    if (e.gnd) doc = setAuthority(doc, e.id, "GND", e.gnd);
+  }
+  return doc;
 }

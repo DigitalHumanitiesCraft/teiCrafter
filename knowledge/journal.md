@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-21
 language: en
-version: 0.18
+version: 0.19
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,14 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-21 (autonomous): the inline-GND re-open path built, the export made a round-trip
+
+Trigger: with the export secured, the operator asked what could be carried toward the goal autonomously and implemented at once. The inline-GND export was one-way, so a handed-back `_final.xml` could not be edited further; closing that gap was the clear internal, reversible next step, no public surface, so within the autonomous boundary.
+
+The inverse. `fromInlineGND` reads an inline-GND document back into the register model: each inline `persName`/`orgName`/`bibl` becomes a `<standOff>` entity, deduplicated by GND (else by text), carrying its `<idno type="GND">` when a `ref="GND:.."` was present, and the mention is rewrapped as `<name ref="#id">`. Reading text is preserved byte-for-byte. Places are not recovered, because the format does not annotate them, a documented one-way loss.
+
+Why a fixed point is the right contract. Rather than assert a vague round-trip, the proof pins that re-importing an exported file and re-exporting yields the identical bytes: `toInlineGND(fromInlineGND(file))` equals the file. That is exactly the property a handover format needs, an object can leave, come back for further editing, and leave again without drift. It is built on the existing engine primitives (`addEntity`, `setAuthority`), so the rebuilt register is the same shape `readEntities` already reads, not a parallel one.
 
 ## 2026-06-21 (milestone round): the inline-GND export built, the mention walk consolidated
 
