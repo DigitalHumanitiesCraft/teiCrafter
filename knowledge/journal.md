@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-20
+updated: 2026-06-21
 language: en
-version: 0.16
+version: 0.17
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,12 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-21: the standOff-note review surface scoped (F2), the milestone secured
+
+Trigger: a portfolio sync re-activated the lane and found its order and handoff already in the Leitstelle archive (it was not registered in the running round), and the two confirm/reject commits from the day before still local because the push policy at the time was operator-gated. Under the policy in force since 2026-06-21, securing decoupled from approval (pushes to main autonomous, tags and releases still gated), the milestone was secured to origin/main.
+
+The one open review surface, a proposed standOff `<note>`, was scoped but deliberately not yet built, recorded here so the design is not lost and explicitly not as a claim that it ships (the 2026-06-04 aspirational-token lesson applies). The note is not a reading-cell layer, so it never reaches the overlap inspector where every other AI construct is reviewed. The design: an additive index in `standoff.js` (the set of target ids whose note carries `@resp`, plus a locator that resolves that note element for the already-proven `confirmConstruct`/`rejectConstruct`), feeding two affordances at the note's existing home, the cell context menu (confirm drops the violet marker and keeps the note, reject removes it), and a violet note marker so the "AI is always violet" invariant holds for notes too. The reason it reuses the cell context menu rather than a new surface: the note already lives on its target cell (the has-note marker and tooltip), so the human gate is one more contextual action, the same judgment that put confirm/reject in the overlap inspector rather than a fresh panel. The engine half is proven by `proposal_review_check`; what remains is the UI, an index proof, and the operator browser check (VC-14).
 
 ## 2026-06-20 (continued): the confirm/reject UI wired into the overlap inspector
 

@@ -6,8 +6,11 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, pushed to `origin/main` (operator-authorized 2026-06-16); `origin/main`
-at the tip. Two local commits ahead since 2026-06-20 (first the per-construct confirm/reject engine + proof, then the confirm/reject UI wiring into the overlap inspector), not pushed (push to main stays operator-gated). GitHub Pages redeploys from `/docs`. The 2026-06-16
+Branch `main`, synced to `origin/main`. The two confirm/reject commits from 2026-06-20
+(first the per-construct engine + proof `302836e`, then the UI wiring into the overlap
+inspector `4c56fa2`) were secured to `origin/main` on 2026-06-21 under the decoupled-securing
+policy: pushes to main run autonomously, tags and releases stay operator-gated. `origin/main`
+is at the tip. GitHub Pages redeploys from `/docs`. The 2026-06-16
 commits, oldest first:
 
 - A status pass: live checks report editor-caused id/count changes as neutral info (not
@@ -58,9 +61,12 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
   UI is wired: an AI-marked cell opens the overlap inspector and each AI layer carries
   confirm/reject through `commitStandoff` (`annotation-ui.js` `openLayersInspector`, plus the
   `editor-app.js` click routing). OPEN: the operator browser sight-check (VC-13 in
-  `test/acceptance/BROWSER-CHECKS.md`, pass pending), and the one remaining review surface, a
-  proposed standOff `<note>` is not a reading-cell layer and needs its own affordance at the
-  note marker.
+  `test/acceptance/BROWSER-CHECKS.md`, pass pending), and the one remaining review surface (F2),
+  a proposed standOff `<note>` is not a reading-cell layer and needs its own affordance at the
+  note marker. F2 is scoped (2026-06-21): an additive AI-note index in `standoff.js` (the set of
+  target ids whose note carries `@resp`, plus a locator resolving that note element) feeding a
+  cell-context-menu confirm/reject and a violet note marker; the engine is already proven by
+  `proposal_review_check`. Implementation pending, no code written yet.
 - **The offline evaluation harness** (Phase 4) is designed in full in `testing.md`
   ("Evaluating LLM output") but built after the UI walk: L1/L2/L3 scoring of model output
   against the committed CC-BY gold object plus type-diverse samples, an optional model-as-judge,
@@ -76,9 +82,10 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
 
 teiCrafter itself is edited directly. Sibling-repo work (the SZD `<standOff>`/`<name>` schema
 extension, ZBZ `<graphic>` emission and the rights answer) goes as orders to `szd-htr` and
-`zbz-ocr-tei`, never edited here. Commits are local; no push without word. Research steering
-(milestone register, backlog, paper material) lives in the operator's private vault, not in
-this repository.
+`zbz-ocr-tei`, never edited here. Securing is decoupled from approval (since 2026-06-21):
+commits to the lane's own paths push to main autonomously, tags and releases stay
+operator-gated. Research steering (milestone register, backlog, paper material) lives in the
+operator's private vault, not in this repository.
 
 ## Shared and held files
 
