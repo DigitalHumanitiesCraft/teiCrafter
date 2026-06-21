@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-21
 language: en
-version: 0.20
+version: 0.21
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,14 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-21 (order teicrafter): the export path pinned by a dedicated wiring proof
+
+Trigger: the lane order for M3 named a specific deliverable the autonomous build had not produced, a dedicated headless proof `inline_gnd_export_wiring_check.mjs` that the export PATH serializes exactly the engine result. The button and its manifest gate were already built and secured; this closes the one gap against the order.
+
+What the wiring proof adds over the existing inline-GND proofs. The structural proof works at the tei-document layer; this one goes through the edition layer (`parseEdition`/`serialize`/`state.doc`), the path the editor actually uses, and pins the two invariants a UI download depends on: the bytes the button transforms are the canonical current document (`serialize(state) === state.doc.raw`, so the export is never a stale snapshot), and an in-editor edit is reflected in a re-export. The download filename derivation is pinned in the same proof.
+
+Reconciliation with the order. The order also asked to scope M4 (the inline-GND re-open path) without building it; that engine was already built and proven a fixed point in the prior round (`fromInlineGND`), so M4 is ahead of the order, with only the load-time wiring left, and that is held on one editorial decision (the Save-behavior fork, a klaerung item). The order's green count (46) predated the re-open proof; with the wiring proof the gate is 47, reported as drift rather than smoothed.
 
 ## 2026-06-21 (autonomous): the inline-GND export wired into the editor UI
 
