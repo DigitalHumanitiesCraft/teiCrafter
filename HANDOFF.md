@@ -6,7 +6,7 @@ file that carries session state; conceptual detail lives in `knowledge/` (start 
 
 ## State
 
-Branch `main`, synced to `origin/main`, working tree clean. Tip `0e97282`. GitHub Pages
+Branch `main`, synced to `origin/main`, working tree clean. Tip `f940ff8`. GitHub Pages
 redeploys from `/docs`.
 
 Newest (2026-06-21, milestone round): the **inline-GND export profile** for ZBZ Hersch is
@@ -23,8 +23,15 @@ functions, into one `enclosingName` helper (behaviour-preserving). The inverse r
 now built too (`fromInlineGND`, `0e97282`): a handed-back inline-GND file reads back into the
 register model (entities deduplicated by GND else text, mentions rewrapped as `<name ref>`,
 places not recovered), so the interchange file is a fixed point, `toInlineGND(fromInlineGND(file))`
-equals the file (proof `inline_gnd_reopen_check`). The export affordance in the editor UI remains
-the open next step (a download entry; needs an operator browser trace before live).
+equals the file (proof `inline_gnd_reopen_check`). The export affordance in the editor UI is now
+built too: an "Export inline-GND" toolbar button (`downloadInlineGND` in `editor-app.js`) shown
+only for a document under a project that opts in with the new manifest field
+`"interchange": "inline-gnd"`, running `toInlineGND` and downloading `{base}_final.xml`
+(`inlineGndFilename`) without touching the in-editor register document. It is gated declaratively
+and the public deployment ships no such project, so the push deploys nothing a casual visitor
+reaches; the operator browser trace is VC-15. The load-time re-import wiring is deferred to one
+operator decision (whether a plain Save of an opened inline file re-emits inline or writes the
+register model).
 
 Earlier on 2026-06-21, the two confirm/reject commits from 2026-06-20 (the per-construct engine
 + proof `302836e`, then the UI wiring into the overlap inspector `4c56fa2`) were secured to
@@ -90,17 +97,23 @@ the browser surfaces are operator-verified. Added 2026-06-20, `proposal_review_c
   target ids whose note carries `@resp`, plus a locator resolving that note element) feeding a
   cell-context-menu confirm/reject and a violet note marker; the engine is already proven by
   `proposal_review_check`. Implementation pending, no code written yet.
-- **The inline-GND export affordance in the editor UI** is the next build step: a download
-  entry beside the existing Save/Download (`editor-app.js download()`) that runs
-  `toInlineGND(app.state.doc)`, serializes and downloads `{id}_final.xml`, shown for a
-  zbz-profile document. The engine is proven; only the wiring remains. It is a public surface,
-  so it needs an operator browser trace (new VC-15 in `test/acceptance/BROWSER-CHECKS.md`) and
-  that the exported file re-opens.
-- **The inline-GND re-open engine is built** (`fromInlineGND`, `0e97282`): a handed-back
-  inline-GND `_final.xml` reads back into the register model, proven a round-trip fixed point
+- **The inline-GND export affordance in the editor UI is built**: an "Export inline-GND"
+  toolbar button (`editor-app.js downloadInlineGND`/`syncInlineExport`) beside Save/Download,
+  shown only for a document under a project that declares `"interchange": "inline-gnd"` (a new
+  project-manifest field; the shipped ZBZ manifest opts in). It runs `toInlineGND(app.state.doc)`
+  and downloads `inlineGndFilename(docName)` = `{base}_final.xml`, leaving the in-editor document
+  untouched. Gated declaratively and absent from the public deployment (no opt-in project ships),
+  so the push exposes nothing casually live. OPEN: the operator browser trace, VC-15 in
+  `test/acceptance/BROWSER-CHECKS.md` (the button shows only for the opt-in, the export drops the
+  standOff/inlines mentions, reading text byte-identical, the exported file re-opens).
+- **The inline-GND re-open engine is built** (`fromInlineGND`): a handed-back inline-GND
+  `_final.xml` reads back into the register model, proven a round-trip fixed point
   (`inline_gnd_reopen_check`). The remaining step is the load-time wiring (apply `fromInlineGND`
-  when a zbz-profile inline file is opened), grouped with the export affordance as the same
-  public surface awaiting the operator browser trace.
+  when an opt-in inline file is opened). It is deferred on ONE operator decision, not on
+  engineering: when an opened inline file is lifted into the register and the operator hits plain
+  Save, should the file re-emit inline or become the register model. That is an editorial choice
+  about what a handed-back file turns into, so it goes to the operator (a klaerung item) before
+  the wiring is built.
 - **The offline evaluation harness** (Phase 4) is designed in full in `testing.md`
   ("Evaluating LLM output") but built after the UI walk: L1/L2/L3 scoring of model output
   against the committed CC-BY gold object plus type-diverse samples, an optional model-as-judge,
