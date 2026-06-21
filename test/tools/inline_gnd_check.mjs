@@ -24,7 +24,7 @@
 
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
 import { parseEdition } from "../../docs/js/editor/edition.js";
-import { toInlineGND } from "../../docs/js/editor/inline-gnd.js";
+import { toInlineGND, inlineGndFilename } from "../../docs/js/editor/inline-gnd.js";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -115,6 +115,14 @@ check("respStmt <name>AI</name> is untouched (no '#'-ref, not a mention)",
 // --- losslessness and idempotence ---
 check("reading text is byte-identical (body text unchanged)", readingText(raw) === beforeReading);
 check("idempotent: a second pass returns the SAME doc", toInlineGND(out) === out);
+
+// --- the export filename helper (the download names the pipeline's _final.xml) ---
+check("inlineGndFilename appends _final.xml to a working name",
+  inlineGndFilename("zbz-hersch-100.xml") === "zbz-hersch-100_final.xml");
+check("inlineGndFilename is idempotent on an already-final name",
+  inlineGndFilename("x_final.xml") === "x_final.xml");
+check("inlineGndFilename falls back when the name is missing",
+  inlineGndFilename(null) === "edition_final.xml");
 
 // --- secondary smoke: the committed synthetic register fixture (person + place) ---
 const synthPath = join(REPO, "docs", "data", "editor", "zbz-hersch-synthetic.xml");

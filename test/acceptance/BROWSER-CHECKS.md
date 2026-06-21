@@ -202,6 +202,28 @@ unambiguous).
   proposed standOff `<note>`, which is not a reading-cell layer and so does not appear
   in the inspector; its review surface is the open remainder.
 
+### VC-15 Export the inline-GND interchange copy
+
+- Gesture: open a document under a project that declares the inline-GND interchange
+  (the ZBZ Hersch example, `editor.html#example=zbz`, whose
+  `teicrafter.project.json` carries `"interchange": "inline-gnd"`). Annotate at
+  least one person/org/work mention with a GND id. An "Export inline-GND" button
+  appears in the toolbar beside Save and Download. Click it.
+- Expected: the button is shown ONLY for an inline-GND project (it is absent for the
+  Wenzelsbibel example and any document without the opt-in). Clicking it downloads
+  `{name}_final.xml`: each register mention is inlined as `<persName ref="GND:..">`,
+  `<orgName ref="GND:..">` or `<bibl ref="GND:..">`, places are plain text, and there
+  is no `<standOff>`. The reading text is byte-identical to the in-editor document,
+  and the in-editor document is left unchanged (the register model stays the editing
+  model). Re-opening the exported `{name}_final.xml` in the editor renders the same
+  reading text (the round-trip fixed point proven headless by
+  `inline_gnd_reopen_check`). The engine behind the export is proven headless
+  (`inline_gnd_check`, `inline_gnd_schema_check`).
+- Failure signature: the button appears for a non-opt-in document, the export changes
+  the in-editor document, a `<standOff>` survives in the exported file, a `<name
+  ref="#..">` mention survives un-inlined, a place is annotated, the reading text
+  diffs from the source, or the exported file fails to re-open.
+
 ### VC-F-1 Index panel reflects the document's declared indices
 
 - Gesture: open the folder `docs/data/editor/wb-codex/` as a project (its

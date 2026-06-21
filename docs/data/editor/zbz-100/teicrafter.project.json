@@ -6,5 +6,6 @@
   ],
   "files": {
     "zbz-hersch-100.xml": "letter"
-  }
+  },
+  "interchange": "inline-gnd"
 }

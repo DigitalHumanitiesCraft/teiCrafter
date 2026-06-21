@@ -49,6 +49,7 @@ import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFile
 import { complete } from "../services/llm.js";
 import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
 import { applyProposals } from "./proposal-apply.js";
+import { toInlineGND, inlineGndFilename } from "./inline-gnd.js";
 import { createProjectFolder } from "./project-folder.js";
 import { createValidationView } from "./validation-view.js";
 import { createDocumentFacts } from "./document-facts.js";
@@ -134,6 +135,7 @@ function enableControls(on) {
   // M2.5 legend strip: visible while a document is loaded;
   // render() keeps the chips current after every mutation.
   if (on) buildLegend(); else $("ed-legend").hidden = true;
+  syncInlineExport();
   updateFolioButtons();
   updatePanels();
 }
@@ -1800,6 +1802,48 @@ function download() {
   setStatus(`Downloaded ${app.docName || "edition.xml"}`);
 }
 
+/** True when the loaded document's project opts into the inline-GND interchange. */
+function docHasInlineGndExport() {
+  const project = app.projectFolder ? app.projectFolder.project : app.project;
+  return !!(app.state && project && project.interchange === "inline-gnd");
+}
+
+/**
+ * Show the inline-GND export only where it is meaningful: a document under a
+ * project that declares the inline-GND interchange profile. The register model
+ * stays the editing model; this is a one-way handover copy for the ZBZ pipeline.
+ */
+function syncInlineExport() {
+  const btn = $("btn-export-inline");
+  if (btn) btn.hidden = !docHasInlineGndExport();
+}
+
+/**
+ * Export the current register-model document to the inline-GND interchange shape
+ * (authority inline at each mention, no standOff) and download it as the
+ * pipeline's "_final.xml". Reading text is byte-preserved; only the markup shape
+ * changes (toInlineGND). The in-editor document is untouched.
+ */
+function downloadInlineGND() {
+  if (!app.state) return;
+  let raw;
+  try {
+    raw = toInlineGND(app.state.doc).raw;
+  } catch (err) {
+    setStatus(`Inline-GND export failed: ${err.message}`);
+    return;
+  }
+  const name = inlineGndFilename(app.docName);
+  const blob = new Blob([raw], { type: "application/xml" });
+  const url = URL.createObjectURL(blob);
+  const a = el("a", { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  setStatus(`Exported the inline-GND interchange copy ${name}`);
+}
+
 // ---- view controls: zoom, collapse, splitter, layout persistence ------------
 // One persistence mechanism (storage.js, localStorage): text zoom is a global
 // preference; the per-document layout (split position, collapsed pane, active
@@ -2164,6 +2208,7 @@ document.addEventListener("keydown", (e) => {
 });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", download);
+$("btn-export-inline").addEventListener("click", downloadInlineGND);
 
 // View controls: text zoom (a global preference) and the context-pane collapse
 // toggle. Ctrl/Cmd+\ mirrors the collapse button; the splitter resizes the panes.

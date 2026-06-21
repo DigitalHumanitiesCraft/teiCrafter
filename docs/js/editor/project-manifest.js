@@ -37,8 +37,16 @@
  *     "indices": [ { "key": "peoples", "label": "...", "listType": "...", "registers": ["GND"] } ],
  *     "views":   [ { "key": "diplomatic", "label": "..." } ],
  *     "reconciliation": { "registers": ["Wikidata", "GND"], "auto": true },
- *     "llm": { "systemPrompt": "...", "mapping": "mapping.md", "responsibility": "#ai" }
+ *     "llm": { "systemPrompt": "...", "mapping": "mapping.md", "responsibility": "#ai" },
+ *     "interchange": "inline-gnd"
  *   }
+ *
+ * "interchange" (optional) opts the project into a handover export profile. The
+ * only value is "inline-gnd": the project's register-model documents can be
+ * exported to the ZBZ inline-GND interchange shape (toInlineGND, inline-gnd.js),
+ * which the editor surfaces as a download for a document under such a project.
+ * Absent, the field normalizes to project.interchange = null and no export
+ * affordance is shown.
  *
  * "llm" (optional) is the project's model-assistance config: a systemPrompt (the
  * project's editorial instructions for the model), a mapping (a Markdown filename,
@@ -304,6 +312,14 @@ export function parseManifest(input) {
       })
     : [];
 
+  let interchange = null;
+  if (m.interchange !== undefined) {
+    if (m.interchange !== "inline-gnd") {
+      fail('"interchange" must be "inline-gnd" (the only supported interchange profile)');
+    }
+    interchange = m.interchange;
+  }
+
   let files = {};
   if (m.files !== undefined) {
     if (!m.files || typeof m.files !== "object" || Array.isArray(m.files)) fail('"files" is not an object');
@@ -328,6 +344,7 @@ export function parseManifest(input) {
     views: Array.isArray(m.views) ? m.views.map(viewDef) : [],
     reconciliation: reconciliationDef(m.reconciliation),
     llm: llmDef(m.llm),
+    interchange,
   };
 }
 

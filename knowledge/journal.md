@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-06-21
 language: en
-version: 0.19
+version: 0.20
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,14 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-06-21 (autonomous): the inline-GND export wired into the editor UI
+
+Trigger: with both engine halves secured (export and re-open), the operator asked what could now be implemented toward the goal. The schema-valid ZBZ path existed only as a function call; an editor that cannot reach it through the UI has the path as plumbing, not as a feature. Wiring the export was the documented next build step.
+
+Why this public surface stays within the autonomous boundary. An export button is a public surface, which normally waits for the operator browser trace before going live. Here it is gated declaratively: it shows only for a document under a project that opts in with a new manifest field `interchange: "inline-gnd"`, and the public deployment ships no such project (examples are local-only). So building and pushing it deploys nothing a casual visitor can reach; it is the spur laid for the operator to walk (VC-15), not a live release. The button runs `toInlineGND` over a copy and downloads `{base}_final.xml`, leaving the in-editor register document untouched, so the register stays the editing model and the inline file stays the handover artifact.
+
+Why the load-time re-import was deferred, not built. The re-open engine (`fromInlineGND`) is ready, but wiring it to file opening forces a decision the engine does not make: when an opened inline file is lifted into the register and the operator hits plain Save, should the file on disk re-emit inline or become the register model. That changes what a handed-back file turns into, an editorial choice, so it goes to the operator rather than being settled by default.
 
 ## 2026-06-21 (autonomous): the inline-GND re-open path built, the export made a round-trip
 

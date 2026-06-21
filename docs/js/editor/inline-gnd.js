@@ -155,6 +155,18 @@ export function toInlineGND(doc) {
   return dropStandOff(doc);
 }
 
+/**
+ * The interchange filename for a working document: its base name carrying the
+ * "_final.xml" suffix the ZBZ pipeline uses for a finished object. Idempotent
+ * when the name already ends in "_final":
+ *   "zbz-hersch-100.xml" -> "zbz-hersch-100_final.xml"
+ *   "x_final.xml"        -> "x_final.xml"
+ */
+export function inlineGndFilename(docName) {
+  const base = (docName || "edition").replace(/\.xml$/i, "");
+  return (/_final$/.test(base) ? base : base + "_final") + ".xml";
+}
+
 // ---- import (the inverse: inline-GND -> register model) --------------------
 
 // Inline element -> register type key, and the type key -> generated-id prefix

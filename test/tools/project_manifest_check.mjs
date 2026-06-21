@@ -311,6 +311,21 @@ rejects({ teicrafter: 1, name: "x", reconciliation: { registers: ["VIAF"] } },
 rejects({ teicrafter: 1, name: "x", reconciliation: { auto: "yes" } }, /"reconciliation\.auto" is not a boolean/,
   "a non-boolean reconciliation.auto is rejected");
 
+// --- 8. interchange: the inline-GND export opt-in ------------------------------
+
+const zbzM = parseManifest(readFileSync(join(ROOT, "docs", "data", "editor", "zbz-100", MANIFEST_FILENAME), "utf8"));
+check(zbzM.interchange === "inline-gnd",
+  "the shipped ZBZ manifest opts into the inline-GND interchange export");
+const szdM = parseManifest(readFileSync(join(ROOT, "docs", "data", "editor", "szd", MANIFEST_FILENAME), "utf8"));
+check(szdM.interchange === null,
+  "a project that declares no interchange normalizes to null (no export affordance)");
+check(parseManifest({ teicrafter: 1, name: "x" }).interchange === null,
+  "interchange absent: project.interchange is null");
+check(parseManifest({ teicrafter: 1, name: "x", interchange: "inline-gnd" }).interchange === "inline-gnd",
+  'interchange "inline-gnd" parses and is carried verbatim');
+rejects({ teicrafter: 1, name: "x", interchange: "tei-p5" },
+  /"interchange" must be "inline-gnd"/, "an unknown interchange value is rejected, never half-read");
+
 // --- summary ------------------------------------------------------------------
 
 console.log("=".repeat(60));
