@@ -28,8 +28,8 @@ model to generate here.
 
 This contract is **frozen** (status `active`, M1.2 done). The mappings, the id scheme,
 and the geometry are fixed from the v0.2 schema, the reference prototype, and the demo
-handful. The open points named in section 9 were resolved against real data on
-2026-06-08 (the handful plus a 151-object deterministic spread across the ~2069-object
+handful. The open points named in section 9 were resolved against real data
+(the handful plus a 151-object deterministic spread across the ~2069-object
 corpus; `test/tools/port_parity.mjs` and `pipeline/export_tei.py`).
 
 ## 0. Sources of truth for this document
@@ -38,7 +38,7 @@ corpus; `test/tools/port_parity.mjs` and `pipeline/export_tei.py`).
 - The reference prototype (spec-by-example, self-verifying):
   [test/tools/szd-pagejson-to-tei.mjs](../test/tools/szd-pagejson-to-tei.mjs). Every
   rule below cites the prototype line that implements it.
-- Two real objects read on 2026-06-08: `o_szd.100` (typescript, en, 3 images,
+- Two real objects read: `o_szd.100` (typescript, en, 3 images,
   creator present) and `o_szd.1079` (letter, de, 5 images, no creator). The demo
   target is **o_szd.1079**.
 - The teiCrafter engine contract: [docs/js/editor/edition.js](../docs/js/editor/edition.js),
@@ -280,7 +280,7 @@ later revision of this contract **only after** real data confirms which markers
 actually occur and with what exact syntax. Encoding markers we have not observed would
 be guesswork; v1 stays literal on purpose.
 
-## 9. Resolved against real data (2026-06-08, M1.2 freeze)
+## 9. Resolved against real data (M1.2 freeze)
 
 Checked over the handful (o_szd.100, 72, 161, 2215, 1079) and a 151-object deterministic
 spread across the full ~2069-object corpus. The five open points are settled:

@@ -202,6 +202,25 @@ unambiguous).
   proposed standOff `<note>`, which is not a reading-cell layer and so does not appear
   in the inspector; its review surface is the open remainder.
 
+### VC-14 LLM layer off and on, Propose (AI) end-to-end
+
+- Gesture: with the LLM on-ramp enabled, open the Load menu and toggle AI off; confirm
+  no AI surface remains (no "New from text (LLM)" entry, no "Propose (AI)" action, no
+  provider or key UI). Toggle AI back on. Open the hsa-7711 letter (open the folder
+  `docs/data/editor/hsa-7711/` as a project and its `.txt` letter, or the registered
+  example on a local host), set a provider key once via the on-ramp, run "Propose (AI)"
+  on a page, then save and reopen the file.
+- Expected: with AI off the editor is a fully deterministic editor with no AI surface;
+  with AI on "Propose (AI)" inserts each proposal inline as a violet `resp="#ai"`
+  construct, confirmable or rejectable per construct (VC-13). A save and reopen is
+  byte-faithful to the intended change (VC-6): the confirmed constructs read as ordinary
+  markup and the rejected ones leave no trace. The engine behind the flow is proven
+  headless (`proposal_apply_check`, `proposal_review_check`, `llm_gate_check`).
+- Failure signature: an AI surface remains after AI is toggled off; "Propose (AI)"
+  throws, returns nothing on a page that carries proposable text, or inserts a construct
+  that is not marked violet; a confirmed construct keeps its `@resp`; or a save and
+  reopen diffs outside the intended spans.
+
 ### VC-15 Export the inline-GND interchange copy
 
 - Gesture: open a document under a project that declares the inline-GND interchange

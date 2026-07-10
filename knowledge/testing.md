@@ -101,6 +101,8 @@ The engine proofs are byte-true but structurally blind to the DOM, event and tim
 
 The third tier is the named manual browser checks themselves: `test/acceptance/BROWSER-CHECKS.md` lists every browser-only path (the timing-dependent re-entry surfaces and the visual acceptance scenarios) as a check that is run and dated, never silently skipped. The standing structural reason the floor is needed: the un-exported integrator (`editor-app.js`) wires the whole UI, so any feature that touches it re-runs the affected manual checks.
 
+Known frontend limitation. On a tiled cross-origin IIIF source (the OeNB Wenzelsbibel codex) the facsimile pane stays blank until the first viewport interaction on initial load and after each page turn; the console shows an OpenSeadragon "tainted data" WebGL warning and the image then paints via the canvas fallback. Single-image facsimiles are unaffected. This is a cosmetic first-paint lag, without any losslessness or data impact; the candidate fix is setting the OSD `crossOriginPolicy` on the tile source or forcing the canvas drawer.
+
 ## Evaluating LLM output (designed; built after the UI walk)
 
 The LLM-assistance layer is evaluated in tiers, only the deterministic one in the gate today (operator decision: exercise the UI before building the offline harness). The design, so the whole picture is on record:

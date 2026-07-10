@@ -191,8 +191,8 @@ Browser evidence (rendering and interaction):
 
 - M2.2 facsimile render: the GAMS page image actually rendering for this object in
   OpenSeadragon under headless Chrome is recorded in `c:\tmp\m2_2_1079_folio1.png`
-  (folio 2 in `c:\tmp\m2_2_1079_folio2.png`), 2026-06-08.
-- M7.2 end-to-end browser run (Playwright, headless Chrome, 2026-06-08; script
+  (folio 2 in `c:\tmp\m2_2_1079_folio2.png`).
+- M7.2 end-to-end browser run (Playwright, headless Chrome; script
   `c:\tmp\pwtest\m72.js`, screenshots `c:\tmp\m72_edit.png` and
   `c:\tmp\m72_annotate.png`): open `o_szd.1079`; download immediately and confirm the
   saved file is byte-identical to the source (open-then-save no-op); correct a reading
@@ -320,10 +320,9 @@ documents are redistributable, committing the file is a one-line gitignore chang
    (b) Index panel (right): use **add person**, **add place**, **add work**, then
    type the authority id into the per-entity authority field, choosing the register
    (GND / GeoNames / Wikidata).
-   - Jeanne Hersch (person): GND `118815679` (resolved against lobid.org,
-     2026-06-09).
+   - Jeanne Hersch (person): GND `118815679` (resolved against lobid.org).
    - Genève (place): Wikidata `Q71`, GeoNames `7285902` (resolved via Wikidata
-     P1566, 2026-06-09).
+     P1566).
    - Ivan Illich (person) and the work "Une société sans école" (Illich's book as
      discussed by Verne) are entered by name with the authority field left empty,
      to be resolved via the live lookup (M3.3). teiCrafter never fabricates an

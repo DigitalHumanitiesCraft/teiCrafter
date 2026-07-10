@@ -39,20 +39,20 @@ What teiCrafter consumes and produces, and which TEI proves the engine. teiCraft
 |-------|-------|-------|
 | Existing TEI edition | Editor | Any TEI; opened from local disk, edited losslessly, saved back |
 | Plaintext (`.txt`/`.md`) | Editor (picker, drop) or project folder | Opens as minimal line-level TEI by the fixed conventions below: transport, not interpretation, so the same input always yields the same output and the draft is never AI-marked. In a project folder the first save creates the `.xml` next to its source; opened directly, the draft has no save target and downloads its `.xml` |
-| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Behind `FEATURES.llmOnRamp` (on since 2026-06-16) |
+| Plaintext | LLM on-ramp | "New from text (LLM)": a model drafts an initial TEI that opens in the editor, marked machine-generated (violet) and unreviewed. Behind `FEATURES.llmOnRamp` |
 
 ### Plaintext conventions (deterministic ingest rules)
 
-| Convention | Resolves to | Since |
-|------------|-------------|-------|
-| Blank line | paragraph boundary (`<p>`) | M2.9 |
-| Line break between lines of a paragraph | `<lb/>` marking the break BETWEEN lines; the first line of a paragraph stays bare (the `<p>` already opens it) | 2026-06-12 |
-| `\|N\|` (N = digits), standalone or mid-line | `<pb n="N"/>`; a page break implies a line break, one conventional bordering space dropped | 2026-06-12 |
-| Anything else | carried verbatim (XML-escaped) | M2.9 |
+| Convention | Resolves to |
+|------------|-------------|
+| Blank line | paragraph boundary (`<p>`) |
+| Line break between lines of a paragraph | `<lb/>` marking the break BETWEEN lines; the first line of a paragraph stays bare (the `<p>` already opens it) |
+| `\|N\|` (N = digits), standalone or mid-line | `<pb n="N"/>`; a page break implies a line break, one conventional bordering space dropped |
+| Anything else | carried verbatim (XML-escaped) |
 
 A `<lb/>` marks the break between lines inside a paragraph and the first line of a paragraph stays bare. The editor also reads drafts where every line carries a leading `<lb/>` (including the first), so both line shapes load.
 
-The boundary rule (decision 2026-06-12, [specification](specification.md)): a convention resolves at ingest only where it encodes structure the text itself carries. Semantics (entities, dates, normalizations) is never pseudo-syntax in the source file; it belongs in the editor, where verification, lookup and validation live. New conventions are added only when real material carries them.
+The boundary rule ([specification](specification.md)): a convention resolves at ingest only where it encodes structure the text itself carries. Semantics (entities, dates, normalizations) is never pseudo-syntax in the source file; it belongs in the editor, where verification, lookup and validation live. New conventions are added only when real material carries them.
 
 Output is the same TEI, edited byte-losslessly (only edited text runs change), saved in place via the File System Access API or downloaded. The LLM on-ramp output is a fresh TEI draft, marked as machine-generated and unreviewed until the human verifies it.
 
