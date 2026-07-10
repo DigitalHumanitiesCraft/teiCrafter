@@ -1,0 +1,74 @@
+# preferred-citation points to the ZfdG article that references teiCrafter; it is
+# a field survey rather than a paper solely about this software, used here per
+# the maintainer's stated citation preference.
+cff-version: 1.2.0
+message: >-
+  If you use teiCrafter in academic work, please cite the preferred-citation
+  (the ZfdG article). To cite the software itself, use the metadata below.
+title: teiCrafter
+abstract: >-
+  A browser-based, client-only, lossless editor for arbitrary TEI-XML. The raw
+  TEI string is canonical, edits are offset splices, and serialization is
+  byte-identical outside the edit. An optional LLM on-ramp drafts initial TEI
+  from plaintext; the model assists and the human decides.
+type: software
+authors:
+  - given-names: Christopher
+    family-names: Pollin
+    orcid: "https://orcid.org/0000-0002-4879-129X"
+    affiliation: "Digital Humanities Craft OG"
+repository-code: "https://github.com/DigitalHumanitiesCraft/teiCrafter"
+url: "https://digitalhumanitiescraft.github.io/teiCrafter/"
+license: MIT
+keywords:
+  - TEI
+  - TEI-XML
+  - digital scholarly editing
+  - text encoding
+  - lossless editing
+  - human-in-the-loop
+# Filled in once a release is tagged and Zenodo mints the concept DOI:
+# version: 0.1.0
+# date-released: "2026-07-10"
+# doi: 10.5281/zenodo.XXXXXXX
+preferred-citation:
+  type: article
+  title: "When it was 2024 - Generative AI in the Field of Digital Scholarly Editions"
+  authors:
+    - given-names: Christopher
+      family-names: Pollin
+      orcid: "https://orcid.org/0000-0002-4879-129X"
+    - given-names: Franz
+      family-names: Fischer
+      orcid: "https://orcid.org/0000-0002-2162-5531"
+    - given-names: Patrick
+      family-names: Sahle
+      orcid: "https://orcid.org/0000-0002-8648-2033"
+    - given-names: Martina
+      family-names: Scholger
+      orcid: "https://orcid.org/0000-0003-1438-3236"
+    - given-names: Georg
+      family-names: Vogeler
+      orcid: "https://orcid.org/0000-0002-1726-1712"
+  journal: "Zeitschrift fuer digitale Geisteswissenschaften"
+  year: 2025
+  volume: 10
+  doi: 10.17175/2025_008
+  url: "https://zfdg.de/2025_008"
+references:
+  - type: conference-paper
+    title: >-
+      New Ways of Creating Research Data: Conversion of Unstructured Text to
+      TEI XML Using GPT on the Correspondence of Hugo Schuchardt with a Web
+      Prototype for Prompt Engineering
+    authors:
+      - given-names: Christopher
+        family-names: Pollin
+      - given-names: Christian
+        family-names: Steiner
+      - given-names: Constantin
+        family-names: Zach
+    year: 2023
+    doi: 10.5281/zenodo.8425163
+    conference:
+      name: "FORGE 2023"
