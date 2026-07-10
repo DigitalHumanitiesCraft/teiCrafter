@@ -9,11 +9,12 @@ method:
 template:
   name: Vorlage Integration
   version: 0.1
+  url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: active
 created: 2026-06-07
-updated: 2026-06-13
+updated: 2026-07-10
 language: en
-version: 0.16
+version: 0.17
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
 ---

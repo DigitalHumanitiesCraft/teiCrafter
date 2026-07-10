@@ -9,6 +9,7 @@ method:
 template:
   name: Vorlage Reference
   version: 0.1
+  url: https://dhcraft.org/Promptotyping/promptotyping-document/reference
 status: active
 created: 2026-06-08
 updated: 2026-06-08

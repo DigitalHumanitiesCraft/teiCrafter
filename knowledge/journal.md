@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-06-21
+updated: 2026-07-10
 language: en
-version: 0.21
+version: 0.22
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,10 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-07-10: knowledge-layer refactoring, HANDOFF dissolved
+
+Trigger: a full-repository refactoring pass to bring the documentation layer back under the knowledge conventions. Decision: the knowledge set is consolidated to eleven documents, the curated-set document folded into worked-examples and the promptotyping-case document into project; the root HANDOFF is dissolved into this journal plus a dated-reports convention, and reports/ is kept as the dated action-layer home for volatile working-state snapshots. Reason: one owner per fact, cross-linked rather than restated, with no volatile state or dated provenance living in a knowledge document, so the newest journal entry carries durable re-entry while a dated reports/ file carries the volatile snapshot; the lane-handoff skill writes to that dated report file or records a durable decision here, never volatile state into a knowledge document.
 
 ## 2026-06-21 (order teicrafter): the export path pinned by a dedicated wiring proof
 

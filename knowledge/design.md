@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-06-21
+updated: 2026-07-10
 language: en
-version: 0.16
+version: 0.17
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture]
 ---

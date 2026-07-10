@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-06-21
+updated: 2026-07-10
 language: en
-version: 0.16
+version: 0.17
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
 ---
