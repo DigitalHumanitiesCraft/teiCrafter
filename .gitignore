@@ -5,24 +5,19 @@ __pycache__/
 *.pyc
 *.stackdump
 
-# Real ZBZ Hersch example (rights: not redistributable) -- local-only demo data.
-# Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
-docs/data/editor/zbz-100/*
-!docs/data/editor/zbz-100/teicrafter.project.json
+# Example data under docs/data/editor/: the payload stays local-only by default,
+# only the project manifest, README and NOTICE are tracked. Named exceptions
+# below re-include fully redistributable material. Local-only payloads are
+# regenerated via test/tools/make_*.mjs or copied from their source repos.
+docs/data/editor/*/*
+!docs/data/editor/*/teicrafter.project.json
+!docs/data/editor/*/README.md
+!docs/data/editor/*/NOTICE.md
 
-# Real ZBZ Hersch worked-example object (rights stance as zbz-100; regenerate via test/tools/make_zbz1000_demo.mjs)
-docs/data/editor/zbz-1000/
+# hsa-7711: the 1879 letter text (public domain) and its mapping are tracked;
+# the edition's editorial apparatus (target-reference.xml) stays local-only.
+!docs/data/editor/hsa-7711/brief-benndorf-1879.txt
+!docs/data/editor/hsa-7711/mapping.md
 
-# Real Wenzelsbibel codex (licence-restricted OeNB data; copy from GitHub/Wenzelsbibel/data/codex-2759.xml).
-# Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
-docs/data/editor/wb-codex/*
-!docs/data/editor/wb-codex/teicrafter.project.json
-
-# Real DEPCHA Wheaton day book (third-party data, no redistribution licence; materialize via test/tools/make_depcha_demo.mjs).
-# Ignore the contents, not the directory, so the manifest (no licensed content) can be re-included.
-docs/data/editor/depcha-wheaton/*
-!docs/data/editor/depcha-wheaton/teicrafter.project.json
-
-# HSA sample letter (hsa-7711): the letter text (1879, public domain) and the
-# manifest are committed; the edition's editorial apparatus stays local-only.
-docs/data/editor/hsa-7711/target-reference.xml
+# szd: CC BY object (see its NOTICE.md), fully tracked.
+!docs/data/editor/szd/*

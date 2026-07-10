@@ -45,7 +45,7 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_ROOT = join(HERE, "..", "..", "output", "curated-set");
-const SZD_FIXTURE = join(HERE, "..", "fixtures", "real", "o_szd.1079.tei.xml");
+const SZD_FIXTURE = join(HERE, "..", "..", "docs", "data", "editor", "szd", "o_szd.1079.tei.xml");
 
 // ---------------------------------------------------------------------------
 // Recipe helpers: every recipe builds a step log alongside the engine calls so

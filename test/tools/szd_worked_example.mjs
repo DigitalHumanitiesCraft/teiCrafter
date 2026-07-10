@@ -2,7 +2,7 @@
  * Worked example: the REAL o_szd.1079 object, end-to-end through the engine.
  *
  * This is the surgical-splice proof. It takes the genuine 1901 Stefan Zweig letter
- * to Max Fleischer (test/fixtures/real/o_szd.1079.tei.xml, CC-BY) through the whole
+ * to Max Fleischer (docs/data/editor/szd/o_szd.1079.tei.xml, CC-BY) through the whole
  * editing arc the tool promises (open -> correct -> annotate -> textual criticism ->
  * save) and proves, at every step, that the change is a SURGICAL, byte-faithful
  * splice: the serialized output differs from its input in exactly the touched region
@@ -40,7 +40,7 @@ function check(label, cond) {
 }
 
 // ---- Gate: the CC-BY object may not be in every checkout --------------------
-const FIXTURE = new URL("../fixtures/real/o_szd.1079.tei.xml", import.meta.url);
+const FIXTURE = new URL("../../docs/data/editor/szd/o_szd.1079.tei.xml", import.meta.url);
 if (!existsSync(FIXTURE)) {
   console.log("SKIP: o_szd.1079 fixture absent (CC-BY object not in this checkout)");
   process.exit(0);
