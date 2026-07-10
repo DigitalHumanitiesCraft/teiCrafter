@@ -21,7 +21,7 @@ jobs:
       - name: Typecheck (checkJs over jsconfig include set)
         run: tsc --noEmit -p jsconfig.json
       - name: Node proof suite
-        run: node test/tools/run_all.mjs
+        run: node test/run_all.mjs
 
   py-gate:
     runs-on: ubuntu-latest

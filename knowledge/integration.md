@@ -111,8 +111,8 @@ The five entity types are person, place, org, work, event.
 loaded baseline (xml:id set, tag counts). Offline harness: L1 text/word fidelity (gating),
 L2 RelaxNG (tei_all) + Schematron (reported, non-gating), L3 element-count / namespace /
 pointer integrity (gating). MVP gate = well-formed AND L1 AND L3. Engine proofs (Node,
-re-runnable): `test/tools/roundtrip_sweep.mjs` (every real file byte-identical),
-`test/tools/hersch_loadability.mjs` (every Hersch file yields a usable editor view),
+re-runnable): `test/proofs/roundtrip_sweep.mjs` (every real file byte-identical),
+`test/proofs/hersch_loadability.mjs` (every Hersch file yields a usable editor view),
 plus generic/editor/edit-fidelity/selftest harnesses. The proof results live in testing.md.
 
 **Corpus.** Hersch line-level (reads directly), Wenzelsbibel word-level (reads directly),
@@ -243,7 +243,7 @@ SZD:  images -> Gemini VLM -> [layout] -> Page-JSON v0.2 -> export_tei ───
 ZBZ to editor works today for text (the local zbz-100 demo is doc 100's
 `_final.xml` plus a `<standOff>` demo block and inline `<name ref>` links). SZD needs the
 converter. The ZBZ worked-example object (doc 1000 plus per-surface `<graphic url>`,
-M2.4 scheme) is materialized deterministically by `test/tools/make_zbz1000_demo.mjs`
+M2.4 scheme) is materialized deterministically by `test/generators/make_zbz1000_demo.mjs`
 from the zbz sibling checkout; like zbz-100 it stays local-only (rights). There is no
 automated pipeline-to-teiCrafter link beyond that generator.
 
@@ -317,6 +317,6 @@ Precise statements that guard a likely misreading of the pipeline TEI as teiCraf
   testing,journal,converter-reference}.md; the editor and service modules
   under docs/js/editor/ and docs/js/services/ (the current module map is in
   architecture.md); docs/css/style.css; pipeline/export_tei.py; the proofs under
-  test/tools/ (documented in testing.md).
+  test/proofs/ (documented in testing.md).
 - The zbz-ocr-tei and szd-htr source inventories: see the respective sibling
   knowledge bases.

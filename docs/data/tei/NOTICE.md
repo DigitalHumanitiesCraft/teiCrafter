@@ -39,8 +39,8 @@ To move to a newer P5 release, do all of the following in ONE commit:
    `curl -o p5subset_en.json https://www.tei-c.org/Vault/P5/<version>/xml/tei/odd/p5subset_en.json`
 2. Update this NOTICE: pinned version, retrieval date, byte size and SHA-256
    (`sha256sum p5subset_en.json`).
-3. Update the pinned counts in `test/tools/guidelines_check.mjs`
+3. Update the pinned counts in `test/proofs/guidelines_check.mjs`
    (`PINNED_VERSION`, `PINNED_MODULE_COUNT`, `PINNED_PERSNAME_ATTS`) to the
    values measured against the new file, and update
    `VENDORED_GUIDELINES_VERSION` in `docs/js/editor/tei-guidelines.js`.
-4. Run `node test/tools/guidelines_check.mjs` and confirm it passes.
+4. Run `node test/proofs/guidelines_check.mjs` and confirm it passes.

@@ -2,7 +2,7 @@
 
 ## Why this file exists
 
-teiCrafter's automated proofs (the `test/tools/*_check.mjs` scripts and the
+teiCrafter's automated proofs (the `test/proofs/*_check.mjs` scripts and the
 `test/harness` validators) run outside the browser. They prove the engine
 contract: a parse covers every byte, an edit is an offset splice, `serialize()`
 returns the raw bytes unchanged, and standoff and criticism markup round-trips
@@ -11,7 +11,7 @@ deferred handlers. The selection-popover lifecycle, the facsimile-to-text
 coupling, the violet AI marker, the index panel, and every keyboard and
 pointer gesture live entirely in that DOM/event/timing layer.
 
-`test/tools/interaction_check.mjs` lifts the one piece of that layer that
+`test/proofs/interaction_check.mjs` lifts the one piece of that layer that
 reduces to pure logic (the popover dismissal identity guard) into a headless
 predicate. Everything else is checked here, by hand, against a running editor.
 This file is the named, reproducible floor for the layer the engine proofs
@@ -387,7 +387,7 @@ Drive these on a line-level document (the ZBZ Hersch example,
 ## Race and re-entry checks
 
 These exercise the deferred handlers named in the interaction surface map and in
-the manual gaps printed by `test/tools/interaction_check.mjs`. They are listed
+the manual gaps printed by `test/proofs/interaction_check.mjs`. They are listed
 separately because they depend on event ordering and timer or await scheduling
 that the headless predicate cannot reproduce. The confirmed-race set handed to
 the synthesis step was empty; these are the named gestures to watch so that any

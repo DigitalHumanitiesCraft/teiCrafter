@@ -56,7 +56,7 @@ The real `codex-2759.xml` (~78 MB, ONB) is NOT in this repo and must never be co
 When you have it locally:
 
 ```
-python test/tools/extract_folio.py --codex /path/to/codex-2759.xml \
+python test/generators/extract_folio.py --codex /path/to/codex-2759.xml \
        --surfaces 1 5 40 --out test/fixtures/wb/
 ```
 

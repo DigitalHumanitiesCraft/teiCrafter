@@ -51,7 +51,7 @@ exact browser interaction (which pane, which button), and (c) what the engine do
 losslessly underneath.
 
 These same curation arcs are persisted as before/after/diff/summary pairs by
-`test/tools/make_curated_set.mjs` under the gitignored `output/curated-set/`,
+`test/generators/make_curated_set.mjs` under the gitignored `output/curated-set/`,
 regenerable and deterministic (see [testing](testing.md)).
 
 ## SZD: o_szd.1079
@@ -172,7 +172,7 @@ where the human verifies, corrects, and curates that machine output.
 Headless proof (engine):
 
 ```
-node test/tools/szd_worked_example.mjs
+node test/proofs/szd_worked_example.mjs
 ```
 
 This runs the real engine modules over the worked-example path and asserts, among
@@ -184,7 +184,7 @@ and `gap` markup round-trip. Exit 0 is a pass.
 
 The currently green sibling proof covering the same engine surface (folios/lines,
 graphic url, place and work entities, authority add/replace/remove, linkMention) is
-`node test/tools/szd_demo_check.mjs` (PASS line: "PASS: SZD demo path, place/work
+`node test/proofs/szd_demo_check.mjs` (PASS line: "PASS: SZD demo path, place/work
 entities, authority idno, and graphic url all verified.").
 
 Browser evidence (rendering and interaction):
@@ -263,7 +263,7 @@ deterministic assembly), with one preparation step applied in this repo: each
 `<surface>` received a `<graphic url>` pointing at the published page image
 (`https://chpollin.github.io/zbz-ocr-tei/images/1000/1000_p001.png` to `_p004.png`),
 per the M2.4 image-URL scheme. The injection is itself a deterministic string rule,
-`test/tools/make_zbz1000_demo.mjs`: the same pipeline file always produces the same
+`test/generators/make_zbz1000_demo.mjs`: the same pipeline file always produces the same
 prepared file. The pipeline file itself carries no `<graphic>` elements; emitting
 them upstream is an open order to the zbz lane. The file's
 `<revisionDesc>` records its own status honestly: all three streams (ocr, layout,
@@ -274,7 +274,7 @@ verifies, corrects, and curates that machine output.
 The prepared file lives at `docs/data/editor/zbz-1000/zbz-hersch-1000.xml` and is
 deliberately local-only: this repo treats Hersch material as not redistributable
 (the same rights stance as `docs/data/editor/zbz-100/`, see `.gitignore`), so the
-object is materialized on demand with `node test/tools/make_zbz1000_demo.mjs` from
+object is materialized on demand with `node test/generators/make_zbz1000_demo.mjs` from
 the zbz-ocr-tei sibling checkout. Should ZBZ confirm that the four published demo
 documents are redistributable, committing the file is a one-line gitignore change.
 
@@ -369,7 +369,7 @@ documents are redistributable, committing the file is a one-line gitignore chang
 Headless proof (engine):
 
 ```
-node test/tools/zbz_worked_example.mjs
+node test/proofs/zbz_worked_example.mjs
 ```
 
 This runs the real engine modules over the bundled object and asserts, among

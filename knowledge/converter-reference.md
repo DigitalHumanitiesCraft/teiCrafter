@@ -31,13 +31,13 @@ This contract is **frozen** (status `active`, M1.2 done). The mappings, the id s
 and the geometry are fixed from the v0.2 schema, the reference prototype, and the demo
 handful. The open points named in section 9 were resolved against real data
 (the handful plus a 151-object deterministic spread across the ~2069-object
-corpus; `test/tools/port_parity.mjs` and `pipeline/export_tei.py`).
+corpus; `test/proofs/port_parity.mjs` and `pipeline/export_tei.py`).
 
 ## 0. Sources of truth for this document
 
 - The Page-JSON v0.2 schema: `szd-htr/schemas/page-json-v0.2.json`.
 - The reference prototype (spec-by-example, self-verifying):
-  [test/tools/szd-pagejson-to-tei.mjs](../test/tools/szd-pagejson-to-tei.mjs). Every
+  [test/generators/szd-pagejson-to-tei.mjs](../test/generators/szd-pagejson-to-tei.mjs). Every
   rule below cites the prototype line that implements it.
 - Two real objects read: `o_szd.100` (typescript, en, 3 images,
   creator present) and `o_szd.1079` (letter, de, 5 images, no creator). The demo
@@ -62,8 +62,8 @@ real engine (not by claim):
    as failures (about 3 percent of a 151-object sample).
 
 The prototype asserts exactly these before it exits
-([szd-pagejson-to-tei.mjs:198-207](../test/tools/szd-pagejson-to-tei.mjs#L198)); the
-fixed sweep enforces (1) repo-wide (`node test/tools/roundtrip_sweep.mjs`). A
+([szd-pagejson-to-tei.mjs:198-207](../test/generators/szd-pagejson-to-tei.mjs#L198)); the
+fixed sweep enforces (1) repo-wide (`node test/proofs/roundtrip_sweep.mjs`). A
 delivered TEI that fails either check is returned with a precise correction
 (file / field / expected value), not a vague rejection.
 
@@ -90,7 +90,7 @@ before text):
 
 Namespace is the default TEI namespace, no prefix. Encoding is UTF-8. The file ends
 with a single trailing newline (the prototype's template does;
-[szd-pagejson-to-tei.mjs:165-176](../test/tools/szd-pagejson-to-tei.mjs#L165)).
+[szd-pagejson-to-tei.mjs:165-176](../test/generators/szd-pagejson-to-tei.mjs#L165)).
 
 ## 3. Body: text to pb + lb (the core mapping)
 
@@ -98,7 +98,7 @@ This is the line-level rule the whole demo rests on.
 
 - **One `<pb>` per page**, in `pages[]` order. `@n = pages[].page`; `@facs = "#surf_{page}"`
   only when that page has a surface (section 5). The prototype:
-  [bodyForPage szd-pagejson-to-tei.mjs:105-115](../test/tools/szd-pagejson-to-tei.mjs#L105).
+  [bodyForPage szd-pagejson-to-tei.mjs:105-115](../test/generators/szd-pagejson-to-tei.mjs#L105).
 - **`pages[].text` is canonical.** Normalize CRLF to LF (`\r\n` -> `\n`) once, then:
   - Split into paragraphs on a blank line (`/\n{2,}/`) -> one `<p>` each.
   - Within a paragraph, split on single `\n` -> each line is `<lb/>` immediately
@@ -108,7 +108,7 @@ This is the line-level rule the whole demo rests on.
   no editable line. This is correct and must round-trip.
 - **Escaping:** text content escapes `&`, `<`, `>`; attribute values additionally
   escape `"`. Use exactly these and nothing else, or the round-trip breaks. Helpers:
-  [escText / escAttr szd-pagejson-to-tei.mjs:35-37](../test/tools/szd-pagejson-to-tei.mjs#L35).
+  [escText / escAttr szd-pagejson-to-tei.mjs:35-37](../test/generators/szd-pagejson-to-tei.mjs#L35).
 
 Worked shape (o_szd.100 page 1, abridged):
 
@@ -132,7 +132,7 @@ The editor splits folios on `<pb>` and lines on `<lb>`
 
 Mapped from `source` and `source.descriptive_metadata` (`dm`). Every field is
 optional in the data; omit the element when the source value is absent (never emit an
-empty shell). Prototype: [header szd-pagejson-to-tei.mjs:119-158](../test/tools/szd-pagejson-to-tei.mjs#L119).
+empty shell). Prototype: [header szd-pagejson-to-tei.mjs:119-158](../test/generators/szd-pagejson-to-tei.mjs#L119).
 
 | TEI target | Source field | Notes |
 |---|---|---|
@@ -160,7 +160,7 @@ Rights: {dm.rights}.        (the Rights clause only if dm.rights is present)
 
 One `<surface>` per page that has an image or at least one zone; pages with neither
 contribute no surface (and their `<pb>` carries no `@facs`). Prototype:
-[surfaces szd-pagejson-to-tei.mjs:84-102](../test/tools/szd-pagejson-to-tei.mjs#L84).
+[surfaces szd-pagejson-to-tei.mjs:84-102](../test/generators/szd-pagejson-to-tei.mjs#L84).
 
 - **Surface id:** `surf_{page}` (e.g. `surf_1`). Body `<pb facs="#surf_1">` points to it.
 - **Surface extent:** `ulx="0" uly="0" lrx="{image_width}" lry="{image_height}"` when
@@ -213,7 +213,7 @@ This bbox-to-pixel coordinate contract is consumed by
 off the `<zone>` as image pixels with no further scaling, so the converter must already
 emit pixels (not percent).
 
-Prototype: [zonesFor szd-pagejson-to-tei.mjs:68-82](../test/tools/szd-pagejson-to-tei.mjs#L68).
+Prototype: [zonesFor szd-pagejson-to-tei.mjs:68-82](../test/generators/szd-pagejson-to-tei.mjs#L68).
 Zones are skipped entirely when `image_width`/`image_height` are absent (the schema
 makes them required only when regions are present, so in practice they are there
 whenever regions are).
@@ -237,7 +237,7 @@ from a non-empty register; everything else is hand-added in teiCrafter (M3.3).
   ```
 
   inside `<standOff><listPerson>`. Prototype:
-  [persons szd-pagejson-to-tei.mjs:50-65](../test/tools/szd-pagejson-to-tei.mjs#L50).
+  [persons szd-pagejson-to-tei.mjs:50-65](../test/generators/szd-pagejson-to-tei.mjs#L50).
   `creator.gnd` is a full GND URI (`http://d-nb.info/gnd/118637479`); write it
   **verbatim** into `<idno type="GND">`. This is exactly the authority shape
   teiCrafter reads and edits ([readEntities / setAuthority standoff.js]): the
@@ -261,7 +261,7 @@ from a non-empty register; everything else is hand-added in teiCrafter (M3.3).
 | zone | `z_{page}_{region.id}` | `z_1_r1` |
 
 `slug()` is NFKD, strip combining marks, lowercase, non-`[a-z0-9]` to `_`, trim `_`
-([szd-pagejson-to-tei.mjs:39-48](../test/tools/szd-pagejson-to-tei.mjs#L39)). It must
+([szd-pagejson-to-tei.mjs:39-48](../test/generators/szd-pagejson-to-tei.mjs#L39)). It must
 agree with the editor's `slugify` for hand-added entities to stay NCName-safe and
 collision-free ([slugify standoff.js:61-73](../docs/js/editor/standoff.js#L61)).
 Hand-added entities in teiCrafter use the prefixes `plc_` (place), `org_`, `evt_`
@@ -323,7 +323,7 @@ Two further findings recorded at freeze:
   `--id` convenience mode hard-errors on any ambiguous id rather than silently picking one (a
   general guard, no longer triggered by o_szd.161 specifically). The contract's earlier label
   of o_szd.161 as "Formular, Pipe-Tabellen" is wrong: both files were printed cards
-  (Eintrittskarte / Theaterkarte) with no pipe tables. `test/tools/port_parity.mjs` now skips
+  (Eintrittskarte / Theaterkarte) with no pipe tables. `test/proofs/port_parity.mjs` now skips
   the absent korrespondenzen copy and proves parity over every present member.
 - **Empty objects.** o_szd.70 / 2256 / 2314 have `pages: []`. They convert to
   byte-identical-round-trip TEI with `folios === pages` and `cells === 0`; they are
@@ -335,7 +335,7 @@ Two further findings recorded at freeze:
 ## 10. Reference implementation and how to run it
 
 ```
-node test/tools/szd-pagejson-to-tei.mjs <in_page.json> <out.xml>
+node test/generators/szd-pagejson-to-tei.mjs <in_page.json> <out.xml>
 ```
 
 It writes `<out.xml>` and self-verifies (round-trip + line-level) before exiting 0;
@@ -346,8 +346,8 @@ first (M1.3).
 
 teiCrafter's own per-feature proof for the engine side of this contract (graphic url,
 zones in pixels, place/work entities, authority idno, line-level model, byte-identical
-round-trip) is `node test/tools/szd_demo_check.mjs`.
+round-trip) is `node test/proofs/szd_demo_check.mjs`.
 
 Port parity (this port produces byte-identical output to the reference prototype over the
 handful, so the Python output round-trips through the engine exactly as the prototype's
-does) is `node test/tools/port_parity.mjs` (5/5 byte-identical, the upstream-deduped o_szd.161/korrespondenzen skipped).
+does) is `node test/proofs/port_parity.mjs` (5/5 byte-identical, the upstream-deduped o_szd.161/korrespondenzen skipped).

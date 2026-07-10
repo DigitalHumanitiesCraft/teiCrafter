@@ -3,7 +3,7 @@
  *
  * DOM-free decision logic lifted out of the event handlers so the part that
  * carries a bug-or-no-bug decision can be proven headlessly
- * (test/tools/interaction_check.mjs) and cannot drift from the handler that uses
+ * (test/proofs/interaction_check.mjs) and cannot drift from the handler that uses
  * it. The DOM and timing around these rules (which handler fires when, what the
  * live selection is) stay in the handlers and are covered by the named manual
  * checks in test/acceptance/BROWSER-CHECKS.md.

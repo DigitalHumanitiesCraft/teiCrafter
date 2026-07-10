@@ -124,7 +124,7 @@ AI-generated drafts open in the editor marked in the violet token family (`--col
 
 ## Round-trip Fidelity
 
-The editing core is proven headlessly by exit code: `node test/tools/run_all.mjs` is the one-command regression gate over every proof, and the full proof catalog is [knowledge/testing.md](knowledge/testing.md). The sweep reads source repositories directly; no rights-encumbered third-party TEI is committed.
+The editing core is proven headlessly by exit code: `node test/run_all.mjs` is the one-command regression gate over every proof, and the full proof catalog is [knowledge/testing.md](knowledge/testing.md). The sweep reads source repositories directly; no rights-encumbered third-party TEI is committed.
 
 ---
 
@@ -179,7 +179,7 @@ A modern browser with ES6 module support is required. Serve over `http://localho
 ### Running the Proofs
 
 ```bash
-node test/tools/run_all.mjs        # the regression gate: every proof in one run
+node test/run_all.mjs        # the regression gate: every proof in one run
 node test/harness/run.mjs          # the Python/lxml fixture validator (separate dependency set)
 ```
 

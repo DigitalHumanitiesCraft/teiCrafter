@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """SZD Page-JSON v0.2 -> teiCrafter-target TEI (deterministic).
 
-Faithful Python port of test/tools/szd-pagejson-to-tei.mjs (the reference
+Faithful Python port of test/generators/szd-pagejson-to-tei.mjs (the reference
 prototype, spec-by-example). Same input, byte-identical output. The contract is
 knowledge/converter-reference.md.
 
 The conversion is a rule, never an LLM: the transcription is already in
 pages[].text. Output is byte-identical round-trippable by the teiCrafter engine
 (proven by the prototype, which round-trips its output through edition.js; this
-port is verified byte-equal to the prototype, see test/tools/port_parity.mjs).
+port is verified byte-equal to the prototype, see test/proofs/port_parity.mjs).
 
 Usage:
   python pipeline/export_tei.py <in_page.json> <out.xml>
@@ -18,7 +18,7 @@ Usage:
 The --all form converts every o_szd.*_page.json under <results_dir> (default
 SZD_DIR or ../../szd-htr/results) to <out>/<folder>__<id>.xml; the folder prefix
 keeps the duplicate id o_szd.161 (two folders) from colliding. This is M1.5;
-verify the result with test/tools/szd_loadability_sweep.mjs.
+verify the result with test/proofs/szd_loadability_sweep.mjs.
 
 The --id form resolves <object_id> to a single Page-JSON under <results_dir>;
 ambiguous ids (the same id in two folders, e.g. o_szd.161) are a hard error,
