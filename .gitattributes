@@ -1,3 +1,16 @@
+# Repo-wide normalization: text files are committed with LF and checked out
+# with LF, so the tracked content is byte-stable across contributors.
+* text=auto eol=lf
+*.png binary
+*.svg text eol=lf
+
+# Byte-exact material is exempt from any line-ending conversion: the tool's
+# core promise is byte fidelity, so committed data objects and fixtures keep
+# their bytes exactly as they are.
+docs/data/editor/** -text
+test/fixtures/** -text
+test/fixtures-synthetic/** -text
+
 # The vendored TEI Guidelines compilation is stored byte-verbatim; its SHA-256
 # is recorded in docs/data/tei/NOTICE.md. No line-ending conversion, ever.
 docs/data/tei/p5subset_en.json -text
