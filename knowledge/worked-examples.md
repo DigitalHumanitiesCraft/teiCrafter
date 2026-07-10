@@ -50,6 +50,10 @@ at the edited spans. Each walkthrough step gives (a) the editorial action, (b) t
 exact browser interaction (which pane, which button), and (c) what the engine does
 losslessly underneath.
 
+These same curation arcs are persisted as before/after/diff/summary pairs by
+`test/tools/make_curated_set.mjs` under the gitignored `output/curated-set/`,
+regenerable and deterministic (see [testing](testing.md)).
+
 ## SZD: o_szd.1079
 
 One real SZD object taken end-to-end in the browser editor: open it, verify the

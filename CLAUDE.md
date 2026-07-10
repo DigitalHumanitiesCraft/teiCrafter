@@ -35,8 +35,6 @@ Function-separated per the Promptotyping convention. Read `INDEX.md` first; it c
 | integration.md | working across the sibling projects: cross-project data flow or the tool boundary |
 | converter-reference.md | building or verifying the SZD Page-JSON to TEI converter |
 | worked-examples.md | the SZD or ZBZ object taken end-to-end in the editor is in question |
-| curated-set.md | the curated example set, its production, or its rights status is in question |
-| promptotyping-case.md | teiCrafter as a Promptotyping case, its provenance, is in question |
 
 ## Design as Value Source
 Before generating or changing UI, read `knowledge/design.md`. Its principles are binding: the AI assists and the human decides (expert-in-the-loop); categorical confidence, not numeric; AI-generated content is always marked in the violet token family (`--color-ai`); design tokens are the single source of truth (live prefix is `--color-*`/`--space-*`/`--font-*`/`--radius-*`, no raw hex in components); label consistency is a rule, not a freedom.

@@ -16,7 +16,7 @@ updated: 2026-06-16
 language: en
 version: 0.16
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples, curated-set, promptotyping-case]
+related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples]
 ---
 
 # teiCrafter Knowledge Base
@@ -39,8 +39,6 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor, and where is the tool boundary? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
 | [converter-reference](converter-reference.md) | The deterministic Page-JSON v0.2 to TEI mapping (body, header, facsimile, bbox formula, standOff seeding, markers) | Building or verifying the SZD converter | data, architecture, specification |
 | [worked-examples](worked-examples.md) | The real SZD and ZBZ objects taken end-to-end in the editor: the objects, the walkthrough, the proof, the entity tables, the added-value before/after | A worked example or a live demo path is in question | testing, specification |
-| [curated-set](curated-set.md) | The curated example set: how the before/after pairs are produced, the set table, rights and schema-validity status | The empirical partial result or the set's reproduction is in question | worked-examples |
-| [promptotyping-case](promptotyping-case.md) | teiCrafter as a Promptotyping case: the case description and provenance pointers | Presenting the tool or its provenance | journal, integration |
 
 Action layer: `CLAUDE.md` (repo root) configures the coding agent and binds `design.md` as the aesthetic value source. Session re-entry is the newest [journal](journal.md) entry for durable state; a volatile working-state snapshot (branch and tip, uncommitted work, the immediate next step, open threads) is written as a dated report under `reports/`, an action-layer note that carries no Promptotyping frontmatter and is not a knowledge document. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.
 
@@ -67,5 +65,7 @@ Action layer: `CLAUDE.md` (repo root) configures the coding agent and binds `des
 ## Lineage
 
 Lineage and positioning are in [project.md](project.md): the shared design system with coOCR HTR, the relation to EditionCrafter, and the FORGE 2023 origin of the LLM on-ramp.
+
+teiCrafter as a Promptotyping case, the artifact and its provenance (the function-separated knowledge base, the [journal](journal.md) as decision record, the Git history as build trace) inspectable side by side, is described in [project.md](project.md).
 
 The version history is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.

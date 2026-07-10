@@ -49,6 +49,10 @@ Image -> HTR pipeline -> teiCrafter -> ediarum / GAMS / publication
 
 teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream tool, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed separately. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
 
+## As a Promptotyping case
+
+teiCrafter is a worked Promptotyping artifact; the argument is carried not only by the running tool but by its provenance on disk, the function-separated knowledge/ base, the [journal](journal.md) as decision record, and the Git history as per-milestone build trace. The artifact and its reasoning are inspectable side by side, which makes the method reproducible, and the result checkable.
+
 ## Real Cases
 
 teiCrafter is format-driven and open to any TEI. Three concrete pipelines drive it and serve as the proving ground (see [data](data.md)):

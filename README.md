@@ -218,8 +218,6 @@ The project maintains a knowledge base in [`knowledge/`](knowledge/) following t
 | [integration.md](knowledge/integration.md) | Cross-project data flow (ZBZ and SZD pipelines into the editor), tool boundary |
 | [converter-reference.md](knowledge/converter-reference.md) | Deterministic SZD Page-JSON v0.2 to TEI mapping |
 | [worked-examples.md](knowledge/worked-examples.md) | Real SZD and ZBZ objects end-to-end in the editor, with the added-value before/after |
-| [curated-set.md](knowledge/curated-set.md) | Curated example set: before/after pairs, method, rights status |
-| [promptotyping-case.md](knowledge/promptotyping-case.md) | teiCrafter as a Promptotyping case, provenance |
 
 Evaluation reports live in [`reports/`](reports/).
 
