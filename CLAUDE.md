@@ -14,7 +14,7 @@
 ## Project
 - A browser-based, lossless editor for arbitrary TEI-XML. Open an existing edition, correct it folio by folio at its natural granularity (word-level if `<w>` is present, else line-level), save it back byte-faithfully. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
 - Projects are folders with a declarative `teicrafter.project.json`. One project holds several document types, and the allowed markup binds to the type (`documentTypes` + the `files` map; project-level `markup` is the default, PID detection the fallback for bare files). "Open project folder" uses a once-granted File System Access directory handle (decision: not OPFS), Chromium-only; its `.xml`/`.txt`/`.md` files appear in the Project panel. Plaintext (`.txt`/`.md`) opens as a deterministic line-level draft (transport, never AI-marked; a `|N|` token becomes a page break), from the project panel or directly via picker/drop; in a project the first save creates the `.xml` next to the source, an unsaved draft survives a reload via a recovery offer. Separate from the LLM on-ramp.
-- An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides. Behind `FEATURES.llmOnRamp` (on since 2026-06-16); the code stays in place.
+- An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides. Behind `FEATURES.llmOnRamp` (a build default plus a per-user toggle); AI off is a fully deterministic editor and the code stays in place.
 - Real cases: Wenzelsbibel (word-level), Jeanne Hersch / zbz-ocr-tei (line-level), Stefan Zweig / szd-htr (catalog TEI + Page-JSON, needs conversion first).
 - Client-only, deployed via GitHub Pages from `/docs`. ES6 modules, no bundler, no build step. The built-in examples (landing cards, Load... entries, `#example` deep link) show only on local development hosts (`FEATURES.examples`); the public deployment hides them.
 - An independent tool, not a module of EditionCrafter.
@@ -48,6 +48,10 @@ At the end of a session with code changes, update the affected knowledge documen
 3. `specification.md` for new decisions, resolved open questions, or requirement changes.
 4. `design.md` only if the visual or interaction layer changed.
 
-Keep `version:` consistent repo-wide. Distill: one function per document, cross-link via `related:` rather than repeat.
+Keep `version:` consistent across the knowledge set. Two documented carve-outs: `converter-reference.md` (SZD-lane-owned) and `journal.md` (advances per session) keep their own version. Distill: one function per document, cross-link via `related:` rather than repeat.
 
-Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository, and is not to be recreated here. This repository carries tool knowledge and reproducibility only.
+## Handoff and re-entry
+There is no root HANDOFF.md and no knowledge/HANDOFF.md. Durable re-entry is the newest journal.md entry. A volatile working-state snapshot (branch and tip, uncommitted work, the immediate next step, open threads) is written as a dated file under `reports/`, an action-layer note exempt from the knowledge conventions, without Promptotyping frontmatter. The lane-handoff skill writes to a dated `reports/` file or records a durable decision in the journal, never volatile state into a knowledge document.
+
+## Working model (lane protocol)
+teiCrafter is edited directly. Sibling-repo work (szd-htr, zbz-ocr-tei) goes out as orders and is never edited from here. Securing is decoupled from approval: commits to this lane's own paths push to main autonomously, tags and releases stay operator-gated. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.

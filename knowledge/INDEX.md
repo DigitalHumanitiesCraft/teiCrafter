@@ -42,7 +42,7 @@ This knowledge base follows the [Promptotyping Documents convention](https://dhc
 | [curated-set](curated-set.md) | The curated example set: how the before/after pairs are produced, the set table, rights and schema-validity status | The empirical partial result or the set's reproduction is in question | worked-examples |
 | [promptotyping-case](promptotyping-case.md) | teiCrafter as a Promptotyping case: the case description and provenance pointers | Presenting the tool or its provenance | journal, integration |
 
-Action layer lives in the repo root: `CLAUDE.md` configures the coding agent and binds `design.md` as the aesthetic value source; `HANDOFF.md` is the current working-state summary. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.
+Action layer: `CLAUDE.md` (repo root) configures the coding agent and binds `design.md` as the aesthetic value source. Session re-entry is the newest [journal](journal.md) entry for durable state; a volatile working-state snapshot (branch and tip, uncommitted work, the immediate next step, open threads) is written as a dated report under `reports/`, an action-layer note that carries no Promptotyping frontmatter and is not a knowledge document. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.
 
 ## Core Concepts
 

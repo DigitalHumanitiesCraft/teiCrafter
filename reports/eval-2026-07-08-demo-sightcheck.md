@@ -5,8 +5,8 @@ that stood open on the demo gate (M7.2): both worked-example objects taken
 end-to-end in the running browser editor, plus the Wenzelsbibel codex load path.
 The operator delegated the running of this check on 2026-07-08; formal acceptance
 stays with the operator. This report is the decision aid, with the finding per
-check and the concrete on-screen evidence. It follows the method of the
-agent-driven evaluation of 2026-06-10 (`eval-2026-06-10-m25-m26.md`).
+check and the concrete on-screen evidence. It follows the earlier
+agent-driven evaluation method.
 
 ## 1. Method
 
