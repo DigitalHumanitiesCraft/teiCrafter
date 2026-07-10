@@ -150,7 +150,7 @@ lry>` per page (absolute pixels), `<zone xml:id="facs_N_r_M" ulx uly lrx lry>` p
 `<figure xml:id><graphic url>`, `<bibl>` in `<listBibl>`. No entity tags (removed, E71).
 
 **Schema.** `data/schema/zbz_hersch.rng` (RelaxNG, TEI P5 4.10.2). Root `<TEI type="naegeli">`.
-`<graphic>` requires `@url`. revisionDesc `@status` allowed (E68 fix gave 285/285 valid).
+`<graphic>` requires `@url`. revisionDesc `@status` allowed (E68 fix restored schema validity).
 Entities removed (E71). MMSID projection removed (E76; header is ZBZ's domain).
 
 **Streams and status.** Three streams ocr / layout / tei, each with status
@@ -162,10 +162,8 @@ OpenSeadragon facsimile, layout editor, transcription/TEI/XML text editor, manif
 editor). One Save button persists all unsaved streams; File System Access API (Chromium)
 or download fallback; dual-write to canonical `output/` and viewer mirror `docs/data/`.
 
-**Quality.** Fidelity-CER median 1.40%, mean 2.71% (n=25 GT, corrected run of
-2026-06-08; E70 methodology: case-sensitive full-text Levenshtein, fidelity isolates
-real OCR/layout errors from scope inserts). 285/285 schema-valid. 79 blank pages in
-15 docs.
+**Quality.** The CER (median and mean), the ground-truth sample size, the
+schema-validity count and the blank-page count live in the zbz-ocr-tei knowledge base.
 
 ## 6. SZD Pipeline (szd-htr), verified
 
@@ -194,15 +192,14 @@ prompt (system + group A-I + auto object-context from TEI + optional per-object 
 all images in one batch, auto-chunk above 20 images, backoff on 429, JSON sanitization;
 output `{id}_{model}.json` with pages[] (transcription, notes, type), confidence, metadata.
 (2) `quality_signals.py` v1.5: 7 signals + page.type (content/blank/color_chart);
-needs_review 16.4% on the post-dedup corpus (340/2069, 2026-06-09). (3) `layout_analysis.py`: ensemble Docling (blocks) + Surya (lines) +
+each page flagged `needs_review` from those signals (the current quota lives in szd-htr). (3) `layout_analysis.py`: ensemble Docling (blocks) + Surya (lines) +
 Gemini 3 Flash (merge+verify), output `{id}_layout.json` with regions (bbox in percent).
 (4) exports: `export_page_json.py` (Page-JSON v0.2), `export_pagexml.py` (PAGE XML 2019,
 deterministic), `export_mets.py` (METS/MODS, ~2074 objects).
 
-**On-disk inventory (results/, verified, post-dedup 2026-06-08):** `_page.json` 2069
-(127/169/621/1152), `_mets.xml` 2069, a `_<model>.json` model run per object, but only
-**25** `_layout.json` total. Most objects
-are Page-JSON state 1 (text only, no regions); layout is a stratified pilot (~1%).
+**On-disk inventory.** The per-collection `_page.json`/`_mets.xml`/`_layout.json` counts
+and the layout-pilot coverage live in the szd-htr knowledge base. Most objects
+are Page-JSON state 1 (text only, no regions); layout is a stratified pilot.
 
 **Page-JSON v0.2** (`schemas/page-json-v0.2.json`, spec
 `knowledge/htr-interchange-format.md`). Required: `page_json`, `source` (id, title,
@@ -303,17 +300,15 @@ The dependency chain and input gaps that shape the work, independent of mileston
 
 ## 12. Corrections (verified)
 
-Precise statements that guard a likely misreading of the pipeline TEI:
+Precise statements that guard a likely misreading of the pipeline TEI as teiCrafter reads it:
 
-- **`<graphic>` in ZBZ TEI:** no `<graphic>` sits inside `<facsimile>`/`<surface>`, but 26
-  docs carry `<graphic url>` inside `<figure>` blocks in the body (~101 total). The
-  `zbz_hersch.rng` schema permits `<graphic url>`, so the M2.2 placement of a graphic in a
-  surface is schema-compatible.
+- **`<graphic>` in ZBZ TEI:** no `<graphic>` sits inside `<facsimile>`/`<surface>`;
+  `<graphic url>` appears inside `<figure>` blocks in the body. The `zbz_hersch.rng`
+  schema permits `<graphic url>`, so the M2.2 placement of a graphic in a surface is
+  schema-compatible.
 - **`@facs` cross-linking:** in pipeline `_final.xml`, body `<p>`/`<hi>` do not carry
   `@facs` to zones; only `<pb>` and `<lb>` do. The teiCrafter bundled demo additionally
   adds inline `<name ref="#id">` links that the raw pipeline output does not have.
-- **Status values:** SZD uses a 4-tier verification model (gt_verified, approved,
-  agent_verified, needs_review) plus unreviewed, not 3.
 
 ## 13. Source Evidence
 
@@ -322,10 +317,5 @@ Precise statements that guard a likely misreading of the pipeline TEI:
   under docs/js/editor/ and docs/js/services/ (the current module map is in
   architecture.md); docs/css/style.css; pipeline/export_tei.py; the proofs under
   test/tools/ (documented in testing.md).
-- zbz-ocr-tei: knowledge/{project,pipeline,workflow,quality,viewer,methodik,decisions,
-  journal}.md; scripts/{ocr,layout,tei,edition}/; data/schema/zbz_hersch.rng;
-  docs/data/pages/<id>/<id>_final.xml; docs/images/<id>/.
-- szd-htr: knowledge/{data-overview,verification-concept,htr-interchange-format,
-  page-xml-mets-architecture,layout-analysis,teicrafter-integration}.md;
-  schemas/page-json-v0.2.json; pipeline/{config,transcribe,tei_context,export_page_json,
-  export_pagexml,export_mets,quality_signals}.py; results/<collection>/*.
+- The zbz-ocr-tei and szd-htr source inventories: see the respective sibling
+  knowledge bases.
