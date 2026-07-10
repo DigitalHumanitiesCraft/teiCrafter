@@ -18,8 +18,9 @@ location. The file contents are not uploaded anywhere.
 
 teiCrafter has an optional on-ramp that drafts an initial TEI document from
 plaintext with a language model. These features are gated behind the
-`FEATURES.llmOnRamp` flag in `docs/js/utils/constants.js` and are currently off.
-When they are off, no model provider is contacted.
+`FEATURES.llmOnRamp` build flag (`docs/js/utils/constants.js`) and a per-user
+opt-in; no model provider is contacted unless you enable the on-ramp and initiate
+a request.
 
 When the LLM features are used, requests go directly from your browser to the
 model provider's API. The handling of your API key is constrained by design:

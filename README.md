@@ -45,7 +45,7 @@ Plaintext is a first-class entry: a `.txt` or `.md`, opened directly (file picke
 Two paths lead into the same editor:
 
 - **Open and edit existing TEI** -- the deterministic path. Open a local edition, correct word or line text, manage an index, link facsimile zones, and save losslessly. No LLM is involved.
-- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides. Enabled by the feature flag `FEATURES.llmOnRamp` (on since 2026-06-16) plus a per-user toggle in the Load menu; turning it off leaves a fully deterministic editor with no AI surfaces.
+- **New from text (LLM)** -- an optional on-ramp. Paste plaintext and a model drafts an initial TEI that opens straight in the same editor for verification and correction. AI-generated content is marked in the violet token family and counts as unreviewed. The model assists; the human decides. Enabled by the feature flag `FEATURES.llmOnRamp` (a build default) plus a per-user toggle in the Load menu; turning it off leaves a fully deterministic editor with no AI surfaces.
 
 The tool occupies a specific position in the digital scholarly editing pipeline:
 
@@ -110,46 +110,13 @@ The LLM on-ramp ("New from text (LLM)") is enabled. It accepts plaintext and an 
 
 ## Architecture
 
-teiCrafter is a client-only application built from native ES6 modules, with no build step, no framework, and no NPM runtime dependencies.
-
-```
-teiCrafter/
-├── docs/
-│   ├── index.html              Landing page
-│   ├── editor.html             Editor: dual-view shell; loads OpenSeadragon from CDN
-│   ├── about.html              What the tool is, what saving does, status and licence
-│   ├── css/                    Design tokens (--color-*/--space-*/--font-*/--radius-*) + editor styles
-│   └── js/
-│       ├── editor/             The three engine layers (tei-document, edition, editor-app)
-│       │                       plus the feature modules (annotation, index, facsimile,
-│       │                       source view, project layer, plaintext intake, recovery, ...)
-│       ├── services/           llm, authority-lookup, storage
-│       └── utils/              constants (feature flags)
-├── pipeline/                   Deterministic SZD Page-JSON to TEI converter (Python)
-└── test/                       Headless harness and engine proofs
-```
-
-The authoritative module map with per-file responsibilities is [knowledge/architecture.md](knowledge/architecture.md).
-
-### Technology Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| No framework | Reduces complexity, maximizes longevity, avoids dependency churn |
-| ES6 modules (native) | No bundler needed, direct browser execution |
-| Raw string as canonical | Edits are offset splices into the opened string; serialize returns that string, so untouched content cannot change |
-| DOM-free editing core | Round-trip fidelity does not depend on a serializer's whitespace choices |
-| CSS custom properties | Design tokens are the single source of truth; no raw hex in components |
-| Fetch API only | No HTTP library dependencies |
-| Module-scoped API keys | Never on window, DOM, localStorage, or cookies |
-
-For the complete technical specification, see the [knowledge base](knowledge/).
+teiCrafter is a client-only application built from native ES6 modules, with no build step, no framework, and no NPM runtime dependencies. The engine is a three-layer, offset-true core: the raw TEI string is canonical, every edit is an offset splice into that string, and `serialize()` returns that string, so untouched content cannot change and round-trip fidelity does not depend on a serializer's whitespace choices. The authoritative module map with per-file responsibilities, the data flow and the technology decisions are in [knowledge/architecture.md](knowledge/architecture.md).
 
 ---
 
 ## LLM Integration (on-ramp only)
 
-The optional "New from text" path supports multiple providers through a unified client; you bring your own model, whether a locally hosted LLM (e.g. via Ollama) or a commercial provider. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key. The on-ramp is enabled by the feature flag `FEATURES.llmOnRamp` (in `docs/js/utils/constants.js`, on since 2026-06-16) together with a per-user runtime toggle in the Load menu; turning it off leaves a fully deterministic standalone editor with no AI surfaces.
+The optional "New from text" path supports multiple providers through a unified client; you bring your own model, whether a locally hosted LLM (e.g. via Ollama) or a commercial provider. API keys are held exclusively in module-scoped memory for the duration of the session; they are never persisted to disk, DOM, or browser storage. The deterministic editor path uses no LLM and needs no key. The on-ramp is enabled by the feature flag `FEATURES.llmOnRamp` (in `docs/js/utils/constants.js`) together with a per-user runtime toggle in the Load menu; turning it off leaves a fully deterministic standalone editor with no AI surfaces.
 
 AI-generated drafts open in the editor marked in the violet token family (`--color-ai`) and are counted as unreviewed until a human confirms them.
 
@@ -157,32 +124,13 @@ AI-generated drafts open in the editor marked in the violet token family (`--col
 
 ## Round-trip Fidelity
 
-The editing core is proven headlessly by exit code; `node test/tools/run_all.mjs` is the one-command regression gate over every proof.
-
-| Proof | Asserts | Result |
-|-------|---------|--------|
-| `test/tools/roundtrip_sweep.mjs` | every real TEI serializes back byte-identically | 296/296 |
-| `test/tools/generic_roundtrip.mjs` | one engine reads Hersch/WB/SZD; surgical cell edit; model shape | all pass |
-| `test/tools/editor_roundtrip.mjs` | editor core identity + surgical word edit | 13/13 |
-| `test/tools/szd_worked_example.mjs` | real SZD object end-to-end (open, correct, annotate, criticize, save), every step a surgical splice | 38/38 |
-| `test/tools/zbz_worked_example.mjs` | real ZBZ object end-to-end, mirror of the SZD proof (SKIPs without the local-only object) | 38/38 |
-| `test/harness/selftest.mjs` | negative gate (identity passes, corruption fails) | 14/14 |
-| `test/harness/run.mjs` | synthetic fixtures, MVP gate | all PASS |
-
-The sweep reads source repositories directly; no rights-encumbered third-party TEI is committed. The full proof catalog is [knowledge/testing.md](knowledge/testing.md).
+The editing core is proven headlessly by exit code: `node test/tools/run_all.mjs` is the one-command regression gate over every proof, and the full proof catalog is [knowledge/testing.md](knowledge/testing.md). The sweep reads source repositories directly; no rights-encumbered third-party TEI is committed.
 
 ---
 
 ## Real Cases
 
-| Case | Source | Shape | Granularity | Editable now? |
-|------|--------|-------|-------------|---------------|
-| Wenzelsbibel | Codex 2759 (real codex local-only, licence-restricted; synthetic twin committed) | `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word | yes, directly |
-| Jeanne Hersch | zbz-ocr-tei | `<p>` + `<lb facs>`, real zones, no `<w>` | line | yes, directly |
-| Stefan Zweig | szd-htr | catalog TEI + Page-JSON (no transcription TEI) | line | yes, via the deterministic converter (`pipeline/export_tei.py`, byte-faithful to its reference prototype) |
-| HSA sample letter | Hugo Schuchardt Archiv 7711 (letter text public domain) | plaintext to TEI walkthrough | line | yes, via the plaintext entry |
-
-Real rights-encumbered third-party TEI is never committed; only synthetic twins and public-domain material ship with the repository.
+Three pipelines drive the tool and prove the engine: the Wenzelsbibel codex (word-level, `<w xml:id>` with facsimile and standOff), Jeanne Hersch from zbz-ocr-tei (line-level, `<p>` and `<lb facs>` with real zones), and Stefan Zweig from szd-htr (catalog TEI plus Page-JSON, editable via the deterministic converter `pipeline/export_tei.py`); the HSA sample letter is the plaintext-to-TEI walkthrough. The cases, their TEI shapes and their rights status are in [knowledge/data.md](knowledge/data.md). Real rights-encumbered third-party TEI is never committed; only synthetic twins and public-domain material ship with the repository.
 
 ---
 
@@ -203,21 +151,7 @@ For positioning and the market scan, see [knowledge/project.md](knowledge/projec
 
 ## Knowledge Base
 
-The project maintains a knowledge base in [`knowledge/`](knowledge/) following the Promptotyping Documents convention (function-separated, with YAML frontmatter). Start at [INDEX.md](knowledge/INDEX.md); it carries the document map and the glossary. This knowledge base is also the interface for coding agents: fork the repository, point an agent at `knowledge/`, and it has the patterns, decisions and constraints it needs to implement your adaptations.
-
-| Document | Function |
-|----------|----------|
-| [INDEX.md](knowledge/INDEX.md) | Navigation, document map, glossary |
-| [project.md](knowledge/project.md) | Identity, positioning, success criteria |
-| [data.md](knowledge/data.md) | Formats, plaintext conventions, TEI test corpus, real-case material |
-| [specification.md](knowledge/specification.md) | Requirements, function cores, decisions, acceptance scenarios |
-| [architecture.md](knowledge/architecture.md) | Components, data flow, engine reading contract, status |
-| [design.md](knowledge/design.md) | Design system, tokens, UI components |
-| [testing.md](knowledge/testing.md) | Test approach, acceptance method, engine proofs, harness |
-| [journal.md](knowledge/journal.md) | Development log |
-| [integration.md](knowledge/integration.md) | Cross-project data flow (ZBZ and SZD pipelines into the editor), tool boundary |
-| [converter-reference.md](knowledge/converter-reference.md) | Deterministic SZD Page-JSON v0.2 to TEI mapping |
-| [worked-examples.md](knowledge/worked-examples.md) | Real SZD and ZBZ objects end-to-end in the editor, with the added-value before/after |
+The project maintains a knowledge base in [`knowledge/`](knowledge/) following the Promptotyping Documents convention (function-separated, with YAML frontmatter). Start at [INDEX.md](knowledge/INDEX.md); it carries the document map, one entry per document, and the glossary. This knowledge base is also the interface for coding agents: fork the repository, point an agent at `knowledge/`, and it has the patterns, decisions and constraints it needs to implement your adaptations.
 
 Evaluation reports live in [`reports/`](reports/).
 
