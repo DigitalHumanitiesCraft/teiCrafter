@@ -15,7 +15,7 @@
  * Empty parts are omitted. The source text is carried verbatim (never altered),
  * because the task itself demands character-exact preservation.
  *
- * @param {{ text: string, systemPrompt?: string, mapping?: string }} opts
+ * @param {{ text?: string, systemPrompt?: string, mapping?: string }} opts
  * @returns {string}
  */
 export function buildGenerationPrompt({ text, systemPrompt = "", mapping = "" } = {}) {

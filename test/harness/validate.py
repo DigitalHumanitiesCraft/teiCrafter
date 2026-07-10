@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "lxml>=5,<6",
+# ]
+# ///
 """
 teiCrafter validation harness ("the other side").
 
@@ -23,16 +29,20 @@ Usage
 
 Exit codes: 0 gate pass, 2 gate fail, 3 candidate not well-formed, 4 usage/IO error.
 """
+
 import argparse
 import difflib
 import json
 import sys
+from pathlib import Path
 
 try:
     from lxml import etree
     from lxml.isoschematron import Schematron
 except ImportError:
-    sys.stderr.write("ERROR: lxml is required (pip install lxml). isoschematron ships with lxml.\n")
+    sys.stderr.write(
+        "ERROR: lxml is required (pip install lxml). isoschematron ships with lxml.\n"
+    )
     sys.exit(4)
 
 TEI_NS = "http://www.tei-c.org/ns/1.0"
@@ -66,7 +76,7 @@ def word_texts(root):
 
 
 def count_tags(root):
-    counts = {t: 0 for t in TRACKED_TAGS}
+    counts = dict.fromkeys(TRACKED_TAGS, 0)
     for el in root.iter():
         ln = localname(el)
         if ln in counts:
@@ -98,7 +108,7 @@ def extract_refs(value):
             while j < len(token) and (token[j].isalnum() or token[j] in "._-:"):
                 j += 1
             if j > h + 1:
-                refs.append(token[h + 1:j])
+                refs.append(token[h + 1 : j])
             idx = j
     return refs
 
@@ -114,7 +124,9 @@ def check_pointers(root, ids):
                 continue
             for ref in extract_refs(val):
                 if ref not in ids:
-                    dangling.append({"element": localname(el), "attr": attr, "ref": ref})
+                    dangling.append(
+                        {"element": localname(el), "attr": attr, "ref": ref}
+                    )
     return dangling
 
 
@@ -167,7 +179,11 @@ def l3_invariants(in_root, cand_root, manifest):
         if entry["delta"] != 0:
             preserved = False
         counts[t] = entry
-    ns_ok = root_default_ns(in_root.getroottree()) == TEI_NS == root_default_ns(cand_root.getroottree())
+    ns_ok = (
+        root_default_ns(in_root.getroottree())
+        == TEI_NS
+        == root_default_ns(cand_root.getroottree())
+    )
     ids = collect_ids(cand_root)
     dangling = check_pointers(cand_root, ids)
     return {
@@ -186,21 +202,30 @@ def schema_messages(tree, rng_path, sch_path):
         try:
             rng = etree.RelaxNG(etree.parse(rng_path))
             valid = rng.validate(tree)
-            out["rng"] = {"valid": bool(valid),
-                          "errors": [{"line": e.line, "message": e.message} for e in rng.error_log]}
+            out["rng"] = {
+                "valid": bool(valid),
+                "errors": [
+                    {"line": e.line, "message": e.message} for e in rng.error_log
+                ],
+            }
         except (etree.XMLSyntaxError, etree.RelaxNGError, OSError) as exc:
             out["rng"] = {"valid": None, "engineError": str(exc)}
     if sch_path:
         try:
             sct = Schematron(etree.parse(sch_path), store_report=True)
             valid = sct.validate(tree)
-            out["sch"] = {"valid": bool(valid),
-                          "engine": "lxml-isoschematron-xslt1",
-                          "failures": [e.message for e in sct.error_log]}
-        except (etree.XMLSyntaxError, OSError, Exception) as exc:  # XSLT2 sch -> engine gap
-            out["sch"] = {"valid": None, "engine": "unsupported",
-                          "engineError": str(exc),
-                          "hint": "If the .sch uses XSLT2, run via Saxon (pip install saxonche)."}
+            out["sch"] = {
+                "valid": bool(valid),
+                "engine": "lxml-isoschematron-xslt1",
+                "failures": [e.message for e in sct.error_log],
+            }
+        except (etree.LxmlError, OSError) as exc:  # XSLT2 sch or IO -> engine gap
+            out["sch"] = {
+                "valid": None,
+                "engine": "unsupported",
+                "engineError": str(exc),
+                "hint": "If the .sch uses XSLT2, run via Saxon (pip install saxonche).",
+            }
     return out
 
 
@@ -210,17 +235,34 @@ def l2_schema(in_tree, cand_tree, cand_wellformed, rng_path, sch_path):
         res.update({"skipped": True, "rng": "skipped", "sch": "skipped"})
         return res
     cand = schema_messages(cand_tree, rng_path, sch_path)
-    base = schema_messages(in_tree, rng_path, sch_path) if in_tree is not None else {"rng": None, "sch": None}
+    base = (
+        schema_messages(in_tree, rng_path, sch_path)
+        if in_tree is not None
+        else {"rng": None, "sch": None}
+    )
     # round-trip diff: errors the candidate introduces that the input did not have
     new_rng, new_sch = [], []
     if cand.get("rng") and cand["rng"].get("errors") is not None:
-        base_msgs = {e["message"] for e in (base.get("rng") or {}).get("errors", [])} if base.get("rng") else set()
+        base_msgs = (
+            {e["message"] for e in (base.get("rng") or {}).get("errors", [])}
+            if base.get("rng")
+            else set()
+        )
         new_rng = [e for e in cand["rng"]["errors"] if e["message"] not in base_msgs]
     if cand.get("sch") and cand["sch"].get("failures") is not None:
-        base_msgs = set((base.get("sch") or {}).get("failures", [])) if base.get("sch") else set()
+        base_msgs = (
+            set((base.get("sch") or {}).get("failures", []))
+            if base.get("sch")
+            else set()
+        )
         new_sch = [m for m in cand["sch"]["failures"] if m not in base_msgs]
-    res.update({"rng": cand.get("rng"), "sch": cand.get("sch"),
-                "newErrorsVsInput": {"rng": new_rng, "sch": new_sch}})
+    res.update(
+        {
+            "rng": cand.get("rng"),
+            "sch": cand.get("sch"),
+            "newErrorsVsInput": {"rng": new_rng, "sch": new_sch},
+        }
+    )
     return res
 
 
@@ -234,12 +276,23 @@ def score(levels):
             total -= w
             continue
         if key == "L1":
-            ratio = 1.0 if lv.get("pass") else (
-                min(lv.get("wCountCandidate", 0), lv.get("wCountInput", 0)) / lv["wCountInput"]
-                if lv.get("wCountInput") else 0.0)
+            ratio = (
+                1.0
+                if lv.get("pass")
+                else (
+                    min(lv.get("wCountCandidate", 0), lv.get("wCountInput", 0))
+                    / lv["wCountInput"]
+                    if lv.get("wCountInput")
+                    else 0.0
+                )
+            )
             earned += w * ratio
         elif key == "L3":
-            sub = [lv.get("countsPreserved"), lv.get("namespaceOk"), len(lv.get("danglingPointers", [])) == 0]
+            sub = [
+                lv.get("countsPreserved"),
+                lv.get("namespaceOk"),
+                len(lv.get("danglingPointers", [])) == 0,
+            ]
             earned += w * (sum(1 for x in sub if x) / len(sub))
         elif key == "L2":
             ne = lv.get("newErrorsVsInput", {})
@@ -249,8 +302,12 @@ def score(levels):
 
 def main():
     ap = argparse.ArgumentParser(description="teiCrafter L1/L2/L3 validation harness")
-    ap.add_argument("--input", required=True, help="reference fixture (the round-trip baseline)")
-    ap.add_argument("--candidate", required=True, help="candidate produced by the round-trip")
+    ap.add_argument(
+        "--input", required=True, help="reference fixture (the round-trip baseline)"
+    )
+    ap.add_argument(
+        "--candidate", required=True, help="candidate produced by the round-trip"
+    )
     ap.add_argument("--manifest", help="manifest.json with expected counts")
     ap.add_argument("--rng", help="TEI All RelaxNG schema")
     ap.add_argument("--sch", help="project Schematron")
@@ -261,7 +318,7 @@ def main():
     manifest = None
     if args.manifest:
         try:
-            with open(args.manifest, encoding="utf-8") as fh:
+            with Path(args.manifest).open(encoding="utf-8") as fh:
                 manifest = json.load(fh)
         except (OSError, json.JSONDecodeError) as exc:
             sys.stderr.write(f"ERROR reading manifest: {exc}\n")
@@ -281,12 +338,17 @@ def main():
     }
 
     if cand_err:
-        report.update({
-            "levels": {"L2": {"wellFormed": False, "error": cand_err}},
-            "gates": {"wellFormed": "fail"},
-            "verdict": "fail", "score": 0,
-            "topIssues": [{"level": "L2", "message": f"candidate not well-formed: {cand_err}"}],
-        })
+        report.update(
+            {
+                "levels": {"L2": {"wellFormed": False, "error": cand_err}},
+                "gates": {"wellFormed": "fail"},
+                "verdict": "fail",
+                "score": 0,
+                "topIssues": [
+                    {"level": "L2", "message": f"candidate not well-formed: {cand_err}"}
+                ],
+            }
+        )
         _emit(report, args)
         sys.exit(3)
 
@@ -299,27 +361,45 @@ def main():
     gate = bool(l1["pass"] and l3["countsPreserved"])  # well-formed already true here
     top = []
     if not l1["pass"] and l1["firstDivergence"]:
-        top.append({"level": "L1", "message": "word fidelity broken", "detail": l1["firstDivergence"]})
+        top.append(
+            {
+                "level": "L1",
+                "message": "word fidelity broken",
+                "detail": l1["firstDivergence"],
+            }
+        )
     if not l3["countsPreserved"]:
         changed = {t: c["delta"] for t, c in l3["counts"].items() if c["delta"]}
-        top.append({"level": "L3", "message": "structural counts changed", "detail": changed})
+        top.append(
+            {"level": "L3", "message": "structural counts changed", "detail": changed}
+        )
     if l3["danglingPointers"]:
-        top.append({"level": "L3", "message": "dangling pointers", "detail": l3["danglingPointers"][:5]})
+        top.append(
+            {
+                "level": "L3",
+                "message": "dangling pointers",
+                "detail": l3["danglingPointers"][:5],
+            }
+        )
     for m in l2.get("newErrorsVsInput", {}).get("sch", [])[:3]:
         top.append({"level": "L2", "engine": "schematron", "message": m})
     for e in l2.get("newErrorsVsInput", {}).get("rng", [])[:3]:
         top.append({"level": "L2", "engine": "relaxng", "message": e.get("message")})
 
-    report.update({
-        "levels": levels,
-        "gates": {"wellFormed": "pass",
-                  "textFidelity": "pass" if l1["pass"] else "fail",
-                  "countsPreserved": "pass" if l3["countsPreserved"] else "fail"},
-        "score": score(levels),
-        "threshold": 95,
-        "verdict": "pass" if gate else "fail",
-        "topIssues": top,
-    })
+    report.update(
+        {
+            "levels": levels,
+            "gates": {
+                "wellFormed": "pass",
+                "textFidelity": "pass" if l1["pass"] else "fail",
+                "countsPreserved": "pass" if l3["countsPreserved"] else "fail",
+            },
+            "score": score(levels),
+            "threshold": 95,
+            "verdict": "pass" if gate else "fail",
+            "topIssues": top,
+        }
+    )
     _emit(report, args)
     sys.exit(0 if gate else 2)
 
@@ -328,7 +408,7 @@ def _emit(report, args):
     text = json.dumps(report, indent=2, ensure_ascii=False)
     if args.json_out:
         try:
-            with open(args.json_out, "w", encoding="utf-8") as fh:
+            with Path(args.json_out).open("w", encoding="utf-8") as fh:
                 fh.write(text + "\n")
         except OSError as exc:
             sys.stderr.write(f"ERROR writing json-out: {exc}\n")

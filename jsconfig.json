@@ -9,5 +9,21 @@
     "strict": false,
     "skipLibCheck": true
   },
-  "include": ["docs/js/editor/tei-document.js"]
+  "include": [
+    "docs/js/editor/tei-document.js",
+    "docs/js/editor/typedefs.js",
+    "docs/js/editor/dom.js",
+    "docs/js/editor/ctx.js",
+    "docs/js/editor/interaction-rules.js",
+    "docs/js/editor/draft-recovery.js",
+    "docs/js/editor/plaintext-import.js",
+    "docs/js/editor/page-images.js",
+    "docs/js/editor/recent-files.js",
+    "docs/js/editor/tei-guidelines.js",
+    "docs/js/editor/llm-prompt.js",
+    "docs/js/editor/ai-suggest.js",
+    "docs/js/services/authority-lookup.js",
+    "docs/js/services/storage.js",
+    "docs/js/utils/constants.js"
+  ]
 }

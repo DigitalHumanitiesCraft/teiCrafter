@@ -27,8 +27,10 @@ listing the candidates, because the converter must not silently pick one.
 import json
 import math
 import os
+import re
 import sys
 import unicodedata
+
 
 # --- escaping (mirror escText/escAttr in the prototype, & first) -------------
 def esc_text(s):
@@ -150,7 +152,6 @@ def page_json_to_tei(pj):
         text = (page.get("text") or "").replace("\r\n", "\n")
         if not text.strip():
             return pb
-        import re
         paras = re.split(r"\n{2,}", text)
         out = []
         for para in paras:

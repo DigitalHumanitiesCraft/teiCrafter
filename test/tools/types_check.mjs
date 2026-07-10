@@ -1,20 +1,18 @@
 /**
- * Optional typing gate for the engine naht (docs/js/editor/tei-document.js).
+ * Typing gate over the jsconfig.json include set (checkJs).
  *
- * The module carries JSDoc on its public exports; this runs `tsc --noEmit` over
- * jsconfig.json (checkJs) to read those types. It is a SEAM, not a hard gate:
+ * Those files carry JSDoc types; this runs `tsc --noEmit -p jsconfig.json` to
+ * check them. It is a hard gate on diagnostics, with one tolerated escape:
  *
- *   - tsc clean         -> PASS
- *   - tsc reports TS#### diagnostics -> SKIP (informational): the diagnostics come
- *       from TypeScript's structural inference over existing executable code, and
- *       closing them would mean editing engine logic, which is out of scope for a
- *       comments-only typing seam. The diagnostics are printed for the record.
+ *   - tsc clean                      -> PASS
+ *   - tsc reports TS#### diagnostics -> FAIL: the include set is curated to stay
+ *       clean, so a diagnostic is a regression. The diagnostics are printed.
  *   - typescript / npx / network unavailable -> SKIP: the offline proof gate must
- *       never hard-FAIL on a missing optional toolchain.
+ *       never hard-FAIL on a missing optional toolchain (CI installs a pinned tsc
+ *       and enforces the same check).
  *
- * A SKIP exits 0, so run_all.mjs counts it as a pass (a SKIP-with-reason is a pass).
- *
- * Run: node test/tools/types_check.mjs
+ * PASS and SKIP exit 0; FAIL exits 1, so run_all.mjs counts a diagnostic as a
+ * failure. Run: node test/tools/types_check.mjs
  */
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -70,16 +68,18 @@ const out = (result.stdout || "") + (result.stderr || "");
 if (result.status === 0 && !hasTsDiagnostics(out)) {
   console.log("=".repeat(60));
   console.log("PASSED (1/1)");
-  console.log("Engine naht typechecks clean under checkJs (docs/js/editor/tei-document.js).");
+  console.log("Typechecks clean under checkJs over the jsconfig.json include set.");
   process.exit(0);
 }
 
-// didRun guarantees the only remaining outcome here is real TS diagnostics. They
-// come from TypeScript's structural inference over existing executable engine code
-// (the dual element/text node shape, incrementally built object literals, an
-// empty-object accumulator); closing them needs logic edits, which this
-// comments-only seam does not do. Record and SKIP, never FAIL the gate.
+// didRun guarantees the only remaining outcome here is real TS diagnostics from
+// the checkJs pass over the include set. The set is curated to stay tsc-clean, so
+// a diagnostic is a regression: print it and FAIL. A missing tsc toolchain already
+// SKIPped above, so this branch never fires merely because typescript is absent.
 const diags = out.split(/\r?\n/).filter((l) => /error TS\d+/.test(l));
-console.log("Type diagnostics over docs/js/editor/tei-document.js (informational):");
+console.log("Type diagnostics over the jsconfig.json include set:");
 for (const d of diags) console.log("  " + d.trim());
-skip(diags.length + " type diagnostic(s) from structural inference over executable engine code; closing them requires logic edits, out of scope for a comments-only typing seam");
+console.log("=".repeat(60));
+console.log("FAILED (0/1)");
+console.log(diags.length + " type diagnostic(s) under checkJs; the jsconfig.json include set must stay tsc-clean.");
+process.exit(1);

@@ -1,0 +1,40 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install TypeScript
+        run: npm install -g typescript@7.0
+      - name: Typecheck (checkJs over jsconfig include set)
+        run: tsc --noEmit -p jsconfig.json
+      - name: Node proof suite
+        run: node test/tools/run_all.mjs
+
+  py-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Harness identity pass (validate.py self-check)
+        run: >-
+          uv run test/harness/validate.py
+          --input test/fixtures-synthetic/tiers/tier1-1folio.xml
+          --candidate test/fixtures-synthetic/tiers/tier1-1folio.xml
+          --quiet
+      - name: Ruff lint
+        run: uvx ruff check pipeline test/harness
+      - name: Ruff format
+        run: uvx ruff format --check pipeline test/harness

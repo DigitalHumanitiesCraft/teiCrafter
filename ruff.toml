@@ -1,0 +1,16 @@
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "PTH", "RUF"]
+ignore = ["E501"]
+
+# pipeline/export_tei.py is a byte-for-byte port of the .mjs prototype; its output
+# parity is proven by test/tools/port_parity.mjs and must stay green, so the file
+# mirrors the prototype's style and is not rewritten. The rules that would refactor
+# it are ignored here (the parity proof is its guardrail), and it is excluded from
+# the formatter below so a cosmetic reformat cannot risk that parity.
+[lint.per-file-ignores]
+"pipeline/export_tei.py" = ["E702", "UP031", "UP015", "PTH"]
+
+[format]
+exclude = ["pipeline/export_tei.py"]
