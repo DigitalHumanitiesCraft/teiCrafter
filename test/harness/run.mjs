@@ -9,10 +9,10 @@
  *
  * Usage:  node test/harness/run.mjs [--rng test/schemas/tei_all.rng]
  */
-import { spawnSync } from "node:child_process";
 import { mkdirSync, copyFileSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runValidate } from "./_validate_runner.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TEST = resolve(HERE, "..");
@@ -21,7 +21,6 @@ const REPORTS = join(TEST, "reports");
 
 const argv = process.argv.slice(2);
 const rngArg = argFlag("--rng");
-const PYTHON = process.env.TCR_PYTHON || "python";
 
 // Fixture registry. Synthetic tiers (committed) exercise the harness across data
 // scales; real ONB fixtures (gitignored) are added here once extracted.
@@ -49,16 +48,13 @@ function roundTrip(inputPath, candidatePath) {
 }
 
 function validate(fx, candidatePath, outPath) {
-  const args = [join(HERE, "validate.py"),
-    "--input", fx.input, "--candidate", candidatePath,
+  const args = ["--input", fx.input, "--candidate", candidatePath,
     "--manifest", fx.manifest, "--json-out", outPath, "--quiet"];
   if (fx.sch) args.push("--sch", fx.sch);
   const rng = rngArg || join(TEST, "schemas", "tei_all.rng");
   if (existsSync(rng)) args.push("--rng", rng);
-  const r = spawnSync(PYTHON, args, { encoding: "utf-8" });
-  if (r.error) { console.error(`Failed to run ${PYTHON}: ${r.error.message}`); process.exit(4); }
-  if (r.stderr && r.stderr.trim()) console.error(r.stderr.trim());
-  return { code: r.status, report: existsSync(outPath) ? JSON.parse(readFileSync(outPath, "utf-8")) : null };
+  const code = runValidate(args);
+  return { code, report: existsSync(outPath) ? JSON.parse(readFileSync(outPath, "utf-8")) : null };
 }
 
 let failures = 0;

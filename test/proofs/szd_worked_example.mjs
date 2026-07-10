@@ -32,12 +32,7 @@ import { parseEdition, serialize, editCell } from "../../docs/js/editor/edition.
 import { readEntities, addEntity, linkMention, setAuthority } from "../../docs/js/editor/standoff.js";
 import { markCritical } from "../../docs/js/editor/criticism.js";
 import { readFileSync, existsSync } from "node:fs";
-
-let failures = 0;
-function check(label, cond) {
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${label}`);
-  if (!cond) failures++;
-}
+import { check, finish } from "./_assert.mjs";
 
 // ---- Gate: the CC-BY object may not be in every checkout --------------------
 const FIXTURE = new URL("../../docs/data/editor/szd/o_szd.1079.tei.xml", import.meta.url);
@@ -239,14 +234,7 @@ check("final raw is idempotent (parse -> serialize === itself)", serialize(final
 check("final model is still the 5-folio line-level object",
   finalState.folios.length === 5 && finalState.profile === "line");
 
-console.log("");
 console.log(`Summary: ${editsApplied} distinct surgical edits applied to o_szd.1079.`);
-if (failures) {
-  console.log(`FAIL: ${failures} check(s) failed.`);
-  process.exit(1);
-} else {
-  console.log(
-    "PASS: o_szd.1079 went open -> correct -> annotate (person/place/work + authority + mention) -> textual criticism -> save, every step a surgical byte-faithful splice."
-  );
-  process.exit(0);
-}
+finish(
+  "PASS: o_szd.1079 went open -> correct -> annotate (person/place/work + authority + mention) -> textual criticism -> save, every step a surgical byte-faithful splice."
+);

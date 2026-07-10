@@ -8,14 +8,13 @@
  *
  * Usage: node test/harness/selftest.mjs
  */
-import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runValidate } from "./_validate_runner.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const TEST = resolve(HERE, "..");
-const PYTHON = process.env.TCR_PYTHON || "python";
 
 const fixture = join(TEST, "fixtures-synthetic", "wb-synthetic-folio.xml");
 const manifest = join(TEST, "fixtures-synthetic", "manifest.json");
@@ -37,12 +36,10 @@ writeFileSync(corrupted, broken, "utf-8");
 
 function run(candidate, tag) {
   const out = join(work, `${tag}.report.json`);
-  const args = [join(HERE, "validate.py"), "--input", fixture, "--candidate", candidate,
+  const args = ["--input", fixture, "--candidate", candidate,
     "--manifest", manifest, "--sch", sch, "--json-out", out, "--quiet"];
-  const r = spawnSync(PYTHON, args, { encoding: "utf-8" });
-  if (r.error) { console.error(`Failed to run ${PYTHON}: ${r.error.message}`); process.exit(4); }
-  if (r.stderr && r.stderr.trim()) console.error(r.stderr.trim());
-  return { code: r.status, report: JSON.parse(readFileSync(out, "utf-8")) };
+  const code = runValidate(args);
+  return { code, report: JSON.parse(readFileSync(out, "utf-8")) };
 }
 
 const checks = [];

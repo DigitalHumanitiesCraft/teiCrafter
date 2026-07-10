@@ -18,6 +18,7 @@
 import { parseEdition, serialize } from "../../docs/js/editor/edition.js";
 import { parseDocument, readSurfaces } from "../../docs/js/editor/tei-document.js";
 import { readEntities, addEntity, linkMention, setAuthority } from "../../docs/js/editor/standoff.js";
+import { check, finish } from "./_assert.mjs";
 
 const TEI = `<?xml version="1.0" encoding="UTF-8"?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
@@ -47,12 +48,6 @@ const TEI = `<?xml version="1.0" encoding="UTF-8"?>
   </body></text>
 </TEI>
 `;
-
-let failures = 0;
-function check(label, cond) {
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${label}`);
-  if (!cond) failures++;
-}
 
 // 1. round-trip
 const state = parseEdition(TEI);
@@ -140,11 +135,4 @@ const HEADER_BIBL = TEI.replace(
 );
 check("header bibl is not read as a work", readEntities(parseDocument(HEADER_BIBL)).works.length === 0);
 
-console.log("");
-if (failures) {
-  console.log(`FAIL: ${failures} check(s) failed.`);
-  process.exit(1);
-} else {
-  console.log("PASS: SZD demo path, place/work entities, authority idno, and graphic url all verified.");
-  process.exit(0);
-}
+finish("PASS: SZD demo path, place/work entities, authority idno, and graphic url all verified.");

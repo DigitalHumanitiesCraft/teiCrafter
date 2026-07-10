@@ -32,12 +32,8 @@ import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
+import { check, finish, readingText } from "./_assert.mjs";
 
-let failures = 0;
-function check(label, cond) {
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${label}`);
-  if (!cond) failures++;
-}
 function skip(msg) { console.log("SKIP: " + msg); process.exit(0); }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -99,11 +95,7 @@ check("export carries the three inline GND pointers",
   gPrime.includes('ref="GND:2026353-7"') &&
   gPrime.includes('ref="GND:4126228-1"'));
 
-const bodyText = (raw) => {
-  const m = /<body>[\s\S]*<\/body>/.exec(raw);
-  return (m ? m[0] : raw).replace(/<[^>]*>/g, "");
-};
-check("reading text byte-identical to the input", bodyText(gPrime) === bodyText(raw0));
+check("reading text byte-identical to the input", readingText(gPrime) === readingText(raw0));
 
 // --- 4. validate the export against the real schema -------------------------
 const candPath = join(tmpdir(), "tcr_inline_gnd_candidate.xml");
@@ -126,11 +118,4 @@ if (report) {
   }
 }
 
-console.log("");
-if (failures) {
-  console.log(`FAIL: ${failures} check(s) failed.`);
-  process.exit(1);
-} else {
-  console.log("PASS: a real pipeline file annotated in the register model and exported with toInlineGND is RNG-valid against zbz_hersch.rng.");
-  process.exit(0);
-}
+finish("PASS: a real pipeline file annotated in the register model and exported with toInlineGND is RNG-valid against zbz_hersch.rng.");

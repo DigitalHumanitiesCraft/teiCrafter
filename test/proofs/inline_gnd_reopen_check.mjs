@@ -28,12 +28,7 @@ import { toInlineGND, fromInlineGND } from "../../docs/js/editor/inline-gnd.js";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-let failures = 0;
-function check(label, cond) {
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${label}`);
-  if (!cond) failures++;
-}
+import { check, section, finish, readingText } from "./_assert.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -72,12 +67,7 @@ const REG = `<?xml version="1.0" encoding="utf-8"?>
   </text>
 </TEI>`;
 
-const readingText = (raw) => {
-  const m = /<body>[\s\S]*<\/body>/.exec(raw);
-  return (m ? m[0] : raw).replace(/<[^>]*>/g, "");
-};
-
-console.log("inline-GND re-open / import path (fromInlineGND)");
+section("inline-GND re-open / import path (fromInlineGND)");
 
 const reg = parseDocument(REG);
 const regReading = readingText(reg.raw);
@@ -151,11 +141,4 @@ if (existsSync(synthPath)) {
   console.log("  --  synthetic fixture absent, skipping secondary smoke");
 }
 
-console.log("");
-if (failures) {
-  console.log(`FAIL: ${failures} check(s) failed.`);
-  process.exit(1);
-} else {
-  console.log("PASS: fromInlineGND lifts inline-GND back into the register; the interchange file is a fixed point.");
-  process.exit(0);
-}
+finish("PASS: fromInlineGND lifts inline-GND back into the register; the interchange file is a fixed point.");

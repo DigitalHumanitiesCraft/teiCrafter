@@ -15,6 +15,13 @@
  *   - a <name> with no '#'-ref -> untouched (the respStmt <name>AI</name>)
  *   - the <standOff> register   -> removed
  *
+ * The final section is the EDITION-LAYER WIRING block (formerly its own proof): it
+ * pins the data path the "Export inline-GND" button drives, going through the
+ * edition layer (parseEdition / serialize / state.doc) rather than the tei-document
+ * layer, and adds the two invariants a UI download depends on: the transformed bytes
+ * ARE the canonical current document (serialize(state) === state.doc.raw), and the
+ * export reflects an in-editor edit.
+ *
  * Acceptance contract asserted here: every emitted @ref matches GND:[0-9A-Za-z\-]+,
  * no standOff and no '#'-mention remain, the reading text is byte-identical, the
  * output re-parses, and a second pass is a no-op (idempotent).
@@ -23,17 +30,12 @@
  */
 
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
-import { parseEdition } from "../../docs/js/editor/edition.js";
+import { parseEdition, serialize, editCellCore } from "../../docs/js/editor/edition.js";
 import { toInlineGND, inlineGndFilename } from "../../docs/js/editor/inline-gnd.js";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-
-let failures = 0;
-function check(label, cond) {
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${label}`);
-  if (!cond) failures++;
-}
+import { check, section, finish, readingText } from "./_assert.mjs";
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -72,12 +74,7 @@ const REG = `<?xml version="1.0" encoding="utf-8"?>
   </text>
 </TEI>`;
 
-const readingText = (raw) => {
-  const m = /<body>[\s\S]*<\/body>/.exec(raw);
-  return (m ? m[0] : raw).replace(/<[^>]*>/g, "");
-};
-
-console.log("inline-GND export profile (toInlineGND)");
+section("inline-GND export profile (toInlineGND)");
 
 const before = parseDocument(REG);
 const beforeReading = readingText(before.raw);
@@ -141,11 +138,82 @@ if (existsSync(synthPath)) {
   console.log("  --  synthetic fixture absent, skipping secondary smoke");
 }
 
-console.log("");
-if (failures) {
-  console.log(`FAIL: ${failures} check(s) failed.`);
-  process.exit(1);
-} else {
-  console.log("PASS: toInlineGND produces the inline-GND ZBZ shape, reading text byte-preserved.");
-  process.exit(0);
-}
+// =============================================================================
+// EDITION-LAYER WIRING  -- the "Export inline-GND" button path (editor download)
+// =============================================================================
+// This goes through the EDITION layer (parseEdition / serialize / state.doc), the
+// data path the editor actually uses, and pins the invariants a UI download needs:
+// the bytes transformed ARE the canonical current document, and the export reflects
+// an in-editor edit. A register-model document: one person mention WITH a GND, one
+// place mention (unwraps on export), and a plain editable line with no markup.
+const REG_WIRING = `<?xml version="1.0" encoding="utf-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc><titleStmt><title>wiring fixture</title></titleStmt></fileDesc>
+  </teiHeader>
+  <standOff>
+    <listPerson>
+      <person xml:id="pers_h"><persName>Jeanne Hersch</persName><idno type="GND">118703854</idno></person>
+    </listPerson>
+    <listPlace>
+      <place xml:id="plc_g"><placeName>Geneva</placeName></place>
+    </listPlace>
+  </standOff>
+  <text>
+    <body>
+      <p><name ref="#pers_h">Jeanne Hersch</name> wrote from <name ref="#plc_g">Geneva</name>.</p>
+      <p>A plain line to edit.</p>
+    </body>
+  </text>
+</TEI>`;
+
+section("inline-GND export wiring (editor download path)");
+
+const state = parseEdition(REG_WIRING);
+
+// 1. The button transforms the canonical current document, not a copy that could
+//    drift: serialize(state) is exactly the doc toInlineGND receives.
+check("the export reads the canonical document (serialize(state) === state.doc.raw)",
+  serialize(state) === state.doc.raw);
+
+// 2. The export path output is the engine result serialized.
+const wiringBefore = readingText(state.doc.raw);
+const exported = toInlineGND(state.doc).raw;
+
+check("export output re-parses as an edition", (() => {
+  try { parseEdition(exported); return true; } catch { return false; }
+})());
+check("export drops the <standOff> register", !exported.includes("<standOff"));
+check("export leaves no '#'-mention (<name ref=\"#...\">)", !/<name\s+ref="#/.test(exported));
+check("person WITH GND inlined as <persName ref=\"GND:118703854\">",
+  exported.includes('<persName ref="GND:118703854">Jeanne Hersch</persName>'));
+check("place mention unwrapped to plain text (no placeName, no register ref)",
+  exported.includes("wrote from Geneva.") && !exported.includes("placeName") && !exported.includes('"#plc_g"'));
+const wiringRefs = [...exported.matchAll(/<(?:persName|orgName|bibl)\s+ref="([^"]*)"/g)].map((m) => m[1]);
+check("every emitted @ref matches GND:[0-9A-Za-z-]+", wiringRefs.length === 1 && /^GND:[0-9A-Za-z-]+$/.test(wiringRefs[0]));
+check("reading text byte-identical through the export", readingText(exported) === wiringBefore);
+
+// 3. Idempotence at the doc level: a second pass returns the SAME doc object.
+const once = toInlineGND(state.doc);
+check("idempotent: a second export pass is a SAME-doc no-op", toInlineGND(once) === once);
+
+// 4. The export reflects an in-editor edit: edit a reading cell, re-export, and
+//    the change is in the output (the path serializes the CURRENT state).
+const plainCell = state.cells.find((c) => /plain line to edit/.test(c.text));
+check("fixture exposes the editable plain line as a cell", !!plainCell);
+const edited = editCellCore(state, plainCell.id, "An edited line to export.");
+const exportedAfterEdit = toInlineGND(edited.doc).raw;
+check("export after an edit carries the new reading text",
+  exportedAfterEdit.includes("An edited line to export.") && !exportedAfterEdit.includes("A plain line to edit."));
+check("export after an edit still drops the register and inlines the GND mention",
+  !exportedAfterEdit.includes("<standOff") && exportedAfterEdit.includes('<persName ref="GND:118703854">'));
+
+// 5. The download filename: {base}_final.xml, idempotent on an already-final name.
+check("inlineGndFilename names the download {base}_final.xml",
+  inlineGndFilename("zbz-hersch-100.xml") === "zbz-hersch-100_final.xml");
+check("inlineGndFilename is idempotent on an already-final name",
+  inlineGndFilename("zbz-hersch-100_final.xml") === "zbz-hersch-100_final.xml");
+check("inlineGndFilename falls back when the document name is missing",
+  inlineGndFilename(null) === "edition_final.xml");
+
+finish("PASS: toInlineGND produces the inline-GND ZBZ shape, reading text byte-preserved, and the editor download path serializes the engine result over the canonical document.");

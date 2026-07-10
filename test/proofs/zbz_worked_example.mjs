@@ -36,12 +36,7 @@ import { readEntities, addEntity, linkMention, setAuthority } from "../../docs/j
 import { markCritical } from "../../docs/js/editor/criticism.js";
 import { buildZbz1000, SOURCE_FILE, TARGET_FILE } from "../generators/make_zbz1000_demo.mjs";
 import { readFileSync, existsSync } from "node:fs";
-
-let failures = 0;
-function check(label, cond) {
-  console.log(`  ${cond ? "ok  " : "FAIL"} ${label}`);
-  if (!cond) failures++;
-}
+import { check, finish } from "./_assert.mjs";
 
 // ---- Gate: the object is local-only (rights stance as zbz-100). Prefer the
 // materialized demo file; else build it in memory from the zbz sibling checkout;
@@ -233,14 +228,7 @@ check("final raw is idempotent (parse -> serialize === itself)", serialize(final
 check("final model is still the 4-folio line-level object",
   finalState.folios.length === 4 && finalState.profile === "line");
 
-console.log("");
 console.log(`Summary: ${editsApplied} distinct surgical edits applied to ZBZ doc 1000.`);
-if (failures) {
-  console.log(`FAIL: ${failures} check(s) failed.`);
-  process.exit(1);
-} else {
-  console.log(
-    "PASS: ZBZ doc 1000 went open -> correct -> annotate (person/place/work + authority + mention) -> textual criticism -> save, every step a surgical byte-faithful splice."
-  );
-  process.exit(0);
-}
+finish(
+  "PASS: ZBZ doc 1000 went open -> correct -> annotate (person/place/work + authority + mention) -> textual criticism -> save, every step a surgical byte-faithful splice."
+);
