@@ -6,7 +6,7 @@
 
 > **Research Preview** -- an active research prototype developed with the [Promptotyping](https://github.com/DigitalHumanitiesCraft) method. It demonstrates lossless, expert-in-the-loop TEI editing with an optional LLM on-ramp, and is under active development. Not intended for production use yet.
 
-[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/editor-GitHub_Pages-blue)](https://digitalhumanitiescraft.github.io/teiCrafter/)
 
 ---
@@ -203,11 +203,11 @@ The original prototype and idea:
 
 ---
 
-## License
+## Licence
 
-This work is licensed under a [Creative Commons Attribution 4.0 International License](https://creativecommons.org/licenses/by/4.0/).
-
-You are free to share and adapt this material for any purpose, provided you give appropriate credit.
+- Code: MIT (see [LICENSE](LICENSE)).
+- Documentation and knowledge documents (`knowledge/`, `docs/` prose): CC BY 4.0.
+- Third-party research data that a user loads or edits is excluded from these licences and the rights remain with their holders.
 
 ---
 
