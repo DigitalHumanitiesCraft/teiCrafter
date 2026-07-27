@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: active
 created: 2026-02-05
-updated: 2026-07-10
+updated: 2026-07-27
 language: en
 version: 0.17
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
@@ -48,6 +48,14 @@ Image -> HTR pipeline -> teiCrafter -> ediarum / GAMS / publication
 ```
 
 teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream tool, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed separately. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
+
+## Related Work
+
+[LEAF-Writer](https://leaf-writer.leaf-vre.org/) (formerly CWRC-Writer) is the closest comparable tool, a browser-based TEI+RDF editor from the LEAF consortium that runs client-only, stores to GitHub or local storage and needs no installation. It shares the premise that scholarly TEI editing belongs in the browser, and on entity work it is ahead: named entity reconciliation against VIAF, GeoNames, Wikidata and DBpedia is a first-class editor function, NER runs as a separate upstream service (NERVE), and Transkribus output is a direct input option.
+
+Two differences mark teiCrafter's own ground. LEAF-Writer gates at load time, opening a document only if it is well-formed and references a schema the editor supports (TEI customizations, Orlando, CWRC), whereas teiCrafter reads arbitrary TEI and derives the editing unit from the document. And LEAF-Writer edits through a contenteditable HTML DOM (its base class builds on TinyMCE), so the file passes through a second representation on every round-trip; its documentation states no byte-fidelity property and does not address whitespace, comments or processing instructions. That teiCrafter's offset-splice model preserves what a DOM-mediated round-trip does not is an inference from that architecture and from the absence of the claim. It has not been measured against a running LEAF-Writer instance and stays an open item.
+
+One point favours LEAF-Writer. Its persistence path is the GitHub API over OAuth and works in every browser, while teiCrafter's project folder uses the File System Access API and is therefore Chromium-only.
 
 ## As a Promptotyping case
 

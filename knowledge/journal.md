@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-07-10
+updated: 2026-07-27
 language: en
-version: 0.22
+version: 0.23
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,10 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-07-27: LEAF-Writer recorded as related work
+
+Trigger: the LEAF consortium's DH2026 workshop record (Zenodo, https://doi.org/10.5281/zenodo.21605798) surfaced a browser-based TEI+RDF editor holding the position teiCrafter claims, and the knowledge base named no comparable tool anywhere. Decision: LEAF-Writer enters [project](project.md) as related work, with the load-time schema gate and the DOM-mediated round-trip as the two differentiators and the Chromium-only persistence path named as the point where teiCrafter is behind. Reason: the 2026-02-18 market analysis concluded that no tool combined TEI annotation with assistance and human review, which is too coarse to survive contact with LEAF-Writer; the distinction that actually holds is losslessness plus schema openness. teiCrafter can prove both about itself and has so far only inferred the counterpart from LEAF-Writer's architecture and from the absence of a byte-fidelity claim in its documentation, so the inferred half is marked as such and a measurement against a running instance can settle it.
 
 ## 2026-07-10: knowledge-layer refactoring, HANDOFF dissolved
 
