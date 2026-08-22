@@ -1,5 +1,5 @@
 ---
-title: Three-Project Master Reference (teiCrafter, zbz-ocr-tei, szd-htr)
+title: Three-Project Integration Reference (teiCrafter, zbz-ocr-tei, szd-htr)
 project:
   name: teiCrafter
   repository: https://github.com/DigitalHumanitiesCraft/teiCrafter
@@ -19,7 +19,7 @@ topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
 ---
 
-# Three-Project Master Reference
+# Three-Project Integration Reference
 
 Single, verified reference across the three projects. It holds
 the complete picture: the editor internals, both HTR pipelines, the data formats and
