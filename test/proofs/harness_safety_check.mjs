@@ -14,9 +14,10 @@ const multiset = spawnSync(
   "python",
   [
     "-c",
-    "from test.harness.validate import _multiset_difference; "
+    "import runpy; "
+      + "module=runpy.run_path('test/harness/validate.py', run_name='teicrafter_validate'); "
       + "x={'message':'same'}; y={'message':'other'}; "
-      + "assert _multiset_difference([x,x,y],[x,y]) == [x]",
+      + "assert module['_multiset_difference']([x,x,y],[x,y]) == [x]",
   ],
   { encoding: "utf8" },
 );
