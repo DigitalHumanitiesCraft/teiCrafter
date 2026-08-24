@@ -249,7 +249,7 @@
   #ed-pane-right { border-top: 1px solid var(--color-border); }
 }
 .ed-pane-head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md); background: var(--color-secondary);
   border-bottom: 1px solid var(--color-border);
@@ -257,7 +257,7 @@
 }
 .ed-pane-head > .ed-tabs { flex: 0 0 auto; }
 .ed-pane-head-right {
-  display: inline-flex; flex: 1 1 auto; min-width: 0;
+  display: inline-flex; flex: 1 1 28rem; min-width: min(100%, 28rem);
   align-items: center; justify-content: flex-end; flex-wrap: wrap;
   gap: var(--space-xs) var(--space-sm);
 }

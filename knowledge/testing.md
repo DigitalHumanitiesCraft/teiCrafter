@@ -14,7 +14,7 @@ status: active
 created: 2026-05-30
 updated: 2026-08-24
 language: en
-version: 0.21
+version: 0.22
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
 ---
@@ -102,6 +102,8 @@ Source Profile reprojection has a separate interaction invariant. Schema evidenc
 Chromium covers the portable file flow and capability-gated native File System Access where the environment exposes it. Firefox covers the portable flow with native picker absence asserted. Shared scenarios execute navigation, metadata, review, discontinuous spans, schema diagnostics, stale output rejection, downloads, keyboard focus, and accessible state in both engines.
 
 The application declares `baseline widely available` through Browserslist. Playwright projects are the executable browser floor. Capability detection remains part of each scenario, so a missing native API is a tested fallback condition rather than a skipped product path.
+
+The CI run is the clean-checkout portability check. Synthetic browser assets are explicitly tracked outside the rights-local fixture boundary, and harness self-tests load their implementation by repository path so that Windows package resolution cannot conceal a Linux failure.
 
 ## Real UFBAS evidence
 

@@ -14,7 +14,7 @@ status: active
 created: 2026-05-27
 updated: 2026-08-24
 language: en
-version: 0.21
+version: 0.22
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture]
 ---
@@ -53,6 +53,8 @@ The populated editor has two panes. The left pane holds Reading text, XML source
 Document identity sits below the toolbar and reports the loaded name, provenance, project, type, source model, and save target. The site header retains site identity. The empty editor uses the same frame with a direct load prompt, recent file handles where available, and draft recovery when present.
 
 The toolbar groups file actions. Save is the primary gold action because it commits the current scholarly state to the chosen target. Download creates a copy and uses neutral styling. View and context switching remain in their pane headers. A document replacement asks before discarding unsaved work.
+
+Pane-header controls wrap as a complete secondary row when the current pane cannot hold the view tabs and document controls side by side. This rule follows the resizable pane width rather than assuming that the browser viewport predicts the available editor width, and it keeps every tab free from pointer overlap across supported font metrics.
 
 ## Source Profile disclosure
 

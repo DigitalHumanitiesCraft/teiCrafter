@@ -14,7 +14,7 @@ status: active
 created: 2026-02-05
 updated: 2026-08-24
 language: en
-version: 0.31
+version: 0.32
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,10 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-08-24: session closure became clean-checkout and pane-width portable
+
+Trigger: the complete local gate passed while the first clean Linux checkout lacked a synthetic browser fixture and could not import the Python harness through Windows-specific package resolution. After those repository assumptions were removed, the cross-browser run exposed a pane header whose pager could overlap the Metadata tab under different font metrics. Decision: every synthetic browser dependency is tracked outside the rights-local ignore boundary, the harness self-test loads its target directly by repository path, and pane-header controls wrap as a complete row when their pane is too narrow. Reason: a green working directory does not establish a reproducible release state; the tracked checkout and the rendered pane geometry are the relevant boundaries.
 
 ## 2026-08-24: the effective schema set became live profile evidence
 
