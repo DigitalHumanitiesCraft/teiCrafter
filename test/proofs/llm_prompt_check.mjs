@@ -33,6 +33,12 @@ check(full.indexOf(map) < full.indexOf("Source text:"), "mapping precedes the so
 check(full.indexOf("Source text:") < full.indexOf(text), "the source text comes last");
 check(full.includes(text), "the source text is carried verbatim (special chars, <>, & unchanged)");
 check(full.endsWith(text), "the prompt ends with the source text, nothing appended after it");
+check(full.includes("<titleStmt><title>Generated TEI draft</title></titleStmt>")
+    && full.includes("<publicationStmt><p>") && full.includes("<sourceDesc><p>"),
+  "the prompt supplies an exact minimum TEI P5 fileDesc structure");
+check(full.includes("the source text must not appear in it") && full.includes("only inside <text><body>"),
+  "the prompt keeps source text out of the header and confines it to the body");
+check(full.includes("Do not emit a DOCTYPE"), "the prompt forbids external document type declarations");
 
 // --- 2. empty parts are omitted ----------------------------------------------
 const noSys = buildGenerationPrompt({ text, mapping: map });

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="correspondence">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Correspondence profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>An invented letter used to exercise correspondence metadata.</p>
+      </sourceDesc>
+    </fileDesc>
+    <profileDesc>
+      <correspDesc xml:id="correspondence-description">
+        <correspAction type="sent">
+          <persName>Anna Example</persName>
+          <placeName>Vienna</placeName>
+          <date when="1901-03-12">12 March 1901</date>
+        </correspAction>
+        <correspAction type="received">
+          <persName>Bertha Sample</persName>
+          <placeName>Graz</placeName>
+        </correspAction>
+      </correspDesc>
+    </profileDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="letter" xml:id="letter-1">
+        <opener>
+          <dateline>Vienna, 12 March 1901</dateline>
+          <salute>Dear Bertha,</salute>
+        </opener>
+        <p>The requested catalogue entry is enclosed.</p>
+        <closer>
+          <salute>Yours sincerely,</salute>
+          <signed>Anna</signed>
+        </closer>
+      </div>
+    </body>
+  </text>
+</TEI>

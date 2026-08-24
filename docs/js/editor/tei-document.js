@@ -13,7 +13,7 @@
  * the logic the harness measures.
  *
  * Layer 1 here: tokenize + parse to an offset-true tree + lossless edit ops.
- * Layer 2 here: generic, schema-free TEI recognizers keyed on local-name.
+ * Layer 2 here: generic, schema-free TEI recognizers keyed on expanded names.
  * Layer 3 (the editable "cells" = text nodes grouped into lines/folios) lives in
  * edition.js, which is a thin model built on this core.
  */
@@ -30,6 +30,9 @@
  * @typedef {Object} Attr
  * @property {string} name Qualified attribute name as written (e.g. "xml:id").
  * @property {string} localName Local part of the attribute name.
+ * @property {string|null} prefix Namespace prefix, or null when unprefixed.
+ * @property {string|null} namespaceURI Resolved namespace URI; unqualified attributes have none.
+ * @property {string} expandedName Clark-notation expanded name.
  * @property {string} value Decoded attribute value.
  * @property {string} rawValue Attribute value exactly as written (still encoded).
  * @property {string} quote The quote character used ('"' or "'").
@@ -45,6 +48,9 @@
  * @property {string} [localName] Local-name for elements, "#root" for the root (absent on text/leaf nodes).
  * @property {string} [qname] Qualified element name as written.
  * @property {string|null} [prefix] Namespace prefix, or null when unprefixed.
+ * @property {string|null} [namespaceURI] Resolved namespace URI.
+ * @property {string} [expandedName] Clark-notation expanded name.
+ * @property {Map<string, string|null>} [namespaces] Namespace bindings in scope.
  * @property {Attr[]} [attrs] Parsed attributes (elements only).
  * @property {number} [outerStart] Byte offset where the element/node begins.
  * @property {number|null} [outerEnd] Byte offset just after the element/node ends.
@@ -112,6 +118,16 @@ function prefixOf(name) {
   const i = name.indexOf(":");
   return i < 0 ? null : name.slice(0, i);
 }
+
+export const TEI_NAMESPACE = "http://www.tei-c.org/ns/1.0";
+export const XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace";
+export const XMLNS_NAMESPACE = "http://www.w3.org/2000/xmlns/";
+
+/** Clark-notation expanded name for a resolved namespace and local name. */
+export function expandedName(namespaceURI, localName) {
+  return namespaceURI ? `{${namespaceURI}}${localName}` : localName;
+}
+
 function readName(raw, from) {
   // a tag name runs until whitespace, '/', or '>'
   let j = from;
@@ -259,9 +275,13 @@ function parseAttrs(raw, tagStart, tagEnd) {
     // offset of the value's first char (just after the opening quote)
     const valueStartRel = m.index + m[0].length - m[2].length + 1;
     const valueStart = tagStart + valueStartRel;
+    const prefix = prefixOf(m[1]);
     out.push({
       name: m[1],
       localName: localOf(m[1]),
+      prefix,
+      namespaceURI: null,
+      expandedName: localOf(m[1]),
       value: decodeEntities(value),
       rawValue: value,
       quote,
@@ -276,13 +296,32 @@ function parseAttrs(raw, tagStart, tagEnd) {
 
 // ---- tree ------------------------------------------------------------------
 
-function mkElement(raw, tk, empty) {
+function mkElement(raw, tk, empty, parent) {
+  const attrs = parseAttrs(raw, tk.start, tk.end);
+  const namespaces = parent?.namespaces
+    ? new Map(parent.namespaces)
+    : new Map([["xml", XML_NAMESPACE], ["xmlns", XMLNS_NAMESPACE], ["", null]]);
+  for (const attr of attrs) {
+    if (attr.name === "xmlns") namespaces.set("", attr.value || null);
+    else if (attr.prefix === "xmlns") namespaces.set(attr.localName, attr.value || null);
+  }
+  const prefix = prefixOf(tk.name);
+  const namespaceURI = namespaces.get(prefix || "") || null;
+  for (const attr of attrs) {
+    if (attr.name === "xmlns" || attr.prefix === "xmlns") attr.namespaceURI = XMLNS_NAMESPACE;
+    else if (attr.prefix) attr.namespaceURI = namespaces.get(attr.prefix) || null;
+    else attr.namespaceURI = null;
+    attr.expandedName = expandedName(attr.namespaceURI, attr.localName);
+  }
   return {
     type: "element",
     qname: tk.name,
     localName: localOf(tk.name),
-    prefix: prefixOf(tk.name),
-    attrs: parseAttrs(raw, tk.start, tk.end),
+    prefix,
+    namespaceURI,
+    expandedName: expandedName(namespaceURI, localOf(tk.name)),
+    namespaces,
+    attrs,
     outerStart: tk.start,
     stagStart: tk.start,
     stagEnd: tk.end,
@@ -317,19 +356,19 @@ export function parseDocument(raw) {
     } else if (tk.t === T.COMMENT || tk.t === T.CDATA || tk.t === T.PI || tk.t === T.DECL || tk.t === T.DOCTYPE) {
       top.children.push({ type: tk.t, start: tk.start, end: tk.end, parent: top });
     } else if (tk.t === T.EMPTY) {
-      const el = mkElement(raw, tk, true);
+      const el = mkElement(raw, tk, true, top);
       el.parent = top;
       top.children.push(el);
     } else if (tk.t === T.STAG) {
-      const el = mkElement(raw, tk, false);
+      const el = mkElement(raw, tk, false, top);
       el.parent = top;
       top.children.push(el);
       stack.push(el);
     } else if (tk.t === T.ETAG) {
       // close the nearest matching open element (lenient on mismatch)
       let k = stack.length - 1;
-      const want = localOf(tk.name);
-      while (k > 0 && stack[k].localName !== want) k--;
+      const want = tk.name;
+      while (k > 0 && stack[k].qname !== want) k--;
       if (k > 0) {
         const el = stack[k];
         el.contentEnd = tk.start;
@@ -360,6 +399,57 @@ export function walk(node, visitor) {
   go(node);
 }
 
+/** Resolve a QName against the namespace bindings in scope at an element. */
+export function resolveQName(el, qname, { attribute = false } = {}) {
+  const prefix = prefixOf(String(qname));
+  const localName = localOf(String(qname));
+  let namespaceURI = null;
+  if (prefix === "xml") namespaceURI = XML_NAMESPACE;
+  else if (prefix === "xmlns" || qname === "xmlns") namespaceURI = XMLNS_NAMESPACE;
+  else if (prefix) namespaceURI = el?.namespaces?.get(prefix) || null;
+  else if (!attribute) namespaceURI = el?.namespaces?.get("") || null;
+  return { prefix, localName, namespaceURI, expandedName: expandedName(namespaceURI, localName) };
+}
+
+/** True when an element has the requested expanded name. */
+export function isElementInNamespace(node, namespaceURI, localName) {
+  return node?.type === "element"
+    && node.namespaceURI === (namespaceURI || null)
+    && (localName == null || node.localName === localName);
+}
+
+function legacyTeiRoot(node) {
+  let top = node?.type === "element" ? node : node?.parent;
+  while (top?.parent?.type === "element") top = top.parent;
+  return top?.namespaceURI == null && top?.localName === "TEI";
+}
+
+/** TEI URI match, with document-scoped compatibility for unnamespaced <TEI>. */
+export function isTeiElement(node, localName = null) {
+  if (node?.type !== "element" || (localName != null && node.localName !== localName)) return false;
+  return node.namespaceURI === TEI_NAMESPACE
+    || (node.namespaceURI == null && legacyTeiRoot(node));
+}
+
+/** All TEI elements with a local name, in document order. */
+export function teiElementsByLocal(node, localName) {
+  const out = [];
+  walk(node, (candidate) => {
+    if (isTeiElement(candidate, localName)) out.push(candidate);
+  });
+  return out;
+}
+
+/** The first TEI element with a local name, or null. */
+export function firstTeiByLocal(node, localName) {
+  let found = null;
+  walk(node, (candidate) => {
+    if (found) return false;
+    if (isTeiElement(candidate, localName)) { found = candidate; return false; }
+  });
+  return found;
+}
+
 /**
  * Decoded value of an element's attribute, matched by local-name, or null.
  * @param {TeiNode} el The element.
@@ -380,6 +470,29 @@ export function getAttr(el, localName) {
 export function getAttrObj(el, localName) {
   if (!el.attrs) return null;
   return el.attrs.find((x) => x.localName === localName) || null;
+}
+
+/** Attribute object matched by expanded name, or null. */
+export function getAttrObjInNamespace(el, namespaceURI, localName) {
+  if (!el?.attrs) return null;
+  return el.attrs.find(
+    (attr) => attr.namespaceURI === (namespaceURI || null) && attr.localName === localName,
+  ) || null;
+}
+
+/** Decoded attribute value matched by expanded name, or null. */
+export function getAttrInNamespace(el, namespaceURI, localName) {
+  return getAttrObjInNamespace(el, namespaceURI, localName)?.value ?? null;
+}
+
+/** Decoded unqualified attribute value, or null. */
+export function getUnqualifiedAttr(el, localName) {
+  return getAttrInNamespace(el, null, localName);
+}
+
+/** The XML namespace's id value, or null. */
+export function getXmlId(el) {
+  return getAttrInNamespace(el, XML_NAMESPACE, "id");
 }
 
 /** All elements with the given local-name (namespace-agnostic), in document order.
@@ -463,7 +576,7 @@ export function nearestAncestor(node, pred) {
  * @returns {TeiNode|null} The nearest ancestor with an xml:id, or null.
  */
 export function ancestorWithXmlId(node) {
-  return nearestAncestor(node, (p) => getAttr(p, "id") != null);
+  return nearestAncestor(node, (p) => getXmlId(p) != null);
 }
 // ---- lossless edit operations ---------------------------------------------
 
@@ -513,6 +626,96 @@ export function spliceDocument(doc, start, end, replacement) {
   return parseDocument(splice(doc.raw, start, end, replacement));
 }
 
+/** Qualify element tags introduced around an existing source slice. */
+function qualifyAddedMarkup(fragment, prefix) {
+  if (!prefix) return fragment;
+  return fragment.replace(
+    /<(\/?)([A-Za-z_][A-Za-z0-9_.-]*)(?=[\s/>])/g,
+    (_match, close, qname) => `<${close}${prefix}:${qname}`,
+  );
+}
+
+/** Qualify unprefixed TEI tags for the prefix used by an insertion context. */
+export function qualifyTeiMarkup(fragment, context) {
+  if (!isTeiElement(context)) return null;
+  return qualifyAddedMarkup(fragment, context.prefix);
+}
+
+/** True when a markup fragment contributes text outside its tags. */
+function contributesText(fragment) {
+  return fragment.replace(/<[^>]*>/g, "").length > 0;
+}
+
+/** True when before/after are matching tag stacks that enclose the inner slice. */
+function isWrappingMarkup(before, after) {
+  const beforeTags = before.match(/<[^>]+>/g) || [];
+  const afterTags = after.match(/<[^>]+>/g) || [];
+  if (!beforeTags.length || beforeTags.join("") !== before || afterTags.join("") !== after) return false;
+  const qnames = [];
+  for (const tag of beforeTags) {
+    const match = /^<([A-Za-z_][A-Za-z0-9_.:-]*)(?:\s[^>]*)?>$/.exec(tag);
+    if (!match) return false;
+    qnames.push(match[1]);
+  }
+  if (afterTags.length !== qnames.length) return false;
+  for (let i = 0; i < afterTags.length; i++) {
+    const match = /^<\/([A-Za-z_][A-Za-z0-9_.:-]*)\s*>$/.exec(afterTags[i]);
+    if (!match || match[1] !== qnames[qnames.length - 1 - i]) return false;
+  }
+  return true;
+}
+
+/**
+ * Wrap a source-contiguous sequence of sibling elements in markup produced by
+ * `build(inner)`. Text nodes between the elements stay inside the wrapper;
+ * comments, processing instructions, and intervening elements refuse the whole
+ * operation. The existing inner bytes must occur exactly once in the build and
+ * the added fragments may contain tags only, so reading text cannot change.
+ * Newly introduced unprefixed tags inherit the common TEI parent's prefix.
+ *
+ * @param {TeiDocument} doc The source document.
+ * @param {TeiNode[]} elements Ordered direct sibling elements to wrap.
+ * @param {(inner: string) => string} build Builds the wrapper around exact source bytes.
+ * @returns {TeiDocument} A new document, or the same document when unsafe.
+ */
+export function wrapSiblingElementRange(doc, elements, build) {
+  if (!doc || !Array.isArray(elements) || elements.length < 2 || typeof build !== "function") return doc;
+  if (elements.some((element) => !element || element.type !== "element" || element.outerStart == null || element.outerEnd == null)) return doc;
+  const parent = elements[0].parent;
+  if (!parent || parent.type !== "element" || elements.some((element) => element.parent !== parent)) return doc;
+  if (isTeiElement(elements[0]) && !isTeiElement(parent)) return doc;
+
+  const positions = elements.map((element) => parent.children.indexOf(element));
+  if (positions.some((position) => position < 0)) return doc;
+  for (let i = 1; i < positions.length; i++) if (positions[i] <= positions[i - 1]) return doc;
+
+  let selectedIndex = 0;
+  for (const child of parent.children.slice(positions[0], positions[positions.length - 1] + 1)) {
+    if (child.type === "text") continue;
+    if (child !== elements[selectedIndex]) return doc;
+    selectedIndex += 1;
+  }
+  if (selectedIndex !== elements.length) return doc;
+
+  const start = elements[0].outerStart;
+  const end = elements[elements.length - 1].outerEnd;
+  const inner = doc.raw.slice(start, end);
+  if (!inner) return doc;
+  const built = build(inner);
+  if (typeof built !== "string") return doc;
+  const at = built.indexOf(inner);
+  if (at < 0 || built.indexOf(inner, at + inner.length) >= 0) return doc;
+  const before = built.slice(0, at);
+  const after = built.slice(at + inner.length);
+  if (contributesText(before) || contributesText(after) || !isWrappingMarkup(before, after)) return doc;
+
+  const sourcePrefix = parent.prefix;
+  const replacement = qualifyAddedMarkup(before, sourcePrefix) + inner
+    + qualifyAddedMarkup(after, sourcePrefix);
+  if (replacement === inner) return doc;
+  return spliceDocument(doc, start, end, replacement);
+}
+
 /** Remove an attribute (by local-name) from an element, including the single
  *  separating space before it. Returns a NEW document, or the SAME doc if absent.
  * @param {TeiDocument} doc The document.
@@ -522,6 +725,15 @@ export function spliceDocument(doc, start, end, replacement) {
  */
 export function removeAttr(doc, el, localName) {
   const attr = getAttrObj(el, localName);
+  return removeParsedAttr(doc, attr);
+}
+
+/** Remove one attribute selected by expanded name. */
+export function removeAttrInNamespace(doc, el, namespaceURI, localName) {
+  return removeParsedAttr(doc, getAttrObjInNamespace(el, namespaceURI, localName));
+}
+
+function removeParsedAttr(doc, attr) {
   if (!attr || attr.start == null) return doc;
   let start = attr.start;
   if (start > 0 && /\s/.test(doc.raw[start - 1])) start -= 1; // eat one leading space
@@ -660,7 +872,7 @@ const NON_READING_LOCALS = new Set(["teiHeader", "facsimile", "standOff", "fsdec
  * @returns {string|null} The pointer target id, or null.
  */
 export function facsPointer(el) {
-  const v = getAttr(el, "facs");
+  const v = isTeiElement(el) ? getUnqualifiedAttr(el, "facs") : null;
   return v ? v.replace(/^#/, "") : null;
 }
 
@@ -671,26 +883,26 @@ export function facsPointer(el) {
 export function readSurfaces(doc) {
   const surfaces = [];
   const byId = new Map();
-  for (const s of elementsByLocal(doc.root, "surface")) {
-    const id = getAttr(s, "id");
+  for (const s of teiElementsByLocal(doc.root, "surface")) {
+    const id = getXmlId(s);
     // A surface may carry a <graphic url="..."> page image; expose its url so the
     // facsimile viewer can show an opened file's image without a hardcoded base.
-    const graphicEl = elementsByLocal(s, "graphic")[0] || null;
+    const graphicEl = teiElementsByLocal(s, "graphic")[0] || null;
     /** @type {TeiSurface} */
     const surf = {
       id,
-      n: getAttr(s, "n"),
-      ulx: num(getAttr(s, "ulx")), uly: num(getAttr(s, "uly")),
-      lrx: num(getAttr(s, "lrx")), lry: num(getAttr(s, "lry")),
-      graphic: graphicEl ? getAttr(graphicEl, "url") : null,
+      n: getUnqualifiedAttr(s, "n"),
+      ulx: num(getUnqualifiedAttr(s, "ulx")), uly: num(getUnqualifiedAttr(s, "uly")),
+      lrx: num(getUnqualifiedAttr(s, "lrx")), lry: num(getUnqualifiedAttr(s, "lry")),
+      graphic: graphicEl ? getUnqualifiedAttr(graphicEl, "url") : null,
       zones: [],
     };
-    for (const z of elementsByLocal(s, "zone")) {
+    for (const z of teiElementsByLocal(s, "zone")) {
       const zone = {
-        id: getAttr(z, "id"),
-        ulx: num(getAttr(z, "ulx")), uly: num(getAttr(z, "uly")),
-        lrx: num(getAttr(z, "lrx")), lry: num(getAttr(z, "lry")),
-        points: getAttr(z, "points"),
+        id: getXmlId(z),
+        ulx: num(getUnqualifiedAttr(z, "ulx")), uly: num(getUnqualifiedAttr(z, "uly")),
+        lrx: num(getUnqualifiedAttr(z, "lrx")), lry: num(getUnqualifiedAttr(z, "lry")),
+        points: getUnqualifiedAttr(z, "points"),
       };
       // Transkribus-style zones (Wenzelsbibel) carry only a @points polygon,
       // no ulx/uly/lrx/lry; derive the bounding box so overlays can place them.
@@ -740,7 +952,14 @@ export function indexZonesById(surfaces) {
  * @returns {TeiNode} The reading-text subtree root.
  */
 export function readingRoot(doc) {
-  return firstByLocal(doc.root, "body") || firstByLocal(doc.root, "text") || doc.root;
+  const documentElement = (doc.root.children || []).find((node) => isTeiElement(node)) || null;
+  if (isTeiElement(documentElement, "teiCorpus")) return documentElement;
+  if (isTeiElement(documentElement, "TEI")) {
+    const text = (documentElement.children || []).find((node) => isTeiElement(node, "text")) || null;
+    const body = text && (text.children || []).find((node) => isTeiElement(node, "body"));
+    return body || text || documentElement;
+  }
+  return firstTeiByLocal(doc.root, "body") || firstTeiByLocal(doc.root, "text") || doc.root;
 }
 
 /**
@@ -751,7 +970,7 @@ export function readingRoot(doc) {
  * @returns {boolean} True when no non-reading ancestor is present.
  */
 export function isReadingContext(node) {
-  return nearestAncestor(node, (p) => NON_READING_LOCALS.has(p.localName)) == null;
+  return nearestAncestor(node, (p) => isTeiElement(p) && NON_READING_LOCALS.has(p.localName)) == null;
 }
 
 /** Is this text node part of the readable transcription (not header/facsimile/standOff)?

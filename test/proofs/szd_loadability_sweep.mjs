@@ -10,7 +10,7 @@
  *
  * Run: node test/proofs/szd_loadability_sweep.mjs   (exit 0 = all clean)
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, existsSync, rmSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -20,7 +20,15 @@ const DIR = "output/szd-tei";
 // from removed objects would otherwise linger and inflate the sweep count.
 rmSync(DIR, { recursive: true, force: true });
 console.log("converting corpus via pipeline/export_tei.py --all ...");
-execFileSync("python", ["pipeline/export_tei.py", "--all", "--out", DIR], { stdio: "inherit" });
+const conversion = spawnSync(
+  "python",
+  ["pipeline/export_tei.py", "--all", "--out", DIR],
+  { encoding: "utf8" },
+);
+if (conversion.stdout) process.stdout.write(conversion.stdout);
+if (conversion.stderr) process.stderr.write(conversion.stderr);
+console.log("formally parsing converted XML and checking xml:id uniqueness ...");
+execFileSync("python", ["test/harness/corpus_wellformed.py", DIR], { stdio: "inherit" });
 
 if (!existsSync(DIR)) { console.error("no output at " + DIR); process.exit(1); }
 const ed = await import(pathToFileURL("docs/js/editor/edition.js").href);
@@ -44,4 +52,8 @@ console.log(`  round-trip FAIL: ${rtFail}   parse error: ${parseErr}   text-bear
 console.log(`  cells === 0 (empty / all-blank, valid): ${cells0}`);
 const genuine = rtFail + parseErr + notLine;
 if (genuine) { console.error("\nFAIL:\n  " + fails.slice(0, 40).join("\n  ")); process.exit(1); }
+if (conversion.status !== 0) {
+  console.error("\nFAIL: at least one Page-JSON input was rejected; see the preflight diagnostics above.");
+  process.exit(1);
+}
 console.log("\nPASS: every converted TEI round-trips byte-identically and loads line-level.");

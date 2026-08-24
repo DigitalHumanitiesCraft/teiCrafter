@@ -1,8 +1,8 @@
 /**
  * teiCrafter Editor -- OpenSeadragon facsimile viewer with zone overlays.
  *
- * Pure UI module. It depends on the global OpenSeadragon (loaded via CDN by
- * the integrator) and imports no engine or state modules; its only project
+ * Pure UI module. It depends on the vendored global OpenSeadragon and imports
+ * no engine or state modules; its only project
  * import is the shared DOM helpers (dom.js). It replaces the synthetic SVG
  * placeholder in editor-app.js with a real pan/zoom image viewer whose <zone>
  * rectangles are overlaid on the page image and linked back to the reading text.
@@ -35,9 +35,7 @@
 
 import { el, clear } from "./dom.js";
 
-// OSD ships its own UI sprite set; this CDN path matches the version the
-// integrator loads.
-const OSD_PREFIX = "https://cdn.jsdelivr.net/npm/openseadragon@5.0.1/build/openseadragon/images/";
+const OSD_PREFIX = "vendor/openseadragon/images/";
 
 /** Plain-image tileSource for a single full-resolution page image (no tiling). */
 export function plainImageTileSource(url) {

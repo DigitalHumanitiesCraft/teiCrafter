@@ -73,6 +73,8 @@ check(true, "all garbage inputs return [] without throwing");
 
 const p = buildSuggestPrompt("Anna lebt in Wien.");
 check(p.includes("Anna lebt in Wien.") && /JSON array/i.test(p), "prompt embeds the text and asks for a JSON array");
+check(/contained within one text line/i.test(p) && /including capitalization and punctuation/i.test(p),
+  "prompt requires a verbatim, single-line span");
 
 // --- summary -----------------------------------------------------------------
 

@@ -12,77 +12,67 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: active
 created: 2026-02-05
-updated: 2026-07-27
+updated: 2026-08-24
 language: en
-version: 0.17
+version: 0.21
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal, integration]
 ---
 
 # teiCrafter Project Overview
 
-teiCrafter is a browser-based, lossless editor for arbitrary TEI-XML. You open an existing TEI edition from your local disk, read it folio by folio, correct it directly in the rendered text, and save it back, byte-for-byte unchanged except where you edited. An optional LLM on-ramp drafts an initial TEI from plaintext and drops it into the same editor for verification. One workbench, two ways in. The application runs entirely in the browser, client-only, no backend, no build step. The only outbound calls are the optional LLM on-ramp and the live authority lookup, both user-initiated; nothing leaves the browser unless the user triggers it.
+## Identity
 
-## What It Is
+teiCrafter is a client-side editor for existing TEI documents and deterministic or model-assisted TEI drafts. It gives editors a readable work surface while retaining the source document as the canonical state. Exact offset splices preserve source bytes outside an intentional edit, including whitespace, prefixes, attribute order, comments, processing instructions, and entity spellings.
 
-The core is a **generic, offset-true TEI reader**. The raw TEI string is canonical; every edit is an offset splice on that string, so untouched markup is preserved exactly. This is proven: every TEI file tested round-trips byte-identically (Jeanne Hersch editions, Stefan Zweig objects, the synthetic Wenzelsbibel tiers; the round-trip proofs are in [testing](testing.md)). The editor reads any TEI and lets the human correct it; it does not impose a project-specific schema or shape on the input.
+The tool serves editors who must correct, annotate, review, and return heterogeneous TEI without first translating every project into one internal edition type. Its central contribution is a compositional Source Profile. The profile derives capabilities and navigation from the loaded TEI, can receive conservative Schema Profile evidence, and accepts explicit project policy from a manifest.
 
-The editing unit is read from the document, not configured: TEI encodes its own structure, so a document that tokenizes words (`<w xml:id>`) is edited word by word, and one that marks only line breaks (`<lb/>` inside `<p>`) is edited line by line. Same engine, same lossless splice. On top of this document-driven default, a project manifest (`teicrafter.project.json` next to the edition's files) adds what a concrete editorial undertaking needs: its name, an image resolver, the markup its guidelines allow, its indices and views. A project is not an edition type: one project holds several types (Stefan Zweig Digital: letters, life documents, typescripts), so the manifest declares document types and the allowed element inventory binds to the type, while name, image resolver and indices live at the project level. The manifest carries the rules; the reader stays generic.
+## Product promise
 
-## Why It Exists
+An editor can open a TEI document without prior configuration. The interface identifies source-backed navigation channels and selects a safe primary channel. A paginated dictionary can expose entries, pages, and sections together. A spoken corpus can navigate by corpus member or speech turn. A critical edition can expose apparatus and logical structure. Token cells and text-run cells can coexist within the same document.
 
-It fills the gap between automated text recognition and deep editorial encoding: a place to correct and refine pipeline-produced TEI comfortably in a browser, without an XML editor on every collaborator's machine and without a server. Editing is deterministic and human-driven; nothing the human did not type is changed.
+Common editorial work remains direct. The editor supports reading-text correction, inline and stand-off annotation, entity registers, authority identifiers, facsimile alignment, dual readings, source XML, complete header inspection, review records, Undo and Redo, and schema-gated output. Project manifests add editorial vocabulary, schemas, image resolution, document-type policy, interchange formats, and model instructions.
 
-The LLM on-ramp keeps the original FORGE 2023 idea (plaintext to TEI via a model) but subordinates it to the editor: a model can produce a plausible first draft, but it cannot judge its own correctness. This is the epistemic-asymmetry stance inherited from coOCR HTR. So LLM output is marked as machine-generated (violet) and unreviewed, and the human verifies it in the same deterministic editor. The model assists; the human decides.
+## Scholarly control
 
-## What It Does Not Do
+The human editor authorizes every substantive change. Model output enters as visibly unverified material with TEI `@resp` provenance. A generated document remains identifiable after reload when the TEI root points to the configured responsibility and the header contains the matching `respStmt`. Confirm and reject actions resolve proposed constructs through the same lossless mutation path used for manual editing.
 
-It is not an XML development environment: no schema design, no XSLT/XQuery toolchain, no free restructuring of arbitrary XML; that remains oXygen's ground. For the editorial working role (open, correct, annotate, maintain indices, validate, save) teiCrafter is built to carry project workflows that today run in oXygen/ediarum, in the browser and without installation; the Wenzelsbibel mandate states this explicitly, and gates W1/W2 exist to prove it before it is claimed. Because saving is byte-faithful, the same files move between teiCrafter and oXygen/ediarum without one disturbing the other's work. It does not perform character recognition (that is upstream, coOCR HTR and other HTR pipelines). It does not host or persist data on a server, and it does not publish editions (EditionCrafter's line). It is an independent browser tool, not a module of any harness.
+Editorial review is represented as TEI evidence. A `revisionDesc/change` record targets a stable identifier on the reviewed primary navigation unit and records reviewer, time, status, and rationale. Annotation coverage and review answer different questions and remain separate in the interface and document model.
 
-## Positioning
+Selections that cross XML structures or consist of separated segments use TEI stand-off spans. The editor inserts exact boundary anchors and stores the semantic relation in one `spanGrp`. Inline projection remains available where the target format can express the selection. Formats such as inline-GND refuse cross-structure, overlapping, or discontinuous output because that interchange shape cannot carry those relations.
 
-```
-Image -> HTR pipeline -> teiCrafter -> ediarum / GAMS / publication
-         (transcription)  (correct, refine,  (deep encoding &
-                           draft via LLM)      publication)
-```
+## Output trust boundary
 
-teiCrafter shares architecture principles, UI patterns and the design system with [coOCR HTR](https://github.com/DigitalHumanitiesCraft/co-ocr-htr) (upstream tool, client-only ES6, expert-centered). It is conceptual preparation for EditionCrafter but developed separately. The LLM on-ramp originates in the FORGE 2023 prototype (Pollin, Steiner & Zach 2023).
+Save and Download are authorization points. The editor validates the exact projected output against an ordered schema set. The authorization belongs to one document session, revision, schema set, and byte string. A changed document or configuration invalidates it. Every configured schema must return a valid result. Invalid, unavailable, missing, or stale results block output and explain the reason in the interface.
 
-## Related Work
+A project manifest supplies the project schema set. A session upload replaces that set for the current session. TEI P5 TEI All is the repository default when the project supplies no schema. RelaxNG and XSD run locally through the browser validator. Raw and compiled Schematron use bounded browser runtimes whose unsupported constructs produce an unavailable result and therefore block output.
 
-[LEAF-Writer](https://leaf-writer.leaf-vre.org/) (formerly CWRC-Writer) is the closest comparable tool, a browser-based TEI+RDF editor from the LEAF consortium that runs client-only, stores to GitHub or local storage and needs no installation. It shares the premise that scholarly TEI editing belongs in the browser, and on entity work it is ahead: named entity reconciliation against VIAF, GeoNames, Wikidata and DBpedia is a first-class editor function, NER runs as a separate upstream service (NERVE), and Transkribus output is a direct input option.
+The offline Python fidelity harness has a different purpose. It compares text fidelity, structural invariants, and schema diagnostics before and after edits. Its comparative schema level remains evidence rather than an output authorization. The browser gate governs actual Save and Download operations.
 
-Two differences mark teiCrafter's own ground. LEAF-Writer gates at load time, opening a document only if it is well-formed and references a schema the editor supports (TEI customizations, Orlando, CWRC), whereas teiCrafter reads arbitrary TEI and derives the editing unit from the document. And LEAF-Writer edits through a contenteditable HTML DOM (its base class builds on TinyMCE), so the file passes through a second representation on every round-trip; its documentation states no byte-fidelity property and does not address whitespace, comments or processing instructions. That teiCrafter's offset-splice model preserves what a DOM-mediated round-trip does not is an inference from that architecture and from the absence of the claim. It has not been measured against a running LEAF-Writer instance and stays an open item.
+## Browser and deployment model
 
-One point favours LEAF-Writer. Its persistence path is the GitHub API over OAuth and works in every browser, while teiCrafter's project folder uses the File System Access API and is therefore Chromium-only.
+teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set and exercises the complete fallback path in Chromium and Firefox. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
 
-## As a Promptotyping case
+External LLM services are optional. Built-in providers and a configurable OpenAI-compatible endpoint share one catalogue. Application code can register adapters for other JSON protocols. API keys remain in memory, requests omit ambient credentials, and manifests cannot inject executable provider logic.
 
-teiCrafter is a worked Promptotyping artifact; the argument is carried not only by the running tool but by its provenance on disk, the function-separated knowledge/ base, the [journal](journal.md) as decision record, and the Git history as per-milestone build trace. The artifact and its reasoning are inspectable side by side, which makes the method reproducible, and the result checkable.
+## Representative material
 
-## Real Cases
+| Material | Structural contribution | Evidential role |
+| --- | --- | --- |
+| UFBAS Urfehde book | Whole-book pagination, mixed header, page source, annotations, and download fallback | Real browser workflow with schema output gating and automated accessibility checks in Chromium and Firefox |
+| Wenzelsbibel Codex 2759 | Word tokens, diplomatic and normalized readings, surfaces, zones, IIIF images, TEI-level apparatus, and cross-file image annotations | Rights-local engine and Source Profile evidence; a synthetic twin supplies committed cross-browser interaction evidence |
+| Jeanne Hersch corpus | Line-oriented text, inline GND interchange, facsimile zones, and project-specific reconciliation | Real project-boundary and round-trip evidence |
+| Stefan Zweig Digital material | Catalogue TEI plus upstream Page-JSON | Converter and project-manifest integration evidence |
+| Type-diverse synthetic TEI | Dictionary, drama, spoken corpus, correspondence, critical edition, facsimile, source document, and mixed structures | Reproducible Source Profile and navigation coverage |
 
-teiCrafter is format-driven and open to any TEI. Three concrete pipelines drive it and serve as the proving ground (see [data](data.md)):
+## Boundaries
 
-| Case | Pipeline | TEI shape | Editor granularity |
-|------|----------|-----------|--------------------|
-| Wenzelsbibel (Codex 2759) | manuscript edition | word-level `<w xml:id>`, `<facsimile>`/`<zone>`, `<standOff>` | word |
-| Jeanne Hersch | zbz-ocr-tei | line-level `<p>` + `<lb facs>`, real zone coordinates | line |
-| Stefan Zweig | szd-htr | catalog TEI + Page-JSON (needs page-json to TEI before editing) | (line, after conversion) |
+teiCrafter preserves arbitrary TEI through exact source views and targeted splices. Form projections intentionally cover only operations with a lossless mapping back to the source. Complete reformatting, wholesale DOM serialization, silent schema repair, and automatic scholarly acceptance fall outside the product contract.
 
-The Wenzelsbibel is the reference manuscript case. Because the real codex is third-party material (Austrian National Library) with an unresolved redistribution licence, all committed Wenzelsbibel material is synthetic; real third-party files stay out of version control.
+The browser inspects the effective repository, project, or session schema set after opening a document and after a session override changes. Multiple vocabulary schemas contribute conjunctive evidence. Schematron remains constraint evidence for validation. An unavailable or partially resolved vocabulary schema leaves the affected capabilities unknown, so profile inspection cannot block opening or suppress a structurally observed capability without sound negative evidence. This descriptive path remains separate from the fail-closed output gate.
 
-## Success Criteria
+The stand-off span engine operates within one TEI document. Wenzelsbibel's separate image-annotation document uses cross-file pointers and range expressions, which require a project-level multi-document editing model. The present editor preserves such pointers in raw XML and treats interactive cross-document authoring as future integration work.
 
-| Criterion | Meaning | Operationalisation |
-|-----------|---------|--------------------|
-| Lossless | Save changes nothing the human did not edit | Byte-identical round-trip on every real file (proven in the harness) |
-| Universal | Reads arbitrary TEI without per-project code | One engine handles word-level and line-level editions; the unit is read from the document |
-| Self-explanatory | Usable without external instruction | Open a file, click a word or line, correct it, save |
-| Connective | Output usable downstream | Edited TEI imports into ediarum, oXygen, GAMS unchanged in structure |
+## Related work
 
-## Related
-
-- [data](data.md), [specification](specification.md), [architecture](architecture.md), [design](design.md), [journal](journal.md), [integration](integration.md)
-- Vault: [[teiCrafter]], [[Project Overview Wenzelsbibel]], [[coOCR HTR]], [[Project Overview EditionCrafter]]
+LEAF-Writer is the closest browser-based TEI and RDF editing comparison. teiCrafter differentiates itself through exact-source mutation, compositional source discovery, and fail-closed validation of the output bytes. A direct empirical round-trip comparison with a running LEAF-Writer instance remains outside the evidence base.

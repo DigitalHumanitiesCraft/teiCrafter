@@ -40,6 +40,8 @@ export function buildSuggestPrompt(text, opts = {}) {
     "You assist a TEI editor. From the transcribed text below, propose the TEI",
     "annotations that ACTUALLY appear in it. Do not invent or infer anything that is",
     "not present. Use the exact surface form as written for each span.",
+    "Every span must be non-empty and contained within one text line. Copy it",
+    "verbatim, including capitalization and punctuation; never cross a line break.",
     "",
     "Return ONLY a JSON array, no prose and no code fence. Each element is one of:",
     '  {"kind":"entity","type":"person|place|org|work|event","name":"<canonical>","span":"<surface form>"}',

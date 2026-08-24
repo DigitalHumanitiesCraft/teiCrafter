@@ -29,6 +29,7 @@ import { createIndexPanel, DEFAULT_SECTIONS } from "./index-panel.js";
 import * as standoff from "./standoff.js";
 import { requireCtx } from "./ctx.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
+import { exportableEntityTypes } from "./interchange.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -52,12 +53,13 @@ const EDITABLE_BY_INDEX_KEY = (() => {
  * indices (project.indices, the parseManifest output). Returns one descriptor
  * per declared index, in declaration order, using the manifest's own label as
  * the heading; a non-mappable index becomes a read-only descriptor (visible,
- * add disabled, with an explanation), never dropped. With no declared indices
- * (undefined, not an array, or empty) it returns null so the caller falls back
- * to the panel's built-in DEFAULT_SECTIONS. Pure: no DOM, no project imports.
+ * add disabled, with an explanation), never dropped. With no indices
+ * declaration it returns null so the caller falls back to the built-in
+ * sections. An explicit empty array remains empty and closes the inventory.
+ * Pure: no DOM, no project imports.
  */
 export function sectionsForIndices(indices) {
-  if (!Array.isArray(indices) || indices.length === 0) return null;
+  if (!Array.isArray(indices)) return null;
   return indices.map((idx) => {
     const key = (idx && idx.key ? String(idx.key) : "").toLowerCase();
     const label = idx && idx.label ? String(idx.label) : (idx && idx.key ? String(idx.key) : "Index");
@@ -73,6 +75,21 @@ export function sectionsForIndices(indices) {
       type: key || "index", key: key || "index", label, addLabel: "",
       readOnly: true,
       readOnlyNote: `The "${label}" index has no editable entity type in this editor; it is shown read-only.`,
+    };
+  });
+}
+
+/** Disable creation for section types the active interchange cannot persist. */
+export function sectionsForEntityTypes(sections, allowedTypes) {
+  if (!Array.isArray(sections)) return sections;
+  if (!Array.isArray(allowedTypes)) return sections;
+  const allowed = new Set(allowedTypes);
+  return sections.map((section) => {
+    if (section.readOnly || allowed.has(section.type)) return section;
+    return {
+      ...section,
+      addDisabled: true,
+      addDisabledNote: "The project target cannot persist this entity type. Existing entries remain available for review or removal.",
     };
   });
 }
@@ -170,7 +187,11 @@ export function createEntityIndex(ctx) {
     // otherwise sectionsForIndices returns null and the panel falls back to its
     // built-in default (the five entity sections), so non-project documents and
     // PID-detected profiles are unaffected.
-    const sections = sectionsForIndices(app.project ? app.project.indices : null);
+    const declared = sectionsForIndices(app.project ? app.project.indices : null);
+    const sections = sectionsForEntityTypes(
+      declared || DEFAULT_SECTIONS,
+      exportableEntityTypes(app.project),
+    );
     panel.render(all, sections);
     applyFilter($("idx-filter") ? $("idx-filter").value : "");
   }

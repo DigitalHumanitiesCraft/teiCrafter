@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="drama-paginated">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Paginated drama profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>An invented dramatic scene spanning two page images.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface xml:id="drama-surface-1" n="1">
+      <graphic url="drama-001.jpg"/>
+    </surface>
+    <surface xml:id="drama-surface-2" n="2">
+      <graphic url="drama-002.jpg"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <div type="act" n="1" xml:id="drama-act-1">
+        <head>Act I</head>
+        <pb xml:id="drama-page-1" n="1" facs="#drama-surface-1"/>
+        <stage type="setting">A reading room in the evening.</stage>
+        <sp xml:id="drama-turn-1">
+          <speaker>The Archivist</speaker>
+          <p>The catalogue is ready for inspection.</p>
+        </sp>
+        <pb xml:id="drama-page-2" n="2" facs="#drama-surface-2"/>
+        <sp xml:id="drama-turn-2">
+          <speaker>The Researcher</speaker>
+          <p>Then let us compare the witnesses.</p>
+        </sp>
+      </div>
+    </body>
+  </text>
+</TEI>

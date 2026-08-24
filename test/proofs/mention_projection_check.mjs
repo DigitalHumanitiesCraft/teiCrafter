@@ -201,6 +201,46 @@ check(parseDocument(wdoc.raw).serialize() === wdoc.raw,
 check(wrapRange(wstate.doc, wcell.node, wrel[0], wrel[1], () => "<persName>oops</persName>") === wstate.doc,
   "a build that loses reading text is refused (SAME doc)");
 
+// --- 10. typed TEI carriers with internal refs are entity mentions -----------
+
+const TYPED = `<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  ${HEADER}
+  <standOff>
+    <listPerson><person xml:id="p1"><persName>Ada</persName></person></listPerson>
+    <listPlace><place xml:id="pl1"><placeName>Graz</placeName></place></listPlace>
+    <listOrg><org xml:id="o1"><orgName>Academy</orgName></org></listOrg>
+  </standOff>
+  <text><body><p><seg><persName ref="#p1">Ada</persName></seg> <placeName ref="#pl1">Graz</placeName> <orgName ref="#o1">Academy</orgName> <rs ref="#p1">Analyst</rs> <name ref="#p1">Lovelace</name> <persName ref="GND:123">External</persName> <orgName ref="#missing">Dangling</orgName></p></body></text>
+</TEI>`;
+const typed = parseEdition(TYPED);
+for (const [text, id] of [
+  ["Ada", "p1"],
+  ["Graz", "pl1"],
+  ["Academy", "o1"],
+  ["Analyst", "p1"],
+  ["Lovelace", "p1"],
+]) {
+  const cell = cellByText(typed, text);
+  check(cell && cell.mention === id && cell.layers[0].kind === "mention",
+    `<${cell?.layers[0]?.localName || "typed-name"} ref="#${id}"> projects as an entity mention`);
+}
+const typedNested = cellByText(typed, "Ada");
+check(typedNested.layers.length === 2
+  && typedNested.layers[0].localName === "persName"
+  && typedNested.layers[0].kind === "mention"
+  && typedNested.layers[1].localName === "seg"
+  && typedNested.layers[1].kind === "markup",
+"typed mention classification preserves its surrounding generic markup layer");
+const externalTyped = cellByText(typed, "External");
+check(externalTyped.mention === null
+  && externalTyped.layers.length === 1
+  && externalTyped.layers[0].kind === "markup",
+"a typed carrier with an external ref remains generic markup");
+const danglingTyped = cellByText(typed, "Dangling");
+check(danglingTyped.mention === "missing" && danglingTyped.layers[0].kind === "mention",
+  "a dangling internal pointer remains visible as an entity mention diagnostic");
+check(serialize(typed) === TYPED, "typed mention projection is byte-neutral");
+
 // --- summary -----------------------------------------------------------------
 
 console.log("=".repeat(60));

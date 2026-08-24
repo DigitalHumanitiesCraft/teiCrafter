@@ -3,9 +3,10 @@
  *
  * Precursor of the declarative project manifest (teicrafter.project.json,
  * decision 2026-06-10): a profile is detected from the loaded document itself
- * (its publicationStmt PID) and currently contributes one thing, an image
- * resolver that turns a surface's <graphic url> into an OpenSeadragon tile
- * source. The Wenzelsbibel codex references its page images by bare filename
+ * and contributes project-specific behavior when a manifest is unavailable.
+ * A profile may be detected from a narrow root or publicationStmt signature.
+ * The Wenzelsbibel profile contributes an image resolver that turns a surface's
+ * <graphic url> into an OpenSeadragon tile source. The codex references its page images by bare filename
  * (e.g. "00000010.jpg") while the ÖNB serves them through the IIIF Image API
  * as .jp2; the resolver maps filename -> info.json URL so OSD deep-zooms real
  * tiles instead of fetching one enormous plain jpg. When the manifest lands
@@ -19,6 +20,13 @@
 import { firstByLocal, elementsByLocal, getAttr, decodeEntities } from "./tei-document.js";
 
 const PROFILES = [
+  {
+    id: "zbz-hersch",
+    name: "ZBZ Jeanne Hersch",
+    teiType: "naegeli",
+    interchange: "inline-gnd",
+    exportableEntityTypes: ["person", "org", "work"],
+  },
   {
     id: "wenzelsbibel",
     name: "Wenzelsbibel (Codex 2759)",
@@ -44,9 +52,13 @@ export function readPid(doc) {
 
 /** Detect the built-in profile for a loaded document, or null. */
 export function detectProject(doc) {
+  const tei = firstByLocal(doc.root, "TEI");
+  const rootType = getAttr(tei, "type");
+  const rootProfile = PROFILES.find((p) => p.teiType && p.teiType === rootType);
+  if (rootProfile) return rootProfile;
   const pid = readPid(doc);
   if (!pid) return null;
-  return PROFILES.find((p) => p.pidPattern.test(pid)) || null;
+  return PROFILES.find((p) => p.pidPattern && p.pidPattern.test(pid)) || null;
 }
 
 /**

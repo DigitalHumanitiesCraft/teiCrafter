@@ -81,7 +81,7 @@ check(state.cellById.get("w1").mention === persId, "the cell projects the mentio
 
 const noted = commit("addNoteForNode(w1)",
   (doc) => addNoteForNode(doc, state.cellById.get("w1").node, null, "needs review"));
-check(noted.notes.get("w1") === "needs review", "the returned note index carries the new note");
+check(noted.notes.get("w1")[0] === "needs review", "the returned note index carries the new note");
 noop("addNoteForNode(empty text)", (doc) => addNoteForNode(doc, state.cellById.get("w1").node, null, "  "));
 
 // --- 4. textual criticism --------------------------------------------------------

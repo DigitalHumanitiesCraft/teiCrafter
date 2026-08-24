@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="critical-edition">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Critical edition profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <listWit>
+          <witness xml:id="witness-a">Manuscript A, the base witness.</witness>
+          <witness xml:id="witness-b">Manuscript B, the variant witness.</witness>
+        </listWit>
+      </sourceDesc>
+    </fileDesc>
+    <encodingDesc>
+      <variantEncoding method="double-end-point" location="external"/>
+    </encodingDesc>
+  </teiHeader>
+  <text>
+    <body>
+      <div type="edition" xml:id="edition-text">
+        <p><anchor xml:id="lemma-start"/>The harbour is calm<anchor xml:id="lemma-end"/> tonight.</p>
+      </div>
+    </body>
+  </text>
+  <standOff>
+    <listApp>
+      <app xml:id="apparatus-1" from="#lemma-start" to="#lemma-end">
+        <lem wit="#witness-a">The harbour is calm</lem>
+        <rdg wit="#witness-b">The harbour lies still</rdg>
+      </app>
+    </listApp>
+  </standOff>
+</TEI>

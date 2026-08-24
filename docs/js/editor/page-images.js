@@ -7,25 +7,31 @@
  *   - an absolute http/data/blob URL passes through untouched;
  *   - a bare filename resolves against an in-memory store (app.pageImages),
  *     populated either by the text+image on-ramp (uploaded File objects) or by
- *     reading the files back from the open project folder.
+ *     reading the files back from the open project folder or a separately
+ *     attached local facsimile folder.
  *
- * Images live in memory as object URLs until a Save into a project folder writes
- * them next to the TEI; reopening that folder resolves the filenames again, so a
- * saved edition shows its page images. Extracted from editor-app.js so the image
- * concern (which the facsimile roadmap will grow) stays in one cohesive place.
+ * Uploaded images live in memory as object URLs until a Save into a project
+ * folder writes them next to the TEI. Images attached from a separate folder
+ * stay read-only and are never copied by Save. Extracted from editor-app.js so
+ * the image concern stays in one cohesive place.
  *
  * Contract:
- *   createPageImages(ctx) -> { revoke, resolve, resolveFromFolder,
- *                              referencedNames, countUnpersisted, persist, fromUploads }
+ *   createPageImages(ctx) -> { revoke, resolve, resolveFromFolder, attachFolder,
+ *                              supportsFolderAttachment, referencedNames,
+ *                              countUnpersisted, persist, fromUploads }
  *   ctx: { app, rerenderPanel() }   // app: shared editor state; rerenderPanel: re-render the active right panel
  *
- * Each store record is { url, blob, type, persisted }: url displays it, blob is
- * the bytes to write, persisted is true once the bytes are on disk (read back
- * from the folder, or written by a Save), so a later Save never rewrites them.
+ * Each store record is { url, blob, type, persisted, external? }: url displays
+ * it, blob is the bytes available to write, and persisted prevents a later Save
+ * from rewriting files already on disk. external marks a separately attached
+ * local source.
  */
 
 // Graphic urls that need no store resolution (already loadable as-is).
 const RE_ABSOLUTE_URL = /^(?:https?:|data:|blob:)/i;
+const isBareFilename = (value) => !!value
+  && !RE_ABSOLUTE_URL.test(value)
+  && !/[\\/]/.test(value);
 
 export function createPageImages(ctx) {
   const { app, rerenderPanel } = ctx;
@@ -58,7 +64,7 @@ export function createPageImages(ctx) {
   function referencedNames() {
     const names = new Set();
     for (const s of (app.state && app.state.surfaces) || []) {
-      if (s.graphic && !RE_ABSOLUTE_URL.test(s.graphic)) names.add(s.graphic);
+      if (isBareFilename(s.graphic)) names.add(s.graphic);
     }
     return names;
   }
@@ -98,23 +104,74 @@ export function createPageImages(ctx) {
    * already on disk). Re-renders the facsimile when anything was found. Best
    * effort: a missing or unreadable file is skipped.
    */
-  async function resolveFromFolder() {
-    const dir = app.projectFolder && app.projectFolder.dir;
-    if (!dir || !app.state) return;
-    const wanted = new Set();
-    for (const s of app.state.surfaces || []) {
-      if (s.graphic && !RE_ABSOLUTE_URL.test(s.graphic) && !app.pageImages.has(s.graphic)) wanted.add(s.graphic);
-    }
+  async function resolveFromDirectory(dir, replace = false, external = false) {
+    const wanted = [...referencedNames()].filter((name) => replace || !app.pageImages.has(name));
     let found = 0;
+    let changed = 0;
+    const missing = [];
     for (const name of wanted) {
+      const previous = app.pageImages.get(name);
       try {
         const handle = await dir.getFileHandle(name);
         const file = await handle.getFile();
-        app.pageImages.set(name, { url: URL.createObjectURL(file), blob: file, type: file.type || "", persisted: true });
+        if (previous?.url) URL.revokeObjectURL(previous.url);
+        app.pageImages.set(name, {
+          url: URL.createObjectURL(file),
+          blob: file,
+          type: file.type || "",
+          persisted: true,
+          external,
+        });
         found++;
-      } catch { /* not in the folder, or unreadable: leave it unresolved */ }
+        changed++;
+      } catch {
+        if (replace && previous?.external) {
+          if (previous.url) URL.revokeObjectURL(previous.url);
+          app.pageImages.delete(name);
+          changed++;
+        }
+        missing.push(name);
+      }
     }
-    if (found && app.panel === "facs") rerenderPanel();
+    if (changed && app.panel === "facs") rerenderPanel();
+    return { found, missing, requested: wanted.length };
+  }
+
+  /** Resolve bare graphic filenames beside a document opened from a project. */
+  async function resolveFromFolder() {
+    const dir = app.projectFolder && app.projectFolder.dir;
+    if (!dir || !app.state) return { found: 0, missing: [], requested: 0 };
+    return resolveFromDirectory(dir);
+  }
+
+  /** Whether this browser can grant read access to a separately chosen folder. */
+  function supportsFolderAttachment() {
+    const picker = typeof window === "undefined"
+      ? null
+      : /** @type {any} */ (window).showDirectoryPicker;
+    return typeof picker === "function";
+  }
+
+  /**
+   * Attach a read-only facsimile directory for this browser session. The files
+   * become object URLs only; they are marked persisted so Save never copies them.
+   */
+  async function attachFolder() {
+    if (!supportsFolderAttachment()) {
+      return { supported: false, cancelled: false, found: 0, missing: [], requested: 0 };
+    }
+    let dir;
+    try {
+      const picker = /** @type {any} */ (window).showDirectoryPicker;
+      dir = await picker({ mode: "read" });
+    } catch (err) {
+      if (err?.name === "AbortError") {
+        return { supported: true, cancelled: true, found: 0, missing: [], requested: 0 };
+      }
+      throw err;
+    }
+    const result = await resolveFromDirectory(dir, true, true);
+    return { supported: true, cancelled: false, folderName: dir.name || "selected folder", ...result };
   }
 
   /** Build a store map from uploaded File objects (on-ramp), keyed by filename. */
@@ -126,5 +183,15 @@ export function createPageImages(ctx) {
     return map;
   }
 
-  return { revoke, resolve, resolveFromFolder, referencedNames, countUnpersisted, persist, fromUploads };
+  return {
+    revoke,
+    resolve,
+    resolveFromFolder,
+    attachFolder,
+    supportsFolderAttachment,
+    referencedNames,
+    countUnpersisted,
+    persist,
+    fromUploads,
+  };
 }

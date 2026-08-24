@@ -4,6 +4,11 @@ output/
 __pycache__/
 *.pyc
 *.stackdump
+node_modules/
+dist/
+playwright-report/
+test-results/
+blob-report/
 
 # Example data under docs/data/editor/: the payload stays local-only by default,
 # only the project manifest, README and NOTICE are tracked. Named exceptions

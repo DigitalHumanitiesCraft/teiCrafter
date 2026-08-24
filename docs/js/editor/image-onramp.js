@@ -55,14 +55,20 @@ export function setupImageOnramp(ctx) {
   // page order; index i binds to page i + 1.
   let items = [];
   let root = null;
+  let returnFocus = null;
   const ids = {};
 
   function ensureDom() {
     if (root) return;
-    const card = el("div", { class: "ed-modal-card", role: "dialog", "aria-modal": "true" });
+    const card = el("div", {
+      class: "ed-modal-card",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "onramp-title",
+    });
 
     const head = el("div", { class: "ed-modal-head" }, [
-      el("span", { text: "New from text and page images" }),
+      el("span", { id: "onramp-title", text: "New from text and page images" }),
       (ids.close = el("button", { class: "ed-btn", title: "Close", text: "Close" })),
     ]);
 
@@ -84,7 +90,11 @@ export function setupImageOnramp(ctx) {
       ids.text,
     ]);
 
-    ids.drop = el("div", { class: "onramp-drop", tabindex: "0" }, [
+    ids.drop = el("div", {
+      class: "onramp-drop",
+      role: "group",
+      "aria-label": "Page image files",
+    }, [
       el("span", { class: "onramp-drop-hint", text: "Drop page images here, in any order, or" }),
       (ids.addBtn = el("button", { class: "ed-btn", type: "button", text: "Add images..." })),
     ]);
@@ -204,6 +214,7 @@ export function setupImageOnramp(ctx) {
 
   function open() {
     ensureDom();
+    returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     revokeThumbs();
     ids.name.value = "letter";
     ids.text.value = "";
@@ -217,6 +228,8 @@ export function setupImageOnramp(ctx) {
     revokeThumbs();
     if (root) root.hidden = true;
     renderThumbs();
+    if (returnFocus && returnFocus.isConnected) returnFocus.focus();
+    returnFocus = null;
   }
 
   async function run() {
@@ -260,7 +273,28 @@ export function setupImageOnramp(ctx) {
     ids.drop.addEventListener("drop", (e) => { if (e.dataTransfer) addFiles(e.dataTransfer.files); });
     // Backdrop click and Escape close.
     root.addEventListener("click", (e) => { if (e.target === root) close(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && root && !root.hidden) close(); });
+    document.addEventListener("keydown", (e) => {
+      if (!root || root.hidden) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const focusable = [...root.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((node) => !node.hidden);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
   }
 
   return { open };

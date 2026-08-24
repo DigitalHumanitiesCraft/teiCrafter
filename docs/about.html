@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <title>About teiCrafter</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* About page, tokens only (no raw hex). Same frame as the landing page. */
@@ -42,16 +41,18 @@
             edition, shows the text page by page next to its facsimile, and lets you correct
             the text and annotate persons, places, organisations and works with authority
             identifiers (GND, GeoNames, Wikidata). It is a static page that runs entirely in
-            the browser; the edition is read from and saved to a local file on your computer
-            and is not uploaded anywhere.</p>
+            the browser. The deterministic editing path reads the edition from and saves it to
+            a local file on your computer. Optional AI and lookup actions send the context
+            described below directly to the selected external service.</p>
 
         <h2>What it is for, and what it is not</h2>
         <p>teiCrafter is a working environment for correcting and annotating TEI editions in
             the browser. Most editions reach it as the output of OCR or HTR pipelines that a
             person now verifies and refines. Plaintext files in a project folder open as
-            minimal TEI drafted by a fixed rule (the text is carried verbatim); a separate,
-            optional entry that drafts TEI from plain text with a language model exists and
-            is currently switched off. It is not an XML development environment:
+            minimal TEI drafted by a fixed rule (the text is carried verbatim). A separate,
+            optional entry can draft TEI from plain text with a language model, and the editor
+            can request model proposals for the current folio. A per-user control switches
+            both AI surfaces off. It is not an XML development environment:
             there is no schema design and no transformation toolchain. Because saving changes
             nothing outside your deliberate edits, the same files can move between teiCrafter
             and tools such as oXygen or ediarum without one disturbing the other's work. It
@@ -96,22 +97,28 @@
             possible). Editorial notes are written as <code>&lt;note target&gt;</code> entries,
             and textual-critical markup wraps a passage in <code>&lt;unclear&gt;</code>,
             <code>&lt;del&gt;</code> or <code>&lt;add&gt;</code>, or marks a
-            <code>&lt;gap/&gt;</code>. All of this stays inside the saving behaviour described
-            above; nothing is stored outside the file.</p>
+            <code>&lt;gap/&gt;</code>. Confirmed annotations become part of the TEI and follow the
+            lossless saving behaviour described above. Browser storage also retains editor
+            preferences, recent file handles, and one eligible unsaved draft for recovery.</p>
 
         <h2>What leaves the browser</h2>
-        <p>The edition itself is never transmitted; it is read from and saved to a local file.
-            Network requests occur for three things: page images are fetched from the
+        <p>Opening, editing, and saving a TEI file does not transmit it to teiCrafter or a model
+            provider. Page images are fetched from the
             repositories the edition points to (for the examples: GAMS and the IIIF service of
             the Austrian National Library); an authority lookup sends the search term you typed
-            to the chosen register (lobid.org for the GND, wikidata.org, geonames.org); and the
-            page itself loads fonts and the OpenSeadragon viewer from public CDNs. When the
-            optional language-model entry is enabled, the text you paste there is sent to the
-            provider you select, and the API key is held in memory for the session only.
+            to the chosen register (lobid.org for the GND, wikidata.org, geonames.org). Fonts,
+            the OpenSeadragon viewer and the TEI vocabulary are served with teiCrafter. "New from
+            text (LLM)" sends the pasted text and applicable mapping instructions to the selected
+            model provider. "Propose (AI)" sends the current folio text with the active project
+            prompt, mapping, and annotation vocabulary to that provider. The API key is held in
+            memory for the session only.
             The TEI element and attribute vocabulary the editor can suggest comes from a
             vendored, versioned copy of the TEI P5 Guidelines compilation (currently 4.11.0,
             published by the TEI Consortium under CC-BY 3.0 and BSD-2-Clause) that is served
-            with the page itself; requesting it transmits nothing of your edition.</p>
+            with the page itself; requesting it transmits nothing of your edition. The repository's
+            <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/main/SECURITY.md"
+            target="_blank" rel="noopener">security and data-handling statement</a> lists the
+            external and local browser data flows.</p>
 
         <h2>Browser requirements</h2>
         <p>A current browser with ES6-module support is required. Saving in place uses the File
@@ -121,9 +128,11 @@
         <h2>Machine-generated content</h2>
         <p>Content that a machine produced is <span class="ab-ai">marked violet</span> and
             counted as unreviewed until a human verifies it; violet is used for
-            machine-generated content and for nothing else. An optional entry that lets a
-            language model draft an initial TEI from plaintext exists in the codebase and is
-            switched off in this preview.</p>
+            machine-generated content and for nothing else. A generated initial TEI opens as
+            an unreviewed draft. In-context entity, markup, textual-criticism, and note proposals
+            carry <code>resp="#ai"</code>. Inline proposals provide confirm and reject controls
+            in the layers inspector; proposed standOff notes provide the same controls at their
+            violet note marker.</p>
 
         <h2>The example projects</h2>
         <p>The tool is developed against three real projects, not all of them editions in the
@@ -148,9 +157,11 @@
             Vogeler, G. (2025): When it was 2024. Generative AI in the Field of Digital
             Scholarly Editions. <i>Zeitschrift f&uuml;r digitale Geisteswissenschaften</i> 10,
             <a href="https://doi.org/10.17175/2025_008" target="_blank"
-            rel="noopener">doi:10.17175/2025_008</a>. The repository is licensed under
-            <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank"
-            rel="noopener">CC BY 4.0</a>.</p>
+            rel="noopener">doi:10.17175/2025_008</a>. The source code is available under the
+            <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/main/LICENSE"
+            target="_blank" rel="noopener">MIT License</a>. Bundled reference data and fixtures
+            retain the rights stated in their notices, source files, or embedded rights
+            statements.</p>
 
         <h2>Who makes this</h2>
         <p>teiCrafter is a research tool by <a href="https://dhcraft.org" target="_blank"

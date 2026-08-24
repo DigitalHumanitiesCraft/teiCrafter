@@ -19,8 +19,10 @@
 import {
   parseDocument,
   walk,
-  getAttr,
-  elementsByLocal,
+  getUnqualifiedAttr as getAttr,
+  getXmlId,
+  teiElementsByLocal as elementsByLocal,
+  isTeiElement,
   textOf,
   isReadingText,
   readingRoot,
@@ -33,11 +35,12 @@ import {
   editTextNode,
   editTextAndAttrs,
   hasAttrQName,
-  countLocals,
   escapeText,
   decodeEntities,
   splitEdge,
 } from "./tei-document.js";
+import { resolveSourceProfile } from "./source-profile.js";
+import { resolvedSpanGroups, spanEntityId } from "./span-projection.js";
 
 // Back-compat re-exports (old names used elsewhere).
 export const escapeXmlText = escapeText;
@@ -64,6 +67,11 @@ const BLOCK_LINE = new Set(["p", "head", "lg", "ab"]);
 // Combined with MILESTONE_LOCALS (empty segmenting markers) and <w> (the dual-
 // reading token, not an annotation), this is the complete non-layer exclusion.
 const STRUCTURAL_LOCALS = new Set(["p", "head", "lg", "ab", "l", "div", "body", "text"]);
+
+// Inline TEI name carriers that can point into the editor's standOff register.
+// A hash pointer denotes the internal entity layer; external authority pointers
+// remain ordinary markup until an interchange profile explicitly lifts them.
+const MENTION_LOCALS = new Set(["name", "persName", "placeName", "orgName", "rs"]);
 
 /**
  * Map a DISPLAY range (offsets into the decoded text the renderer shows, i.e.
@@ -146,15 +154,12 @@ export function cellRawOffset(cell, displayOffset) {
   return rel == null ? null : cell.start + rel;
 }
 
-/** Count tracked element tags in a raw TEI string (namespace-agnostic, regex).
- *  Kept string-based because the harness calls it on a serialized candidate. */
+/** Count tracked TEI elements in a raw candidate, independent of its prefix. */
 export function countTags(raw) {
   const tags = ["surface", "zone", "standOff", "note", "w", "lb", "l", "pb", "p"];
+  const doc = parseDocument(raw);
   const out = {};
-  for (const t of tags) {
-    const re = new RegExp("<" + t + "\\b", "g");
-    out[t] = (raw.match(re) || []).length;
-  }
+  for (const tag of tags) out[tag] = elementsByLocal(doc.root, tag).length;
   return out;
 }
 
@@ -166,15 +171,18 @@ export function countTags(raw) {
  */
 function buildState(doc) {
   const root = readingRoot(doc);
+  const sourceProfile = resolveSourceProfile({ doc });
   const { surfaces, byId: surfaceById } = readSurfaces(doc);
   const zoneIndex = indexZonesById(surfaces);
-  const profile = elementsByLocal(root, "w").length > 0 ? "word" : "line";
+  let hasWordTokens = false;
 
   // Pre-order event stream: page breaks, line starts, and reading-text cells,
   // all in document order.
   const events = [];
   walk(root, (n) => {
     if (n.type === "element") {
+      if (!isTeiElement(n)) return;
+      if (n.localName === "w") hasWordTokens = true;
       if (n.localName === "pb") events.push({ k: "pb", el: n });
       else if (n.localName === "lb" || n.localName === "l") events.push({ k: "line", el: n });
       else if (BLOCK_LINE.has(n.localName)) events.push({ k: "block" });
@@ -197,11 +205,13 @@ function buildState(doc) {
   let curLine = null;
   let cellSeq = 0;
   let hasDualReadings = false;
+  const profile = hasWordTokens ? "word" : "line";
 
   const newFolio = (pbEl) => {
     const surfaceId = pbEl ? stripHash(getAttr(pbEl, "facs")) : null;
     curFolio = {
       index: folios.length,
+      pb: pbEl || null,
       n: pbEl ? getAttr(pbEl, "n") : null,
       surfaceId,
       surface: surfaceId ? surfaceById.get(surfaceId) || null : null,
@@ -232,24 +242,31 @@ function buildState(doc) {
   const cellFacs = (node) => {
     let p = node.parent;
     while (p && p.type === "element") {
-      const f = getAttr(p, "facs");
+      const f = isTeiElement(p) ? getAttr(p, "facs") : null;
       if (f) return stripHash(f);
-      if (p.localName === "l" || p.localName === "p" || p.localName === "body") break;
+      if (isTeiElement(p) && (p.localName === "l" || p.localName === "p" || p.localName === "body")) break;
       p = p.parent;
     }
     return null;
   };
 
+  const internalMentionRef = (el) => {
+    if (!isTeiElement(el) || !MENTION_LOCALS.has(el.localName)) return null;
+    const ref = getAttr(el, "ref");
+    if (!ref || ref.charAt(0) !== "#" || ref.length === 1) return null;
+    return ref.slice(1);
+  };
+
   // M2.5: read-only mention projection. Walk the text node's parent chain to the
-  // nearest <name ref> wrapper (the shape linkMention writes) and surface the
-  // referenced entity id, so the renderer can make the link visible. The walk
-  // stops at the line/paragraph level: a mention never leaks across reading
-  // units. No offsets, splices, or serialize() behaviour change.
+  // nearest typed TEI name carrier with an internal pointer and surface the
+  // referenced entity id. The walk stops at the line/paragraph level: a mention
+  // never leaks across reading units. No offsets or serialization behaviour change.
   const mentionRef = (node) => {
     let p = node.parent;
     while (p && p.type === "element") {
-      if (p.localName === "name") return stripHash(getAttr(p, "ref"));
-      if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") return null;
+      const ref = internalMentionRef(p);
+      if (ref) return ref;
+      if (isTeiElement(p) && (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body")) return null;
       p = p.parent;
     }
     return null;
@@ -262,11 +279,24 @@ function buildState(doc) {
   const dualReading = (node) => {
     let p = node.parent;
     while (p && p.type === "element") {
-      if (p.localName === "w") return { el: p, orig: getAttr(p, "orig"), norm: getAttr(p, "norm") };
-      if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") return null;
+      if (isTeiElement(p, "w")) return { el: p, orig: getAttr(p, "orig"), norm: getAttr(p, "norm") };
+      if (isTeiElement(p) && (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body")) return null;
       p = p.parent;
     }
     return null;
+  };
+
+  const editingKind = (node) => {
+    let parent = node.parent;
+    while (parent && parent.type === "element") {
+      if (isTeiElement(parent)
+        && (parent.localName === "w" || parent.localName === "pc")) return "token";
+      if (isTeiElement(parent)
+        && (parent.localName === "p" || parent.localName === "head"
+          || parent.localName === "note" || parent.localName === "body")) break;
+      parent = parent.parent;
+    }
+    return "text-run";
   };
 
   // F5: read-only overlap projection. Collect every inline annotation element that
@@ -286,14 +316,15 @@ function buildState(doc) {
     const out = [];
     let p = node.parent;
     while (p && p.type === "element") {
+      if (!isTeiElement(p)) { p = p.parent; continue; }
       const ln = p.localName;
       if (ln === "p" || ln === "head" || ln === "note" || ln === "body") break;
       if (!(STRUCTURAL_LOCALS.has(ln) || MILESTONE_LOCALS.has(ln) || ln === "w")) {
-        const ref = getAttr(p, "ref");
+        const ref = internalMentionRef(p);
         const resp = getAttr(p, "resp") || null;
         // el is the parsed element node, so a consumer (the overlap inspector) can
         // target THIS layer's element, not only the cell's innermost wrapper.
-        if (ln === "name" && ref != null) out.push({ kind: "mention", localName: ln, ref: stripHash(ref), el: p, resp });
+        if (ref != null) out.push({ kind: "mention", localName: ln, ref, el: p, resp });
         else if (CRITICAL_LOCALS.has(ln)) out.push({ kind: "critical", localName: ln, ref: null, el: p, resp });
         else out.push({ kind: "markup", localName: ln, ref: null, el: p, resp });
       }
@@ -306,12 +337,23 @@ function buildState(doc) {
   // for cells (synthetic positional fallback otherwise). Shared by text and gap cells.
   const makeCellId = (node) => {
     const anc = ancestorWithXmlId(node);
-    let id = anc ? getAttr(anc, "id") : null;
+    let id = anc ? getXmlId(anc) : null;
     if (!id || cellById.has(id)) id = (id ? id + "#" : "c") + cellSeq;
     cellSeq++;
     return id;
   };
   const pushCell = (cell) => {
+    const previous = curLine.cells[curLine.cells.length - 1] || null;
+    if (!cell.gap && previous && !previous.gap
+      && previous.node.parent === cell.node.parent) {
+      const siblings = cell.node.parent.children || [];
+      const from = siblings.indexOf(previous.node);
+      const to = siblings.indexOf(cell.node);
+      cell.joinLeft = from >= 0 && to > from
+        && siblings.slice(from + 1, to).every((node) => isTeiElement(node, "anchor"));
+    } else {
+      cell.joinLeft = false;
+    }
     curLine.cells.push(cell);
     cells.push(cell);
     cellById.set(cell.id, cell);
@@ -339,6 +381,7 @@ function buildState(doc) {
         rawText: doc.raw.slice(e.el.outerStart, e.el.outerEnd),
         facs: cellFacs(e.el) || curLine.facs,
         gap: true,
+        editingKind: "gap",
         crit: "gap",
         critSole: false,
         mention: null,
@@ -355,7 +398,7 @@ function buildState(doc) {
     // direct parent). critSole records whether this node is the wrapper's sole
     // content, i.e. whether "clear" can remove it without touching sibling content.
     const cp = e.node.parent;
-    const critParent = cp && cp.type === "element" && CRITICAL_LOCALS.has(cp.localName) ? cp : null;
+    const critParent = isTeiElement(cp) && CRITICAL_LOCALS.has(cp.localName) ? cp : null;
     const w = dualReading(e.node);
     if (w && w.norm != null) hasDualReadings = true;
     pushCell({
@@ -367,6 +410,7 @@ function buildState(doc) {
       rawText: doc.raw.slice(e.node.start, e.node.end),
       facs: cellFacs(e.node) || curLine.facs,
       gap: false,
+      editingKind: editingKind(e.node),
       crit: critParent ? critParent.localName : null,
       critSole: critParent ? (critParent.children.length === 1 && critParent.children[0] === e.node) : false,
       mention: mentionRef(e.node),
@@ -380,7 +424,31 @@ function buildState(doc) {
   // so this is lossless; it only cleans the reading view.
   for (const f of folios) f.lines = f.lines.filter((l) => l.cells.length > 0);
 
-  return {
+  // Stand-off entity spans project onto the same cells as inline mentions. The
+  // span remains the editable layer; its anchor interval supplies the coverage.
+  const standOffGroups = doc.raw.includes("spanGrp") ? resolvedSpanGroups(doc) : [];
+  for (const group of standOffGroups) {
+    if (group.type !== "entity") continue;
+    for (const range of group.ranges) {
+      const ref = spanEntityId(range);
+      if (!ref) continue;
+      for (const cell of cells) {
+        if (cell.gap || cell.end <= range.start || cell.start >= range.end) continue;
+        cell.layers.push({
+          kind: "mention",
+          localName: "span",
+          ref,
+          el: range.span,
+          resp: range.resp,
+          standOff: true,
+          standOffGroupId: group.id,
+        });
+        if (!cell.mention) cell.mention = ref;
+      }
+    }
+  }
+
+  return applySourceProfile({
     raw: doc.raw,
     doc,
     profile,
@@ -393,13 +461,224 @@ function buildState(doc) {
     surfaceById,
     zoneIndex,
     folios,
+    sourceProfile,
     hasDualReadings,
+  }, sourceProfile);
+}
+
+function surfaceForUnit(state, unit) {
+  const anchor = unit.anchor;
+  if (isTeiElement(anchor, "surface")) {
+    const id = getXmlId(anchor);
+    return id ? state.surfaceById.get(id) || null : null;
+  }
+  const pointer = unit.facsimileRefs.find((value) => value.startsWith("#"));
+  return pointer ? state.surfaceById.get(pointer.slice(1)) || null : null;
+}
+
+/** Repartition the reading cells over the resolved source-specific navigation units. */
+export function applySourceProfile(state, sourceProfile) {
+  const units = sourceProfile?.navigation?.primary?.units || [];
+  if (!units.length) return { ...state, sourceProfile };
+
+  const folios = units.map((unit, index) => {
+    const anchor = unit.anchor;
+    const surface = surfaceForUnit(state, unit);
+    return {
+      index,
+      pb: isTeiElement(anchor, "pb") ? anchor : null,
+      n: isTeiElement(anchor, "pb") ? getAttr(anchor, "n") : unit.label,
+      surfaceId: surface?.id || null,
+      surface,
+      lines: [],
+      navigationUnit: unit,
+      reviewAnchor: anchor,
+      unitKind: sourceProfile.navigation.primary.id,
+    };
+  });
+
+  const unitForOffset = (offset) => {
+    let low = 0;
+    let high = units.length - 1;
+    while (low <= high) {
+      const middle = (low + high) >> 1;
+      const unit = units[middle];
+      if (offset < unit.start) high = middle - 1;
+      else if (offset >= unit.end) low = middle + 1;
+      else return middle;
+    }
+    return -1;
   };
+
+  for (const line of state.lines) {
+    let currentIndex = -1;
+    let currentLine = null;
+    for (const cell of line.cells) {
+      const unitIndex = unitForOffset(cell.start);
+      if (unitIndex < 0) continue;
+      if (unitIndex !== currentIndex) {
+        currentIndex = unitIndex;
+        currentLine = { ...line, cells: [] };
+        folios[unitIndex].lines.push(currentLine);
+      }
+      currentLine.cells.push(cell);
+    }
+  }
+  const lines = folios.flatMap((folio) => folio.lines);
+  return { ...state, folios, lines, sourceProfile };
 }
 
 /** Parse a raw TEI string into the editor model. */
 export function parseEdition(raw) {
   return buildState(parseDocument(raw));
+}
+
+/** Find a rendered cell's folio, line, and position within that line. */
+function cellLocation(state, cellId) {
+  for (let folioIndex = 0; folioIndex < state.folios.length; folioIndex++) {
+    const folio = state.folios[folioIndex];
+    for (let lineIndex = 0; lineIndex < folio.lines.length; lineIndex++) {
+      const line = folio.lines[lineIndex];
+      const cellIndex = line.cells.findIndex((cell) => cell.id === cellId);
+      if (cellIndex >= 0) return { folioIndex, lineIndex, line, cellIndex };
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve a multi-cell DOM selection to a structurally safe sequence of complete
+ * sibling <w> elements. Cross-folio, cross-line, partial-edge, non-word, and
+ * structurally crossing selections return { ok:false, code, message }.
+ */
+export function multiWordSelectionTarget(state, selection) {
+  if (!state || !selection) {
+    return { ok: false, code: "no-selection", message: "No readable selection is available." };
+  }
+  const start = cellLocation(state, selection.startCellId);
+  const end = cellLocation(state, selection.endCellId);
+  if (!start || !end) {
+    return { ok: false, code: "unknown-cell", message: "The selection no longer matches the current reading view." };
+  }
+  if (start.folioIndex !== end.folioIndex ||
+      (Number.isInteger(selection.folioIndex) && start.folioIndex !== selection.folioIndex)) {
+    return { ok: false, code: "cross-folio", message: "Annotations cannot cross page boundaries." };
+  }
+  if (start.line !== end.line) {
+    return { ok: false, code: "cross-line", message: "Annotations cannot cross line boundaries." };
+  }
+  if (start.cellIndex >= end.cellIndex) {
+    return { ok: false, code: "cell-order", message: "Select two or more adjacent word cells in reading order." };
+  }
+
+  const first = start.line.cells[start.cellIndex];
+  const last = start.line.cells[end.cellIndex];
+  if (selection.startOffset !== 0 || selection.endOffset !== last.text.length) {
+    return {
+      ok: false,
+      code: "partial-word",
+      message: "A multi-word annotation must include the complete first and last word so the XML stays well-formed.",
+    };
+  }
+  const cells = start.line.cells.slice(start.cellIndex, end.cellIndex + 1);
+  if (cells.some((cell) => cell.gap || !cell.w || !cell.w.el)) {
+    return { ok: false, code: "non-word-cell", message: "A multi-word annotation can contain adjacent <w> cells only." };
+  }
+  const elements = cells.map((cell) => cell.w.el);
+  if (new Set(elements).size !== elements.length) {
+    return { ok: false, code: "split-word", message: "A word with multiple text segments cannot be used as a multi-word boundary." };
+  }
+  const parent = elements[0].parent;
+  if (!isTeiElement(parent) || elements.some((element) => element.parent !== parent)) {
+    return { ok: false, code: "structural-crossing", message: "The selected words cross an XML structure and cannot share one wrapper." };
+  }
+  const positions = elements.map((element) => parent.children.indexOf(element));
+  if (positions.some((position) => position < 0)) {
+    return { ok: false, code: "structural-crossing", message: "The selected words are not source-contiguous siblings." };
+  }
+  let selectedIndex = 0;
+  for (const child of parent.children.slice(positions[0], positions[positions.length - 1] + 1)) {
+    if (child.type === "text") continue;
+    if (child !== elements[selectedIndex]) {
+      return { ok: false, code: "structural-crossing", message: "The selected words cross an XML structure and cannot share one wrapper." };
+    }
+    selectedIndex += 1;
+  }
+  if (selectedIndex !== elements.length) {
+    return { ok: false, code: "structural-crossing", message: "The selected words are not source-contiguous siblings." };
+  }
+  return {
+    ok: true,
+    kind: "multi-word",
+    cells,
+    cellIds: cells.map((cell) => cell.id),
+    elements,
+    folioIndex: start.folioIndex,
+    lineIndex: start.lineIndex,
+    text: String(selection.text || "").trim(),
+  };
+}
+
+/**
+ * The exact raw XML slice belonging to one rendered folio. A page begins at
+ * its `<pb>` and ends immediately before the next `<pb>`; reading text before
+ * the first page break belongs to the synthetic first folio. The final slice
+ * ends at the reading root's closing tag, leaving the document scaffold and
+ * every other page byte-identical.
+ */
+export function folioSourceSlice(state, folioIndex) {
+  const raw = state && typeof state.raw === "string" ? state.raw : "";
+  const folios = state && Array.isArray(state.folios) ? state.folios : [];
+  if (!folios.length) return { start: 0, end: raw.length, value: raw };
+
+  const index = Math.max(0, Math.min(folios.length - 1, Number(folioIndex) || 0));
+  const folio = folios[index];
+  const next = folios[index + 1] || null;
+  const root = readingRoot(state.doc);
+  const rootStart = root.contentStart != null ? root.contentStart : (root.start || 0);
+  const rootEnd = root.contentEnd != null ? root.contentEnd : (root.end || raw.length);
+  const explicit = folio.navigationUnit;
+  const start = Number.isInteger(explicit?.contentStart)
+    ? explicit.contentStart
+    : Number.isInteger(explicit?.start) ? explicit.start
+    : folio.pb && folio.pb.outerStart != null ? folio.pb.outerStart : rootStart;
+  const end = Number.isInteger(explicit?.contentEnd)
+    ? explicit.contentEnd
+    : Number.isInteger(explicit?.end) ? explicit.end
+    : next && next.pb && next.pb.outerStart != null ? next.pb.outerStart : rootEnd;
+  if (start < 0 || end < start || end > raw.length) {
+    return { start: 0, end: raw.length, value: raw };
+  }
+  return { start, end, value: raw.slice(start, end) };
+}
+
+/** The exact outer XML of the first element with this local name. */
+export function elementSourceSlice(state, localName) {
+  const raw = state && typeof state.raw === "string" ? state.raw : "";
+  const name = String(localName || "");
+  const element = state && state.doc && state.doc.root && name
+    ? elementsByLocal(state.doc.root, name)[0]
+    : null;
+  const start = element && element.outerStart;
+  const end = element && element.outerEnd;
+  if (!Number.isInteger(start) || !Number.isInteger(end)
+      || start < 0 || end < start || end > raw.length) return null;
+  return { start, end, value: raw.slice(start, end) };
+}
+
+/** Replace one previously resolved raw source slice in the canonical string. */
+export function spliceSourceSlice(state, slice, replacement) {
+  const raw = state && typeof state.raw === "string" ? state.raw : "";
+  if (!slice || !Number.isInteger(slice.start) || !Number.isInteger(slice.end)
+      || slice.start < 0 || slice.end < slice.start || slice.end > raw.length) {
+    throw new Error("Invalid source range");
+  }
+  return raw.slice(0, slice.start) + String(replacement) + raw.slice(slice.end);
+}
+
+/** Back-compatible page-specific name for the generic source splice. */
+export function spliceFolioSource(state, slice, replacement) {
+  return spliceSourceSlice(state, slice, replacement);
 }
 
 /**
@@ -427,7 +706,7 @@ export const editWordText = editCell;
 export function attrTargetForCell(cell) {
   if (!cell || cell.gap || !cell.node) return null;
   const p = cell.node.parent;
-  if (!p || p.type !== "element") return null;
+  if (!isTeiElement(p)) return null;
   if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") return null;
   return p;
 }
@@ -490,7 +769,7 @@ export function xmlIdSet(state) {
   const ids = new Set();
   walk(readingRoot(state.doc), (n) => {
     if (n.type === "element") {
-      const id = getAttr(n, "id");
+      const id = getXmlId(n);
       if (id) ids.add(id);
     }
   });
@@ -499,12 +778,13 @@ export function xmlIdSet(state) {
 
 /** A lightweight structural summary for the in-browser validation panel. */
 export function structuralSummary(state) {
-  const counts = countLocals(state.doc, [
-    "surface", "zone", "standOff", "note", "w", "lb", "l", "pb", "p", "div", "hi", "figure",
-  ]);
+  const counts = {};
+  for (const name of ["surface", "zone", "standOff", "note", "w", "lb", "l", "pb", "p", "div", "hi", "figure"]) {
+    counts[name] = elementsByLocal(state.doc.root, name).length;
+  }
   const ids = new Set();
   walk(state.doc.root, (n) => {
-    if (n.type === "element") { const id = getAttr(n, "id"); if (id) ids.add(id); }
+    if (n.type === "element") { const id = getXmlId(n); if (id) ids.add(id); }
   });
   return {
     counts,

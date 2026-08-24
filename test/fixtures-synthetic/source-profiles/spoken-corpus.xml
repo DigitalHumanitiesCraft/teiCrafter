@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<teiCorpus xmlns="http://www.tei-c.org/ns/1.0" xml:id="spoken-corpus">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Spoken corpus profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Two invented interview extracts encoded as separate TEI documents.</p>
+      </sourceDesc>
+    </fileDesc>
+    <profileDesc>
+      <particDesc>
+        <listPerson>
+          <person xml:id="speaker-a">
+            <persName>Speaker A</persName>
+          </person>
+          <person xml:id="speaker-b">
+            <persName>Speaker B</persName>
+          </person>
+        </listPerson>
+      </particDesc>
+    </profileDesc>
+  </teiHeader>
+  <TEI xml:id="interview-1">
+    <teiHeader>
+      <fileDesc>
+        <titleStmt>
+          <title>Interview extract one</title>
+        </titleStmt>
+        <publicationStmt>
+          <p>Synthetic test fixture.</p>
+        </publicationStmt>
+        <sourceDesc>
+          <p>Invented spoken testimony.</p>
+        </sourceDesc>
+      </fileDesc>
+    </teiHeader>
+    <text>
+      <body>
+        <u xml:id="utterance-1" who="#speaker-a">
+          <s xml:id="sentence-1"><w xml:id="word-1" lemma="catalogue">Catalogue</w> <w xml:id="word-2" lemma="be">is</w> <w xml:id="word-3" lemma="ready">ready</w><pc>.</pc></s>
+        </u>
+      </body>
+    </text>
+  </TEI>
+  <TEI xml:id="interview-2">
+    <teiHeader>
+      <fileDesc>
+        <titleStmt>
+          <title>Interview extract two</title>
+        </titleStmt>
+        <publicationStmt>
+          <p>Synthetic test fixture.</p>
+        </publicationStmt>
+        <sourceDesc>
+          <p>Invented spoken testimony.</p>
+        </sourceDesc>
+      </fileDesc>
+    </teiHeader>
+    <text>
+      <body>
+        <u xml:id="utterance-2" who="#speaker-b">
+          <s xml:id="sentence-2"><w xml:id="word-4" lemma="record">Records</w> <w xml:id="word-5" lemma="need">need</w> <w xml:id="word-6" lemma="context">context</w><pc>.</pc></s>
+        </u>
+      </body>
+    </text>
+  </TEI>
+</teiCorpus>

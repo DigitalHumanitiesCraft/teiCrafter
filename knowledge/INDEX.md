@@ -12,60 +12,54 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-07-10
+updated: 2026-08-24
 language: en
-version: 0.17
+version: 0.21
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
 related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples]
 ---
 
 # teiCrafter Knowledge Base
 
-Central knowledge repository for teiCrafter. Each document carries one defined function; redundancy is avoided and expressed through cross-references. teiCrafter is a **browser-based, lossless editor for arbitrary TEI-XML**: open an existing edition, correct it folio by folio at its natural granularity, save it back byte-faithfully. Plaintext also enters the editor: a `.txt` or `.md`, opened directly (picker, drop) or from a project folder, becomes a line-level TEI draft by a fixed, deterministic rule ([data](data.md)), never AI-marked. Separately, an optional LLM on-ramp drafts an initial TEI from plaintext into the same editor, an optional model-assisted entry the human then verifies deterministically. Client-only, no backend, no build step; the built-in examples show only on local development hosts.
+teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Output leaves the editor only after the exact projected bytes pass every configured schema for the current document revision.
 
-This knowledge base follows the [Promptotyping Documents convention](https://dhcraft.org/Promptotyping/), function-separated as in the ancestor tool coOCR HTR.
+## Documents
 
-## Document Map
+| Document | Owning question |
+| --- | --- |
+| [Project](project.md) | What problem does teiCrafter solve, for whom, and within which boundaries? |
+| [Data](data.md) | Which input, output, manifest, provenance, review, and stand-off forms does the tool preserve or create? |
+| [Specification](specification.md) | Which behaviours and constraints are normative? |
+| [Architecture](architecture.md) | How do inventory, profiles, navigation, mutations, validation, and browser boundaries compose? |
+| [Design](design.md) | How does the interface expose document structure, risk, provenance, and review? |
+| [Testing](testing.md) | Which evidence supports each technical and editorial claim? |
+| [Integration](integration.md) | Which contracts connect teiCrafter to project repositories, schemas, images, and model services? |
+| [Worked examples](worked-examples.md) | How do representative editorial workflows exercise those contracts? |
+| [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
+| [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
 
-| Document | Answers | Read first when | Depends on |
-|----------|---------|-----------------|------------|
-| [project](project.md) | What is teiCrafter, why does it exist, how is it positioned? | Scope or identity unclear | - |
-| [data](data.md) | What does it consume and produce; the plaintext ingest conventions; what TEI proves the engine? | Formats or test corpus in question | project |
-| [specification](specification.md) | What should the system do and why? (generic reader, editor, LLM on-ramp, validation, decisions, acceptance scenarios) | A requirement, a decision, or an acceptance scenario is at stake | project, data |
-| [architecture](architecture.md) | How is it built? (three-layer engine, the engine reading contract, services, implementation status) | Wrong assumptions about components, the reading contract, or data flow | specification |
-| [design](design.md) | How does it look and behave? (tokens, dual-view layout, AI marking) | UI or design-system work | specification |
-| [testing](testing.md) | How is it proven and validated? (the acceptance method, engine proofs, harness levels) | Coverage or acceptance method in question | architecture |
-| [journal](journal.md) | How did we get here? (decision log) | Decision logic unclear | - |
-| [integration](integration.md) | How do the ZBZ and SZD pipelines feed the editor, and where is the tool boundary? (cross-project data flow, roles, open items) | Working across the three sibling projects (ZBZ, SZD, teiCrafter) | data, architecture |
-| [converter-reference](converter-reference.md) | The deterministic Page-JSON v0.2 to TEI mapping (body, header, facsimile, bbox formula, standOff seeding, markers) | Building or verifying the SZD converter | data, architecture, specification |
-| [worked-examples](worked-examples.md) | The real SZD and ZBZ objects taken end-to-end in the editor: the objects, the walkthrough, the proof, the entity tables, the added-value before/after | A worked example or a live demo path is in question | testing, specification |
+## Core vocabulary
 
-Action layer: `CLAUDE.md` (repo root) configures the coding agent and binds `design.md` as the aesthetic value source. Session re-entry is the newest [journal](journal.md) entry for durable state; a volatile working-state snapshot (branch and tip, uncommitted work, the immediate next step, open threads) is written as a dated report under `reports/`, an action-layer note that carries no Promptotyping frontmatter and is not a knowledge document. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.
+**Document inventory** records TEI elements, attributes, values, reading text, facsimile pointers, and schema processing instructions without treating foreign namespace lookalikes as TEI.
 
-## Core Concepts
+**Source Profile** composes structural evidence from the document, optional conservative Schema Profile evidence, and project policy. It expresses capabilities such as pages, entries, speech turns, records, apparatus, facsimiles, and header metadata. A profile can expose several capabilities at once.
 
-| Concept | Definition | Document |
-|---------|------------|----------|
-| Generic lossless reader | The core: the raw TEI string is canonical, edits are offset splices, `serialize()` is byte-identical; reads arbitrary TEI without a per-project profile | architecture, specification |
-| Editing unit from the document | TEI encodes its own structure, so the editable unit is read from the encoding: word-level if `<w>` present, else line-level; no configuration, no branching | architecture, project |
-| Cells / folios / lines | The model `edition.js` projects: folios split by `<pb>`, lines by `<lb>`/`<l>`, cells are editable reading-text nodes | architecture |
-| LLM on-ramp | The optional entry: a model drafts an initial TEI from plaintext that opens in the same editor, marked machine-generated and unreviewed. Behind `FEATURES.llmOnRamp`; the model assists, the human verifies | specification, design |
-| Epistemic asymmetry | Models produce plausible TEI but cannot judge their own correctness; the human verifies in the deterministic editor | project, design |
-| Hybrid validation | Browser-light live (well-formed + structural integrity) plus harness-heavy offline (RelaxNG + Schematron) | specification, testing |
-| MVP gate | Well-formed AND L1 word fidelity AND L3 counts preserved; L2 reported as new-errors-vs-input, non-gating | testing |
-| Byte-identical round-trip | The proven property: every TEI file in the sweep serializes back unchanged | testing |
-| Lossless / byte-identical / byte-faithful | One concept, three precisions. **Lossless** is the product promise: saving changes nothing the human did not edit. **Byte-identical** is the no-edit case: the saved file equals the opened file in every byte. **Byte-faithful** is the with-edits case: outside the deliberately edited spans every byte is unchanged (whitespace, attribute order, comments, entity spellings included); the only difference between input and output is exactly the edit. | testing, specification |
-| Editorial annotation layer | standOff entities + authority `<idno>` + mention linking + notes + AI proposal (`resp="#ai"`) + live lookup + inline textual criticism (`unclear`/`del`/`add`/`gap`), all lossless | architecture, specification |
-| Dual reading | A Wenzelsbibel `<w>` encodes the diplomatic reading as its text (mirrored in `@orig`) and the normalized reading in `@norm`; the reading pane projects a normalized display view, and a two-field double-click edits the diplomatic core and `@norm` atomically in one re-parse | architecture, specification |
-| Project manifest | A declarative `teicrafter.project.json` next to a project's TEI files (name, schema, image resolver, allowed markup, indices, views), the machine-readable derivation of its editorial guidelines; a manifest wins, PID detection is the fallback. A project is not an edition type: it carries `documentTypes` and a `files` map, so the markup inventory binds to the open document's type | specification, architecture |
-| TEI vocabulary scope | A manifest's `teiModules`/`teiElements` declare its TEI vocabulary against a vendored, version-pinned copy of the P5 Guidelines compilation (an authoring aid, never a validator): named elements feed the wrap menu, modules scope the attribute editor; everything degrades to the explicit lists without the data | specification, architecture |
-| Single mutation path | Every standOff mutation commits through `commitStandoff` over the DOM-free `applyMutation` core: SAME-doc no-op contract, fresh note index, exactly one re-render on a real change | architecture, testing |
-| File System Access API | Lets the editor read and write editions locally without a backend | architecture |
+**Navigation Model** materializes source-backed channels and chooses a primary channel. A dictionary can therefore navigate by entries while retaining page and section context. Token cells and text-run cells may coexist inside one navigation unit.
 
-## Lineage
+**Schema Profile** extracts conservative authoring evidence from ODD, RelaxNG, or XSD. It never substitutes for validation. Broad or incomplete schemas contribute positive hints and cannot safely forbid document capabilities.
 
-Lineage and positioning are in [project.md](project.md): the shared design system with coOCR HTR, the relation to EditionCrafter, and the FORGE 2023 origin of the LLM on-ramp.
+**Project manifest** is the declarative policy layer in `teicrafter.project.json`. It can bind files to document types, provide an ordered schema set, select a primary navigation channel, disable inappropriate capabilities, and declare project-specific authoring, image, interchange, and LLM settings.
 
-teiCrafter as a Promptotyping case, the artifact and its provenance (the function-separated knowledge base, the [journal](journal.md) as decision record, the Git history as build trace) inspectable side by side, is described in [project.md](project.md).
+**Output schema gate** validates the exact bytes intended for Save or Download. It binds the result to the document session, revision, schema set, and output projection. Any invalid, unavailable, missing, or stale result blocks output. TEI All is the repository default when the project supplies no schema.
 
-The version history is the [journal](journal.md); converter-reference keeps its own version, owned by the SZD lane.
+**Header inventory** exposes every element and ordinary attribute below the document's TEI header. Simple text and attribute values are directly editable. Mixed, structured, self-closing, and namespace-sensitive content remains visible through exact XML editing.
+
+**Review Record** is a TEI `revisionDesc/change` that identifies the reviewed navigation unit through a stable target and records reviewer, time, status, and rationale. Review state remains independent from annotation coverage.
+
+**Stand-off span group** represents a continuous cross-structure selection or a discontinuous selection as one TEI `spanGrp` containing one or more `span` elements. Exact boundary anchors preserve the source text and support round-trip projection.
+
+**Open provider adapter** is an application-code extension point for nonstandard LLM protocols. A custom OpenAI-compatible endpoint is configurable in the interface. Project manifests remain declarative and cannot inject executable adapters.
+
+## Evidence boundary
+
+Committed synthetic fixtures exercise type-diverse Source Profiles and browser interaction in Chromium and Firefox. The real UFBAS whole-book workflow covers navigation, metadata, review, schema-gated output, fallback download, and automated accessibility checks in both browsers. The rights-local Wenzelsbibel codex exercises the large word-level, dual-reading, facsimile, zone, and no-op engine path. Its committed browser example uses a synthetic structural twin, so real cross-document Wenzelsbibel interaction remains an integration seam.

@@ -42,6 +42,7 @@ export const LLM_PROVIDERS = Object.freeze({
   DEEPSEEK: 'deepseek',
   QWEN: 'qwen',
   OLLAMA: 'ollama',
+  CUSTOM: 'custom',
 });
 
 // Source types offered in the LLM on-ramp; each selects a default mapping below.

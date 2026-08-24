@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   parseManifest, markupForFile, typeForFile, teiScopeForFile, resolveMarkup,
+  allowsArbitraryMarkup, uiProfileForFile,
   MANIFEST_FILENAME, MANIFEST_VERSION,
 } from "../../docs/js/editor/project-manifest.js";
 import { parseGuidelines } from "../../docs/js/editor/tei-guidelines.js";
@@ -187,6 +188,45 @@ check(markupForFile(szd, "dok-001.xml")[0][0] === "hi",
   "a type without markup falls back to the project default");
 check(markupForFile(szd, "unknown.xml")[0][0] === "hi", "an unassigned file gets the project default");
 check(markupForFile(null, "x.xml") === null, "no project yields null (built-in wraps apply)");
+check(allowsArbitraryMarkup(null, "x.xml") === true,
+  "a bare document keeps the generic any-element escape hatch");
+
+const closed = parseManifest({
+  teicrafter: 1,
+  name: "Closed authoring",
+  markup: [],
+  indices: [],
+  documentTypes: [
+    { key: "none", markup: [] },
+    { key: "scoped", teiElements: [] },
+  ],
+  files: { "none.xml": "none", "scoped.xml": "scoped" },
+});
+const schemaSet = parseManifest({
+  teicrafter: 1,
+  name: "Multi-schema",
+  schema: { schemas: [
+    { type: "relaxng", path: "structure.rng", name: "Structure" },
+    { type: "schematron", path: "rules.sch" },
+    { type: "xsd", path: "exchange.xsd" },
+    { type: "relaxng", path: "names.rng" },
+  ] },
+});
+check(schemaSet.schema.schemas.length === 4
+  && schemaSet.schema.schemas.map((entry) => entry.type).join(",") === "relaxng,schematron,xsd,relaxng"
+  && schemaSet.schema.schemas[0].name === "Structure",
+"manifest schema sets preserve order, repeated kinds, labels, and RNG/XSD combinations");
+check(Array.isArray(markupForFile(closed, "none.xml"))
+  && markupForFile(closed, "none.xml").length === 0,
+"an explicit empty type markup inventory stays closed instead of falling back");
+check(Array.isArray(markupForFile(closed, "scoped.xml"))
+  && markupForFile(closed, "scoped.xml").length === 0,
+"an explicit empty type TEI element scope stays closed");
+check(allowsArbitraryMarkup(closed, "none.xml") === false
+  && allowsArbitraryMarkup(closed, "scoped.xml") === false,
+"closed project/type inventories disable arbitrary element authoring");
+check(Array.isArray(closed.indices) && closed.indices.length === 0,
+"an explicit empty index inventory remains distinct from an absent declaration");
 check(wb.documentTypes.length === 0 && Object.keys(wb.files).length === 0,
   "a manifest without types (WB: one-type codex) parses with empty types/files");
 
@@ -262,6 +302,9 @@ check(resolveMarkup(scoped, "doc.xml", null) === markupForFile(scoped, "doc.xml"
   "null guidelines: resolveMarkup returns exactly the explicit markup (degradation)");
 check(resolveMarkup(null, "x.xml", null) === null,
   "null guidelines, no project: null (built-in wraps apply)");
+check(Array.isArray(resolveMarkup(closed, "none.xml", null))
+  && resolveMarkup(closed, "none.xml", null).length === 0,
+"null guidelines preserve an explicitly closed empty markup inventory");
 
 const resolved = resolveMarkup(scoped, "doc.xml", g);
 check(resolved[0][0] === "supplied (editor)",
@@ -311,14 +354,41 @@ rejects({ teicrafter: 1, name: "x", reconciliation: { registers: ["VIAF"] } },
 rejects({ teicrafter: 1, name: "x", reconciliation: { auto: "yes" } }, /"reconciliation\.auto" is not a boolean/,
   "a non-boolean reconciliation.auto is rejected");
 
+// --- 7b. Source-aware UI policy ---------------------------------------------
+
+const profiled = parseManifest({
+  teicrafter: 1,
+  name: "Profiled",
+  uiProfile: { primaryNavigation: "pages", disableCapabilities: ["tabular"] },
+  documentTypes: [{
+    key: "dictionary",
+    uiProfile: { primaryNavigation: "entries", disableCapabilities: ["pages"] },
+  }],
+  files: { "lexicon.xml": "dictionary" },
+});
+check(uiProfileForFile(profiled, "other.xml").primaryNavigation === "pages",
+  "project UI policy is the fallback for unassigned files");
+const dictionaryUi = uiProfileForFile(profiled, "lexicon.xml");
+check(dictionaryUi.primaryNavigation === "entries"
+  && dictionaryUi.disableCapabilities.join(",") === "tabular,pages",
+"document-type UI policy overrides the primary channel and merges disabled capabilities");
+rejects({ teicrafter: 1, name: "x", uiProfile: { primaryNavigation: "filename-type" } },
+  /not a known navigation channel/, "an unknown primary navigation channel is rejected");
+rejects({ teicrafter: 1, name: "x", uiProfile: { disableCapabilities: ["magic"] } },
+  /not a known capability/, "an unknown UI capability is rejected");
+
 // --- 8. interchange: the inline-GND export opt-in ------------------------------
 
 const zbzM = parseManifest(readFileSync(join(ROOT, "docs", "data", "editor", "zbz-100", MANIFEST_FILENAME), "utf8"));
 check(zbzM.interchange === "inline-gnd",
   "the shipped ZBZ manifest opts into the inline-GND interchange export");
+check(zbzM.exportableEntityTypes.join(",") === "person,org,work",
+  "the shipped ZBZ manifest exposes the entity types its interchange can persist");
 const szdM = parseManifest(readFileSync(join(ROOT, "docs", "data", "editor", "szd", MANIFEST_FILENAME), "utf8"));
 check(szdM.interchange === null,
   "a project that declares no interchange normalizes to null (no export affordance)");
+check(szdM.exportableEntityTypes === null,
+  "a project without an interchange imposes no entity-type capability limit");
 check(parseManifest({ teicrafter: 1, name: "x" }).interchange === null,
   "interchange absent: project.interchange is null");
 check(parseManifest({ teicrafter: 1, name: "x", interchange: "inline-gnd" }).interchange === "inline-gnd",

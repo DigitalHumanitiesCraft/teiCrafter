@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="source-document">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Source document profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>An invented document transcribed directly on its source surfaces.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <sourceDoc>
+    <surface xml:id="source-surface-1" n="1" ulx="0" uly="0" lrx="1200" lry="1800">
+      <graphic url="source-001.jpg" width="1200px" height="1800px"/>
+      <zone xml:id="source-zone-1" ulx="100" uly="120" lrx="1050" lry="300">
+        <line xml:id="source-line-1">Inventory recorded on the first source surface.</line>
+      </zone>
+    </surface>
+    <surface xml:id="source-surface-2" n="2" ulx="0" uly="0" lrx="1200" lry="1800">
+      <graphic url="source-002.jpg" width="1200px" height="1800px"/>
+      <zone xml:id="source-zone-2" ulx="100" uly="120" lrx="1050" lry="300">
+        <line xml:id="source-line-2">Inventory continued on the second source surface.</line>
+      </zone>
+    </surface>
+  </sourceDoc>
+</TEI>

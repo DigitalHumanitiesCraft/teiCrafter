@@ -24,7 +24,10 @@
  *   {
  *     "teicrafter": 1,
  *     "name": "...",
- *     "schema": "https://...rng",
+ *     "schema": { "schemas": [
+ *       { "type": "relaxng", "path": "project.rng" },
+ *       { "type": "schematron", "path": "project.sch", "name": "Editorial rules" }
+ *     ] },
  *     "imageResolver": { "type": "iiif-image-template", "template": "...{stem}..." },
  *       // or { "type": "iiif-presentation", "manifest": "https://.../manifest.json" }
  *       // ("mets" is recognized but explicitly deferred, not yet supported)
@@ -37,6 +40,7 @@
  *     "indices": [ { "key": "peoples", "label": "...", "listType": "...", "registers": ["GND"] } ],
  *     "views":   [ { "key": "diplomatic", "label": "..." } ],
  *     "reconciliation": { "registers": ["Wikidata", "GND"], "auto": true },
+ *     "uiProfile": { "primaryNavigation": "entries", "disableCapabilities": ["pages"] },
  *     "llm": { "systemPrompt": "...", "mapping": "mapping.md", "responsibility": "#ai" },
  *     "interchange": "inline-gnd"
  *   }
@@ -74,6 +78,7 @@
  */
 
 import { elementByName } from "./tei-guidelines.js";
+import { normalizeSchemaSet } from "./schema-set.js";
 
 export const MANIFEST_FILENAME = "teicrafter.project.json";
 export const MANIFEST_VERSION = 1;
@@ -147,7 +152,11 @@ function markupWrap(entry, i) {
 
 /** Validate the optional teiModules / teiElements pair into a scope object. */
 function teiScopeDef(obj, where) {
-  const scope = { modules: [], elements: [] };
+  const scope = {
+    modules: [],
+    elements: [],
+    declared: obj.teiModules !== undefined || obj.teiElements !== undefined,
+  };
   if (obj.teiModules !== undefined) {
     if (!Array.isArray(obj.teiModules)) fail(`${where}"teiModules" is not an array`);
     scope.modules = obj.teiModules.map((v, i) => {
@@ -255,6 +264,53 @@ function viewDef(entry, i) {
   };
 }
 
+function schemaDef(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const normalized = normalizeSchemaSet(value);
+  if (normalized.issues.length) fail(normalized.issues.join(" "));
+  return { schemas: normalized.entries.map((entry) => ({ ...entry })) };
+}
+
+const NAVIGATION_CHANNELS = new Set([
+  "pages", "corpus-members", "entries", "speech-turns", "table-rows", "records",
+  "source-documents", "sections", "surfaces", "document",
+]);
+const UI_CAPABILITIES = new Set([
+  "pages", "corpus-members", "entries", "speech-turns", "dramatic-context",
+  "token-analysis", "correspondence-metadata", "apparatus", "facsimile-resource",
+  "source-document", "tabular", "descriptive-records", "verse", "logical-flow",
+  "header-metadata",
+]);
+
+/** Validate the optional structural UI override. It can only select real channels. */
+function uiProfileDef(value, where = "") {
+  if (value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    fail(`${where}"uiProfile" is not an object`);
+  }
+  let primaryNavigation = null;
+  if (value.primaryNavigation !== undefined) {
+    if (typeof value.primaryNavigation !== "string"
+      || !NAVIGATION_CHANNELS.has(value.primaryNavigation)) {
+      fail(`${where}uiProfile.primaryNavigation is not a known navigation channel`);
+    }
+    primaryNavigation = value.primaryNavigation;
+  }
+  let disableCapabilities = [];
+  if (value.disableCapabilities !== undefined) {
+    if (!Array.isArray(value.disableCapabilities)) {
+      fail(`${where}uiProfile.disableCapabilities is not an array`);
+    }
+    disableCapabilities = value.disableCapabilities.map((capability, index) => {
+      if (typeof capability !== "string" || !UI_CAPABILITIES.has(capability)) {
+        fail(`${where}uiProfile.disableCapabilities[${index}] is not a known capability`);
+      }
+      return capability;
+    });
+  }
+  return { primaryNavigation, disableCapabilities };
+}
+
 /**
  * Parse and validate a manifest (JSON text or already-parsed object).
  * Returns the runtime project object, or throws with a precise message.
@@ -305,8 +361,10 @@ export function parseManifest(input) {
         return {
           key: t.key.trim(),
           label: typeof t.label === "string" && t.label.trim() ? t.label.trim() : t.key.trim(),
-          markup: Array.isArray(t.markup) && t.markup.length ? t.markup.map(markupWrap) : null,
+          markup: Array.isArray(t.markup) ? t.markup.map(markupWrap) : null,
+          markupClosed: t.markup !== undefined || t.teiElements !== undefined,
           teiScope: teiScopeDef(t, `documentTypes[${i}].`),
+          uiProfile: uiProfileDef(t.uiProfile, `documentTypes[${i}].`),
           llm: llmDef(t.llm, `documentTypes[${i}].`),
         };
       })
@@ -333,18 +391,21 @@ export function parseManifest(input) {
   return {
     source: "manifest",
     name: m.name.trim(),
-    schema: typeof m.schema === "string" && m.schema.trim() ? m.schema.trim() : null,
+    schema: schemaDef(m.schema),
     iiifImageTemplate,
     iiifPresentationManifest,
-    markup: Array.isArray(m.markup) && m.markup.length ? m.markup.map(markupWrap) : null,
+    markup: Array.isArray(m.markup) ? m.markup.map(markupWrap) : null,
+    markupClosed: m.markup !== undefined || m.teiElements !== undefined,
     teiScope: teiScopeDef(m, ""),
     documentTypes,
     files,
-    indices: Array.isArray(m.indices) ? m.indices.map(indexDef) : [],
+    indices: Array.isArray(m.indices) ? m.indices.map(indexDef) : null,
     views: Array.isArray(m.views) ? m.views.map(viewDef) : [],
     reconciliation: reconciliationDef(m.reconciliation),
+    uiProfile: uiProfileDef(m.uiProfile),
     llm: llmDef(m.llm),
     interchange,
+    exportableEntityTypes: interchange === "inline-gnd" ? ["person", "org", "work"] : null,
   };
 }
 
@@ -363,8 +424,34 @@ export function typeForFile(project, fileName) {
 export function markupForFile(project, fileName) {
   if (!project) return null;
   const type = typeForFile(project, fileName);
-  if (type && type.markup) return type.markup;
-  return project.markup || null;
+  if (type && type.markupClosed) return type.markup || [];
+  if (project.markupClosed) return project.markup || [];
+  return null;
+}
+
+/** Whether the generic "any element" escape hatch applies to this file. */
+export function allowsArbitraryMarkup(project, fileName) {
+  if (!project) return true;
+  const type = typeForFile(project, fileName);
+  if (type && type.markupClosed) return false;
+  return !project.markupClosed;
+}
+
+/** Field-wise project UI override resolved for the current document type. */
+export function uiProfileForFile(project, fileName) {
+  if (!project) return null;
+  const projectProfile = project.uiProfile || null;
+  const typeProfile = typeForFile(project, fileName)?.uiProfile || null;
+  if (!projectProfile && !typeProfile) return null;
+  return {
+    primaryNavigation: typeProfile?.primaryNavigation
+      || projectProfile?.primaryNavigation
+      || null,
+    disableCapabilities: [
+      ...(projectProfile?.disableCapabilities || []),
+      ...(typeProfile?.disableCapabilities || []),
+    ].filter((value, index, values) => values.indexOf(value) === index),
+  };
 }
 
 /**
@@ -374,10 +461,10 @@ export function markupForFile(project, fileName) {
  * without a manifest or for pre-scope manifests.
  */
 export function teiScopeForFile(project, fileName) {
-  const empty = { modules: [], elements: [] };
+  const empty = { modules: [], elements: [], declared: false };
   if (!project) return empty;
   const type = typeForFile(project, fileName);
-  if (type && type.teiScope && (type.teiScope.modules.length || type.teiScope.elements.length)) {
+  if (type && type.teiScope && type.teiScope.declared) {
     return type.teiScope;
   }
   return project.teiScope || empty;

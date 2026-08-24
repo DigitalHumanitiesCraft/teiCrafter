@@ -11,10 +11,9 @@
  *      (DOMParser) is the separate safety net that flags such input. This proof
  *      pins the unconditional lossless guarantee and the observed projection.
  *
- *   2. A single global editing profile. The profile is read once for the whole
- *      document: word if any <w xml:id> is present anywhere, else line. There is
- *      no per-folio detection, so a <w>-free folio inside an otherwise
- *      word-tokenized document is edited as whole-line cells, not words.
+ *   2. Local editing kinds. Each cell reports token, text-run, or gap from its
+ *      own TEI context. The deprecated document profile remains as a summary for
+ *      compatibility and does not determine how a mixed document is edited.
  *
  * Run: node test/proofs/reading_contract_check.mjs   (exit 0 = all pass)
  */
@@ -28,7 +27,7 @@ function check(cond, label) {
   else { failed++; console.log("  FAIL  " + label); }
 }
 
-console.log("\nEngine reading contract proof (lossless-on-malformed, global profile)");
+console.log("\nEngine reading contract proof (lossless-on-malformed, local editing kinds)");
 console.log("=".repeat(70));
 
 // ===========================================================================
@@ -64,7 +63,7 @@ check(his.length === 1, "one <hi> element is recognised (the line-3 opener)");
 check(his[0].outerEnd == null, "the mis-nested <hi> has no recorded close (outerEnd unset), yet the round-trip stayed byte-identical");
 
 // ===========================================================================
-// 2. A single global editing profile (no per-folio detection)
+// 2. Local editing kinds in a mixed document
 // ===========================================================================
 // Folio 1 is word-tagged; folio 2 is plain line-level prose.
 const mixed = `<TEI><text><body>
@@ -75,22 +74,26 @@ const mixed = `<TEI><text><body>
 </body></text></TEI>`;
 
 const stMixed = parseEdition(mixed);
-check(stMixed.profile === "word", "a single <w> anywhere sets the WHOLE document to the word profile");
+check(stMixed.profile === "word", "the deprecated document summary remains word-compatible");
 check(stMixed.folios.length === 2, "the document splits into two folios on <pb>");
 check(parseDocument(mixed).serialize() === mixed, "the mixed document round-trips byte-identically");
 
 const f1cells = stMixed.folios[0].lines.flatMap((l) => l.cells.map((c) => c.text));
 check(f1cells.length === 2 && f1cells[0] === "Wien" && f1cells[1] === "1879", "the word-tagged folio yields two word cells (Wien, 1879)");
+check(stMixed.folios[0].lines.flatMap((line) => line.cells).every((cell) => cell.editingKind === "token"),
+  "word cells report their local token editing kind");
 
 const f2cells = stMixed.folios[1].lines.flatMap((l) => l.cells);
 check(f2cells.length === 1 && f2cells[0].text.includes("Mit hochachtungsvollem Gruss"),
-  "the <w>-free folio under the global word profile is ONE whole-line cell, not words");
+  "the un-tokenized folio remains one source-faithful text run");
+check(f2cells[0].editingKind === "text-run",
+  "the un-tokenized cell reports its local text-run editing kind");
 
 // ===========================================================================
 console.log("=".repeat(70));
 if (failed === 0) {
   console.log(`PASSED (${passed}/${passed})`);
-  console.log("Lossless holds on malformed input; the editing profile is one global property.");
+  console.log("Lossless holds on malformed input; mixed TEI uses local editing kinds.");
   process.exit(0);
 } else {
   console.log(`FAILED (${passed}/${passed + failed}, ${failed} failing)`);

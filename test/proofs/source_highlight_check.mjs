@@ -65,6 +65,12 @@ for (const cls of ["xs-punc", "xs-tag", "xs-attr", "xs-val", "xs-ent", "xs-comme
   check(`token class present: ${cls}`, html.includes(`class="${cls}"`));
 }
 
+const css = readFileSync(join(here, "..", "..", "docs", "css", "editor.css"), "utf8");
+check("element names use the TEI blue token",
+  /\.xs-tag\s*\{\s*color:\s*var\(--color-blue\)/.test(css));
+check("attribute names and values share the yellow-orange review token",
+  /\.xs-attr,\s*\.xs-val\s*\{\s*color:\s*var\(--color-review\)/.test(css));
+
 // No raw "<" from the source may survive outside our own span markup.
 const stripped = highlightXml(szd).replace(/<\/?span[^>]*>/g, "");
 check("all source angle brackets escaped", !/[<>]/.test(stripped.replace(/&lt;|&gt;/g, "")));

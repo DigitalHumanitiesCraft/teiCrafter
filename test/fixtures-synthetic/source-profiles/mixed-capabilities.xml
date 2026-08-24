@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="mixed-capabilities">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Mixed-capabilities profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>An invented hybrid source combining lexical, dramatic, corpus, tabular, critical, correspondence, and facsimile structures.</p>
+      </sourceDesc>
+    </fileDesc>
+    <profileDesc>
+      <correspDesc>
+        <correspAction type="sent">
+          <persName>The Archivist</persName>
+          <date when="1920-01-15">15 January 1920</date>
+        </correspAction>
+      </correspDesc>
+    </profileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface xml:id="mixed-surface-1" n="1">
+      <graphic url="mixed-001.jpg"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <pb xml:id="mixed-page-1" n="1" facs="#mixed-surface-1"/>
+      <entry xml:id="mixed-entry-1">
+        <form type="lemma">
+          <orth>record</orth>
+        </form>
+        <sense>
+          <def>A document preserved as evidence.</def>
+        </sense>
+      </entry>
+      <div type="scene" xml:id="mixed-scene-1">
+        <head>Catalogue review</head>
+        <sp xml:id="mixed-turn-1">
+          <speaker>The Archivist</speaker>
+          <p><s xml:id="mixed-sentence-1"><w xml:id="mixed-word-1" lemma="record">Records</w> <w xml:id="mixed-word-2" lemma="require">require</w> <app><lem>context</lem><rdg>provenance</rdg></app><pc>.</pc></s></p>
+        </sp>
+        <table xml:id="mixed-table-1">
+          <head>Witness summary</head>
+          <row role="label">
+            <cell>Witness</cell>
+            <cell>Reading</cell>
+          </row>
+          <row>
+            <cell>A</cell>
+            <cell>context</cell>
+          </row>
+        </table>
+      </div>
+    </body>
+  </text>
+</TEI>

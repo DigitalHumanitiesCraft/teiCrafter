@@ -90,7 +90,7 @@ globalThis.document = documentStub;
 // --- modules under test (imported AFTER the stub is installed) ----------------
 
 const { createIndexPanel, DEFAULT_SECTIONS } = await import("../../docs/js/editor/index-panel.js");
-const { sectionsForIndices } = await import("../../docs/js/editor/entity-index.js");
+const { sectionsForEntityTypes, sectionsForIndices } = await import("../../docs/js/editor/entity-index.js");
 const { parseManifest } = await import("../../docs/js/editor/project-manifest.js");
 
 // --- harness -----------------------------------------------------------------
@@ -183,14 +183,18 @@ check(!!roSec.querySelector(".ed-idx-rowbody"),
 
 // --- 4. No declared indices -> the built-in default sections -------------------
 
-check(sectionsForIndices(null) === null && sectionsForIndices([]) === null,
-  "deriver: no/empty declared indices returns null (fall back to default)");
+check(sectionsForIndices(null) === null && sectionsForIndices([]).length === 0,
+  "deriver: an absent declaration falls back while explicit empty stays closed");
 
-for (const [arg, note] of [[undefined, "undefined"], [null, "null"], [[], "empty array"]]) {
+for (const [arg, note] of [[undefined, "undefined"], [null, "null"]]) {
   const h = renderPanel({}, sectionsForIndices(arg));
   check(sectionTypes(h).join(",") === DEFAULT_SECTIONS.map((s) => s.type).join(","),
     `panel: with ${note} declared indices the built-in default sections appear`);
 }
+const hClosed = renderPanel({}, sectionsForIndices([]));
+check(sectionTypes(hClosed).length === 0
+  && hClosed.textContent.includes("declares no entity indices"),
+"panel: an explicit empty index inventory renders no fallback sections");
 // And the panel falls back even if the section argument is omitted entirely.
 const hOmitted = renderPanel({});
 check(sectionTypes(hOmitted).join(",") === DEFAULT_SECTIONS.map((s) => s.type).join(","),
@@ -214,7 +218,26 @@ check(e2e[1].readOnly === true && e2e[1].label === "Peoples (Voelker)",
 
 const noIdx = parseManifest({ teicrafter: 1, name: "No indices" });
 check(sectionsForIndices(noIdx.indices) === null,
-  "end to end: a manifest declaring no indices yields the default fallback");
+  "end to end: a manifest with no indices declaration yields the default fallback");
+const closedIdx = parseManifest({ teicrafter: 1, name: "Closed indices", indices: [] });
+check(sectionsForIndices(closedIdx.indices).length === 0,
+  "end to end: a manifest declaring an empty index inventory stays closed");
+
+// --- 6. Interchange capability: visible for cleanup, creation disabled --------
+
+const inlineManifest = parseManifest({ teicrafter: 1, name: "Inline", interchange: "inline-gnd" });
+const capabilitySections = sectionsForEntityTypes(DEFAULT_SECTIONS, inlineManifest.exportableEntityTypes);
+const capabilityHost = renderPanel({
+  places: [{ id: "pl-1", type: "place", name: "Graz", authorities: [] }],
+}, capabilitySections);
+const placeSec = capabilityHost.querySelectorAll(".ed-idx-section").find((s) => s.dataset.type === "place");
+check(placeSec.querySelector(".ed-idx-add").disabled === true && !placeSec.querySelector(".ed-idx-add-input"),
+  "inline-GND: adding a non-exportable place is disabled");
+check(!!placeSec.querySelector(".ed-idx-delete") && !!placeSec.querySelector(".ed-idx-edit"),
+  "inline-GND: an existing place remains editable and removable for export cleanup");
+const allowedSec = capabilityHost.querySelectorAll(".ed-idx-section").find((s) => s.dataset.type === "person");
+check(allowedSec.querySelector(".ed-idx-add").disabled !== true && !!allowedSec.querySelector(".ed-idx-add-input"),
+  "inline-GND: adding an exportable person remains enabled");
 
 // --- summary ------------------------------------------------------------------
 

@@ -205,8 +205,8 @@ const REGISTRY = [
     rights: "local-only pending the ZBZ rights answer (stance as zbz-100)",
     enabled: true,
     load() {
-      if (existsSync(ZBZ_TARGET)) return readFileSync(ZBZ_TARGET, "utf8");
       if (existsSync(ZBZ_SOURCE)) return buildZbz1000(readFileSync(ZBZ_SOURCE, "utf8"));
+      if (existsSync(ZBZ_TARGET)) return readFileSync(ZBZ_TARGET, "utf8");
       return null;
     },
     absentReason: "zbz-hersch-1000.xml absent and no zbz-ocr-tei sibling checkout",

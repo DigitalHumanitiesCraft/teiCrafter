@@ -8,33 +8,33 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  js-gate:
+  verify-and-e2e:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - name: Install TypeScript
-        run: npm install -g typescript@7.0
-      - name: Typecheck (checkJs over jsconfig include set)
-        run: tsc --noEmit -p jsconfig.json
-      - name: Node proof suite
-        run: node test/run_all.mjs
-
-  py-gate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+          node-version: "24.13.0"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: astral-sh/setup-uv@v6
-      - name: Harness identity pass (validate.py self-check)
-        run: >-
-          uv run test/harness/validate.py
-          --input test/fixtures-synthetic/tiers/tier1-1folio.xml
-          --candidate test/fixtures-synthetic/tiers/tier1-1folio.xml
-          --quiet
-      - name: Ruff lint
-        run: uvx ruff check pipeline test/harness
-      - name: Ruff format
-        run: uvx ruff format --check pipeline test/harness
+      - name: Install Python harness dependency
+        run: uv pip install --system "lxml==5.4.0"
+      - name: Install pinned Node dependencies
+        run: npm ci
+      - name: Verify proofs, harness, types, lint, and build
+        run: npm run verify
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium firefox
+      - name: Run browser E2E and accessibility smoke tests
+        run: npm run test:e2e
+      - name: Upload deployable Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist

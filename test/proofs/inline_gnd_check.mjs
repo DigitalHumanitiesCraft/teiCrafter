@@ -10,8 +10,8 @@
  *   - person WITHOUT a GND     -> <persName> (no @ref; @ref is optional in the schema)
  *   - org WITH a GND           -> <orgName ref="GND:..">
  *   - work WITH a GND          -> <bibl ref="GND:..">
- *   - place mention            -> unwrapped to plain text (no placeName in the format)
- *   - mention to a MISSING id  -> unwrapped to plain text
+ *   - place/event/note content -> reported and blocked before export
+ *   - mention to a MISSING id  -> reported and blocked before export
  *   - a <name> with no '#'-ref -> untouched (the respStmt <name>AI</name>)
  *   - the <standOff> register   -> removed
  *
@@ -31,7 +31,12 @@
 
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
 import { parseEdition, serialize, editCellCore } from "../../docs/js/editor/edition.js";
-import { toInlineGND, inlineGndFilename } from "../../docs/js/editor/inline-gnd.js";
+import {
+  InlineGndCapabilityError,
+  inlineGndCapabilityReport,
+  toInlineGND,
+  inlineGndFilename,
+} from "../../docs/js/editor/inline-gnd.js";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,9 +61,6 @@ const REG = `<?xml version="1.0" encoding="utf-8"?>
       <person xml:id="pers_gessner"><persName>Conrad Gessner</persName><idno type="GND">118538055</idno></person>
       <person xml:id="pers_anon"><persName>an unidentified hand</persName></person>
     </listPerson>
-    <listPlace>
-      <place xml:id="plc_zurich"><placeName>Zurich</placeName></place>
-    </listPlace>
     <listOrg>
       <org xml:id="org_zb"><orgName>Zentralbibliothek</orgName><idno type="GND">2026353-7</idno></org>
     </listOrg>
@@ -68,8 +70,8 @@ const REG = `<?xml version="1.0" encoding="utf-8"?>
   </standOff>
   <text>
     <body>
-      <p><name ref="#pers_gessner">Conrad Gessner</name> wrote in <name ref="#plc_zurich">Zurich</name>, held at the <name ref="#org_zb">Zentralbibliothek</name>.</p>
-      <p>His <name ref="#wrk_hist">Historia animalium</name> survives, annotated by <name ref="#pers_anon">an unidentified hand</name>; one note from <name ref="#missing_id">somewhere</name>.</p>
+      <p><name ref="#pers_gessner">Conrad Gessner</name> wrote in Zurich, held at the <name ref="#org_zb">Zentralbibliothek</name>.</p>
+      <p>His <name ref="#wrk_hist">Historia animalium</name> survives, annotated by <name ref="#pers_anon">an unidentified hand</name>; one note from somewhere.</p>
     </body>
   </text>
 </TEI>`;
@@ -102,10 +104,7 @@ check("org WITH GND -> <orgName ref=\"GND:2026353-7\">",
   raw.includes('<orgName ref="GND:2026353-7">Zentralbibliothek</orgName>'));
 check("work WITH GND -> <bibl ref=\"GND:4126228-1\">",
   raw.includes('<bibl ref="GND:4126228-1">Historia animalium</bibl>'));
-check("place mention unwrapped to plain text (no placeName, no <name>)",
-  raw.includes("wrote in Zurich,") && !raw.includes("placeName") && !raw.includes('"#plc_zurich"'));
-check("missing-entity mention unwrapped to plain text",
-  raw.includes("one note from somewhere.") && !raw.includes("missing_id"));
+check("unannotated place text remains plain text", raw.includes("wrote in Zurich,"));
 check("respStmt <name>AI</name> is untouched (no '#'-ref, not a mention)",
   raw.includes("<name>AI</name>"));
 
@@ -121,19 +120,18 @@ check("inlineGndFilename is idempotent on an already-final name",
 check("inlineGndFilename falls back when the name is missing",
   inlineGndFilename(null) === "edition_final.xml");
 
-// --- secondary smoke: the committed synthetic register fixture (person + place) ---
+// --- secondary smoke: a known non-exportable register is blocked with a report ---
 const synthPath = join(REPO, "docs", "data", "editor", "zbz-hersch-synthetic.xml");
 if (existsSync(synthPath)) {
   const sdoc = parseDocument(readFileSync(synthPath, "utf8"));
-  const sBefore = readingText(sdoc.raw);
-  const sOut = toInlineGND(sdoc).raw;
-  check("synthetic fixture: no standOff, no '#'-mention after export",
-    !sOut.includes("<standOff") && !/<name\s+ref="#/.test(sOut));
-  check("synthetic fixture: person mention became <persName>",
-    sOut.includes("<persName>Marguerite Vautier</persName>"));
-  check("synthetic fixture: place mention unwrapped to plain text",
-    sOut.includes("wrote from Geneva that"));
-  check("synthetic fixture: reading text byte-identical", readingText(sOut) === sBefore);
+  const report = inlineGndCapabilityReport(sdoc);
+  check("synthetic fixture: capability report identifies the place loss",
+    !report.ok && report.issues.some((issue) => issue.code === "unsupported-entity-type" && issue.entityType === "place"));
+  let blocked = null;
+  try { toInlineGND(sdoc); } catch (error) { blocked = error; }
+  check("synthetic fixture: export fails before silently discarding the place",
+    blocked instanceof InlineGndCapabilityError
+      && blocked.report.issues.some((issue) => issue.entityType === "place"));
 } else {
   console.log("  --  synthetic fixture absent, skipping secondary smoke");
 }
@@ -145,7 +143,7 @@ if (existsSync(synthPath)) {
 // data path the editor actually uses, and pins the invariants a UI download needs:
 // the bytes transformed ARE the canonical current document, and the export reflects
 // an in-editor edit. A register-model document: one person mention WITH a GND, one
-// place mention (unwraps on export), and a plain editable line with no markup.
+// and a plain editable line with no markup.
 const REG_WIRING = `<?xml version="1.0" encoding="utf-8"?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
   <teiHeader>
@@ -155,13 +153,10 @@ const REG_WIRING = `<?xml version="1.0" encoding="utf-8"?>
     <listPerson>
       <person xml:id="pers_h"><persName>Jeanne Hersch</persName><idno type="GND">118703854</idno></person>
     </listPerson>
-    <listPlace>
-      <place xml:id="plc_g"><placeName>Geneva</placeName></place>
-    </listPlace>
   </standOff>
   <text>
     <body>
-      <p><name ref="#pers_h">Jeanne Hersch</name> wrote from <name ref="#plc_g">Geneva</name>.</p>
+      <p><name ref="#pers_h">Jeanne Hersch</name> wrote from Geneva.</p>
       <p>A plain line to edit.</p>
     </body>
   </text>
@@ -187,8 +182,7 @@ check("export drops the <standOff> register", !exported.includes("<standOff"));
 check("export leaves no '#'-mention (<name ref=\"#...\">)", !/<name\s+ref="#/.test(exported));
 check("person WITH GND inlined as <persName ref=\"GND:118703854\">",
   exported.includes('<persName ref="GND:118703854">Jeanne Hersch</persName>'));
-check("place mention unwrapped to plain text (no placeName, no register ref)",
-  exported.includes("wrote from Geneva.") && !exported.includes("placeName") && !exported.includes('"#plc_g"'));
+check("unannotated place text stays byte-identical", exported.includes("wrote from Geneva."));
 const wiringRefs = [...exported.matchAll(/<(?:persName|orgName|bibl)\s+ref="([^"]*)"/g)].map((m) => m[1]);
 check("every emitted @ref matches GND:[0-9A-Za-z-]+", wiringRefs.length === 1 && /^GND:[0-9A-Za-z-]+$/.test(wiringRefs[0]));
 check("reading text byte-identical through the export", readingText(exported) === wiringBefore);

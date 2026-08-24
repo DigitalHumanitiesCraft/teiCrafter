@@ -8,12 +8,20 @@
  * Run: node test/proofs/llm_catalog_check.mjs   (exit 0 = all pass)
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   ANTHROPIC_MODELS,
   ANTHROPIC_DEFAULT_MODEL,
   getProviderConfigs,
   pickModel,
 } from "../../docs/js/services/llm.js";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO = resolve(HERE, "..", "..");
+const EDITOR_HTML = readFileSync(join(REPO, "docs", "editor.html"), "utf8");
+const GEN_MODAL = readFileSync(join(REPO, "docs", "js", "editor", "gen-modal.js"), "utf8");
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -57,6 +65,7 @@ check(
 // --- the public consumer view agrees with the exported catalog ---------------
 
 const cfg = getProviderConfigs().anthropic;
+const ollama = getProviderConfigs().ollama;
 check(
   cfg &&
     cfg.defaultModel === ANTHROPIC_DEFAULT_MODEL &&
@@ -64,6 +73,10 @@ check(
     cfg.models.every((m, i) => m === ANTHROPIC_MODELS[i]),
   "getProviderConfigs() exposes the same default and model list",
 );
+check(cfg.allowCustomModel === false,
+  "Anthropic remains catalog-bound");
+check(ollama && ollama.allowCustomModel === true,
+  "getProviderConfigs() exposes Ollama's custom-model capability");
 
 // --- a stale or unknown stored model never reaches the API -------------------
 
@@ -76,6 +89,19 @@ check(pickModel(cfgPick, null) === ANTHROPIC_DEFAULT_MODEL,
   "no stored model uses the default");
 check(pickModel(cfgPick, "made-up-model") === ANTHROPIC_DEFAULT_MODEL,
   "an unknown stored model falls back to the default");
+
+// --- local Ollama ids are deliberately open ---------------------------------
+
+const localModel = "mistral:7b-instruct-q4_K_M";
+check(pickModel(ollama, localModel) === localModel,
+  "a freely entered Ollama model id is preserved");
+check(pickModel(ollama, "") === ollama.defaultModel,
+  "an empty Ollama model id uses the default");
+check(EDITOR_HTML.includes('id="gen-custom-model"'),
+  "the generation dialog exposes a custom local-model field");
+check(GEN_MODAL.includes("cfg && cfg.allowCustomModel") &&
+  GEN_MODAL.includes('$("gen-custom-model").value.trim()'),
+"the dialog reads the custom field only for a provider that allows it");
 
 // --- summary -----------------------------------------------------------------
 

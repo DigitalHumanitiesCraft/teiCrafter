@@ -35,6 +35,8 @@
  * @property {string|null} ref Referenced entity id (mention only), else null.
  * @property {TeiNode} el The layer's element.
  * @property {string|null} resp The @resp provenance value, or null.
+ * @property {boolean} [standOff] True when the layer is represented by a stand-off span.
+ * @property {string|null} [standOffGroupId] The containing spanGrp xml:id, when available.
  */
 
 /**
@@ -48,6 +50,8 @@
  * @property {string} rawText The raw slice doc.raw.slice(start, end).
  * @property {string|null} facs Facsimile zone or surface id the cell links to, or null.
  * @property {boolean} gap True for a read-only <gap/> marker cell.
+ * @property {"token"|"text-run"|"gap"} editingKind Local editing granularity.
+ * @property {boolean} joinLeft True when a zero-width TEI anchor split this cell from its left neighbour.
  * @property {string|null} crit Local-name of the immediate critical wrapper, or null.
  * @property {boolean} critSole True when the cell is that wrapper's sole content.
  * @property {string|null} mention Referenced entity id from a <name ref>, or null.
@@ -66,13 +70,16 @@
  */
 
 /**
- * One folio: the run of lines under a page break.
+ * One source-specific navigation unit, retained as Folio for API compatibility.
  * @typedef {Object} Folio
  * @property {number} index Zero-based folio index.
  * @property {string|null} n The page break's @n, or null.
  * @property {string|null} surfaceId The linked surface id (@facs without '#'), or null.
  * @property {Surface|null} surface The resolved surface, or null.
  * @property {Line[]} lines The folio's lines.
+ * @property {Object} navigationUnit The resolved navigation interval and anchor reference.
+ * @property {TeiNode|null} reviewAnchor The real TEI anchor, or null for a synthetic unit.
+ * @property {string} unitKind The active navigation channel id.
  */
 
 /**
@@ -80,7 +87,7 @@
  * @typedef {Object} EditionState
  * @property {string} raw The canonical raw XML string.
  * @property {TeiDocument} doc The offset-true parsed document.
- * @property {"word"|"line"} profile Editing granularity (word if any <w>, else line).
+ * @property {"word"|"line"} profile Deprecated document-level compatibility summary.
  * @property {Cell[]} cells All reading-text cells in document order.
  * @property {Map<string, Cell>} cellById Cell index by id.
  * @property {Cell[]} words Alias of cells (back-compat).
@@ -89,7 +96,8 @@
  * @property {Surface[]} surfaces Facsimile surfaces.
  * @property {Map<string, Surface>} surfaceById Surface index by id.
  * @property {Map<string, {surface: Surface, zone: Zone|null}>} zoneIndex Zone/surface index by id.
- * @property {Folio[]} folios Folios split by <pb>.
+ * @property {Folio[]} folios Units of the active source-specific navigation channel.
+ * @property {Object} sourceProfile Resolved capabilities, channels, panels, and evidence.
  * @property {boolean} hasDualReadings True when any cell carries a @norm reading.
  */
 
@@ -100,7 +108,8 @@
  * @typedef {Object} Project
  * @property {string} source "manifest" for a teicrafter.project.json, else "detected".
  * @property {string} name Project name.
- * @property {string|null} [schema] Schema path, or null.
+ * @property {{relaxng:string|null,xsd:string|null,schematron:string|null}|null} [schema] Project schema package, or null.
+ * @property {string|null} [schemaBaseUrl] Base URL for relative served schema paths.
  * @property {string|null} [iiifImageTemplate] IIIF image URL template, or null.
  * @property {string|null} [iiifPresentationManifest] IIIF presentation manifest URL, or null.
  * @property {Object[]|null} [markup] Default markup wrap list, or null.
@@ -109,6 +118,7 @@
  * @property {Object<string, string>} [files] File-name to type-key map.
  * @property {Object[]} [indices] Index descriptors.
  * @property {Object[]} [views] View descriptors.
+ * @property {Object|null} [uiProfile] Structural UI policy overrides.
  * @property {Object} [reconciliation] Reconciliation descriptor.
  * @property {Object} [llm] LLM descriptor.
  * @property {string|null} [interchange] Interchange profile ("inline-gnd"), or null.

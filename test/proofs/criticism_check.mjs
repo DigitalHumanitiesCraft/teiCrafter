@@ -14,9 +14,15 @@
  * Run: node test/proofs/criticism_check.mjs   (exit 0 = all pass)
  */
 
-import { parseEdition } from "../../docs/js/editor/edition.js";
-import { parseDocument, tokenize, textNodes } from "../../docs/js/editor/tei-document.js";
-import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "../../docs/js/editor/criticism.js";
+import { parseEdition, rawRangeForDisplay } from "../../docs/js/editor/edition.js";
+import { elementsByLocal, parseDocument, tokenize, textNodes } from "../../docs/js/editor/tei-document.js";
+import {
+  markCritical,
+  markCriticalRange,
+  unwrapCritical,
+  removeGap,
+  CRITICAL_KINDS,
+} from "../../docs/js/editor/criticism.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -179,6 +185,58 @@ check(!!wsNode && markCritical(doc0, wsNode, "del") === doc0,
   "guard: a whitespace-only core is a no-op (SAME doc)");
 check(markCritical(gstate.doc, gapCell.node, "unclear") === gstate.doc,
   "guard: marking a non-text node (a gap element) is a no-op (SAME doc)");
+
+// --- 10. partial-range critical markup is an engine-level lossless splice -----
+
+const RANGE_RAW = WRAP("<p>Alpha &amp; Beta Gamma</p>");
+const rangeState = parseEdition(RANGE_RAW);
+const rangeCell = cellByText(rangeState, "Alpha & Beta Gamma");
+const displayFrom = rangeCell.text.indexOf("Beta");
+const range = rawRangeForDisplay(rangeCell.rawText, displayFrom, displayFrom + "Beta".length);
+const rangeDoc = markCriticalRange(rangeState.doc, rangeCell.node, range[0], range[1], "del");
+check(rangeDoc.raw.includes("<p>Alpha &amp; <del>Beta</del> Gamma</p>"),
+  "partial range: only the selected bytes receive the critical wrapper");
+const rangeParsed = parseEdition(rangeDoc.raw);
+const selectedCell = cellByText(rangeParsed, "Beta");
+check(selectedCell.crit === "del" && selectedCell.critSole,
+  "partial range: the selected fragment reprojects as a removable critical cell");
+check(unwrapCritical(rangeParsed.doc, selectedCell.node).raw === RANGE_RAW,
+  "partial range: unwrapping restores every original byte");
+const rangeGap = markCriticalRange(rangeState.doc, rangeCell.node, range[0], range[1], "gap", { reason: "illegible" });
+check(rangeGap.raw.includes('Alpha &amp; <gap reason="illegible"/> Gamma'),
+  "partial range: gap replaces only the selected bytes");
+const whitespaceAt = rangeCell.rawText.indexOf(" ");
+check(markCriticalRange(rangeState.doc, rangeCell.node, whitespaceAt, whitespaceAt + 1, "add") === rangeState.doc,
+  "partial range: a whitespace-only selection is a SAME-doc no-op");
+
+// --- 11. insertion and recognition are strict about the TEI namespace --------
+
+const PREFIXED = '<tei:TEI xmlns:tei="http://www.tei-c.org/ns/1.0"><tei:text><tei:body><tei:p><tei:w xml:id="p1">Prefix</tei:w></tei:p></tei:body></tei:text></tei:TEI>';
+const prefixState = parseEdition(PREFIXED);
+for (const kind of ["unclear", "del", "add"]) {
+  const prefixDoc = markCritical(prefixState.doc, prefixState.cellById.get("p1").node, kind);
+  check(prefixDoc.raw.includes(`<tei:${kind}>Prefix</tei:${kind}>`) && !prefixDoc.raw.includes(`<${kind}>`),
+    `prefixed TEI: ${kind} preserves the active TEI prefix`);
+  const prefixParsed = parseEdition(prefixDoc.raw);
+  check(prefixParsed.cellById.get("p1").crit === kind,
+    `prefixed TEI: ${kind} is recognized by its TEI URI`);
+  check(unwrapCritical(prefixParsed.doc, prefixParsed.cellById.get("p1").node).raw === PREFIXED,
+    `prefixed TEI: unwrapping ${kind} restores the original bytes`);
+}
+const prefixGap = markCritical(prefixState.doc, prefixState.cellById.get("p1").node, "gap");
+check(prefixGap.raw.includes("<tei:gap/>") && parseEdition(prefixGap.raw).cells.some((cell) => cell.gap),
+  "prefixed TEI: gap insertion preserves the prefix and reprojects as critical");
+
+const FOREIGN = '<TEI xmlns="http://www.tei-c.org/ns/1.0" xmlns:x="urn:foreign"><text><body><p><x:unclear>Foreign</x:unclear><x:gap/></p></body></text></TEI>';
+const foreignDoc = parseDocument(FOREIGN);
+const foreignText = textNodes(foreignDoc.root).find((node) => foreignDoc.raw.slice(node.start, node.end) === "Foreign");
+const foreignGap = elementsByLocal(foreignDoc.root, "gap")[0];
+check(markCritical(foreignDoc, foreignText, "unclear") === foreignDoc,
+  "foreign wrapper: marking refuses a non-TEI insertion context");
+check(unwrapCritical(foreignDoc, foreignText) === foreignDoc,
+  "foreign equal-local-name wrapper is not removable as TEI criticism");
+check(removeGap(foreignDoc, foreignGap) === foreignDoc,
+  "foreign equal-local-name gap is not removable as a TEI gap");
 
 // --- summary -----------------------------------------------------------------
 

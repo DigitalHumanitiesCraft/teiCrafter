@@ -11,18 +11,26 @@ deferred handlers. The selection-popover lifecycle, the facsimile-to-text
 coupling, the violet AI marker, the index panel, and every keyboard and
 pointer gesture live entirely in that DOM/event/timing layer.
 
-`test/proofs/interaction_check.mjs` lifts the one piece of that layer that
-reduces to pure logic (the popover dismissal identity guard) into a headless
-predicate. Everything else is checked here, by hand, against a running editor.
-This file is the named, reproducible floor for the layer the engine proofs
-cannot reach. Run it whenever a change touches the editor UI, the event
-handlers, the facsimile viewer, or the standoff and annotation surfaces.
+`test/proofs/interaction_check.mjs` lifts the popover dismissal identity guard
+into a headless predicate. `test/e2e/app.spec.js` automates the stable browser
+paths with Chromium and Axe. This file retains the complete gesture catalogue,
+including permission prompts, live external services and timing cases that
+still require a human operator. Run the automated and applicable manual checks
+whenever a change touches the editor UI, event handlers, facsimile viewer, or
+standoff and annotation surfaces.
 
-## Serve recipe (no build step)
+## Serve and verification recipes
 
-The tool is client-only ES6 modules with no bundler. Serve the `docs/`
-directory over HTTP (the File System Access and module-loading paths do not work
-from a `file://` URL) and open the editor.
+The runtime is client-only ES modules. The pinned development path uses Vite;
+directly serving `docs/` remains useful for source inspection. Neither path
+works from a `file://` URL.
+
+```
+npm ci
+npm run dev
+```
+
+The Vite terminal prints the local URL. The direct-source alternative is:
 
 ```
 cd docs
@@ -30,6 +38,14 @@ python -m http.server 8000
 ```
 
 Then open `http://localhost:8000/editor.html` in the browser.
+
+The reproducible automated gates are:
+
+```
+npm run verify
+npm run test:e2e
+UFBAS_TEI=/absolute/path/TEI_SOURCE.xml npm run test:e2e
+```
 
 On a local development host the built-in examples are visible (the
 `FEATURES.examples` flag is on for localhost), so the example deep links used
@@ -186,21 +202,23 @@ unambiguous).
 - Gesture: with an AI proposal present on a non-entity construct (a markup wrap such
   as `<date>`, an `<unclear>`/`<del>`/`<add>`, an inline AI entity name-wrap, or a
   `<gap/>`), click the violet construct. It opens the layers inspector. Use the
-  per-layer "confirm" or "reject".
+  per-layer "confirm" or "reject". For a proposed standOff `<note>`, click its
+  violet note marker and use the equivalent controls in the note popover.
 - Expected: the inspector lists the construct's layer(s); a layer carrying the project
   `@resp` shows a "confirm" and a "reject". Confirm drops the violet `@resp` marker and
   keeps the markup (it reads as ordinary, human-accepted markup afterwards); reject
   removes the construct (a reading-text wrapper restores the exact surrounded text, a
   `<gap/>` marker is removed). A human-authored, unmarked construct shows no
   confirm/reject. A save-reopen is byte-faithful to the intended change (VC-6). The
-  engine behind this is proven headless (`proposal_review_check`).
+  engine behind this is proven headless (`proposal_review_check`). After the final
+  proposal is resolved, a responsibility declaration created for this proposal
+  session disappears if no remaining `@resp` points to it. If every proposal was
+  rejected and no other edit occurred, the document returns to its prior clean state.
 - Failure signature: confirm removes the construct instead of only its marker, reject
   loses or changes neighbouring reading text, confirm/reject appears on human markup,
   the violet persists after confirm, the inspector does not open on a single AI
-  construct, or a save-reopen diffs outside the intended span.
-- Not yet covered (engine ready, UI surface pending): confirming or rejecting a
-  proposed standOff `<note>`, which is not a reading-cell layer and so does not appear
-  in the inspector; its review surface is the open remainder.
+  construct, the note marker provides no review controls, unused proposal provenance
+  remains after the last rejection, or a save-reopen diffs outside the intended span.
 
 ### VC-14 LLM layer off and on, Propose (AI) end-to-end
 
@@ -221,27 +239,104 @@ unambiguous).
   that is not marked violet; a confirmed construct keeps its `@resp`; or a save and
   reopen diffs outside the intended spans.
 
-### VC-15 Export the inline-GND interchange copy
+### VC-15 Hersch inline-GND open, save, download and export
 
-- Gesture: open a document under a project that declares the inline-GND interchange
-  (the ZBZ Hersch example, `editor.html#example=zbz`, whose
-  `teicrafter.project.json` carries `"interchange": "inline-gnd"`). Annotate at
-  least one person/org/work mention with a GND id. An "Export inline-GND" button
-  appears in the toolbar beside Save and Download. Click it.
-- Expected: the button is shown ONLY for an inline-GND project (it is absent for the
-  Wenzelsbibel example and any document without the opt-in). Clicking it downloads
-  `{name}_final.xml`: each register mention is inlined as `<persName ref="GND:..">`,
-  `<orgName ref="GND:..">` or `<bibl ref="GND:..">`, places are plain text, and there
-  is no `<standOff>`. The reading text is byte-identical to the in-editor document,
-  and the in-editor document is left unchanged (the register model stays the editing
-  model). Re-opening the exported `{name}_final.xml` in the editor renders the same
-  reading text (the round-trip fixed point proven headless by
-  `inline_gnd_reopen_check`). The engine behind the export is proven headless
-  (`inline_gnd_check`, `inline_gnd_schema_check`).
-- Failure signature: the button appears for a non-opt-in document, the export changes
-  the in-editor document, a `<standOff>` survives in the exported file, a `<name
-  ref="#..">` mention survives un-inlined, a place is annotated, the reading text
-  diffs from the source, or the exported file fails to re-open.
+- Gesture: open `output/entity_preview/1000_final.xml` from the sibling Hersch
+  checkout as a single file, without first opening a project folder. Confirm that
+  its existing inline annotations appear as editable register-backed mentions.
+  Save it in place without making an edit, then compare the saved bytes with the
+  opened bytes. Next open `output/tei_final/1540_final.xml`, add a person, org or
+  work mention with a GND id, and Save. Also exercise Download and the separate
+  "Export inline-GND" action. Finally, open a non-Hersch TEI whose root type is
+  not `naegeli`.
+- Expected: both Hersch files select the detected ZBZ Jeanne Hersch profile solely
+  from the exact `TEI@type="naegeli"` signature. The existing inline mentions in
+  1000 are lifted into the editable register model, while the unannotated 1540 is
+  not transformed on load. Ordinary Save writes the inline-GND project format back
+  to the same file handle. An unchanged 1000 is byte-identical after Save; the new
+  1540 annotation is a typed inline element and no `<standOff>` remains in the saved
+  artifact. Download uses the current filename and clearly identifies the inline-GND
+  save format. "Export inline-GND" remains an explicit handover copy named
+  `{name}_final.xml`. The non-Hersch TEI does not select this profile, even if it
+  contains inline-looking markup. The deterministic boundary is proven by
+  `hersch_profile_workflow_check` and the interchange engine proofs.
+- Failure signature: a Hersch file needs a manifest to select its profile; a broad
+  filename rule selects the non-Hersch document; 1000 opens without editable
+  register entities; the unchanged Save alters 1000; ordinary Save or Download
+  writes the register model; the 1540 annotation is absent after Save; or the
+  explicit export changes the in-editor document.
+
+### VC-16 Attach a local facsimile folder
+
+- Gesture: open a Hersch TEI from `output/tei_final` that references images by bare
+  filename. Choose "Attach facsimile folder" and select its corresponding
+  `docs/images/{id}` directory. Turn pages and inspect the Facsimile panel. Repeat
+  the action in a browser without the File System Access directory picker.
+- Expected: the picker is a separate document action. Matching bare filenames
+  resolve from the selected directory for the current browser session and the
+  facsimiles render. The files remain local: the editor creates display URLs and
+  does not copy the selected images into the TEI folder, a download, or a public
+  location. Missing filenames are counted in the status message. A browser without
+  the capability reports that a Chromium-based browser with the File System Access
+  API is required, while XML editing and download remain available. The storage
+  contract is proven by `facsimile_folder_check`.
+- Failure signature: the action is absent despite bare graphic filenames; selecting
+  the matching directory leaves every image unresolved; Save copies attached image
+  files; path-like or remote graphic URLs are treated as local filenames; cancellation
+  throws; or an unsupported browser fails silently.
+
+### VC-17 Reject structurally invalid LLM drafts
+
+- Gesture: open "New from text (LLM)" and submit a short plaintext sample. Exercise
+  responses that are malformed XML, contain a `DOCTYPE`, use a non-TEI root or wrong
+  namespace, omit part of the minimum `fileDesc`, or omit `text/body`. Then exercise
+  one response that satisfies the minimum structure.
+- Expected: every invalid response produces a precise error in the modal and leaves
+  the currently open document unchanged. A well-formed, self-contained TEI P5 response
+  with `titleStmt/title`, `publicationStmt`, `sourceDesc`, and `text/body` opens as a
+  violet, unreviewed draft. The prompt supplies this exact skeleton and instructs the
+  model to carry source text only in the body (`llm_prompt_check`).
+- Failure signature: an invalid response replaces the current document, a `DOCTYPE`
+  is accepted, a valid minimum document is rejected, or the source text appears in
+  the generated header because the prompt placed it there.
+
+### VC-18 Whole-book page XML and metadata XML
+
+- Gesture: open the real UFBAS whole-book TEI, navigate to page 4, open "XML source",
+  search within the page, stage an edit, attempt a page change, then Check, Apply and
+  Download. Open "Metadata", inspect the structured fields, open the complete
+  `teiHeader` through "Edit XML", and attempt to change views while an edit is staged.
+- Expected: the document loads as 226 pages; page source stages only page 4 and opens
+  at the left edge of its exact raw span; element names are blue, and attributes plus
+  values are yellow-orange. Find locates the page text, Check validates the candidate
+  complete document, and staged edits block page or view changes until Apply or Cancel.
+  Download differs from the opened file only by the deliberate edit. Metadata exposes
+  common existing fields directly, routes mixed/project-specific markup to the exact
+  raw `teiHeader`, retains document line numbers there, hides the unrelated page pager,
+  and applies through the same complete-document boundary.
+- Failure signature: source mode highlights the whole book, opens horizontally midway
+  through a long line, drops bytes outside the edited span, allows a staged change to
+  disappear on navigation, omits header metadata, or presents Metadata as a partial
+  form that cannot represent the original `teiHeader`.
+
+### VC-19 Annotation coverage, structured metadata and TEI completion
+
+- Gesture: open the real UFBAS whole-book TEI. Open the "Annotated" page map, jump
+  directly to page 4, then open Metadata. Change the Title without applying and try
+  to return to Reading text; Reset the staged field. Open "Edit XML", type `<per` at
+  a temporary caret, accept the `persName` completion, then Cancel.
+- Expected: the summary reports 226/226 annotation-bearing pages and 16,846 detected
+  annotations; page 4 opens and the map closes. Metadata presents 13 projected fields
+  (11 editable, 2 XML-only), including the original Title, and the pager plus annotation
+  map are hidden. A staged field blocks the view change with a precise status; Reset
+  restores the original Title. Raw metadata states "Well-formedness · schema offline",
+  offers `persName`, inserts it at the caret, and Cancel returns to the structured form
+  with the original document unchanged.
+- Failure signature: header elements inflate the annotation count, a page-map choice
+  opens the wrong folio, mixed metadata is flattened into an editable plain-text field,
+  staged form data disappears on a view change, the raw source implies schema validation
+  ran in the browser, completion changes bytes outside the typed prefix, or Cancel leaves
+  Metadata for the reading view.
 
 ### VC-F-1 Index panel reflects the document's declared indices
 
@@ -456,3 +551,10 @@ Record each operator pass: date, browser, and which checks passed or failed.
 |-----|--------|
 | Run 2026-06-13 | pending operator pass |
 | VC-15 inline-GND export (2026-06-21, Chrome) | lane partial pass: positive gate verified (the "Export inline-GND" button shows for the zbz interchange opt-in document, click fires with no console error, the in-editor document stays valid); negative gate (button absent for Wenzelsbibel) and exported-file re-open still pending |
+| Hersch pilot, documents 1000 and 1540 (2026-08-22, in-app Chromium) | profile, reading model, folio navigation, facsimile rendering, zones, index projection, correction, annotation, and inline-GND download passed on the real local objects; native single-file Save and the directory picker remain outside browser automation and require an operator gesture |
+| Live GND reconciliation (2026-08-22, in-app Chromium) | the annotation lookup returned the Jeanne Hersch record and exposed it for human selection; this verifies the live register call and candidate surface, not the scholarly correctness of every possible match |
+| VC-13 proposal review (2026-08-22, in-app Chromium, local Mistral) | inline and standOff-note proposals rendered violet; the note marker opened confirm/reject, rejection removed the note, and resolving the final proposal removed `@resp="#ai"`, the session-created `respStmt`, and the dirty marker when the source returned to its baseline |
+| VC-17 structural gate (2026-08-22, in-app Chromium) | structurally non-compliant replies from the real local Mistral were rejected with the current document retained; a controlled local response carrying the required TEI namespace, minimum `fileDesc`, and `text/body` was accepted, opened as generated content, and reported well-formed |
+| VC-18 UFBAS whole-book XML and metadata (2026-08-24, in-app Chromium) | the real 2.17 MB `TEI_SOURCE.xml` loaded as 226 pages; page 4 source, syntax colours, find, complete-document Check, staged-edit guards, Apply, and Download passed. The downloaded file returned to the original exactly after removing the one inserted test comment. The dedicated Metadata tab exposed all 46 `teiHeader` lines, hid the pager, opened at horizontal position zero, and retained an applied header comment after the complete-document reparse. Native Save was outside the automated file-picker permission path; the universal Download path was observed. |
+| VC-19 UFBAS annotation coverage, structured metadata and completion (2026-08-24, in-app Chromium) | the real file reported 226/226 annotation-bearing pages and 16,846 detected annotations; direct navigation opened page 4. Metadata projected 13 fields (11 editable, 2 XML-only), preserved the original title through the staged-change guard and Reset, exposed mixed project description as XML-only, and returned from raw XML Cancel to the form. The raw header labelled schema validation offline; `<per` offered and inserted `persName`. All temporary edits were cancelled or reset. |
+| VC-20 refactor acceptance (2026-08-24, Chromium/Playwright) | 71 required proofs, harness self-test 14/14, four synthetic tiers at score 100, typecheck, Biome and Vite passed. Two committed Chromium scenarios passed with 0 serious/critical Axe findings. With `UFBAS_TEI` set to the downloaded 2.17 MB source, the optional real-book scenario loaded 226 pages, kept the pager on one line, exposed metadata and different page XML spans, persisted and undid review, validated against repository TEI All, and passed Axe with 0 serious/critical findings. The first run found and the second run verified fixes for legend and synthetic-line-number contrast plus reading-pane keyboard focus. Scholarly correctness and user acceptance remain open human judgments. |

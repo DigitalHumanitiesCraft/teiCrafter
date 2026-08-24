@@ -32,19 +32,56 @@
 
 import { el, clear } from "./dom.js";
 import * as standoff from "./standoff.js";
-import { parseEdition, rawRangeForDisplay, unescapeXmlText, attrTargetForCell } from "./edition.js";
-import { addAttr, editAttrValue, removeAttr } from "./tei-document.js";
+import {
+  attrTargetForCell,
+  multiWordSelectionTarget,
+  parseEdition,
+  rawOffsetForDisplay,
+  rawRangeForDisplay,
+  unescapeXmlText,
+} from "./edition.js";
+import {
+  addAttr,
+  editAttrValue,
+  escapeAttr,
+  removeAttr,
+  wrapSiblingElementRange,
+} from "./tei-document.js";
 import { elementByName, isW3cDateAttr, w3cDateReason } from "./tei-guidelines.js";
 import { buildAuthorityForm } from "./authority-form.js";
 import { runAuthorityLookup } from "./authority-picker.js";
 import { requireCtx } from "./ctx.js";
 import { shouldDismissPopover } from "./interaction-rules.js";
 import { confirmConstruct, rejectConstruct } from "./proposal-review.js";
+import { exportableEntityTypes, usesInlineGND } from "./interchange.js";
+import { allowsArbitraryMarkup } from "./project-manifest.js";
+import { markCriticalRange } from "./criticism.js";
+import {
+  addSpanAnnotation,
+  relinkSpanAnnotation,
+  removeSpanAnnotation,
+} from "./span-annotations.js";
 
 const ENTITY_TYPE_LABELS = [
   ["person", "person"], ["place", "place"], ["org", "organisation"],
   ["work", "work"], ["event", "event"],
 ];
+
+const ENTITY_COLLECTION = Object.freeze({
+  person: "persons",
+  place: "places",
+  org: "orgs",
+  work: "works",
+  event: "events",
+});
+
+/** Entity creation/retyping options permitted by the active target profile. */
+export function entityTypeOptions(project) {
+  const supported = exportableEntityTypes(project);
+  if (!supported) return ENTITY_TYPE_LABELS;
+  const allowed = new Set(supported);
+  return ENTITY_TYPE_LABELS.filter(([type]) => allowed.has(type));
+}
 
 const TYPE_LABEL = { pers: "person", plc: "place", org: "organisation", wrk: "work", evt: "event" };
 
@@ -80,6 +117,7 @@ function allEntityIds(doc) {
 // or a real change re-renders. Degrades silently where the API is absent (the
 // Chromium target supports it); the range is cloned so it survives focus moving.
 const HL_ANNOTATE = "ed-annotate";
+const HL_COLLECTED = "ed-collected";
 function setAnnotateHighlight(range) {
   if (!range || typeof Highlight === "undefined" || !window.CSS || !CSS.highlights) return;
   try { CSS.highlights.set(HL_ANNOTATE, new Highlight(range)); } catch { /* unsupported range */ }
@@ -88,13 +126,194 @@ function clearAnnotateHighlight() {
   if (window.CSS && CSS.highlights) CSS.highlights.delete(HL_ANNOTATE);
 }
 
+/** The rendered reading-cell span containing a Range endpoint. */
+function cellSpanForEndpoint(node) {
+  const element = node?.nodeType === 3 ? node.parentElement : node;
+  return element && typeof element.closest === "function"
+    ? element.closest("#ed-reading .ed-w")
+    : null;
+}
+
+/** Display offset of a Range endpoint inside its rendered reading-cell span. */
+function displayOffsetInSpan(span, container, offset) {
+  if (!span || !container || !Number.isInteger(offset) || offset < 0) return null;
+  if (container.nodeType === 3 && container.parentElement === span) {
+    return offset <= container.textContent.length ? offset : null;
+  }
+  if (container !== span) return null;
+  const children = Array.from(container.childNodes || []);
+  if (offset > children.length) return null;
+  return children.slice(0, offset).reduce((sum, child) => sum + String(child.textContent || "").length, 0);
+}
+
+function selectedCellsBetween(state, startCellId, endCellId) {
+  const first = state.cells.findIndex((cell) => cell.id === startCellId);
+  const last = state.cells.findIndex((cell) => cell.id === endCellId);
+  return first >= 0 && last >= first ? state.cells.slice(first, last + 1) : [];
+}
+
+function readingSelectionText(state, startCell, endCell, startOffset, endOffset) {
+  const cells = selectedCellsBetween(state, startCell.id, endCell.id);
+  if (!cells.length) return "";
+  return cells.reduce((text, cell, index) => {
+    const from = index === 0 ? startOffset : 0;
+    const to = index === cells.length - 1 ? endOffset : cell.text.length;
+    const part = cell.text.slice(from, to);
+    const separator = index > 0 && !cell.joinLeft ? " " : "";
+    return text + separator + part;
+  }, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Browser-near selection resolver used by the UI and headless DOM-range proofs.
+ * Returns an { ok:true, kind:"single"|"multi-word"|"stand-off", ... } target or an explicit
+ * fail-closed diagnostic.
+ */
+export function selectionTargetFromRange(state, range, folioIndex) {
+  if (!state || !range) {
+    return { ok: false, code: "no-selection", message: "Select reading text to annotate." };
+  }
+  const startSpan = cellSpanForEndpoint(range.startContainer);
+  const endSpan = cellSpanForEndpoint(range.endContainer);
+  if (!startSpan || !endSpan) {
+    return { ok: false, code: "outside-cell", message: "Start and end the selection inside readable text cells." };
+  }
+  const startOffset = displayOffsetInSpan(startSpan, range.startContainer, range.startOffset);
+  const endOffset = displayOffsetInSpan(endSpan, range.endContainer, range.endOffset);
+  if (startOffset == null || endOffset == null) {
+    return { ok: false, code: "unmapped-endpoint", message: "The selection endpoints cannot be mapped safely to the XML source." };
+  }
+
+  const startCell = state.cellById.get(startSpan.dataset.id);
+  const endCell = state.cellById.get(endSpan.dataset.id);
+  if (!startCell || !endCell || startCell.gap || endCell.gap) {
+    return { ok: false, code: "unknown-cell", message: "The selection no longer matches the current reading view." };
+  }
+  if (startSpan === endSpan) {
+    let dFrom = Math.min(startOffset, endOffset);
+    let dTo = Math.max(startOffset, endOffset);
+    const shown = startSpan.textContent;
+    while (dFrom < dTo && /\s/.test(shown[dFrom])) dFrom++;
+    while (dTo > dFrom && /\s/.test(shown[dTo - 1])) dTo--;
+    if (dFrom >= dTo) {
+      return { ok: false, code: "empty-selection", message: "Select non-whitespace reading text to annotate." };
+    }
+    const rel = rawRangeForDisplay(startCell.rawText, dFrom, dTo);
+    if (!rel) {
+      return { ok: false, code: "unmapped-endpoint", message: "The selection endpoints cannot be mapped safely to the XML source." };
+    }
+    const text = shown.slice(dFrom, dTo);
+    if (unescapeXmlText(startCell.rawText.slice(rel[0], rel[1])) !== text) {
+      return { ok: false, code: "text-mismatch", message: "The displayed selection does not match one safe XML source range." };
+    }
+    return {
+      ok: true,
+      kind: "single",
+      cell: startCell,
+      span: startSpan,
+      relFrom: rel[0],
+      relTo: rel[1],
+      startCellId: startCell.id,
+      endCellId: endCell.id,
+      startOffset: dFrom,
+      endOffset: dTo,
+      text,
+    };
+  }
+
+  const selection = {
+    startCellId: startCell.id,
+    endCellId: endCell.id,
+    startOffset,
+    endOffset,
+    folioIndex,
+    text: readingSelectionText(state, startCell, endCell, startOffset, endOffset),
+  };
+  const inlineTarget = multiWordSelectionTarget(state, selection);
+  if (inlineTarget.ok) return inlineTarget;
+
+  const startRel = rawOffsetForDisplay(startCell.rawText, startOffset);
+  const endRel = rawOffsetForDisplay(endCell.rawText, endOffset);
+  if (startRel == null || endRel == null) {
+    return { ok: false, code: "unmapped-endpoint", message: "The selection endpoints cannot be mapped safely to the XML source." };
+  }
+  const start = startCell.start + startRel;
+  const end = endCell.start + endRel;
+  if (start >= end || !selection.text.trim()) {
+    return { ok: false, code: "empty-selection", message: "Select non-whitespace reading text to annotate." };
+  }
+  return {
+    ok: true,
+    kind: "stand-off",
+    ranges: [{ start, end }],
+    startCellId: startCell.id,
+    endCellId: endCell.id,
+    startOffset,
+    endOffset,
+    folioIndex,
+    text: selection.text,
+    inlineDiagnostic: { code: inlineTarget.code, message: inlineTarget.message },
+  };
+}
+
+/** Convert any resolved browser target into stable cell/display boundaries. */
+export function selectionSegmentFromTarget(state, target) {
+  if (!state || !target?.ok) return null;
+  const startCellId = target.kind === "single"
+    ? target.cell.id
+    : target.kind === "multi-word" ? target.cellIds[0] : target.startCellId;
+  const endCellId = target.kind === "single"
+    ? target.cell.id
+    : target.kind === "multi-word" ? target.cellIds[target.cellIds.length - 1] : target.endCellId;
+  const first = state.cellById.get(startCellId);
+  const last = state.cellById.get(endCellId);
+  const startOffset = target.kind === "multi-word" ? 0 : target.startOffset;
+  const endOffset = target.kind === "multi-word" ? last?.text.length : target.endOffset;
+  const firstRel = first ? rawOffsetForDisplay(first.rawText, startOffset) : null;
+  const lastRel = last ? rawOffsetForDisplay(last.rawText, endOffset) : null;
+  if (!first || !last || firstRel == null || lastRel == null) return null;
+  const start = first.start + firstRel;
+  const end = last.start + lastRel;
+  if (start >= end) return null;
+  return {
+    startCellId,
+    endCellId,
+    startOffset,
+    endOffset,
+    start,
+    end,
+    text: target.text,
+  };
+}
+
+/** Combine separately selected, non-overlapping segments into one UI target. */
+export function combineSelectionSegments(segments) {
+  const sorted = [...segments].sort((a, b) => a.start - b.start || a.end - b.end);
+  if (!sorted.length || sorted.some((segment, index) =>
+    !segment || segment.start >= segment.end || (index > 0 && sorted[index - 1].end > segment.start))) {
+    return { ok: false, code: "overlapping-segments", message: "Collected segments must be separate, non-overlapping reading ranges." };
+  }
+  return {
+    ok: true,
+    kind: "stand-off",
+    segments: sorted,
+    ranges: sorted.map(({ start, end }) => ({ start, end })),
+    startCellId: sorted[0].startCellId,
+    endCellId: sorted[sorted.length - 1].endCellId,
+    startOffset: sorted[0].startOffset,
+    endOffset: sorted[sorted.length - 1].endOffset,
+    text: sorted.map((segment) => segment.text).join(" … "),
+    segmentTexts: sorted.map((segment) => segment.text),
+  };
+}
+
 export function createAnnotationUi(ctx) {
   requireCtx("createAnnotationUi", ctx,
-    ["setStatus", "commitStandoff", "entityMetaMap", "entityUsage",
+    ["setStatus", "setDirty", "commitStandoff", "entityMetaMap", "entityUsage",
      "revealEntity", "highlightMentions", "beginTextInput", "beginNote", "beginCritic",
      "ensureGuidelines", "guidelinesNow"], ["app", "author"]);
   const {
-    app, setStatus, commitStandoff,
+    app, setStatus, setDirty, commitStandoff,
     entityMetaMap, entityUsage, revealEntity,
     highlightMentions, beginTextInput, beginNote, beginCritic,
     ensureGuidelines, guidelinesNow, author,
@@ -106,6 +325,31 @@ export function createAnnotationUi(ctx) {
   // the document's type within the project (resolved at load into app.markup,
   // same [label, build] shape, produced by project-manifest.js).
   const markupWraps = () => app.markup || MARKUP_WRAPS;
+  const entityTypes = () => entityTypeOptions(app.project);
+  const entityCollections = () => entityTypes().map(([type]) => ENTITY_COLLECTION[type]);
+  let collectedSegments = [];
+  let collectedSessionId = null;
+  let collectedRevision = null;
+  let collectedDomRanges = [];
+
+  function paintCollectedRanges() {
+    if (typeof Highlight === "undefined" || !window.CSS || !CSS.highlights) return;
+    if (collectedDomRanges.length) {
+      CSS.highlights.set(HL_COLLECTED, new Highlight(...collectedDomRanges));
+    } else {
+      CSS.highlights.delete(HL_COLLECTED);
+    }
+  }
+
+  function clearCollectedRange() {
+    const hadSegments = collectedSegments.length > 0;
+    collectedSegments = [];
+    collectedSessionId = null;
+    collectedRevision = null;
+    collectedDomRanges = [];
+    if (window.CSS?.highlights) CSS.highlights.delete(HL_COLLECTED);
+    return hadSegments;
+  }
 
   function removeMenu() {
     const old = document.getElementById("ed-menu");
@@ -134,6 +378,27 @@ export function createAnnotationUi(ctx) {
     pop.style.top = (rect.bottom - hostRect.top + host.scrollTop + 6) + "px";
   }
 
+  /** Resolve one proposal and remove a respStmt inserted during this open session
+   * once its final @resp pointer is gone. Declarations loaded from disk are never
+   * treated as session scaffolding. */
+  function resolveProposal(operation, options, aiResp = app.aiResp || standoff.AI_RESP) {
+    let removedSessionDeclaration = false;
+    const changed = commitStandoff((doc) => {
+      const resolved = operation(doc);
+      if (resolved === doc || !app.proposalRespCreated?.has(aiResp)) return resolved;
+      const cleaned = standoff.removeRespStmtIfUnused(resolved, aiResp);
+      removedSessionDeclaration = cleaned !== resolved;
+      return cleaned;
+    }, options);
+    if (changed && removedSessionDeclaration) app.proposalRespCreated.delete(aiResp);
+    if (changed && !standoff.hasRespReference(app.state.doc, aiResp)) {
+      if (app.proposalBaseline && app.state.doc.raw === app.proposalBaseline.raw) {
+        setDirty(app.proposalBaseline.dirty);
+      }
+      app.proposalBaseline = null;
+    }
+  }
+
   /**
    * Oxygen-style right-click menu on the reading text. Contextual: a live
    * selection offers annotation; an annotated element offers its editor; every
@@ -154,13 +419,20 @@ export function createAnnotationUi(ctx) {
     // wrap would splice the wrong bytes: drop the selection-derived entry in the
     // normalized variant; the word-anchored entries below stay available.
     const target = app.readingVariant === "norm" ? null : selectionTarget();
-    if (target) {
+    if (target?.ok) {
       const shortText = target.text.length > 28 ? target.text.slice(0, 28) + "..." : target.text;
       item(`Annotate "${shortText}"...`, () => openSelPopover());
     }
     if (cell) {
       const c = () => app.state.cellById.get(cell.id);
-      if (cell.mention) item("Edit annotation...", () => { if (c()) openAnnotationEditor(span, c()); });
+      if (cell.mention) item("Edit annotation...", () => {
+        const current = c();
+        if (!current) return;
+        const standOffMention = current.layers?.some((layer) =>
+          layer.kind === "mention" && layer.standOff);
+        if (standOffMention) openLayersInspector(span, current);
+        else openAnnotationEditor(span, current);
+      });
       if (!cell.gap) {
         item(app.state.profile === "word" ? "Edit word" : "Edit line", () => { if (c()) beginTextInput(span, c()); });
         item("Add note...", () => { if (c()) beginNote(span, c()); });
@@ -168,7 +440,7 @@ export function createAnnotationUi(ctx) {
         if (attrTargetForCell(cell)) {
           item("Edit element attributes...", () => { if (c()) openAttrEditor(span, c()); });
         }
-        if (app.state.profile === "word") {
+        if (app.state.profile === "word" && !cell.mention) {
           item("Link this word to an entity...", () => { if (c()) openEntityPickerFor(span, c()); });
         }
       } else {
@@ -301,7 +573,7 @@ export function createAnnotationUi(ctx) {
       btn("change type...", "make this a different type (person, place, ...), keeping its id and authority ids", () => {
         clear(row);
         row.appendChild(el("span", { class: "ed-act-group", text: "change type to" }));
-        for (const [type, label] of [["person", "person"], ["place", "place"], ["org", "organisation"], ["work", "work"], ["event", "event"]]) {
+        for (const [type, label] of entityTypes()) {
           if (type === curType) continue;
           const b = el("button", { class: "ed-act-btn", text: label,
             title: `Make this a ${label}; id and authority ids stay, mentions stay linked` });
@@ -573,12 +845,47 @@ export function createAnnotationUi(ctx) {
       row.appendChild(el("span", { class: "ed-layer-label", text: label,
         title: `${KIND_LABEL[layer.kind] || "markup"}${i === 0 ? ", innermost" : ""}` }));
       const c = () => app.state.cellById.get(cell.id);
-      if (layer.kind === "mention" && i === 0 && cell.mention) {
+      if (layer.kind === "mention" && layer.standOff && layer.ref) {
+        const b = el("button", { class: "ed-act-btn", text: "open entity", title: "show this entity in the full index" });
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeSelPopover();
+          revealEntity(layer.ref);
+        });
+        row.appendChild(b);
+        if (layer.standOffGroupId) {
+          const relink = el("button", { class: "ed-act-btn", text: "relink", title: "point every segment of this annotation at another entity" });
+          relink.addEventListener("click", (e) => {
+            e.stopPropagation();
+            clear(row);
+            buildEntityChoiceRows(row, cell.text.trim(), (entityId) => {
+              removeSelPopover();
+              commitStandoff(
+                (doc) => relinkSpanAnnotation(doc, layer.standOffGroupId, entityId),
+                { label: `Relinked stand-off annotation to ${entityId}`, failPrefix: "Relink",
+                  noopLabel: "The stand-off annotation was not changed" },
+              );
+            }, layer.ref);
+          });
+          row.appendChild(relink);
+          const remove = el("button", { class: "ed-act-btn", text: "remove annotation", title: "remove this stand-off annotation and its unused anchors; the text survives" });
+          remove.addEventListener("click", (e) => {
+            e.stopPropagation();
+            removeSelPopover();
+            commitStandoff(
+              (doc) => removeSpanAnnotation(doc, layer.standOffGroupId),
+              { label: "Removed stand-off annotation", failPrefix: "Remove",
+                noopLabel: "The stand-off annotation was not changed" },
+            );
+          });
+          row.appendChild(remove);
+        }
+      } else if (layer.kind === "mention" && i === 0 && cell.mention) {
         const b = el("button", { class: "ed-act-btn", text: "edit link", title: "edit this entity annotation" });
         b.addEventListener("click", (e) => { e.stopPropagation(); const cc = c(); if (cc) openAnnotationEditor(span, cc); });
         row.appendChild(b);
       }
-      if (layer.el) {
+      if (layer.el && !layer.standOff) {
         const b = el("button", { class: "ed-act-btn", text: "edit attributes", title: `edit the attributes of <${layer.localName}>` });
         b.addEventListener("click", (e) => { e.stopPropagation(); const cc = c(); if (cc) openAttrEditor(span, cc, layer.el); });
         row.appendChild(b);
@@ -593,7 +900,7 @@ export function createAnnotationUi(ctx) {
         cb.addEventListener("click", (e) => {
           e.stopPropagation();
           removeSelPopover();
-          commitStandoff((doc) => confirmConstruct(doc, layer.el, { resp: aiResp }),
+          resolveProposal((doc) => confirmConstruct(doc, layer.el, { resp: aiResp }),
             { label: `Confirmed <${layer.localName}>`, failPrefix: "Confirm", noopLabel: "Already confirmed" });
         });
         row.appendChild(cb);
@@ -601,7 +908,7 @@ export function createAnnotationUi(ctx) {
         rb.addEventListener("click", (e) => {
           e.stopPropagation();
           removeSelPopover();
-          commitStandoff((doc) => rejectConstruct(doc, layer.el, { resp: aiResp }),
+          resolveProposal((doc) => rejectConstruct(doc, layer.el, { resp: aiResp }),
             { label: `Rejected <${layer.localName}>`, failPrefix: "Reject", noopLabel: "Nothing to reject" });
         });
         row.appendChild(rb);
@@ -612,40 +919,55 @@ export function createAnnotationUi(ctx) {
     anchorPopAt(pop, span.getBoundingClientRect(), host);
   }
 
+  /** Review a proposed standOff note from the reading location named by @target. */
+  function openProposedNoteReview(span, detail) {
+    if (!detail || !detail.el) return;
+    removeMenu();
+    removeSelPopover();
+    const host = reading();
+    const pop = el("div", { class: "ed-sel-pop ed-layers-pop", id: "ed-sel-pop" });
+    const titleRow = el("div", { class: "ed-sel-pop-titlerow" });
+    titleRow.appendChild(el("span", { class: "ed-sel-pop-title", text: "AI-proposed note" }));
+    const closeBtn = el("button", { class: "ed-sel-pop-close", text: "×", title: "close", "aria-label": "close", type: "button" });
+    closeBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+    titleRow.appendChild(closeBtn);
+    pop.appendChild(titleRow);
+    pop.appendChild(el("div", { class: "ed-layer-label", text: detail.text || "(empty note)" }));
+    const row = el("div", { class: "ed-layers-row ed-layer-note" });
+    const aiResp = app.aiResp || standoff.AI_RESP;
+    const cb = el("button", { class: "ed-act-btn ed-btn-ai", text: "confirm", title: "accept this AI-proposed note" });
+    cb.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeSelPopover();
+      resolveProposal((doc) => confirmConstruct(doc, detail.el, { resp: aiResp }),
+        { label: "Confirmed <note>", failPrefix: "Confirm", noopLabel: "Already confirmed" }, aiResp);
+    });
+    row.appendChild(cb);
+    const rb = el("button", { class: "ed-act-btn", text: "reject", title: "remove this AI-proposed note" });
+    rb.addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeSelPopover();
+      resolveProposal((doc) => rejectConstruct(doc, detail.el, { resp: aiResp }),
+        { label: "Rejected <note>", failPrefix: "Reject", noopLabel: "Nothing to reject" }, aiResp);
+    });
+    row.appendChild(rb);
+    pop.appendChild(row);
+    anchorPopAt(pop, span.getBoundingClientRect(), host);
+  }
+
   // ---- selection annotation (M2.8) ----------------------------------------
   // Select any words inside a line with the mouse and annotate exactly that
   // text. The wrap is a lossless sub-range splice (standoff.linkMentionRange);
   // afterwards the annotation editor opens on the fresh mention so authority
   // ids are attachable in place.
 
-  /** Resolve the current selection to { cell, relFrom, relTo, text } or null. */
+  /** Resolve the current browser range to a safe single- or multi-cell target. */
   function selectionTarget() {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !app.state) return null;
-    const range = sel.getRangeAt(0);
-    const spanOf = (node) => {
-      const elNode = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-      return elNode ? elNode.closest("#ed-reading .ed-w") : null;
-    };
-    const startSpan = spanOf(range.startContainer);
-    const endSpan = spanOf(range.endContainer);
-    if (!startSpan || startSpan !== endSpan) return null; // one segment at a time
-    const cell = app.state.cellById.get(startSpan.dataset.id);
-    if (!cell || cell.gap) return null;
-    // Display offsets inside the span's single text node, trimmed to the words.
-    let dFrom = Math.min(range.startOffset, range.endOffset);
-    let dTo = Math.max(range.startOffset, range.endOffset);
-    const shown = startSpan.textContent;
-    while (dFrom < dTo && /\s/.test(shown[dFrom])) dFrom++;
-    while (dTo > dFrom && /\s/.test(shown[dTo - 1])) dTo--;
-    if (dFrom >= dTo) return null;
-    const rel = rawRangeForDisplay(cell.rawText, dFrom, dTo);
-    if (!rel) return null;
-    const text = shown.slice(dFrom, dTo);
-    // Safety: the mapped raw slice must decode to exactly the selected text,
-    // otherwise refuse rather than wrap the wrong bytes.
-    if (unescapeXmlText(cell.rawText.slice(rel[0], rel[1])) !== text) return null;
-    return { cell, span: startSpan, relFrom: rel[0], relTo: rel[1], text };
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !app.state) {
+      return { ok: false, code: "no-selection", message: "Select reading text to annotate." };
+    }
+    return selectionTargetFromRange(app.state, sel.getRangeAt(0), app.folio);
   }
 
   /** Apply: optionally create the entity, then wrap the selected sub-range. */
@@ -654,17 +976,48 @@ export function createAnnotationUi(ctx) {
       let doc = app.state.doc;
       let id = entityId;
       if (createType) {
+        if (!entityTypes().some(([type]) => type === createType)) {
+          throw new Error(`${createType} entities cannot be represented by this project's target format`);
+        }
         const before = new Set(allEntityIds(doc));
-        doc = standoff.addEntity(doc, createType, { name: target.text });
+        doc = standoff.addEntity(doc, createType, { name: target.segmentTexts?.[0] || target.text });
         id = allEntityIds(doc).find((x) => !before.has(x));
         if (!id) throw new Error("could not resolve the new entity's id");
       }
-      // Re-locate the cell: addEntity shifted offsets, but the cell id is stable
-      // and the relative offsets address the unchanged node content.
+      // Re-locate the selection: addEntity shifted source offsets, while the cell
+      // ids and displayed offsets remain stable.
       const st = parseEdition(doc.raw);
-      const c = st.cellById.get(target.cell.id);
-      if (!c) throw new Error("the selected line is no longer addressable");
-      const next = standoff.linkMentionRange(doc, c.node, target.relFrom, target.relTo, id);
+      let next;
+      if (target.kind === "single") {
+        const c = st.cellById.get(target.cell.id);
+        if (!c) throw new Error("the selected line is no longer addressable");
+        next = standoff.linkMentionRange(doc, c.node, target.relFrom, target.relTo, id);
+      } else if (target.kind === "multi-word") {
+        const resolved = multiWordSelectionTarget(st, {
+          startCellId: target.cellIds[0],
+          endCellId: target.cellIds[target.cellIds.length - 1],
+          startOffset: 0,
+          endOffset: st.cellById.get(target.cellIds[target.cellIds.length - 1])?.text.length,
+          folioIndex: target.folioIndex,
+          text: target.text,
+        });
+        if (!resolved.ok) throw new Error(resolved.message);
+        next = wrapSiblingElementRange(doc, resolved.elements, (inner) =>
+          '<name ref="#' + escapeAttr(id) + '">' + inner + "</name>");
+      } else {
+        const segments = target.segments || [target];
+        const ranges = segments.map((segment) => {
+          const first = st.cellById.get(segment.startCellId);
+          const last = st.cellById.get(segment.endCellId);
+          const firstRel = first ? rawOffsetForDisplay(first.rawText, segment.startOffset) : null;
+          const lastRel = last ? rawOffsetForDisplay(last.rawText, segment.endOffset) : null;
+          if (!first || !last || firstRel == null || lastRel == null) return null;
+          return { start: first.start + firstRel, end: last.start + lastRel };
+        });
+        if (ranges.some((range) => !range)) throw new Error("a selected segment is no longer addressable");
+        next = addSpanAnnotation(doc, ranges, { type: "entity", ana: `#${id}` });
+      }
+      if (next === doc) throw new Error("the selected range could not be represented safely");
       // Commit only the finished doc: the multi-stage offset work above stays
       // here, the state adoption and the single re-render are commitStandoff's.
       const changed = commitStandoff(() => next, {
@@ -672,13 +1025,31 @@ export function createAnnotationUi(ctx) {
         failPrefix: "Annotate",
         noopLabel: "Nothing annotated (the text may already sit inside a link)",
       });
+      if (changed) {
+        clearCollectedRange();
+      }
       // Continue in place: open the annotation editor on the fresh mention so
       // authority ids (GND, Wikidata, GeoNames) are attachable without leaving
       // the text (the index logic lives where the annotating happens).
-      if (changed) openAnnotationEditorFor(id);
+      if (changed && target.kind !== "stand-off") openAnnotationEditorFor(id);
+      else if (changed) revealEntity(id);
     } catch (err) {
       setStatus(`Annotate failed: ${err.message}`);
     }
+  }
+
+  function markSelectionCritical(target, kind, label) {
+    const changed = commitStandoff((doc) => {
+      const cell = app.state.cellById.get(target.cell.id);
+      return cell
+        ? markCriticalRange(doc, cell.node, target.relFrom, target.relTo, kind)
+        : doc;
+    }, {
+      label: `Marked selected text as ${label}`,
+      failPrefix: "Criticism",
+      noopLabel: "Nothing marked (the selected range is no longer safe)",
+    });
+    if (changed) setStatus(`Marked selected text as ${label}`);
   }
 
   /** Open the annotation editor on the current folio's first mention of an entity. */
@@ -689,7 +1060,12 @@ export function createAnnotationUi(ctx) {
       for (const c of line.cells) {
         if (c.mention !== id) continue;
         const span = document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
-        if (span) openAnnotationEditor(span, c);
+        if (span) {
+          const standOff = c.layers?.some((layer) =>
+            layer.kind === "mention" && layer.ref === id && layer.standOff);
+          if (standOff) openLayersInspector(span, c);
+          else openAnnotationEditor(span, c);
+        }
         return;
       }
     }
@@ -704,9 +1080,12 @@ export function createAnnotationUi(ctx) {
    */
   function entityMatches(selText, excludeId) {
     const all = standoff.readEntities(app.state.doc);
-    const entities = ["persons", "places", "orgs", "works", "events"]
+    const excluded = excludeId instanceof Set
+      ? excludeId
+      : new Set(excludeId ? [excludeId] : []);
+    const entities = entityCollections()
       .flatMap((k) => all[k] || [])
-      .filter((ent) => ent.id !== excludeId);
+      .filter((ent) => !excluded.has(ent.id));
     const norm = (s) => (s || "").trim().toLowerCase();
     const want = norm(selText);
     const suggested = [];
@@ -807,7 +1186,30 @@ export function createAnnotationUi(ctx) {
 
   function applyMarkupWrap(target, build, label, attrValue) {
     commitStandoff(
-      (doc) => standoff.wrapRange(doc, target.cell.node, target.relFrom, target.relTo, (inner) => build(inner, attrValue)),
+      (doc) => {
+        if (target.kind === "single") {
+          return standoff.wrapRange(
+            doc,
+            target.cell.node,
+            target.relFrom,
+            target.relTo,
+            (inner) => build(inner, attrValue),
+          );
+        }
+        if (target.kind !== "multi-word") return doc;
+        const state = parseEdition(doc.raw);
+        const lastId = target.cellIds[target.cellIds.length - 1];
+        const resolved = multiWordSelectionTarget(state, {
+          startCellId: target.cellIds[0],
+          endCellId: lastId,
+          startOffset: 0,
+          endOffset: state.cellById.get(lastId)?.text.length,
+          folioIndex: target.folioIndex,
+          text: target.text,
+        });
+        if (!resolved.ok) return doc;
+        return wrapSiblingElementRange(doc, resolved.elements, (inner) => build(inner, attrValue));
+      },
       { label: `Marked "${target.text}" as ${label}`, failPrefix: "Annotate",
         noopLabel: "Nothing changed (invalid range or text would be lost)" },
     );
@@ -827,10 +1229,58 @@ export function createAnnotationUi(ctx) {
   function openSelPopover() {
     removeSelPopover();
     removeMenu();
-    const target = selectionTarget();
-    if (!target) return;
-    if (target.cell.mention) {
-      setStatus("This text already sits inside a link; click it to edit the annotation.");
+    let target = selectionTarget();
+    if (!target.ok) {
+      setStatus(target.message);
+      return;
+    }
+
+    if (collectedSessionId !== app.sessionId || collectedRevision !== app.revision) {
+      clearCollectedRange();
+    }
+    const currentSegment = selectionSegmentFromTarget(app.state, target);
+    if (!currentSegment) {
+      setStatus("The selected segment is no longer addressable in the XML source.");
+      return;
+    }
+    if (collectedSegments.length) {
+      const combined = combineSelectionSegments([...collectedSegments, currentSegment]);
+      if (!combined.ok) {
+        const prior = combineSelectionSegments(collectedSegments);
+        if (!prior.ok) {
+          clearCollectedRange();
+          setStatus(combined.message);
+          return;
+        }
+        target = prior;
+        setStatus(`${combined.message} The earlier collected range remains available; clear it or annotate it.`);
+      } else {
+        target = combined;
+      }
+    }
+
+    const cellsForSegment = (segment) =>
+      selectedCellsBetween(app.state, segment.startCellId, segment.endCellId);
+    const selectedCells = target.segments
+      ? target.segments.flatMap(cellsForSegment)
+      : target.kind === "single"
+        ? [target.cell]
+        : target.kind === "multi-word"
+          ? target.cells
+          : cellsForSegment(target);
+
+    // XML wrappers cannot overlap. Preserve the requested overlap as a TEI
+    // stand-off span instead, so independently meaningful entity layers coexist.
+    if (target.kind !== "stand-off" && selectedCells.some((cell) => cell.mention)) {
+      const combined = combineSelectionSegments([currentSegment]);
+      if (!combined.ok) {
+        setStatus(combined.message);
+        return;
+      }
+      target = combined;
+    }
+    if (target.kind === "stand-off" && usesInlineGND(app.project)) {
+      setStatus("This project's inline-GND target cannot represent cross-structure, discontinuous, or overlapping stand-off annotations.");
       return;
     }
     // Capture the selection range now (before focus moves to the filter) and paint
@@ -846,9 +1296,17 @@ export function createAnnotationUi(ctx) {
     // removes the popover (no reading-pane re-render), so look-and-cancel keeps
     // the scroll and facsimile state.
     const titleRow = el("div", { class: "ed-sel-pop-titlerow" });
-    titleRow.appendChild(el("span", { class: "ed-sel-pop-title", text: `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"` }));
+    const title = target.segmentTexts?.length > 1
+      ? `annotate ${target.segmentTexts.length} segments`
+      : `annotate "${target.text.length > 40 ? target.text.slice(0, 40) + "..." : target.text}"`;
+    titleRow.appendChild(el("span", { class: "ed-sel-pop-title", text: title }));
     const closeBtn = el("button", { class: "ed-sel-pop-close", text: "×", title: "cancel", "aria-label": "cancel", type: "button" });
-    closeBtn.addEventListener("click", (e) => { e.stopPropagation(); removeSelPopover(); });
+    closeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const cancelled = clearCollectedRange();
+      removeSelPopover();
+      if (cancelled) setStatus("Collected segments cleared.");
+    });
     titleRow.appendChild(closeBtn);
     pop.appendChild(titleRow);
 
@@ -880,14 +1338,62 @@ export function createAnnotationUi(ctx) {
         return b;
       };
 
-      // Entities: evidence-first. Suggestions inline and open; the five "new
-      // entity" actions visible; the rest of the index behind a disclosure.
+      const rangeLabels = collectedSegments.length
+        ? ["add one more segment", "clear collected segments"]
+        : ["add another segment"];
+      if (!usesInlineGND(app.project) && (!f || rangeLabels.some(match))) {
+        listHost.appendChild(groupHead("Range"));
+        const rangeRow = el("div", { class: "ed-sel-pop-row" });
+        const addLabel = collectedSegments.length ? "add one more segment" : "add another segment";
+        if (match(addLabel)) {
+          rangeRow.appendChild(actBtn(
+            addLabel,
+            "keep this segment, then select another reading range on this or another page",
+            () => {
+              const next = combineSelectionSegments([...collectedSegments, currentSegment]);
+              if (!next.ok) {
+                setStatus(next.message);
+                return;
+              }
+              collectedSegments = next.segments;
+              collectedSessionId = app.sessionId;
+              collectedRevision = app.revision;
+              if (range) collectedDomRanges.push(range.cloneRange());
+              paintCollectedRanges();
+              removeSelPopover();
+              setStatus(`${collectedSegments.length} segment${collectedSegments.length === 1 ? "" : "s"} collected. Select the next segment and annotate it, or press Escape to cancel.`);
+            },
+          ));
+        }
+        if (collectedSegments.length && match("clear collected segments")) {
+          rangeRow.appendChild(actBtn(
+            "clear collected segments",
+            "discard the collected range without changing the XML",
+            () => {
+              clearCollectedRange();
+              removeSelPopover();
+              setStatus("Collected segments cleared.");
+            },
+          ));
+        }
+        listHost.appendChild(rangeRow);
+      }
+
+      // Entities: evidence-first. Suggestions stay open; only entity types the
+      // active target can persist get a "new entity" action.
       const meta = entityMetaMap();
       const usage = entityUsage();
-      const { entities, suggested, rest } = entityMatches(target.text, null);
+      const entityText = target.segmentTexts?.[0] || target.text;
+      const occupiedEntityIds = new Set(selectedCells.flatMap((cell) => [
+        cell.mention,
+        ...(cell.layers || [])
+          .filter((layer) => layer.kind === "mention")
+          .map((layer) => layer.ref),
+      ]).filter(Boolean));
+      const { entities, suggested, rest } = entityMatches(entityText, occupiedEntityIds);
       const norm = (s) => (s || "").trim().toLowerCase();
       const sugMatches = suggested.filter(({ ent }) => match(ent.name || ""));
-      const newItems = ENTITY_TYPE_LABELS.filter(([, label]) => match(`new ${label}`));
+      const newItems = entityTypes().filter(([, label]) => match(`new ${label}`));
       const restHits = f ? rest.filter((e) => norm(e.name).includes(f) || e.id.toLowerCase().includes(f)) : rest;
       const showExisting = rest.length > 0 && (!f || restHits.length > 0);
       if (sugMatches.length || newItems.length || showExisting) {
@@ -906,7 +1412,7 @@ export function createAnnotationUi(ctx) {
           const newRow = el("div", { class: "ed-sel-pop-row" });
           listHost.appendChild(newRow);
           for (const [type, label] of newItems) {
-            newRow.appendChild(actBtn(`new ${label}`, `create a ${label} named "${target.text}", link this text, then add authority ids right here`, () => {
+            newRow.appendChild(actBtn(`new ${label}`, `create a ${label} named "${entityText}", link this text, then add authority ids right here`, () => {
               removeSelPopover();
               annotateSelection(target, null, type);
             }));
@@ -938,7 +1444,9 @@ export function createAnnotationUi(ctx) {
 
       // Markup: the resolved wrap list (or the built-in wraps), each by its label.
       // A wrap with an attrField reveals an inline input + Apply on click.
-      const wraps = markupWraps().filter(([label]) => match(label));
+      const wraps = target.kind === "stand-off"
+        ? []
+        : markupWraps().filter(([label]) => match(label));
       if (wraps.length) {
         listHost.appendChild(groupHead("Markup"));
         const muRow = el("div", { class: "ed-sel-pop-row" });
@@ -977,7 +1485,9 @@ export function createAnnotationUi(ctx) {
         }
       }
       // Any element by name (the full-TEI escape hatch), part of Markup.
-      if (!f || match("any element")) {
+      if (target.kind !== "stand-off"
+        && allowsArbitraryMarkup(app.project, app.docName)
+        && (!f || match("any element"))) {
         if (!wraps.length) listHost.appendChild(groupHead("Markup"));
         const freeWrap = el("div", { class: "ed-sel-pop-row" });
         const freeInput = el("input", { class: "ed-sel-filter", type: "text", placeholder: "any element name..." });
@@ -995,31 +1505,28 @@ export function createAnnotationUi(ctx) {
         listHost.appendChild(freeWrap);
       }
 
-      // Criticism: mark the selected text as unclear / deleted / added / gap.
-      // Routed through beginCritic on the cell, the established commit path.
-      const critActions = [
-        ["unclear", "mark the selection as unclear"],
-        ["deleted", "mark the selection as deleted"],
-        ["added", "mark the selection as added"],
-        ["gap", "mark the selection as a gap"],
-      ].filter(([label]) => match(label));
+      // Criticism: apply the exact safe source sub-range resolved above.
+      const critActions = (target.kind === "single" ? [
+        ["unclear", "unclear", "mark the selection as unclear"],
+        ["deleted", "del", "mark the selection as deleted"],
+        ["added", "add", "mark the selection as added"],
+        ["gap", "gap", "mark the selection as a gap"],
+      ] : []).filter(([label]) => match(label));
       if (critActions.length) {
         listHost.appendChild(groupHead("Criticism"));
         const critRow = el("div", { class: "ed-sel-pop-row" });
         listHost.appendChild(critRow);
-        for (const [label, title] of critActions) {
+        for (const [label, kind, title] of critActions) {
           const b = actBtn(label, title, () => {
             removeSelPopover();
-            const c = app.state.cellById.get(target.cell.id);
-            const s = c && document.querySelector(`#ed-reading .ed-w[data-id="${CSS.escape(c.id)}"]`);
-            if (c && s) beginCritic(s, c);
+            markSelectionCritical(target, kind, label);
           });
           critRow.appendChild(b);
         }
       }
 
       // Note: add an editorial note on the selected segment, via beginNote.
-      if (match("note")) {
+      if (target.kind === "single" && match("note")) {
         listHost.appendChild(groupHead("Note"));
         const noteRow = el("div", { class: "ed-sel-pop-row" });
         listHost.appendChild(noteRow);
@@ -1059,7 +1566,11 @@ export function createAnnotationUi(ctx) {
         e.preventDefault(); document.activeElement.click();
       } else if (e.key === "Escape") {
         if (filter.value) { e.stopPropagation(); filter.value = ""; rerender(""); filter.focus(); }
-        else removeSelPopover();
+        else {
+          const cancelled = clearCollectedRange();
+          removeSelPopover();
+          if (cancelled) setStatus("Collected segments cleared.");
+        }
       }
     });
 
@@ -1107,7 +1618,9 @@ export function createAnnotationUi(ctx) {
     }, 0);
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && document.getElementById("ed-sel-pop")) removeSelPopover();
+    if (e.key !== "Escape") return;
+    if (document.getElementById("ed-sel-pop")) removeSelPopover();
+    if (clearCollectedRange()) setStatus("Collected segments cleared.");
   });
   // Right-click: the Oxygen-style context menu, on words and on selections.
   reading().addEventListener("contextmenu", (e) => {
@@ -1120,7 +1633,7 @@ export function createAnnotationUi(ctx) {
 
   return {
     openContextMenu, openSelPopover, openAnnotationEditor,
-    openAnnotationEditorFor, openAttrEditor, openLayersInspector,
+    openAnnotationEditorFor, openAttrEditor, openLayersInspector, openProposedNoteReview,
     removeSelPopover, removeMenu,
   };
 }

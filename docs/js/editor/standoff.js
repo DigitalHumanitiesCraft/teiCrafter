@@ -25,20 +25,24 @@
 
 import {
   walk,
-  getAttr,
-  getAttrObj,
-  elementsByLocal,
-  firstByLocal,
+  getUnqualifiedAttr as getAttr,
+  getAttrObjInNamespace,
+  getXmlId,
+  teiElementsByLocal as elementsByLocal,
+  firstTeiByLocal as firstByLocal,
+  isTeiElement,
   textNodes,
   textOf,
   spliceDocument,
   editAttrValue,
-  removeAttr,
+  removeAttrInNamespace,
   escapeText,
   escapeAttr,
   ancestorWithXmlId,
+  qualifyTeiMarkup,
 } from "./tei-document.js";
 import { parseEdition } from "./edition.js";
+import { resolvedSpanGroups, spanEntityId } from "./span-projection.js";
 
 // Responsibility pointer marking an AI-proposed, human-unverified entity. The
 // editor renders these violet (per design.md) until a human confirms (drops the
@@ -95,7 +99,7 @@ export function collectIds(doc) {
   const ids = new Set();
   walk(doc.root, (n) => {
     if (n.type === "element") {
-      const id = getAttr(n, "id");
+      const id = getXmlId(n);
       if (id) ids.add(id);
     }
   });
@@ -124,6 +128,33 @@ function allText(doc, el) {
   return textNodes(el).map((t) => textOf(doc, t)).join("").trim();
 }
 
+/** The document element, preferring TEI when a lenient parse exposes others. */
+function documentElement(doc) {
+  const elements = (doc.root.children || []).filter((child) => child.type === "element");
+  return elements.find((child) => isTeiElement(child, "TEI")) || null;
+}
+
+/** Direct element children matching a local name. */
+function directChildren(el, localName) {
+  if (!el) return [];
+  return (el.children || []).filter(
+    (child) => isTeiElement(child, localName),
+  );
+}
+
+/** The TEI-level standOff governed by this module, excluding nested/header data. */
+export function topLevelStandOff(doc) {
+  return directChildren(documentElement(doc), "standOff")[0] || null;
+}
+
+/** A TEI qualified name using the namespace prefix of its insertion context. */
+function teiQName(doc, localName, context = null) {
+  let source = context;
+  while (source?.type === "element" && !isTeiElement(source)) source = source.parent;
+  source = (isTeiElement(source) ? source : null) || topLevelStandOff(doc) || documentElement(doc);
+  return source?.prefix ? `${source.prefix}:${localName}` : localName;
+}
+
 /**
  * The authority identifiers carried by an entity as <idno type="...">value</idno>
  * children. Returns [{ type, value }] in document order; type "" when @type absent.
@@ -137,7 +168,7 @@ function readAuthorities(doc, el) {
 
 function readOne(doc, el, type) {
   const desc = TYPE_MAP[type];
-  const id = getAttr(el, "id");
+  const id = getXmlId(el);
   const name = firstChildText(doc, el, desc.name) || allText(doc, el) || "";
   const ai = getAttr(el, "resp") === AI_RESP;
   return { id, type, name, node: el, ai, authorities: readAuthorities(doc, el) };
@@ -148,29 +179,30 @@ function readOne(doc, el, type) {
  * bibliographic element in the teiHeader (sourceDesc), so works are read scoped to
  * standOff/listBibl rather than document-wide, to avoid pulling in header citations.
  */
-function readWorks(doc) {
-  const standOff = firstByLocal(doc.root, "standOff");
+function readType(doc, type) {
+  const standOff = topLevelStandOff(doc);
   if (!standOff) return [];
+  const desc = TYPE_MAP[type];
   const out = [];
-  for (const list of elementsByLocal(standOff, "listBibl")) {
-    for (const el of elementsByLocal(list, "bibl")) out.push(readOne(doc, el, "work"));
+  for (const list of directChildren(standOff, desc.list)) {
+    for (const el of directChildren(list, desc.entity)) out.push(readOne(doc, el, type));
   }
   return out;
 }
 
 /**
- * Read every standOff entity in the document.
- * Scans <person>/<place>/<org>/<event> anywhere (standOff preferred but not required);
- * <bibl> works are scoped to standOff/listBibl (see readWorks). Each entity is
+ * Read every entity in the document's TEI-level <standOff>. Header and reading-text
+ * elements with the same local names are editorial source data and stay outside the
+ * mutable register. Each entity is
  * E = { id, type, name, node, authorities }; name from persName/placeName/orgName/
  * label/title else first text; authorities from <idno type="..."> children.
  */
 export function readEntities(doc) {
-  const persons = elementsByLocal(doc.root, "person").map((el) => readOne(doc, el, "person"));
-  const places = elementsByLocal(doc.root, "place").map((el) => readOne(doc, el, "place"));
-  const orgs = elementsByLocal(doc.root, "org").map((el) => readOne(doc, el, "org"));
-  const events = elementsByLocal(doc.root, "event").map((el) => readOne(doc, el, "event"));
-  const works = readWorks(doc);
+  const persons = readType(doc, "person");
+  const places = readType(doc, "place");
+  const orgs = readType(doc, "org");
+  const events = readType(doc, "event");
+  const works = readType(doc, "work");
   return { persons, places, orgs, events, works };
 }
 
@@ -193,23 +225,35 @@ function docNewline(doc) {
  * SAME doc when already present (or unanchorable).
  */
 export function ensureStandOff(doc) {
-  const existing = firstByLocal(doc.root, "standOff");
-  if (existing) return { doc, created: false };
+  const existing = topLevelStandOff(doc);
+  if (existing) {
+    if (!existing.selfClosing) return { doc, created: false };
+    const fragment = doc.raw.slice(existing.outerStart, existing.outerEnd);
+    const closeAt = fragment.lastIndexOf("/>");
+    if (closeAt < 0) return { doc, created: false };
+    const replacement = fragment.slice(0, closeAt) + ">" + `</${existing.qname}>`;
+    return {
+      doc: spliceDocument(doc, existing.outerStart, existing.outerEnd, replacement),
+      created: false,
+    };
+  }
   const nl = docNewline(doc);
-  const block = nl + "  <standOff>" + nl + "  </standOff>";
+  const standOffName = teiQName(doc, "standOff", documentElement(doc));
+  const block = nl + "  <" + standOffName + ">" + nl + "  </" + standOffName + ">";
+
+  const docEl = documentElement(doc);
 
   // Preferred anchor: right after the teiHeader end tag.
-  const header = firstByLocal(doc.root, "teiHeader");
+  const header = directChildren(docEl, "teiHeader")[0] || null;
   if (header && header.etagEnd != null) {
     return { doc: spliceDocument(doc, header.etagEnd, header.etagEnd, block), created: true };
   }
   // Fallback 1: immediately before <text>, so standOff precedes the body.
-  const text = firstByLocal(doc.root, "text");
+  const text = directChildren(docEl, "text")[0] || null;
   if (text && text.outerStart != null) {
     return { doc: spliceDocument(doc, text.outerStart, text.outerStart, block + nl), created: true };
   }
   // Fallback 2: as the first child of the document element (e.g. <TEI>).
-  const docEl = doc.root.children.find((c) => c.type === "element");
   if (docEl && docEl.contentStart != null) {
     return { doc: spliceDocument(doc, docEl.contentStart, docEl.contentStart, block), created: true };
   }
@@ -229,16 +273,59 @@ export function ensureRespStmt(doc, respId = AI_RESP) {
   const id = String(respId == null ? "" : respId).replace(/^#/, "").trim();
   if (!id) return doc;
   let found = false;
-  walk(doc.root, (n) => { if (!found && n.type === "element" && getAttr(n, "id") === id) found = true; });
+  walk(doc.root, (n) => { if (!found && n.type === "element" && getXmlId(n) === id) found = true; });
   if (found) return doc;
   const titleStmt = firstByLocal(doc.root, "titleStmt");
   if (!titleStmt || titleStmt.contentEnd == null) return doc;
   const nl = docNewline(doc);
-  const snippet = nl + '        <respStmt xml:id="' + escapeAttr(id) + '">'
-    + nl + "          <resp>Machine-generated draft, unreviewed (teiCrafter LLM on-ramp)</resp>"
-    + nl + "          <name>AI</name>"
-    + nl + "        </respStmt>";
+  const respStmtName = teiQName(doc, "respStmt", titleStmt);
+  const respName = teiQName(doc, "resp", titleStmt);
+  const nameName = teiQName(doc, "name", titleStmt);
+  const snippet = nl + "        <" + respStmtName + ' xml:id="' + escapeAttr(id) + '">'
+    + nl + "          <" + respName + ">Machine-generated draft, unreviewed (teiCrafter LLM on-ramp)</" + respName + ">"
+    + nl + "          <" + nameName + ">AI</" + nameName + ">"
+    + nl + "        </" + respStmtName + ">";
   return spliceDocument(doc, titleStmt.contentEnd, titleStmt.contentEnd, snippet);
+}
+
+/** True when any element carries respId as one token in its @resp value. */
+export function hasRespReference(doc, respId = AI_RESP) {
+  const rawResp = String(respId == null ? "" : respId).trim();
+  const id = rawResp.replace(/^#/, "");
+  if (!id) return false;
+  const pointer = rawResp.startsWith("#") ? rawResp : `#${id}`;
+  let referenced = false;
+  walk(doc.root, (n) => {
+    if (referenced || !isTeiElement(n)) return;
+    const value = getAttr(n, "resp");
+    if (value && value.split(/\s+/).includes(pointer)) referenced = true;
+  });
+  return referenced;
+}
+
+/**
+ * Remove the declaration for respId once no @resp token points to it. Callers
+ * must only use this for a respStmt they created in the current editing session;
+ * an unrelated declaration in the loaded source remains editorial data. The
+ * preceding indentation line inserted by ensureRespStmt is removed as well, so
+ * ensure followed by final proposal resolution restores the original bytes.
+ */
+export function removeRespStmtIfUnused(doc, respId = AI_RESP) {
+  const rawResp = String(respId == null ? "" : respId).trim();
+  const id = rawResp.replace(/^#/, "");
+  if (!id) return doc;
+  if (hasRespReference(doc, rawResp)) return doc;
+
+  const stmt = elementsByLocal(doc.root, "respStmt")
+    .find((n) => getXmlId(n) === id);
+  if (!stmt || stmt.outerStart == null || stmt.outerEnd == null) return doc;
+  let start = stmt.outerStart;
+  while (start > 0 && (doc.raw[start - 1] === " " || doc.raw[start - 1] === "\t")) start--;
+  if (start > 0 && doc.raw[start - 1] === "\n") {
+    start--;
+    if (start > 0 && doc.raw[start - 1] === "\r") start--;
+  }
+  return spliceDocument(doc, start, stmt.outerEnd, "");
 }
 
 /**
@@ -251,20 +338,21 @@ function ensureList(doc, type) {
   // Make sure standOff is present first.
   const ensured = ensureStandOff(doc);
   doc = ensured.doc;
-  const standOff = firstByLocal(doc.root, "standOff");
+  const standOff = topLevelStandOff(doc);
   // No anchor was available (element-free input): signal "no list" to the caller.
   if (!standOff) return { doc, list: null };
 
   // Look for an existing list of this kind inside the standOff.
-  let list = firstByLocal(standOff, desc.list);
+  let list = directChildren(standOff, desc.list)[0] || null;
   if (list) return { doc, list };
 
   // Insert an empty list just inside <standOff>, after its start tag.
   const at = standOff.contentStart != null ? standOff.contentStart : standOff.stagEnd;
   const nl = docNewline(doc);
-  const snippet = nl + "    <" + desc.list + ">" + nl + "    </" + desc.list + ">";
+  const listName = teiQName(doc, desc.list, standOff);
+  const snippet = nl + "    <" + listName + ">" + nl + "    </" + listName + ">";
   doc = spliceDocument(doc, at, at, snippet);
-  list = firstByLocal(firstByLocal(doc.root, "standOff"), desc.list);
+  list = directChildren(topLevelStandOff(doc), desc.list)[0] || null;
   return { doc, list };
 }
 
@@ -301,10 +389,12 @@ export function addEntity(doc, type, { id, name, ai = false } = {}) {
   const safeName = escapeText(name == null ? "" : name);
   const nl = docNewline(doc);
   const respAttr = ai ? ' resp="' + AI_RESP + '"' : "";
+  const entityName = teiQName(doc, desc.entity, list);
+  const nameName = teiQName(doc, desc.name, list);
   const el =
-    nl + "      <" + desc.entity + ' xml:id="' + escapeAttr(finalId) + '"' + respAttr + ">" +
-    "<" + desc.name + ">" + safeName + "</" + desc.name + ">" +
-    "</" + desc.entity + ">";
+    nl + "      <" + entityName + ' xml:id="' + escapeAttr(finalId) + '"' + respAttr + ">" +
+    "<" + nameName + ">" + safeName + "</" + nameName + ">" +
+    "</" + entityName + ">";
 
   // Append just before the list's end tag (after the last child / content).
   const at = list.contentEnd != null ? list.contentEnd : list.stagEnd;
@@ -313,19 +403,15 @@ export function addEntity(doc, type, { id, name, ai = false } = {}) {
 
 /** Find the entity element (person/org/event) carrying xml:id === id, or null. */
 function findEntityElement(doc, id) {
-  let found = null;
-  walk(doc.root, (n) => {
-    if (found) return false;
-    if (
-      n.type === "element" &&
-      ENTITY_TO_TYPE[n.localName] &&
-      getAttr(n, "id") === id
-    ) {
-      found = n;
-      return false;
+  const standOff = topLevelStandOff(doc);
+  if (!standOff) return null;
+  for (const desc of Object.values(TYPE_MAP)) {
+    for (const list of directChildren(standOff, desc.list)) {
+      const found = directChildren(list, desc.entity).find((el) => getXmlId(el) === id);
+      if (found) return found;
     }
-  });
-  return found;
+  }
+  return null;
 }
 
 /**
@@ -350,7 +436,8 @@ export function updateEntity(doc, id, { name } = {}) {
   }
   // No name element yet: insert one just inside the entity.
   const at = el.contentStart != null ? el.contentStart : el.stagEnd;
-  const snippet = "<" + desc.name + ">" + safeName + "</" + desc.name + ">";
+  const nameName = teiQName(doc, desc.name, el);
+  const snippet = "<" + nameName + ">" + safeName + "</" + nameName + ">";
   return spliceDocument(doc, at, at, snippet);
 }
 
@@ -379,21 +466,28 @@ export function retypeEntity(doc, id, newType) {
   if (!oldType || !newDesc || oldType === newType) return doc;
   const oldDesc = TYPE_MAP[oldType];
 
-  // Transform only this element's own bytes: rename the entity tag and its name
-  // child tag; everything else (xml:id, resp, idno, attributes) is kept verbatim.
-  const qesc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const eq = qesc(el.qname);
-  let frag = doc.raw.slice(el.outerStart, el.outerEnd)
-    .replace(new RegExp("^<" + eq + "(?=[\\s/>])"), "<" + newDesc.entity)
-    .replace(new RegExp("</" + eq + "(\\s*)>$"), "</" + newDesc.entity + "$1>");
+  // Transform only the resolved TEI nodes' QName bytes. A regex over the whole
+  // fragment could also rename a same-spelled element in a shadowed namespace.
+  const entityName = el.prefix ? `${el.prefix}:${newDesc.entity}` : newDesc.entity;
+  const replacements = [{ start: el.stagStart + 1, end: el.stagStart + 1 + el.qname.length, value: entityName }];
+  if (el.etagStart != null) {
+    replacements.push({ start: el.etagStart + 2, end: el.etagStart + 2 + el.qname.length, value: entityName });
+  }
   if (oldDesc.name !== newDesc.name) {
     const nameEl = firstByLocal(el, oldDesc.name);
     if (nameEl) {
-      const nq = qesc(nameEl.qname);
-      frag = frag
-        .replace(new RegExp("<" + nq + "(?=[\\s/>])", "g"), "<" + newDesc.name)
-        .replace(new RegExp("</" + nq + "(\\s*)>", "g"), "</" + newDesc.name + "$1>");
+      const nameName = nameEl.prefix ? `${nameEl.prefix}:${newDesc.name}` : newDesc.name;
+      replacements.push({ start: nameEl.stagStart + 1, end: nameEl.stagStart + 1 + nameEl.qname.length, value: nameName });
+      if (nameEl.etagStart != null) {
+        replacements.push({ start: nameEl.etagStart + 2, end: nameEl.etagStart + 2 + nameEl.qname.length, value: nameName });
+      }
     }
+  }
+  let frag = doc.raw.slice(el.outerStart, el.outerEnd);
+  for (const replacement of replacements.sort((a, b) => b.start - a.start)) {
+    const start = replacement.start - el.outerStart;
+    const end = replacement.end - el.outerStart;
+    frag = frag.slice(0, start) + replacement.value + frag.slice(end);
   }
 
   // Remove the old element, then insert the transformed one into the target list.
@@ -413,7 +507,7 @@ export function retypeEntity(doc, id, newType) {
 export function confirmEntity(doc, id) {
   const el = findEntityElement(doc, id);
   if (!el || getAttr(el, "resp") !== AI_RESP) return doc;
-  return removeAttr(doc, el, "resp");
+  return removeAttrInNamespace(doc, el, null, "resp");
 }
 
 // ---- authority identifiers (idno) ------------------------------------------
@@ -453,7 +547,8 @@ export function setAuthority(doc, id, authority, value) {
 
   if (!val) return doc; // nothing to remove, nothing to add
 
-  const snippet = '<idno type="' + escapeAttr(authType) + '">' + escapeText(val) + "</idno>";
+  const idnoName = teiQName(doc, "idno", el);
+  const snippet = "<" + idnoName + ' type="' + escapeAttr(authType) + '">' + escapeText(val) + "</" + idnoName + ">";
   const nameEl = firstByLocal(el, TYPE_MAP[ENTITY_TO_TYPE[el.localName]].name);
   let at;
   if (idnos.length && idnos[idnos.length - 1].outerEnd != null) {
@@ -480,8 +575,8 @@ export function setAuthority(doc, id, authority, value) {
  */
 function enclosingName(textNode) {
   for (let p = textNode.parent; p && p.type === "element"; p = p.parent) {
-    if (p.localName === "name") return p;
-    if (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body") break;
+    if (isTeiElement(p, "name")) return p;
+    if (isTeiElement(p) && (p.localName === "p" || p.localName === "head" || p.localName === "note" || p.localName === "body")) break;
   }
   return null;
 }
@@ -500,14 +595,16 @@ export function linkMention(doc, textNode, entityId) {
   // wrapping a second <name> (which would nest invalidly). A no-op if it already
   // points at this entity.
   if (nameEl) {
-    const refAttr = getAttrObj(nameEl, "ref");
+    const refAttr = getAttrObjInNamespace(nameEl, null, "ref");
     if (refAttr) return refAttr.value === want ? doc : editAttrValue(doc, refAttr, want);
     // A <name> without @ref: insert one right after the element name.
     const at = nameEl.stagStart + 1 + nameEl.qname.length;
     return spliceDocument(doc, at, at, ' ref="' + escapeAttr(want) + '"');
   }
+  if (!isTeiElement(textNode.parent)) return doc;
   const inner = doc.raw.slice(textNode.start, textNode.end);
-  const wrapped = '<name ref="' + escapeAttr(want) + '">' + inner + "</name>";
+  const nameName = teiQName(doc, "name", textNode.parent);
+  const wrapped = "<" + nameName + ' ref="' + escapeAttr(want) + '">' + inner + "</" + nameName + ">";
   return spliceDocument(doc, textNode.start, textNode.end, wrapped);
 }
 
@@ -523,6 +620,7 @@ export function linkMentionRange(doc, textNode, relFrom, relTo, entityId) {
   if (!textNode || textNode.type !== "text") return doc;
   // Inside a <name> already: refuse (SAME doc) instead of nesting conflicting refs.
   if (enclosingName(textNode)) return doc;
+  if (!isTeiElement(textNode.parent)) return doc;
   const len = textNode.end - textNode.start;
   if (!Number.isInteger(relFrom) || !Number.isInteger(relTo)) return doc;
   if (relFrom < 0 || relTo > len || relFrom >= relTo) return doc;
@@ -530,7 +628,8 @@ export function linkMentionRange(doc, textNode, relFrom, relTo, entityId) {
   const to = textNode.start + relTo;
   const inner = doc.raw.slice(from, to);
   if (!inner.trim()) return doc;
-  const wrapped = '<name ref="' + escapeAttr("#" + entityId) + '">' + inner + "</name>";
+  const nameName = teiQName(doc, "name", textNode.parent);
+  const wrapped = "<" + nameName + ' ref="' + escapeAttr("#" + entityId) + '">' + inner + "</" + nameName + ">";
   return spliceDocument(doc, from, to, wrapped);
 }
 
@@ -545,6 +644,7 @@ export function linkMentionRange(doc, textNode, relFrom, relTo, entityId) {
  */
 export function wrapRange(doc, textNode, relFrom, relTo, build) {
   if (!textNode || textNode.type !== "text" || typeof build !== "function") return doc;
+  if (!isTeiElement(textNode.parent)) return doc;
   const len = textNode.end - textNode.start;
   if (!Number.isInteger(relFrom) || !Number.isInteger(relTo)) return doc;
   if (relFrom < 0 || relTo > len || relFrom >= relTo) return doc;
@@ -552,10 +652,11 @@ export function wrapRange(doc, textNode, relFrom, relTo, build) {
   const to = textNode.start + relTo;
   const inner = doc.raw.slice(from, to);
   if (!inner.trim()) return doc;
-  const replacement = build(inner);
-  if (typeof replacement !== "string") return doc;
-  if (replacement.replace(/<[^>]*>/g, "") !== inner) return doc; // text must survive
-  return spliceDocument(doc, from, to, replacement);
+  const built = build(inner);
+  if (typeof built !== "string") return doc;
+  if (built.replace(/<[^>]*>/g, "") !== inner) return doc; // text must survive
+  const replacement = qualifyTeiMarkup(built, textNode.parent);
+  return replacement == null ? doc : spliceDocument(doc, from, to, replacement);
 }
 
 /**
@@ -581,11 +682,27 @@ export function findMentions(doc, entityId) {
   const want = "#" + entityId;
   const out = [];
   walk(doc.root, (n) => {
-    if (n.type === "element") {
-      const ref = getAttrObj(n, "ref");
+    if (isTeiElement(n)) {
+      const ref = getAttrObjInNamespace(n, null, "ref");
       if (ref && ref.value === want) out.push({ node: n });
     }
   });
+  for (const group of resolvedSpanGroups(doc)) {
+    if (group.type !== "entity") continue;
+    for (const range of group.ranges) {
+      if (spanEntityId(range) !== entityId) continue;
+      out.push({
+        node: {
+          contentStart: range.start,
+          contentEnd: range.end,
+          outerStart: range.start,
+          outerEnd: range.end,
+        },
+        span: range.span,
+        group: group.el,
+      });
+    }
+  }
   return out;
 }
 
@@ -597,7 +714,8 @@ export function findMentions(doc, entityId) {
  * a NEW doc when injected, the SAME doc when the id already existed.
  */
 export function ensureXmlId(doc, el, base) {
-  const cur = getAttr(el, "id");
+  if (!isTeiElement(el)) return { doc, id: null };
+  const cur = getXmlId(el);
   if (cur) return { doc, id: cur };
   const id = uniquify(slugify(base) || "ln_1", collectIds(doc));
   const at = el.stagStart + 1 + el.qname.length;
@@ -616,14 +734,15 @@ export function addNote(doc, targetId, text, opts = {}) {
   if (!body) return doc;
   const ensured = ensureStandOff(doc);
   doc = ensured.doc;
-  const standOff = firstByLocal(doc.root, "standOff");
+  const standOff = topLevelStandOff(doc);
   if (!standOff) return doc; // element-free input: nothing to anchor to
   const nl = docNewline(doc);
   const ref = targetId ? ' target="#' + escapeAttr(targetId) + '"' : "";
   // opts.resp marks a model-proposed note (the project responsibility id, "#ai" by
   // default); absent for a human-authored note.
   const respAttr = opts.resp ? ' resp="' + escapeAttr(opts.resp) + '"' : "";
-  const snippet = nl + "    <note" + ref + respAttr + ">" + escapeText(body) + "</note>";
+  const noteName = teiQName(doc, "note", standOff);
+  const snippet = nl + "    <" + noteName + ref + respAttr + ">" + escapeText(body) + "</" + noteName + ">";
   const at = standOff.contentEnd != null ? standOff.contentEnd : standOff.stagEnd;
   return spliceDocument(doc, at, at, snippet);
 }
@@ -640,11 +759,14 @@ export function addNoteForNode(doc, textNode, fallbackFacs, text, opts = {}) {
   let targetId = null;
   const anc = ancestorWithXmlId(textNode);
   if (anc) {
-    targetId = getAttr(anc, "id");
+    targetId = getXmlId(anc);
   } else if (fallbackFacs) {
     targetId = fallbackFacs;
-  } else if (textNode.parent && textNode.parent.type === "element") {
-    const r = ensureXmlId(doc, textNode.parent, "ln");
+  } else {
+    let anchor = textNode.parent;
+    while (anchor?.type === "element" && !isTeiElement(anchor)) anchor = anchor.parent;
+    if (!isTeiElement(anchor)) return doc;
+    const r = ensureXmlId(doc, anchor, "ln");
     doc = r.doc;
     targetId = r.id;
   }
@@ -652,21 +774,37 @@ export function addNoteForNode(doc, textNode, fallbackFacs, text, opts = {}) {
 }
 
 /**
- * Index editorial notes by the ids they target: Map<id, text>. Walks the parsed
- * tree (every <note> carrying @target, wherever it sits), splits the target on
+ * Index editorial notes by the ids they target: Map<id, string[]>. Walks the
+ * TEI-level <standOff>, splits each @target on
  * whitespace, strips the leading '#', and reads the body as the note's decoded
  * text nodes (child markup contributes its text, tags fall away). Notes without
  * @target are skipped.
  */
 export function noteIndex(doc) {
+  const details = noteDetailIndex(doc);
+  return new Map(Array.from(details, ([id, values]) => [id, values.map((detail) => detail.text)]));
+}
+
+/**
+ * Index notes by target id with the proposal metadata the review UI needs.
+ * Values are arrays of { text, resp, el }; the elements belong to this parsed
+ * document and are refreshed after every mutation. Source order is preserved.
+ */
+export function noteDetailIndex(doc) {
   const map = new Map();
-  for (const note of elementsByLocal(doc.root, "note")) {
+  const standOff = topLevelStandOff(doc);
+  if (!standOff) return map;
+  for (const note of elementsByLocal(standOff, "note")) {
     const target = getAttr(note, "target");
     if (!target) continue;
     const text = textNodes(note).map((t) => textOf(doc, t)).join("").trim();
+    const detail = { text, resp: getAttr(note, "resp"), el: note };
     for (const t of target.split(/\s+/)) {
       const id = t.replace(/^#/, "");
-      if (id) map.set(id, text);
+      if (!id) continue;
+      const values = map.get(id) || [];
+      values.push(detail);
+      map.set(id, values);
     }
   }
   return map;

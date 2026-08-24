@@ -14,7 +14,7 @@ import { getSetting, setSetting } from './storage.js';
 const apiKeys = new Map();
 
 // --- Provider configurations ---
-const PROVIDER_CONFIGS = Object.freeze({
+const PROVIDER_CONFIGS = {
     [LLM_PROVIDERS.GEMINI]: {
         name: 'Google Gemini',
         endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
@@ -105,6 +105,7 @@ const PROVIDER_CONFIGS = Object.freeze({
         endpoint: 'http://localhost:11434/api/chat',
         defaultModel: 'llama3.3',
         models: ['llama3.3', 'qwen2.5', 'mistral', 'gemma2', 'phi4'],
+        allowCustomModel: true,
         authType: 'none',
         buildRequest(prompt, model) {
             return {
@@ -116,14 +117,68 @@ const PROVIDER_CONFIGS = Object.freeze({
         extractResponse(data) {
             return data?.message?.content || '';
         }
+    },
+    [LLM_PROVIDERS.CUSTOM]: {
+        name: 'Custom OpenAI-compatible endpoint',
+        endpoint: '',
+        defaultModel: 'model',
+        models: [],
+        allowCustomModel: true,
+        allowCustomEndpoint: true,
+        authType: 'optional-bearer',
+        buildRequest(prompt, model) {
+            return {
+                model,
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.2
+            };
+        },
+        extractResponse(data) {
+            return data?.choices?.[0]?.message?.content || '';
+        }
     }
-});
+};
+const BUILT_IN_PROVIDERS = new Set(Object.keys(PROVIDER_CONFIGS));
+const AUTH_TYPES = new Set(['none', 'optional-bearer', 'bearer', 'x-api-key', 'url-param']);
 
 // --- State ---
 let currentProvider = getSetting('provider', LLM_PROVIDERS.GEMINI);
 let currentModel = getSetting('model', null);
+let customEndpoint = getSetting('customLlmEndpoint', '');
 
 // --- Public API ---
+
+/**
+ * Register a bundled provider protocol adapter without changing the generation UI.
+ * Manifests cannot inject adapters: callers must supply executable application code.
+ */
+export function registerProviderAdapter(id, adapter) {
+    const key = typeof id === 'string' ? id.trim() : '';
+    if (!/^[a-z][a-z0-9-]{1,63}$/.test(key) || BUILT_IN_PROVIDERS.has(key)
+        || !adapter || typeof adapter !== 'object') return false;
+    if (typeof adapter.name !== 'string' || !adapter.name.trim()
+        || typeof adapter.endpoint !== 'string' || !adapter.endpoint.trim()
+        || typeof adapter.defaultModel !== 'string' || !adapter.defaultModel.trim()
+        || !AUTH_TYPES.has(adapter.authType)
+        || typeof adapter.buildRequest !== 'function'
+        || typeof adapter.extractResponse !== 'function') return false;
+    const endpoint = adapter.endpoint.replace('{model}', 'model');
+    let parsed;
+    try { parsed = new URL(endpoint); } catch { return false; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) return false;
+    PROVIDER_CONFIGS[key] = {
+        name: adapter.name.trim(),
+        endpoint: adapter.endpoint.trim(),
+        defaultModel: adapter.defaultModel.trim(),
+        models: Array.isArray(adapter.models) ? adapter.models.map(String) : [],
+        allowCustomModel: adapter.allowCustomModel === true,
+        allowCustomEndpoint: false,
+        authType: adapter.authType,
+        buildRequest: adapter.buildRequest,
+        extractResponse: adapter.extractResponse,
+    };
+    return true;
+}
 
 /**
  * Set the API key for a provider. Validates input.
@@ -152,8 +207,22 @@ export function setApiKey(provider, key) {
  * @returns {boolean}
  */
 export function hasApiKey(provider = currentProvider) {
-    if (PROVIDER_CONFIGS[provider]?.authType === 'none') return true;
+    if (['none', 'optional-bearer'].includes(PROVIDER_CONFIGS[provider]?.authType)) return true;
     return apiKeys.has(provider) && apiKeys.get(provider).length > 0;
+}
+
+/** Configure a provider-owned endpoint when its adapter allows one. */
+export function setEndpoint(provider, endpoint) {
+    const config = PROVIDER_CONFIGS[provider];
+    if (!config || config.allowCustomEndpoint !== true || typeof endpoint !== 'string') return false;
+    const candidate = endpoint.trim();
+    if (!candidate) return false;
+    let parsed;
+    try { parsed = new URL(candidate); } catch { return false; }
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) return false;
+    customEndpoint = parsed.href;
+    setSetting('customLlmEndpoint', customEndpoint);
+    return true;
 }
 
 /**
@@ -200,6 +269,9 @@ export function getProviderConfigs() {
             name: cfg.name,
             defaultModel: cfg.defaultModel,
             models: cfg.models || [],
+            allowCustomModel: cfg.allowCustomModel === true,
+            allowCustomEndpoint: cfg.allowCustomEndpoint === true,
+            endpoint: cfg.allowCustomEndpoint === true ? customEndpoint : '',
             hasKey: hasApiKey(id),
             authType: cfg.authType
         };
@@ -214,17 +286,19 @@ export const ANTHROPIC_MODELS = PROVIDER_CONFIGS[LLM_PROVIDERS.ANTHROPIC].models
 export const ANTHROPIC_DEFAULT_MODEL = PROVIDER_CONFIGS[LLM_PROVIDERS.ANTHROPIC].defaultModel;
 
 /**
- * The model id to actually send for a provider: the stored/active model only when
- * the provider still lists it, else the provider default. A model dropped from the
- * catalog (a retired id, or one left in storage from another provider) thus never
- * reaches the API; the default is used instead.
- * @param {{ models?: string[], defaultModel: string }} config
+ * The model id to actually send for a provider. Local providers may explicitly
+ * accept any non-empty model id; catalog-bound providers accept listed ids only.
+ * Empty or invalid values use the provider default.
+ * @param {{ models?: string[], defaultModel: string, allowCustomModel?: boolean }} config
  * @param {string|null|undefined} stored
  * @returns {string}
  */
 export function pickModel(config, stored) {
-    return stored && Array.isArray(config.models) && config.models.includes(stored)
-        ? stored : config.defaultModel;
+    const candidate = typeof stored === 'string' ? stored.trim() : '';
+    if (!candidate) return config.defaultModel;
+    if (config.allowCustomModel === true) return candidate;
+    return Array.isArray(config.models) && config.models.includes(candidate)
+        ? candidate : config.defaultModel;
 }
 
 /**
@@ -244,19 +318,21 @@ export async function complete(prompt, options = {}) {
     const key = apiKeys.get(currentProvider) || '';
 
     // Auth check (except for Ollama)
-    if (config.authType !== 'none' && !key) {
+    if (!['none', 'optional-bearer'].includes(config.authType) && !key) {
         throw new Error('No API key configured for ' + config.name + '.');
     }
 
     // Build URL
-    let url = config.endpoint.replace('{model}', encodeURIComponent(model));
+    const endpoint = config.allowCustomEndpoint === true ? customEndpoint : config.endpoint;
+    if (!endpoint) throw new Error('No endpoint configured for ' + config.name + '.');
+    let url = endpoint.replace('{model}', encodeURIComponent(model));
     if (config.authType === 'url-param') {
         url += (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(key);
     }
 
     // Build headers
     const headers = { 'Content-Type': 'application/json' };
-    if (config.authType === 'bearer') {
+    if (config.authType === 'bearer' || (config.authType === 'optional-bearer' && key)) {
         headers['Authorization'] = 'Bearer ' + key;
     } else if (config.authType === 'x-api-key') {
         headers['x-api-key'] = key;

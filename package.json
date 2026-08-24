@@ -1,0 +1,31 @@
+{
+  "name": "teicrafter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.13.0",
+    "npm": "11.6.2"
+  },
+  "packageManager": "npm@11.6.2",
+  "browserslist": [
+    "baseline widely available"
+  ],
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "check:biome": "biome check --files-ignore-unknown=true docs/js test/e2e test/verify.mjs vite.config.js playwright.config.js",
+    "verify": "node test/verify.mjs",
+    "verify:full-corpus": "npm run verify && node test/run_all.mjs szd_loadability_sweep && node test/run_all.mjs port_parity",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@biomejs/biome": "2.5.10",
+    "@playwright/test": "1.62.1",
+    "typescript": "7.0.2",
+    "vite": "8.2.2"
+  }
+}

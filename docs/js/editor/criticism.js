@@ -24,6 +24,8 @@ import {
   escapeAttr,
   splitEdge,
   CRITICAL_LOCALS,
+  isTeiElement,
+  qualifyTeiMarkup,
 } from "./tei-document.js";
 
 /**
@@ -41,12 +43,23 @@ export const CRITICAL_KINDS = Object.freeze({
 function isSoleContentOf(textNode, localName) {
   const p = textNode.parent;
   return (
-    p &&
-    p.type === "element" &&
-    p.localName === localName &&
+    isTeiElement(p, localName) &&
     p.children.length === 1 &&
     p.children[0] === textNode
   );
+}
+
+/** Build prefix-faithful TEI critical markup in the text node's namespace. */
+function criticalMarkup(textNode, desc, inner, opts) {
+  const respAttr = opts.resp ? ' resp="' + escapeAttr(String(opts.resp)) + '"' : "";
+  let fragment;
+  if (desc.wraps) {
+    fragment = "<" + desc.tag + respAttr + ">" + inner + "</" + desc.tag + ">";
+  } else {
+    const reason = opts.reason ? ' reason="' + escapeAttr(String(opts.reason)) + '"' : "";
+    fragment = "<gap" + reason + respAttr + "/>";
+  }
+  return qualifyTeiMarkup(fragment, textNode.parent);
 }
 
 /**
@@ -68,26 +81,46 @@ export function markCritical(doc, textNode, kind, opts = {}) {
   const rawSlice = doc.raw.slice(textNode.start, textNode.end);
   const [lead, core, trail] = splitEdge(rawSlice);
 
-  // opts.resp marks the wrapper as model-proposed (the project responsibility id,
-  // "#ai" by default), so a proposed criticism reads as the AI provenance family
-  // and confirm/reject can act on it. Absent for human-authored criticism.
-  const respAttr = opts.resp ? ' resp="' + escapeAttr(String(opts.resp)) + '"' : "";
-
   if (desc.wraps) {
     if (!core) return doc; // nothing to wrap (whitespace-only node)
     // No-op when the node's immediate parent is already exactly this wrapper, so
     // re-applying the same marker never nests a redundant duplicate, even when the
     // wrapper holds more than this one node (mixed content).
     const p = textNode.parent;
-    if (p && p.type === "element" && p.localName === desc.tag) return doc;
-    const wrapped = lead + "<" + desc.tag + respAttr + ">" + core + "</" + desc.tag + ">" + trail;
+    if (isTeiElement(p, desc.tag)) return doc;
+    const fragment = criticalMarkup(textNode, desc, core, opts);
+    if (fragment == null) return doc;
+    const wrapped = lead + fragment + trail;
     return spliceDocument(doc, textNode.start, textNode.end, wrapped);
   }
 
   // gap: replace the core with an empty element, edge whitespace preserved.
-  const reason = opts.reason ? ' reason="' + escapeAttr(String(opts.reason)) + '"' : "";
-  const replaced = lead + "<gap" + reason + respAttr + "/>" + trail;
+  const fragment = criticalMarkup(textNode, desc, "", opts);
+  if (fragment == null) return doc;
+  const replaced = lead + fragment + trail;
   return spliceDocument(doc, textNode.start, textNode.end, replaced);
+}
+
+/**
+ * Apply a critical marker to a raw sub-range of one text node. The offsets are
+ * relative to the text node and use the same contract as linkMentionRange.
+ * Returns the SAME document for an invalid or whitespace-only range, a foreign
+ * insertion context, or a redundant marker of the same kind.
+ */
+export function markCriticalRange(doc, textNode, relFrom, relTo, kind, opts = {}) {
+  const desc = CRITICAL_KINDS[kind];
+  if (!desc) throw new Error("Unknown critical kind: " + kind);
+  if (!textNode || textNode.type !== "text" || !isTeiElement(textNode.parent)) return doc;
+  if (isTeiElement(textNode.parent, desc.tag)) return doc;
+  const length = textNode.end - textNode.start;
+  if (!Number.isInteger(relFrom) || !Number.isInteger(relTo)) return doc;
+  if (relFrom < 0 || relTo > length || relFrom >= relTo) return doc;
+  const from = textNode.start + relFrom;
+  const to = textNode.start + relTo;
+  const inner = doc.raw.slice(from, to);
+  if (!inner.trim()) return doc;
+  const fragment = criticalMarkup(textNode, desc, inner, opts);
+  return fragment == null ? doc : spliceDocument(doc, from, to, fragment);
 }
 
 /**
@@ -99,8 +132,7 @@ export function markCritical(doc, textNode, kind, opts = {}) {
 export function unwrapCritical(doc, textNode) {
   if (!textNode || textNode.type !== "text") return doc;
   const parent = textNode.parent;
-  if (!parent || parent.type !== "element") return doc;
-  if (!CRITICAL_LOCALS.has(parent.localName) || parent.localName === "gap") return doc;
+  if (!isTeiElement(parent) || !CRITICAL_LOCALS.has(parent.localName) || parent.localName === "gap") return doc;
   // Only remove a wrapper that holds EXACTLY this node. A critical wrapper over
   // mixed content (e.g. <del>Hallo <hi>X</hi> Welt</del>) is shared by several
   // cells; stripping it from one cell would silently drop the editorial markup
@@ -118,7 +150,7 @@ export function unwrapCritical(doc, textNode) {
  * SAME doc when the element is absent or not a gap.
  */
 export function removeGap(doc, gapEl) {
-  if (!gapEl || gapEl.type !== "element" || gapEl.localName !== "gap") return doc;
+  if (!isTeiElement(gapEl, "gap")) return doc;
   if (gapEl.outerStart == null || gapEl.outerEnd == null) return doc;
   return spliceDocument(doc, gapEl.outerStart, gapEl.outerEnd, "");
 }

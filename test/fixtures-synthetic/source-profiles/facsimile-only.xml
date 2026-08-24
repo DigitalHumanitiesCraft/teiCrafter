@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="facsimile-only">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Facsimile-only profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Two invented scans without a transcribed text layer.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface xml:id="scan-surface-1" n="1">
+      <graphic url="scan-001.jpg"/>
+    </surface>
+    <surface xml:id="scan-surface-2" n="2">
+      <graphic url="scan-002.jpg"/>
+    </surface>
+  </facsimile>
+</TEI>

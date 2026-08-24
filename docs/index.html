@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <title>teiCrafter - a browser TEI working environment</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <style>
         /* Landing styles, tokens only (no raw hex). The page states what the
@@ -111,7 +110,7 @@
            accent besides the gold action colour; violet stays AI-only. */
         .lp-feature h3 { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-blue); margin: 0 0 var(--space-xs); }
         .lp-feature p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
-        .lp-feature a { color: var(--color-link); }
+        .lp-feature a { color: var(--color-blue); }
         /* Inline TEI tokens read in the same blue-on-blue-tint as the badges, so
            markup names stand out as one consistent family instead of grey. */
         .lp-feature code { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-blue);
@@ -221,21 +220,6 @@
             </a>
         </div>
     </footer>
-    <script type="module">
-        // Example surfaces show only during local development; the public
-        // deployment keeps them hidden (flag computed in constants.js).
-        import { FEATURES, llmEnabled } from "./js/utils/constants.js";
-        if (FEATURES.examples) {
-            document.getElementById("examples").hidden = false;
-            document.getElementById("lp-try-example").hidden = false;
-        }
-        // The LLM on-ramp entry is product-facing (not a local-dev example), so it
-        // shows on the public deployment whenever AI is enabled. llmEnabled() honours
-        // both the build flag and the per-user runtime toggle, so switching AI off in
-        // the editor also removes the entry here.
-        if (llmEnabled()) {
-            document.getElementById("lp-llm-onramp").hidden = false;
-        }
-    </script>
+    <script type="module" src="js/index-app.js"></script>
 </body>
 </html>

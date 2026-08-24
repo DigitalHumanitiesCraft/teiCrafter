@@ -3,14 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: http:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:">
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <title>teiCrafter Editor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/editor.css">
-    <!-- OpenSeadragon for the facsimile viewer; plain script so it is ready before the type=module app runs. -->
-    <script src="https://cdn.jsdelivr.net/npm/openseadragon@5.0.1/build/openseadragon/openseadragon.min.js"></script>
+    <link rel="stylesheet" href="css/editor.css?v=20260824-ui4">
+    <script src="vendor/openseadragon/openseadragon.min.js"></script>
 </head>
 <body class="ed-body">
     <header class="ed-header site-head">
@@ -55,9 +53,18 @@
         </div>
         <div class="sep ed-tool-doc" hidden></div>
         <div class="group ed-tool-doc" hidden>
+            <button class="ed-btn" id="btn-undo" type="button" disabled
+                    aria-label="Undo document edit" aria-keyshortcuts="Control+Z Meta+Z"
+                    title="Undo the last applied document edit (Ctrl/Cmd+Z)">Undo</button>
+            <button class="ed-btn" id="btn-redo" type="button" disabled
+                    aria-label="Redo document edit" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+                    title="Redo the next document edit (Ctrl/Cmd+Shift+Z)">Redo</button>
+            <span class="sep" aria-hidden="true"></span>
             <button class="ed-btn ed-btn-primary" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
             <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
             <button class="ed-btn" id="btn-export-inline" hidden title="Export the inline-GND interchange copy (authority inline at each mention, no register) for the ZBZ pipeline">Export inline-GND</button>
+            <button class="ed-btn" id="btn-attach-facsimiles" hidden
+                    title="Choose a local folder that contains the bare image filenames referenced by this TEI">Attach facsimile folder</button>
         </div>
         <!-- Document identity: right-aligned in the toolbar, visible only while a
              document is loaded. A factual display, not interactive. -->
@@ -66,17 +73,19 @@
     </div>
 
     <!-- Dual view: two panes, always. The left
-         pane is the text work surface (reading text or XML source); the right
+         pane is the text work surface (reading text, page XML, or metadata XML); the right
          pane is a switchable context panel (facsimile, entity index; the panel
          registry in editor-app.js is open for project-specific panels). -->
     <main class="ed-main" id="ed-main">
         <section class="ed-pane" id="ed-pane-left">
             <div class="ed-pane-head">
                 <span class="ed-tabs" id="ed-view-tabs" role="tablist" aria-label="Text view">
-                    <button class="ed-tab active" id="view-reading" type="button" role="tab" aria-selected="true"
+                    <button class="ed-tab active" id="view-reading" type="button" role="tab" aria-selected="true" tabindex="0" aria-controls="ed-reading"
                             title="The diplomatic reading text: edit, annotate, and mark it word by word or line by line">Reading text</button>
-                    <button class="ed-tab" id="view-xml" type="button" role="tab" aria-selected="false"
-                            title="The editable XML source of the whole document; Apply is gated on well-formedness">XML source</button>
+                    <button class="ed-tab" id="view-xml" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="ed-reading"
+                            title="The editable XML source of the current navigation unit; Check and Apply validate the complete document">XML source</button>
+                    <button class="ed-tab" id="view-metadata" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="ed-reading"
+                            title="Structured teiHeader fields with the complete editable XML one click away">Metadata</button>
                 </span>
                 <span class="ed-pane-head-right">
                     <button class="ed-val-chip" id="ed-val-chip" type="button" hidden></button>
@@ -85,14 +94,26 @@
                     <span class="ed-pager">
                         <button class="ed-btn ed-pager-btn" id="btn-viewmode" type="button" hidden aria-pressed="false"
                                 title="Page-by-page view. Click for continuous (all pages).">&#9633;</button>
+                        <span class="ed-ann-wrap" id="ed-ann-progress" hidden>
+                            <button class="ed-btn ed-ann-summary" id="ed-ann-summary" type="button"
+                                    aria-expanded="false" aria-controls="ed-ann-popover"
+                                    title="Show the pages that contain semantic markup">Markup -/-</button>
+                            <span class="ed-ann-popover" id="ed-ann-popover" role="dialog"
+                                  aria-label="Annotated pages" hidden>
+                                <span class="ed-ann-caption" id="ed-ann-caption"></span>
+                                <span class="ed-ann-pages" id="ed-ann-pages"></span>
+                            </span>
+                        </span>
+                        <button class="ed-btn ed-review-summary" id="ed-review-summary" type="button"
+                                aria-pressed="false" title="Mark the current navigation unit as editorially reviewed">Reviewed -/-</button>
                         <button class="ed-btn ed-pager-btn" id="btn-prev" disabled title="Previous page (ArrowLeft)">&#8249;</button>
                         <span class="ed-folio-label" id="ed-folio-label">-</span>
                         <button class="ed-btn ed-pager-btn" id="btn-next" disabled title="Next page (ArrowRight)">&#8250;</button>
                     </span>
                     <span class="ed-tabs ed-reading-variant" id="ed-reading-variant" role="tablist" aria-label="Reading variant" hidden>
-                        <button class="ed-tab active" id="variant-dipl" type="button" role="tab" aria-selected="true"
+                        <button class="ed-tab active" id="variant-dipl" type="button" role="tab" aria-selected="true" tabindex="0" aria-controls="ed-reading"
                                 title="Shows the text as written in the source.">Diplomatic</button>
-                        <button class="ed-tab" id="variant-norm" type="button" role="tab" aria-selected="false"
+                        <button class="ed-tab" id="variant-norm" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="ed-reading"
                                 title="Shows the normalized reading from the norm attribute; words without one show the text as written.">Normalized</button>
                     </span>
                     <span class="ed-view-controls" id="ed-view-controls" hidden>
@@ -106,25 +127,25 @@
                  title="Colour legend. Select text to annotate; double-click to edit; right-click for all actions.">
                 <span class="ed-legend-chips" id="ed-legend-chips"></span>
             </div>
-            <div class="ed-pane-body ed-reading" id="ed-reading"></div>
+            <div class="ed-pane-body ed-reading" id="ed-reading" role="tabpanel"
+                 aria-labelledby="view-reading" tabindex="0"></div>
         </section>
 
         <div class="ed-splitter" id="ed-splitter" role="separator" aria-orientation="vertical"
-             tabindex="0" aria-label="Resize panes"
-             title="Drag to resize; double-click to reset; arrow keys to nudge">
-            <button class="ed-splitter-toggle" id="ed-collapse-btn" type="button" aria-pressed="false"
-                    title="Hide the context pane">&#8250;</button>
-        </div>
+             aria-controls="ed-pane-left ed-pane-right" aria-valuemin="10" aria-valuemax="90"
+             aria-valuenow="52" aria-valuetext="Left pane 52 percent"
+             tabindex="0" aria-label="Resize or toggle the context pane"
+             title="Drag or use arrow keys to resize; Enter toggles the context pane; Home resets"></div>
 
         <section class="ed-pane" id="ed-pane-right">
             <div class="ed-pane-head">
                 <span class="ed-tabs" id="ed-panel-tabs" role="tablist" aria-label="Context panel"></span>
             </div>
             <div class="ed-pane-body ed-panel-body">
-                <div class="ed-panel" id="ed-panel-facs" hidden>
+                <div class="ed-panel" id="ed-panel-facs" role="tabpanel" hidden>
                     <div class="ed-osd" id="ed-osd"></div>
                 </div>
-                <div class="ed-panel" id="ed-panel-index" hidden>
+                <div class="ed-panel" id="ed-panel-index" role="tabpanel" hidden>
                     <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter by name or id..."
                            title="Filter entities by name or id; matches are highlighted, Escape clears" />
                     <div class="ed-idx-workfilter" id="idx-workfilter" role="group" aria-label="Show only entries that still need editorial work">
@@ -164,7 +185,7 @@
         </a>
         <a href="about.html">About</a>
         <a href="https://dhcraft.org/imprint.html" target="_blank" rel="noopener">Imprint</a>
-        <span class="ed-status-wrap" id="ed-status-wrap" hidden>
+        <span class="ed-status-wrap" id="ed-status-wrap" role="status" aria-live="polite" hidden>
             <span class="ed-status-dot" id="ed-status-dot">&#9679;</span> <span id="ed-status"></span>
         </span>
         <span class="spacer"></span>
@@ -189,10 +210,18 @@
                 <div class="ed-field-row">
                     <label class="ed-field"><span>Source type</span><select id="gen-type"></select></label>
                     <label class="ed-field"><span>Provider</span><select id="gen-provider"></select></label>
-                    <label class="ed-field"><span>Model</span><select id="gen-model"></select></label>
+                    <label class="ed-field"><span>Model</span>
+                        <select id="gen-model"></select>
+                        <input id="gen-custom-model" type="text" hidden autocomplete="off" spellcheck="false"
+                               placeholder="Local Ollama model id, for example mistral:7b-instruct-q4_K_M">
+                    </label>
                 </div>
                 <label class="ed-field" title="The key is kept in memory only and never stored"><span>API key</span>
                     <input id="gen-key" type="password" autocomplete="off" spellcheck="false" placeholder="kept in memory only" />
+                </label>
+                <label class="ed-field" id="gen-endpoint-field" hidden><span>OpenAI-compatible endpoint</span>
+                    <input id="gen-endpoint" type="url" autocomplete="off" spellcheck="false"
+                           placeholder="https://host.example/v1/chat/completions" />
                 </label>
                 <div class="ed-modal-status" id="gen-status"></div>
             </div>
@@ -203,6 +232,6 @@
         </div>
     </div>
 
-    <script type="module" src="js/editor/editor-app.js"></script>
+    <script type="module" src="js/editor/editor-app.js?v=20260824-ui4"></script>
 </body>
 </html>

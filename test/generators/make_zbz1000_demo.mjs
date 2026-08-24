@@ -2,9 +2,9 @@
  * Materialize the ZBZ worked-example object (doc 1000) as a local-only demo file.
  *
  * Reads the unchanged pipeline TEI from the zbz-ocr-tei sibling checkout
- * (docs/data/pages/1000/1000_final.xml) and deterministically injects one
- * <graphic url> per surface, pointing at the published zbz GitHub Pages images
- * (the M2.4 image-URL scheme: facs_N -> 1000_p00N.png). Writes the result to
+ * (docs/data/pages/1000/1000_final.xml) and ensures that every surface carries
+ * one relative <graphic url>. Current pipeline files already satisfy that
+ * contract; older files receive the missing element. Writes the result to
  * docs/data/editor/zbz-1000/zbz-hersch-1000.xml.
  *
  * The output is deliberately NOT committed: like docs/data/editor/zbz-100/ it is
@@ -28,16 +28,17 @@ export const SOURCE_FILE =
   join(GH, "DHCraft", "zbz-ocr-tei", "docs", "data", "pages", "1000", "1000_final.xml");
 export const TARGET_FILE = join(REPO, "docs", "data", "editor", "zbz-1000", "zbz-hersch-1000.xml");
 
-const URL_BASE = "https://chpollin.github.io/zbz-ocr-tei/images/1000/1000_p";
-
-/** Inject one <graphic url> per surface (facs_1..facs_4), first child, M2.4 scheme. */
+/** Ensure one relative <graphic url> per surface (facs_1..facs_4). */
 export function buildZbz1000(raw) {
   const nl = raw.includes("\r\n") ? "\r\n" : "\n";
   let out = raw;
   for (let i = 1; i <= 4; i++) {
-    const re = new RegExp(`(<surface xml:id="facs_${i}"[^>]*>)`);
-    if (!re.test(out)) throw new Error(`surface facs_${i} not found in source`);
-    out = out.replace(re, `$1${nl}      <graphic url="${URL_BASE}00${i}.png" />`);
+    const surfaceRe = new RegExp(`(<surface xml:id="facs_${i}"[^>]*>)([\\s\\S]*?)(</surface>)`);
+    const match = surfaceRe.exec(out);
+    if (!match) throw new Error(`surface facs_${i} not found in source`);
+    if (/<graphic\b/.test(match[2])) continue;
+    const filename = `1000_p${String(i).padStart(3, "0")}.png`;
+    out = out.replace(surfaceRe, `$1${nl}      <graphic url="${filename}" />$2$3`);
   }
   return out;
 }
@@ -51,5 +52,5 @@ if (isMain) {
   const out = buildZbz1000(readFileSync(SOURCE_FILE, "utf8"));
   mkdirSync(dirname(TARGET_FILE), { recursive: true });
   writeFileSync(TARGET_FILE, out);
-  console.log(`wrote ${TARGET_FILE} (${out.length} chars, 4 graphic urls injected)`);
+  console.log(`wrote ${TARGET_FILE} (${out.length} chars, graphic urls present)`);
 }

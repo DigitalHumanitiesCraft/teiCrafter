@@ -39,13 +39,13 @@ import { readFileSync, existsSync } from "node:fs";
 import { check, finish } from "./_assert.mjs";
 
 // ---- Gate: the object is local-only (rights stance as zbz-100). Prefer the
-// materialized demo file; else build it in memory from the zbz sibling checkout;
-// else SKIP (same pattern as the SZD fixture gate).
+// current sibling source; only fall back to the materialized demo when the sibling
+// checkout is absent, so a stale local copy never masks a changed pipeline file.
 let raw0;
-if (existsSync(TARGET_FILE)) {
-  raw0 = readFileSync(TARGET_FILE, "utf8");
-} else if (existsSync(SOURCE_FILE)) {
+if (existsSync(SOURCE_FILE)) {
   raw0 = buildZbz1000(readFileSync(SOURCE_FILE, "utf8"));
+} else if (existsSync(TARGET_FILE)) {
+  raw0 = readFileSync(TARGET_FILE, "utf8");
 } else {
   console.log("SKIP: zbz-hersch-1000.xml absent and no zbz-ocr-tei sibling checkout (rights-encumbered object not in this checkout)");
   process.exit(0);
@@ -79,20 +79,15 @@ let editsApplied = 0;
 // =============================================================================
 console.log("ACT 0  lossless load (real ZBZ doc 1000)");
 const s0 = parseEdition(raw0);
+check("the ZBZ preparation rule is idempotent", buildZbz1000(raw0) === raw0);
 check("round-trip byte-identical (serialize === raw0)", serialize(s0) === raw0);
 check("four folios (pb -> facs_1..facs_4, 1:1)", s0.folios.length === 4);
 check('line profile (no <w>)', s0.profile === "line");
 check("sane cell count (>40 reading lines)", s0.cells.length > 40);
 const surfaceFolios = s0.folios.filter((f) => f.surface);
 check("every folio carries its surface", surfaceFolios.length === 4);
-check(
-  "every graphic is a zbz GitHub-Pages image url for doc 1000",
-  surfaceFolios.every(
-    (f) =>
-      typeof f.surface.graphic === "string" &&
-      f.surface.graphic.startsWith("https://chpollin.github.io/zbz-ocr-tei/images/1000/1000_p")
-  )
-);
+check("every graphic uses the relative pipeline filename for doc 1000",
+  surfaceFolios.every((f, i) => f.surface.graphic === `1000_p${String(i + 1).padStart(3, "0")}.png`));
 
 // =============================================================================
 // ACT 1  -- surgical line correction: the OCR "inadaption" -> "inadaptation" fix
@@ -207,15 +202,15 @@ doc = markCritical(a3.doc, fnCell.node, "unclear");
 editsApplied++;
 check("raw now contains <unclear>", doc.raw.includes("<unclear>"));
 
-// the stray OCR token "Heft" (facs_1_r_5) corresponds to no readable text at
-// that spot: replace the core with an explicit <gap/> instead of silent deletion
+// Exercise the gap splice on a second real reading cell. The earlier carrier's
+// stray cover token is absent from the current cover-stripped pipeline source.
 const a3b = parseEdition(doc.raw);
-const heftCell = a3b.cells.find((c) => !c.gap && c.text.trim() === "Heft");
-check("found the stray 'Heft' token cell to replace with a gap", !!heftCell);
-doc = markCritical(a3b.doc, heftCell.node, "gap");
+const gapCell = a3b.cells.find((c) =>
+  !c.gap && c.text.trim().length > 0 && c.id !== fnCell.id);
+check("found a second real reading cell to replace with a gap", !!gapCell);
+doc = markCritical(a3b.doc, gapCell.node, "gap");
 editsApplied++;
 check("raw now contains a self-closing <gap" + "/>", /<gap\s*\/>/.test(doc.raw));
-check("the metadata line 'Heft: 39' above it is untouched", doc.raw.includes("Heft: 39"));
 check("criticism doc still builds a 4-folio model", parseEdition(doc.raw).folios.length === 4);
 
 // =============================================================================

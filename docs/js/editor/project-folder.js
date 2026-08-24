@@ -15,8 +15,7 @@
  *   ctx: {
  *     app,                       // shared mutable editor state (projectFolder, docName, saveTarget, fileHandle)
  *     setStatus(msg), setDirty(d),
- *     confirmDiscard() -> bool,  // guard before replacing a dirty document
- *     load(raw, name, handle, project) -> Promise,
+ *     load(raw, name, handle, project, opts) -> Promise<boolean>,
  *     showPanel(id), updatePanels(),
  *     teiVocabularyLine() -> string|null,  // the project's TEI scope and load state
  *     getProjectPanelHost() -> Element,  // the project panel's (possibly created) host
@@ -26,27 +25,81 @@
 import { el, clear } from "./dom.js";
 import { parseManifest, typeForFile, mappingFiles, MANIFEST_FILENAME } from "./project-manifest.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
+import { parseEdition } from "./edition.js?v=20260824-ui4";
+import { annotationPageSummary } from "./annotation-progress.js?v=20260824-ui4";
+import { noteIndex } from "./standoff.js?v=20260824-ui4";
+import { decodeXmlBytes } from "./file-encoding.js";
+import { fileVersion } from "./file-version.js";
+import { loadProjectSchemaFiles } from "./project-schema-files.js";
 import { requireCtx } from "./ctx.js";
 
 export function createProjectFolder(ctx) {
   requireCtx("createProjectFolder", ctx,
-    ["setStatus", "setDirty", "confirmDiscard", "load", "showPanel", "updatePanels",
+    ["setStatus", "setDirty", "load", "showPanel", "updatePanels",
      "teiVocabularyLine", "getProjectPanelHost"],
     ["app"]);
   const {
-    app, setStatus, setDirty, confirmDiscard, load,
+    app, setStatus, setDirty, load,
     showPanel, updatePanels, teiVocabularyLine, getProjectPanelHost,
   } = ctx;
   // Optional hook: announce a plaintext draft so the shell can show the neutral
   // draft banner and record the Source provenance. Absent in headless callers.
   const onPlaintextDraft = ctx.onPlaintextDraft || (() => {});
 
+  const summaryForState = (state) => annotationPageSummary(state, noteIndex(state.doc));
+
+  function annotationStatus(file) {
+    if (file.kind !== "tei") return null;
+    if (file.name === app.docName && app.state) return { state: "done", summary: summaryForState(app.state) };
+    return file.annotationStatus || { state: "pending" };
+  }
+
+  async function scanProjectAnnotations() {
+    const pf = app.projectFolder;
+    if (!pf || pf.scanningAnnotations) return;
+    pf.scanningAnnotations = true;
+    renderProjectPanel();
+    let checked = 0;
+    for (const file of pf.files.filter((item) => item.kind === "tei")) {
+      if (app.projectFolder !== pf) return;
+      file.annotationStatus = { state: "scanning" };
+      renderProjectPanel();
+      try {
+        const source = await file.handle.getFile();
+        const decoded = decodeXmlBytes(await source.arrayBuffer());
+        file.annotationStatus = { state: "done", summary: summaryForState(parseEdition(decoded.text)) };
+      } catch (err) {
+        file.annotationStatus = { state: "error", message: err.message };
+      }
+      checked += 1;
+      renderProjectPanel();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    if (app.projectFolder !== pf) return;
+    pf.scanningAnnotations = false;
+    renderProjectPanel();
+    setStatus(`Annotation status scanned for ${checked} TEI file${checked === 1 ? "" : "s"}.`);
+  }
+
   function renderProjectPanel() {
     const host = getProjectPanelHost();
     clear(host);
     const pf = app.projectFolder;
     if (!pf) return;
-    host.appendChild(el("div", { class: "ed-proj-head", text: pf.name }));
+    const head = el("div", { class: "ed-proj-headrow" });
+    head.appendChild(el("div", { class: "ed-proj-head", text: pf.name }));
+    const teiFiles = pf.files.filter((item) => item.kind === "tei");
+    if (teiFiles.length) {
+      const scan = el("button", {
+        class: "ed-btn ed-proj-scan", type: "button",
+        text: pf.scanningAnnotations ? "Scanning..." : "Scan annotations",
+        title: "Read every TEI file in this folder and mark which files and pages contain annotations",
+      });
+      scan.disabled = !!pf.scanningAnnotations;
+      scan.addEventListener("click", scanProjectAnnotations);
+      head.appendChild(scan);
+    }
+    host.appendChild(head);
     const vocab = teiVocabularyLine();
     if (vocab) host.appendChild(el("div", { class: "ed-proj-vocab", text: vocab }));
     if (!pf.files.length) {
@@ -73,34 +126,62 @@ export function createProjectFolder(ctx) {
       row.appendChild(el("span", { class: "ed-proj-file-name", text: f.name }));
       if (docType) row.appendChild(el("span", { class: "ed-proj-file-type", text: docType.label }));
       if (f.kind === "text") row.appendChild(el("span", { class: "ed-proj-file-kind", text: "plaintext" }));
+      const status = annotationStatus(f);
+      if (status) {
+        let label = "not scanned";
+        let stateClass = "pending";
+        if (status.state === "scanning") { label = "scanning"; stateClass = "pending"; }
+        else if (status.state === "error") { label = "scan failed"; stateClass = "error"; }
+        else if (status.state === "done") {
+          const summary = status.summary;
+          label = summary.annotatedPages
+            ? `annotated ${summary.annotatedPages}/${summary.totalPages}`
+            : "no annotations";
+          stateClass = summary.annotatedPages ? "annotated" : "empty";
+        }
+        row.appendChild(el("span", {
+          class: `ed-proj-ann ${stateClass}`, text: label,
+          title: status.state === "error" ? status.message : "Detected annotation-bearing pages in this TEI file",
+        }));
+      }
       row.addEventListener("click", () => openProjectFile(f));
       list.appendChild(row);
     }
     host.appendChild(list);
   }
 
-  async function openProjectFile(f) {
-    if (!confirmDiscard()) return;
+  async function openProjectFile(f, folder = app.projectFolder) {
+    if (!folder) return false;
     try {
       const file = await f.handle.getFile();
-      const project = app.projectFolder ? app.projectFolder.project : null;
+      const project = folder.project;
       if (f.kind === "text") {
         // Deterministic transport, no model: the draft exists only in the editor
         // until Save creates the .xml next to the source in the project folder.
         const baseName = f.name.replace(/\.(txt|md)$/i, "");
         const xmlName = baseName + ".xml";
-        await load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project);
-        app.saveTarget = { dir: app.projectFolder.dir, name: xmlName };
+        const opened = await load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project,
+          { projectFolder: folder });
+        if (!opened) return false;
+        app.saveTarget = { dir: folder.dir, name: xmlName };
         setDirty(true);
         onPlaintextDraft(f.name);
         setStatus(`Drafted ${xmlName} deterministically from ${f.name} (text carried verbatim). Save writes it into the project folder.`);
       } else {
-        await load(await file.text(), f.name, f.handle, project);
+        const decoded = decodeXmlBytes(await file.arrayBuffer());
+        const opened = await load(decoded.text, f.name, f.handle, project, {
+          projectFolder: folder,
+          fileEncoding: { encoding: decoded.encoding, bom: decoded.bom },
+          fileSnapshot: fileVersion(file),
+        });
+        if (!opened) return false;
       }
       // Stay in the project context: switching to the next file is one click.
       showPanel("project");
+      return true;
     } catch (err) {
       setStatus(`Could not open ${f.name}: ${err.message}`);
+      return false;
     }
   }
 
@@ -138,18 +219,32 @@ export function createProjectFolder(ctx) {
           if (names.includes(files[i].name)) files.splice(i, 1);
         }
       }
+      if (project.schema) {
+        project.localSchemas = await loadProjectSchemaFiles(project.schema, async (name) => {
+          const handle = handles.get(name);
+          if (!handle) return null;
+          const decoded = decodeXmlBytes(await (await handle.getFile()).arrayBuffer());
+          return decoded.text;
+        });
+      }
     }
-    app.projectFolder = { dir, name: project ? project.name : dir.name, files, project };
+    const folder = { dir, name: project ? project.name : dir.name, files, project };
     const teiCount = files.filter((x) => x.kind === "tei").length;
-    setStatus(`Project folder "${app.projectFolder.name}": ${files.length} file(s) (${teiCount} TEI, ${files.length - teiCount} plaintext).${note}`);
-    if (files.length) await openProjectFile(files[0]);
+    if (files.length) {
+      const opened = await openProjectFile(files[0], folder);
+      if (!opened) return false;
+      setStatus(`Project folder "${folder.name}": ${files.length} file(s) (${teiCount} TEI, ${files.length - teiCount} plaintext).${note}`);
+    }
     else {
+      app.projectFolder = folder;
+      setStatus(`Project folder "${folder.name}": 0 files.${note}`);
       // No openable document: surface the project panel so its onboarding note
       // (how to add a document or start from text) is what the operator sees,
       // not the bare empty reading pane.
       updatePanels();
       showPanel("project");
     }
+    return true;
   }
 
   async function openProjectFolder() {
@@ -157,7 +252,6 @@ export function createProjectFolder(ctx) {
       setStatus("Open project folder needs the File System Access API (Chromium-based browsers).");
       return;
     }
-    // The discard guard sits in openProjectFile, where a document is replaced.
     let dir;
     try {
       dir = await window.showDirectoryPicker({ mode: "readwrite" });
@@ -174,7 +268,6 @@ export function createProjectFolder(ctx) {
       setStatus("New project needs the File System Access API (Chromium-based browsers).");
       return;
     }
-    // Writing the manifest replaces no document; the guard sits in openProjectFile.
     let dir;
     try {
       dir = await window.showDirectoryPicker({ mode: "readwrite" });

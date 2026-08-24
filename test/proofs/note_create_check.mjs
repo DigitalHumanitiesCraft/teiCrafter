@@ -36,7 +36,7 @@ const wstate = parseEdition(WRAW);
 const wdoc = addNoteForNode(wstate.doc, wstate.cellById.get("w1").node, null, "needs check");
 check(serialize({ raw: wdoc.raw }) === wdoc.raw && wdoc.raw !== WRAW, "word note: a new document is produced");
 let notes = noteIndex(wdoc);
-check(notes.size === 1 && notes.get("w1") === "needs check",
+check(notes.size === 1 && notes.get("w1")[0] === "needs check",
   "word note: target is the ancestor xml:id w1, text preserved");
 check(wdoc.raw.includes("<standOff>") && wdoc.raw.indexOf("<note") > wdoc.raw.indexOf("<standOff>"),
   "word note: lives inside the scaffolded <standOff>");
@@ -52,7 +52,7 @@ const lcell = cellByText(lstate, "Zeile eins");
 check(!!lcell && lcell.facs === "z1", "line cell carries the line's @facs zone id (z1)");
 const ldoc = addNoteForNode(lstate.doc, lcell.node, lcell.facs, "ambiguous reading");
 notes = noteIndex(ldoc);
-check(notes.size === 1 && notes.get("z1") === "ambiguous reading",
+check(notes.size === 1 && notes.get("z1")[0] === "ambiguous reading",
   "line note: target falls back to the zone id z1");
 check(/Zeile eins/.test(ldoc.raw) && parseDocument(ldoc.raw).serialize() === ldoc.raw,
   "line note: body text untouched, byte-identical re-parse");
@@ -67,7 +67,7 @@ const pcell = cellByText(pstate, "nur text");
 check(!!pcell && !pcell.facs, "plain cell has no ancestor id and no facs");
 const pdoc = addNoteForNode(pstate.doc, pcell.node, pcell.facs, "see archive");
 notes = noteIndex(pdoc);
-check(notes.size === 1 && notes.values().next().value === "see archive",
+check(notes.size === 1 && notes.values().next().value[0] === "see archive",
   "injected note: a target id was created");
 const injectedId = notes.keys().next().value;
 check(pdoc.raw.includes('<p xml:id="' + injectedId + '">nur text</p>'),
@@ -87,7 +87,7 @@ check(e2.doc === reparsed.doc && e2.id === e1.id, "ensureXmlId is a no-op when t
 check(addNoteForNode(wstate.doc, wstate.cellById.get("w1").node, null, "   ") === wstate.doc,
   "empty note text is a byte-identical no-op (same doc)");
 const direct = addNote(parseEdition(WRAW).doc, "w2", "direct note");
-check(noteIndex(direct).get("w2") === "direct note",
+check(noteIndex(direct).get("w2")[0] === "direct note",
   "addNote(doc, id, text) targets a given id directly");
 
 // --- summary -----------------------------------------------------------------

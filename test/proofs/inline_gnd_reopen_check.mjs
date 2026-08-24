@@ -11,8 +11,7 @@
  *   - re-import lifts every inline <persName>/<orgName>/<bibl> back into <standOff>,
  *     deduplicated, with its <idno type="GND"> when a ref="GND:.." was present;
  *   - each mention is rewrapped as <name ref="#id"> pointing at the recovered entity;
- *   - places are NOT recovered (the format does not annotate them): a documented
- *     one-way loss;
+ *   - non-representable register data is covered by the export capability proof;
  *   - the reading text is byte-identical through export and re-import;
  *   - the interchange file is a FIXED POINT: toInlineGND(fromInlineGND(file)) === file;
  *   - re-import is idempotent: a register-model document has no inline mention to
@@ -25,15 +24,10 @@ import { parseDocument } from "../../docs/js/editor/tei-document.js";
 import { parseEdition } from "../../docs/js/editor/edition.js";
 import { readEntities } from "../../docs/js/editor/standoff.js";
 import { toInlineGND, fromInlineGND } from "../../docs/js/editor/inline-gnd.js";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { check, section, finish, readingText } from "./_assert.mjs";
 
-const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-
 // The same register-model fixture as inline_gnd_check.mjs: standOff entities (some
-// with a GND, some without), a place (lost on export), and a respStmt <name>.
+// with a GND, some without), and a respStmt <name>.
 const REG = `<?xml version="1.0" encoding="utf-8"?>
 <TEI xmlns="http://www.tei-c.org/ns/1.0">
   <teiHeader>
@@ -49,9 +43,6 @@ const REG = `<?xml version="1.0" encoding="utf-8"?>
       <person xml:id="pers_gessner"><persName>Conrad Gessner</persName><idno type="GND">118538055</idno></person>
       <person xml:id="pers_anon"><persName>an unidentified hand</persName></person>
     </listPerson>
-    <listPlace>
-      <place xml:id="plc_zurich"><placeName>Zurich</placeName></place>
-    </listPlace>
     <listOrg>
       <org xml:id="org_zb"><orgName>Zentralbibliothek</orgName><idno type="GND">2026353-7</idno></org>
     </listOrg>
@@ -61,8 +52,8 @@ const REG = `<?xml version="1.0" encoding="utf-8"?>
   </standOff>
   <text>
     <body>
-      <p><name ref="#pers_gessner">Conrad Gessner</name> wrote in <name ref="#plc_zurich">Zurich</name>, held at the <name ref="#org_zb">Zentralbibliothek</name>.</p>
-      <p>His <name ref="#wrk_hist">Historia animalium</name> survives, annotated by <name ref="#pers_anon">an unidentified hand</name>; one note from <name ref="#missing_id">somewhere</name>.</p>
+      <p><name ref="#pers_gessner" source="full-name" cert="high" resp="#resp-entity-matcher">Conrad Gessner</name> wrote in Zurich, held at the <name ref="#org_zb">Zentralbibliothek</name>.</p>
+      <p>His <name ref="#wrk_hist">Historia animalium</name> survives, annotated by <name ref="#pers_anon">an unidentified hand</name>; one note from somewhere.</p>
     </body>
   </text>
 </TEI>`;
@@ -88,7 +79,7 @@ const ents = readEntities(reopened);
 check("two persons recovered (GND-bearing + no-GND)", ents.persons.length === 2);
 check("one org recovered", ents.orgs.length === 1);
 check("one work recovered", ents.works.length === 1);
-check("place NOT recovered (one-way loss: the format has no placeName)", ents.places.length === 0);
+check("no place register is invented for unannotated place text", ents.places.length === 0);
 
 const gndOf = (e) => (e.authorities.find((a) => a.type === "GND") || {}).value || null;
 const person = (name) => ents.persons.find((p) => p.name === name);
@@ -99,9 +90,12 @@ check("Zentralbibliothek (org) recovered with GND 2026353-7", gndOf(ents.orgs[0]
 check("Historia animalium (work) recovered with GND 4126228-1", gndOf(ents.works[0]) === "4126228-1");
 
 // --- each recovered entity is linked by an in-text <name ref="#id"> mention ---
-const linked = (e) => raw.includes('<name ref="#' + e.id + '">');
+const linked = (e) => raw.includes('<name ref="#' + e.id + '"');
 check("every recovered entity is linked by a <name ref=\"#id\"> mention",
   [...ents.persons, ...ents.orgs, ...ents.works].every(linked));
+check("mention-level source, cert and resp survive on the working <name>",
+  raw.includes('<name ref="#' + person("Conrad Gessner").id +
+    '" source="full-name" cert="high" resp="#resp-entity-matcher">'));
 check("the place text survives as plain reading text (not re-wrapped)",
   raw.includes("wrote in Zurich,"));
 
@@ -121,24 +115,5 @@ if (!isFixedPoint) {
 }
 check("re-import is idempotent: fromInlineGND on a register doc returns the SAME doc",
   fromInlineGND(reopened) === reopened);
-
-// --- secondary smoke: the committed synthetic fixture (person + place) ---
-const synthPath = join(REPO, "docs", "data", "editor", "zbz-hersch-synthetic.xml");
-if (existsSync(synthPath)) {
-  const sdoc = parseDocument(readFileSync(synthPath, "utf8"));
-  const sReading = readingText(sdoc.raw);
-  const sExport = toInlineGND(sdoc);
-  const sReopen = fromInlineGND(sExport);
-  check("synthetic fixture: re-opened register has persons recovered",
-    readEntities(sReopen).persons.length >= 1);
-  check("synthetic fixture: place not recovered (one-way loss)",
-    readEntities(sReopen).places.length === 0);
-  check("synthetic fixture: reading text byte-identical through the round-trip",
-    readingText(sReopen.raw) === sReading);
-  check("synthetic fixture: fixed point toInlineGND(fromInlineGND(file)) === file",
-    toInlineGND(sReopen).raw === sExport.raw);
-} else {
-  console.log("  --  synthetic fixture absent, skipping secondary smoke");
-}
 
 finish("PASS: fromInlineGND lifts inline-GND back into the register; the interchange file is a fixed point.");

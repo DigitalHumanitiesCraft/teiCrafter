@@ -6,9 +6,17 @@
  * copy. Pure DOM, no project imports.
  */
 
+const BOOLEAN_ATTRIBUTES = new Set([
+  "allowfullscreen", "async", "autofocus", "autoplay", "checked", "controls",
+  "default", "defer", "disabled", "formnovalidate", "hidden", "inert", "ismap",
+  "itemscope", "loop", "multiple", "muted", "nomodule", "novalidate", "open",
+  "playsinline", "readonly", "required", "reversed", "selected",
+]);
+
 /**
  * Build an element. Recognised props: class, text, html, on<event> functions,
- * dataset (object); everything else becomes an attribute (null/undefined skipped).
+ * dataset (object); HTML boolean attributes use presence semantics, and every
+ * other value becomes an attribute (null/undefined skipped).
  * Children: string (text node) or Node, single value or array, null skipped.
  */
 export function el(tag, props = {}, children = []) {
@@ -19,6 +27,9 @@ export function el(tag, props = {}, children = []) {
     else if (k === "html") node.innerHTML = v;
     else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
     else if (k === "dataset") for (const [dk, dv] of Object.entries(v)) node.dataset[dk] = dv;
+    else if (BOOLEAN_ATTRIBUTES.has(k.toLowerCase()) && typeof v === "boolean") {
+      if (v) node.setAttribute(k, "");
+    }
     else if (v != null) node.setAttribute(k, v);
   }
   for (const c of [].concat(children)) {

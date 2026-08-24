@@ -82,8 +82,8 @@
     --scrim-drop: rgba(26, 26, 26, .35);
 
     /* Typography */
-    --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-mono: 'JetBrains Mono', Consolas, Monaco, monospace;
+    --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', Consolas, Monaco, monospace;
     --font-serif: 'Georgia', 'Times New Roman', serif;
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.8125rem;

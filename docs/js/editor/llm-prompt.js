@@ -24,10 +24,11 @@ export function buildGenerationPrompt({ text, systemPrompt = "", mapping = "" } 
   parts.push(
     "You are a TEI-XML assistant. Convert the source text into a well-formed TEI P5 document.",
     "Rules:",
-    '1. Output a complete <TEI xmlns="http://www.tei-c.org/ns/1.0"> with a minimal <teiHeader> and <text><body>.',
-    "2. Preserve every character of the source text exactly. Do not paraphrase, translate, or omit anything.",
-    "3. Apply the mapping rules below where they fit; do not invent markup beyond them.",
-    "4. Return ONLY the XML inside a single ```xml code block, with no commentary.",
+    '1. Output a complete <TEI xmlns="http://www.tei-c.org/ns/1.0"> document.',
+    "2. Use exactly this minimum header (the source text must not appear in it): <teiHeader><fileDesc><titleStmt><title>Generated TEI draft</title></titleStmt><publicationStmt><p>Unpublished machine-generated draft for human review.</p></publicationStmt><sourceDesc><p>Source text supplied in teiCrafter.</p></sourceDesc></fileDesc></teiHeader>.",
+    "3. Put the source text only inside <text><body>. Preserve every source character exactly once and in the same order as character data (ordinary XML escaping is allowed). Do not paraphrase, translate, repeat, or omit anything.",
+    "4. Apply the mapping rules below where they fit; do not invent markup beyond them.",
+    "5. Do not emit a DOCTYPE. Return ONLY the XML inside a single ```xml code block, with no commentary.",
     "",
   );
   if (mapping && mapping.trim()) parts.push(mapping.trim(), "");

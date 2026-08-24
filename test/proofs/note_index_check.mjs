@@ -9,7 +9,7 @@
  */
 
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
-import { noteIndex } from "../../docs/js/editor/standoff.js";
+import { noteIndex, noteDetailIndex } from "../../docs/js/editor/standoff.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -25,6 +25,7 @@ const RAW =
   "<teiHeader><fileDesc><titleStmt><title>t</title></titleStmt></fileDesc></teiHeader>" +
   "<standOff>" +
   '<note target="#w1">plain note</note>' +
+  '<note target="#w1">second note</note>' +
   "<note target='#w2'>single quoted</note>" +
   '<note target="#a #b">shared note</note>' +
   '<note target="#m">see <hi rend="i">this</hi> word</note>' +
@@ -35,16 +36,23 @@ const RAW =
   "<text><body><p>x</p></body></text></TEI>";
 
 const idx = noteIndex(parseDocument(RAW));
+const details = noteDetailIndex(parseDocument(
+  RAW.replace('<note target="#w1">', '<note target="#w1" resp="#ai">')));
 
-check(idx.get("w1") === "plain note", "double-quoted @target is read");
-check(idx.get("w2") === "single quoted", "single-quoted @target is read (the regex reader missed it)");
-check(idx.get("a") === "shared note" && idx.get("b") === "shared note",
+check(JSON.stringify(idx.get("w1")) === JSON.stringify(["plain note", "second note"]),
+  "multiple notes for one target survive as a source-ordered array");
+check(idx.get("w2")[0] === "single quoted", "single-quoted @target is read (the regex reader missed it)");
+check(idx.get("a")[0] === "shared note" && idx.get("b")[0] === "shared note",
   "a multi-id target indexes the note under every id");
-check(idx.get("m") === "see this word",
+check(idx.get("m")[0] === "see this word",
   "child markup in the body falls away, its text content stays");
-check(idx.get("e") === "Fischer & Co <1922>", "entities in the body are decoded");
-check(idx.get("t") === "padded", "body whitespace is trimmed");
+check(idx.get("e")[0] === "Fischer & Co <1922>", "entities in the body are decoded");
+check(idx.get("t")[0] === "padded", "body whitespace is trimmed");
 check(idx.size === 7, "the note without @target is skipped (7 indexed ids, the multi-id note counts twice)");
+check(details.get("w1").length === 2
+    && details.get("w1")[0].text === "plain note" && details.get("w1")[0].resp === "#ai"
+    && details.get("w1")[0].el.localName === "note",
+  "the detail index preserves every note with proposal responsibility and parsed element");
 
 // An empty or note-free document yields an empty index and never throws.
 const empty = noteIndex(parseDocument(

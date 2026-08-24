@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0" xml:id="dictionary-paginated">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Paginated dictionary profile fixture</title>
+      </titleStmt>
+      <publicationStmt>
+        <p>Synthetic test fixture.</p>
+      </publicationStmt>
+      <sourceDesc>
+        <p>An invented two-page dictionary source.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface xml:id="dict-surface-1" n="1">
+      <graphic url="dictionary-001.jpg"/>
+    </surface>
+    <surface xml:id="dict-surface-2" n="2">
+      <graphic url="dictionary-002.jpg"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <pb xml:id="dict-page-1" n="1" facs="#dict-surface-1"/>
+      <entry xml:id="dict-entry-apple">
+        <form type="lemma">
+          <orth>apple</orth>
+        </form>
+        <gramGrp>
+          <pos>noun</pos>
+        </gramGrp>
+        <sense n="1">
+          <def>A round fruit produced by an apple tree.</def>
+        </sense>
+      </entry>
+      <pb xml:id="dict-page-2" n="2" facs="#dict-surface-2"/>
+      <entry xml:id="dict-entry-archive">
+        <form type="lemma">
+          <orth>archive</orth>
+        </form>
+        <gramGrp>
+          <pos>noun</pos>
+        </gramGrp>
+        <sense n="1">
+          <def>A collection of records preserved for research.</def>
+        </sense>
+      </entry>
+    </body>
+  </text>
+</TEI>

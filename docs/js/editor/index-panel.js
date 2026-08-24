@@ -33,7 +33,7 @@ import { el, clear as clearNode } from "./dom.js";
 import { buildAuthorityForm } from "./authority-form.js";
 
 // The built-in sections, in render order. A section descriptor:
-//   { type, key, label, addLabel, readOnly?, readOnlyNote? }
+//   { type, key, label, addLabel, readOnly?, readOnlyNote?, addDisabled?, addDisabledNote? }
 // label is the section heading; type is the value handed back to onAdd; key is
 // the property read off the entities object. A readOnly section is one whose
 // entities the editor cannot edit in place (e.g. a project index with no
@@ -237,6 +237,21 @@ export function createIndexPanel(hostEl, hooks = {}) {
         }),
       ]);
     }
+    // A target format may permit inspection and cleanup of an existing entity
+    // type while forbidding creation of further entries that it cannot persist.
+    if (section.addDisabled) {
+      return el("div", { class: "ed-idx-addrow ed-idx-addrow-readonly" }, [
+        el("button", {
+          class: "ed-idx-btn ed-idx-add", type: "button", text: "+",
+          disabled: "", "aria-disabled": "true", "aria-label": "Add (disabled)",
+          title: section.addDisabledNote || "This entity type is not exportable",
+        }),
+        el("span", {
+          class: "ed-idx-readonly-note",
+          text: section.addDisabledNote || "The project target cannot persist this entity type.",
+        }),
+      ]);
+    }
     const input = el("input", {
       class: "ed-idx-add-input", type: "text", placeholder: section.addLabel,
     });
@@ -297,17 +312,19 @@ export function createIndexPanel(hostEl, hooks = {}) {
   // ---- public API ----------------------------------------------------------
 
   // render(entities, sections?) draws one section per descriptor. When sections
-  // is omitted (or not a non-empty array) the built-in DEFAULT_SECTIONS apply,
-  // so documents without declared manifest indices are unaffected.
+  // is omitted the built-in DEFAULT_SECTIONS apply. An explicit empty array is a
+  // closed project inventory and therefore renders no index sections.
   function render(entities = {}, sections) {
-    const useSections = Array.isArray(sections) && sections.length ? sections : DEFAULT_SECTIONS;
+    const useSections = Array.isArray(sections) ? sections : DEFAULT_SECTIONS;
     clearNode(hostEl);
     rowById = new Map();
     const root = el("div", { class: "ed-idx" });
     const total = useSections.reduce((n, s) => n + (Array.isArray(entities[s.key]) ? entities[s.key].length : 0), 0);
     if (total === 0) {
       root.appendChild(el("div", { class: "ed-idx-allempty",
-        text: "No index entities yet. Select text in the reading view to create one, or add it in a section below." }));
+        text: useSections.length
+          ? "No index entities yet. Select text in the reading view to create one, or add it in a section below."
+          : "This project declares no entity indices for the current document." }));
     }
     for (const section of useSections) {
       const items = Array.isArray(entities[section.key]) ? entities[section.key] : [];

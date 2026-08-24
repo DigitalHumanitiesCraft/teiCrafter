@@ -24,21 +24,27 @@ import {
   editCellCore,
   editCellReadings,
   splitEdge,
-  serialize,
   xmlIdSet,
   countTags,
   attrTargetForCell,
   cellRawOffset,
-} from "./edition.js";
+  folioSourceSlice,
+  elementSourceSlice,
+  spliceSourceSlice,
+  applySourceProfile,
+} from "./edition.js?v=20260824-ui4";
 import { splitElement, mergeElements, insertLb, deleteElement } from "./structural.js";
 import { walk, decodeEntities } from "./tei-document.js";
 import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
-import * as standoff from "./standoff.js";
+import * as standoff from "./standoff.js?v=20260824-ui4";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createAnnotationUi } from "./annotation-ui.js";
 import { createEntityIndex } from "./entity-index.js";
-import { mountSourceView } from "./source-view.js";
+import { mountSourceView } from "./source-view.js?v=20260824-ui4";
+import { mountMetadataView } from "./metadata-view.js?v=20260824-ui4";
+import { annotationPageSummary } from "./annotation-progress.js?v=20260824-ui4";
+import { reviewPageSummary, setFolioReviewed } from "./review-progress.js";
 import { setupGenModal } from "./gen-modal.js";
 import { setupImageOnramp } from "./image-onramp.js";
 import { createPageImages } from "./page-images.js";
@@ -48,13 +54,26 @@ import { detectProject, projectTileSource } from "./project-profiles.js";
 import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFiles, llmForFile } from "./project-manifest.js";
 import { complete } from "../services/llm.js";
 import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
-import { applyProposals } from "./proposal-apply.js";
+import { applyProposals, createProposalScope } from "./proposal-apply.js";
+import { createSessionSafety, stageContext } from "./session-safety.js";
+import { EditorSession } from "./editor-session.js";
+import { historyCommand } from "./history-shortcuts.js";
+import { createRevisionCache } from "./revision-cache.js";
 import { toInlineGND, inlineGndFilename } from "./inline-gnd.js";
-import { createProjectFolder } from "./project-folder.js";
+import { targetDocument, usesInlineGND, workingDocument } from "./interchange.js";
+import { createProjectFolder } from "./project-folder.js?v=20260824-ui4";
 import { createValidationView } from "./validation-view.js";
+import { schemaSetKey, schemaSources } from "./schema-validation.js";
+import { inspectSchemaSources } from "./schema-profile.js";
+import { hasGeneratedDraftProvenance } from "./generated-provenance.js";
+import { resolveSourceProfile } from "./source-profile.js";
+import { unitPositionLabel, unitTerms } from "./unit-labels.js";
+import { setupTablist, syncTablist } from "./tabs.js";
+import { decodeXmlBytes, encodeXmlBytes } from "./file-encoding.js";
+import { fileVersion, fileVersionChanged } from "./file-version.js";
 import { createDocumentFacts } from "./document-facts.js";
 import {
-  parseGuidelines, elementsForScope,
+  parseGuidelines, elementsForScope, elementByName,
   VENDORED_GUIDELINES_PATH, VENDORED_GUIDELINES_VERSION,
 } from "./tei-guidelines.js";
 import * as recents from "./recent-files.js";
@@ -76,7 +95,8 @@ const app = {
   docName: null,      // displayed document name
   dirty: false,       // unsaved changes since last load/save
   baseline: null,     // { wordCount, xmlIds:Set, counts } captured at load, for integrity checks
-  noteByWord: new Map(), // wordId -> note text (for has-note marker + tooltip)
+  noteByWord: new Map(), // target id -> note text array
+  noteDetails: new Map(), // target id -> proposal detail array
   currentLines: [],   // lines of the folio currently rendered (for zone <-> line linking)
   generated: false,   // true when the current edition came from the LLM (unreviewed)
   source: null,       // load provenance: { kind: "tei"|"draft"|"example", txtName?, label? } or null
@@ -84,7 +104,7 @@ const app = {
   coordScale: 1,      // zone-to-image scale for the facsimile (1 = no scaling). Becomes > 1 only when a IIIF Presentation manifest declares a canvas size different from the served image's pixel size; the live manifest pre-resolution that computes it is deferred (W7), so today it stays 1.
   pageImages: new Map(), // filename -> { url, blob, type }: in-memory page images (uploaded via the on-ramp or read back from the project folder), resolving a surface's <graphic url> to a displayable URL
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
-  sourceMode: false,  // true while the left pane shows the editable XML source
+  sourceMode: false,  // false | "page" | "metadata-form" | "metadata" for the left text surface
   readingVariant: "dipl", // F4: "dipl" | "norm", which reading the pane shows (only meaningful when state.hasDualReadings)
   viewMode: "paged",  // reading view: "paged" (one folio, pager) | "continuous" (all folios stacked); persisted per document
   project: null,      // active project: manifest-parsed or PID-detected, or null
@@ -92,11 +112,103 @@ const app = {
   markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
   saveTarget: null,   // { dir, name }: create this file in the project folder on first save (plaintext drafts)
   rightCollapsed: false, // true while the context pane is folded away (per-document, persisted)
+  proposalRespCreated: new Set(), // @resp declarations inserted during this open document's proposal session
+  proposalBaseline: null, // { raw, dirty } before the current group of proposals
+  sessionId: 0,
+  revision: 0,
+  fileEncoding: { encoding: "UTF-8", bom: false },
+  fileSnapshot: null,
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios),
 // created lazily once the DOM host exists.
 let facsimile = null;
+let sourceViewSession = null;
+const sessionSafety = createSessionSafety();
+let activeSchemaProfile = null;
+let schemaProfileRequest = 0;
+const schemaProfileCache = new Map();
+function profileEditionState(
+  state,
+  project = app.project,
+  fileName = app.docName,
+  schemaEvidence = activeSchemaProfile?.evidence || null,
+) {
+  const sourceProfile = resolveSourceProfile({ doc: state.doc, project, fileName, schemaEvidence });
+  return applySourceProfile(state, sourceProfile);
+}
+const editorSession = new EditorSession((raw) => profileEditionState(parseEdition(raw)));
+const projectionCache = createRevisionCache();
+
+function reprojectSchemaProfile(evidence) {
+  if (!app.state) return;
+  const hadSchemaRestriction = app.state.sourceProfile?.capabilities
+    .some((capability) => capability.allowed === false);
+  const hasSchemaRestriction = Object.values(evidence?.capabilities || {})
+    .some((allowed) => allowed === false);
+  const changesNavigation = hadSchemaRestriction || hasSchemaRestriction;
+  const nextState = changesNavigation
+    ? profileEditionState(parseEdition(app.state.doc.raw), app.project, app.docName, evidence)
+    : {
+      ...app.state,
+      sourceProfile: resolveSourceProfile({
+        doc: app.state.doc,
+        project: app.project,
+        fileName: app.docName,
+        schemaEvidence: evidence,
+      }),
+    };
+  editorSession.reproject(nextState);
+  app.state = editorSession.state;
+  app.noteByWord = standoff.noteIndex(app.state.doc);
+  app.noteDetails = standoff.noteDetailIndex(app.state.doc);
+  app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
+  projectionCache.clear();
+  if (!changesNavigation || sourceViewSession?.hasChanges()) {
+    updateFolioButtons();
+    documentFacts.updateDocStrip();
+    if (app.panel === "source") renderActivePanel();
+    validationView.renderValidation();
+  } else {
+    render();
+  }
+}
+
+async function refreshSchemaProfile(sources = validationView.activeSchemaSources()) {
+  if (!app.state) return;
+  const request = ++schemaProfileRequest;
+  const sessionId = app.sessionId;
+  const key = schemaSetKey(sources);
+  let evidence = schemaProfileCache.get(key);
+  if (!evidence) {
+    try {
+      evidence = await inspectSchemaSources(sources);
+    } catch (error) {
+      evidence = {
+        kind: "schema-set",
+        capabilities: {},
+        completeness: "unknown",
+        issues: [{
+          code: "schema-profile-unavailable",
+          severity: "warning",
+          message: `The active schema set could not be inspected: ${error.message}`,
+        }],
+      };
+    }
+    schemaProfileCache.set(key, evidence);
+  }
+  if (request !== schemaProfileRequest || sessionId !== app.sessionId) return;
+  if (schemaSetKey(validationView.activeSchemaSources()) !== key) return;
+  activeSchemaProfile = { key, evidence };
+  reprojectSchemaProfile(evidence);
+}
+
+function handleSchemaSourcesChanged(sources) {
+  schemaProfileRequest++;
+  activeSchemaProfile = null;
+  reprojectSchemaProfile(null);
+  void refreshSchemaProfile(sources);
+}
 
 const $ = (id) => document.getElementById(id);
 
@@ -114,12 +226,66 @@ function setStatus(msg) {
 }
 
 function setDirty(d) {
+  if (app.state) {
+    sessionSafety.sync(app.state.doc.raw);
+    app.sessionId = editorSession.sessionId;
+    app.revision = editorSession.revision;
+    if (!d) editorSession.markSaved();
+  }
   app.dirty = d;
   const dot = $("ed-status-dot");
   dot.classList.toggle("dirty", d);
   $("btn-save").disabled = !app.state;
   if (d) { setStatus("Unsaved changes"); documentFacts.persistDraftIfNeeded(); }
   if (app.state) documentFacts.updateDocStrip();
+  updateHistoryControls();
+}
+
+function updateHistoryControls() {
+  const undo = $("btn-undo");
+  const redo = $("btn-redo");
+  if (!undo || !redo) return;
+  const undoLabel = app.state ? editorSession.undoLabel() : null;
+  const redoLabel = app.state ? editorSession.redoLabel() : null;
+  undo.disabled = !undoLabel;
+  redo.disabled = !redoLabel;
+  undo.setAttribute("aria-label", undoLabel ? `Undo ${undoLabel}` : "Undo document edit");
+  redo.setAttribute("aria-label", redoLabel ? `Redo ${redoLabel}` : "Redo document edit");
+  undo.title = undoLabel
+    ? `Undo ${undoLabel} (Ctrl/Cmd+Z)`
+    : "Nothing to undo (Ctrl/Cmd+Z)";
+  redo.title = redoLabel
+    ? `Redo ${redoLabel} (Ctrl/Cmd+Shift+Z)`
+    : "Nothing to redo (Ctrl/Cmd+Shift+Z)";
+}
+
+/** Adopt the EditorSession state and refresh every revision-derived projection. */
+function adoptSessionState(notes = null) {
+  app.state = editorSession.state;
+  app.noteByWord = notes || standoff.noteIndex(app.state.doc);
+  app.noteDetails = standoff.noteDetailIndex(app.state.doc);
+  app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
+  setDirty(editorSession.dirty);
+}
+
+function replaceSessionState(nextState, label, notes = null) {
+  if (!editorSession.replace(profileEditionState(nextState), label)) return false;
+  adoptSessionState(notes);
+  return true;
+}
+
+function applyHistory(command) {
+  if (!app.state) return false;
+  if (sourceViewSession && sourceViewSession.hasChanges()) {
+    setStatus("Apply or cancel the staged source changes before undoing document edits.");
+    return false;
+  }
+  const result = command === "redo" ? editorSession.redo() : editorSession.undo();
+  if (!result) return false;
+  adoptSessionState();
+  setStatus(`${command === "redo" ? "Redid" : "Undid"}: ${result.label}`);
+  refreshAfterStandoffEdit();
+  return true;
 }
 
 function enableControls(on) {
@@ -136,6 +302,7 @@ function enableControls(on) {
   // render() keeps the chips current after every mutation.
   if (on) buildLegend(); else $("ed-legend").hidden = true;
   syncInlineExport();
+  syncFacsimileFolderAction();
   updateFolioButtons();
   updatePanels();
 }
@@ -144,16 +311,24 @@ function enableControls(on) {
 function syncViewTabs() {
   const reading = $("view-reading");
   const xml = $("view-xml");
-  if (!reading || !xml) return;
-  // Both text views need a document; until one loads the tabs stay inert.
+  const metadata = $("view-metadata");
+  if (!reading || !xml || !metadata) return;
+  // All text views need a document; until one loads the tabs stay inert.
   reading.disabled = xml.disabled = !app.state;
+  metadata.disabled = !app.state || !elementSourceSlice(app.state, "teiHeader");
   // The view controls (zoom, collapse) belong with a loaded document.
   const vc = $("ed-view-controls");
   if (vc) vc.hidden = !app.state;
   reading.classList.toggle("active", !app.sourceMode);
   reading.setAttribute("aria-selected", String(!app.sourceMode));
-  xml.classList.toggle("active", app.sourceMode);
-  xml.setAttribute("aria-selected", String(app.sourceMode));
+  xml.classList.toggle("active", app.sourceMode === "page");
+  xml.setAttribute("aria-selected", String(app.sourceMode === "page"));
+  const metadataActive = app.sourceMode === "metadata-form" || app.sourceMode === "metadata";
+  metadata.classList.toggle("active", metadataActive);
+  metadata.setAttribute("aria-selected", String(metadataActive));
+  const panel = $("ed-reading");
+  if (panel) panel.setAttribute("aria-labelledby",
+    metadataActive ? metadata.id : app.sourceMode === "page" ? xml.id : reading.id);
   syncReadingVariant();
 }
 
@@ -211,23 +386,7 @@ function buildLegend() {
   $("ed-legend").hidden = !app.state || app.sourceMode;
   if (!app.state || app.sourceMode) return;
 
-  // Collect the codes the loaded document actually renders.
-  const meta = entityMetaMap();
-  const kinds = new Set();
-  const crits = new Set();
-  let ai = false, dangling = false;
-  for (const cell of app.state.cells) {
-    if (cell.crit) crits.add(cell.crit);
-    // A proposed construct of any kind (markup/criticism/note) carries the AI mark
-    // on a wrapping layer, so the legend shows the AI chip beyond entity mentions.
-    if (cellHasAiLayer(cell)) ai = true;
-    if (cell.gap || !cell.mention) continue;
-    const m = meta.get(cell.mention);
-    if (!m) { dangling = true; continue; }
-    kinds.add(m.kind);
-    if (m.ai) ai = true;
-  }
-  const hasNote = app.noteByWord.size > 0;
+  const { kinds, crits, ai, dangling, hasNote } = legendProjection();
 
   const chips = [];
   const chip = (cls, label) => chips.push(el("span", { class: "ed-legend-chip " + cls, text: label }));
@@ -248,6 +407,25 @@ function buildLegend() {
   if (!chips.length) { $("ed-legend").hidden = true; return; }
   host.appendChild(el("span", { class: "ed-legend-title", text: "legend" }));
   for (const c of chips) host.appendChild(c);
+}
+
+function legendProjection() {
+  return projectionCache.get(app, "legend", () => {
+    const meta = entityMetaMap();
+    const kinds = new Set();
+    const crits = new Set();
+    let ai = false, dangling = false;
+    for (const cell of app.state.cells) {
+      if (cell.crit) crits.add(cell.crit);
+      if (cellHasAiLayer(cell)) ai = true;
+      if (cell.gap || !cell.mention) continue;
+      const mention = meta.get(cell.mention);
+      if (!mention) { dangling = true; continue; }
+      kinds.add(mention.kind);
+      if (mention.ai) ai = true;
+    }
+    return { kinds, crits, ai, dangling, hasNote: app.noteByWord.size > 0 };
+  });
 }
 
 // ---- TEI Guidelines (lazy, never at boot) -----------------------------------
@@ -333,6 +511,21 @@ function teiVocabularyLine() {
 // blocks the thread; smaller documents take the synchronous fast path.
 const BIG_DOC_CHARS = 2_000_000;
 const nextPaint = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+const currentRaw = () => app.state ? app.state.doc.raw : null;
+
+async function readXmlFile(file) {
+  const decoded = decodeXmlBytes(await file.arrayBuffer());
+  return {
+    raw: decoded.text,
+    fileEncoding: { encoding: decoded.encoding, bom: decoded.bom },
+    fileSnapshot: fileVersion(file),
+  };
+}
+
+function authorizeDocumentReplacement() {
+  if (!confirmDiscard()) return null;
+  return sessionSafety.snapshot({ kind: "document-replacement" });
+}
 
 function showLoading(name) {
   const label = $("ed-loading-label");
@@ -346,20 +539,63 @@ function hideLoading() {
 }
 
 async function load(raw, name, handle, project, opts) {
-  if (raw.length <= BIG_DOC_CHARS) { applyLoad(raw, name, handle, project, opts); return; }
+  const options = opts || {};
+  const suppliedAuthorization = Object.prototype.hasOwnProperty.call(options, "replacement");
+  const replacement = suppliedAuthorization ? options.replacement : authorizeDocumentReplacement();
+  if (!replacement || !sessionSafety.isSnapshotCurrent(replacement, currentRaw())) {
+    if (!suppliedAuthorization) setStatus("The current document was kept.");
+    return false;
+  }
+  const adoptsFolder = Object.prototype.hasOwnProperty.call(options, "projectFolder");
+  const folderContext = adoptsFolder ? stageContext(app, "projectFolder", options.projectFolder) : null;
+  if (raw.length <= BIG_DOC_CHARS) {
+    try {
+      applyLoad(raw, name, handle, project, options);
+      if (folderContext) folderContext.commit();
+    } catch (err) {
+      if (folderContext) folderContext.rollback();
+      throw err;
+    }
+    return true;
+  }
   showLoading(name);
   await nextPaint();
-  try { applyLoad(raw, name, handle, project, opts); }
-  finally { hideLoading(); }
+  try {
+    if (!sessionSafety.isSnapshotCurrent(replacement, currentRaw())) {
+      if (folderContext) folderContext.rollback();
+      return false;
+    }
+    applyLoad(raw, name, handle, project, options);
+    if (folderContext) folderContext.commit();
+    return true;
+  } catch (err) {
+    if (folderContext) folderContext.rollback();
+    throw err;
+  } finally { hideLoading(); }
 }
 
 function applyLoad(raw, name, handle, project, opts = {}) {
   const t0 = performance.now();
-  app.state = parseEdition(raw);
+  schemaProfileRequest++;
+  activeSchemaProfile = null;
+  const openedState = parseEdition(raw);
+  const resolvedProject = project || detectProject(openedState.doc);
+  const workingDoc = workingDocument(openedState.doc, resolvedProject);
+  const importedInterchange = workingDoc !== openedState.doc;
+  const workingState = importedInterchange ? parseEdition(workingDoc.raw) : openedState;
+  editorSession.load(profileEditionState(workingState, resolvedProject, name));
+  app.state = editorSession.state;
+  sessionSafety.replace(app.state.doc.raw);
+  app.sessionId = editorSession.sessionId;
+  app.revision = editorSession.revision;
   app.folio = 0;
+  app.sourceMode = false;
   app.fileHandle = handle || null;
+  app.fileEncoding = opts.fileEncoding || { encoding: "UTF-8", bom: false };
+  app.fileSnapshot = handle && opts.fileSnapshot ? opts.fileSnapshot : null;
   app.docName = name;
   app.noteByWord = standoff.noteIndex(app.state.doc);
+  app.noteDetails = standoff.noteDetailIndex(app.state.doc);
   // Default: no known page images. An example with an imageBase (loadExample)
   // sets it afterwards; every other entry (open, drop, generate) stays null.
   app.imageBase = null;
@@ -376,7 +612,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // Project: an explicit manifest (teicrafter.project.json, parsed by the
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
-  app.project = project || detectProject(app.state.doc);
+  app.project = resolvedProject;
   // Load provenance for the draft badge in the document strip. Default: an opened
   // TEI file. The plaintext and example paths override this after load() returns.
   app.source = { kind: "tei" };
@@ -385,11 +621,17 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // the llm block (type-aware), else the default "#ai". The provenance render reads
   // this, so a proposed construct shows violet whatever the configured id.
   app.aiResp = (llmForFile(app.project, name) || {}).responsibility || standoff.AI_RESP;
+  app.proposalRespCreated = new Set();
+  app.proposalBaseline = null;
   maybePrefetchGuidelines(name);
   app.saveTarget = null;
   // Track real @xml:id values (not synthetic positional cell ids, which churn on
   // a lossless line-emptying edit and would raise a false "id lost" alarm).
-  app.baseline = { wordCount: app.state.words.length, xmlIds: xmlIdSet(app.state), counts: countTags(raw) };
+  app.baseline = {
+    wordCount: app.state.words.length,
+    xmlIds: xmlIdSet(app.state),
+    counts: countTags(app.state.doc.raw),
+  };
   // Default context panel: the facsimile when the document has page images, the
   // entity Index otherwise.
   app.panel = docHasImages() ? "facs" : "index";
@@ -405,22 +647,28 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // The recovery slot is NOT cleared here: loading another document must not
   // silently discard a stored draft. It clears only when the draft itself is
   // saved or the operator discards the offer; a new draft overwrites the slot.
-  markGenerated(false); // opening a real file clears the AI-generated flag
+  markGenerated(hasGeneratedDraftProvenance(app.state.doc, app.aiResp));
   // The draft badge is derived from app.source, which this load already reset to
   // { kind: "tei" }; refreshing the strip clears any draft badge from a prior
   // document. The draft paths re-set app.source afterwards. It must never linger
   // over an opened .xml.
   documentFacts.hideDraftBanner();
   refreshAfterStandoffEdit();
+  void refreshSchemaProfile();
   // A folder-opened edition resolves its page-image filenames against the folder
   // (async, best-effort); the on-ramp's in-memory images are already resolved.
   pageImageStore.resolveFromFolder();
-  const unit = app.state.profile === "word" ? "word" : "line";
+  const editingKinds = new Set(app.state.cells.map((cell) => cell.editingKind));
+  const editingUnits = editingKinds.has("token") && editingKinds.has("text-run")
+    ? "mixed text runs and tokens"
+    : editingKinds.has("token") ? "tokens" : "text runs";
+  const terms = unitTerms(app.state.sourceProfile);
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
   const docType = typeForFile(app.project, name);
-  setStatus(`Loaded ${app.state.folios.length} folio(s), ${app.state.cells.length} ${unit}(s) [${app.state.profile}-level]`
+  setStatus(`Loaded ${app.state.folios.length} ${app.state.folios.length === 1 ? terms.singular : terms.plural}, ${app.state.cells.length} ${editingUnits}`
     + (app.project ? `, project: ${app.project.name} (${app.project.source === "manifest" ? "manifest" : "detected"})` : "")
     + (docType ? `, type: ${docType.label}` : "")
+    + (importedInterchange ? ", inline-GND opened in the editable register model" : "")
     + ` in ${secs}s`);
 }
 
@@ -442,12 +690,17 @@ const RE_PLAINTEXT = /\.(txt|md)$/i;
  * direct plaintext path and the text+image on-ramp (opts.pageImages flows the
  * attached images through load). The caller sets dirty/saveTarget as it needs.
  */
-async function adoptDraft({ tei, xmlName, txtName, project, pageImages, statusMsg }) {
-  await load(tei, xmlName, null, project || null, pageImages ? { pageImages } : undefined);
+async function adoptDraft({ tei, xmlName, txtName, project, pageImages, statusMsg, replacement }) {
+  const options = {};
+  if (pageImages) options.pageImages = pageImages;
+  if (replacement) options.replacement = replacement;
+  const opened = await load(tei, xmlName, null, project || null, options);
+  if (!opened) return false;
   app.source = { kind: "draft", txtName };
   if (statusMsg) setStatus(statusMsg);
   documentFacts.updateDocStrip(); // app.source set above; the strip derives the draft badge
   renderActivePanel();
+  return true;
 }
 
 async function loadPlaintextDraft(text, txtName) {
@@ -462,9 +715,10 @@ async function loadPlaintextDraft(text, txtName) {
 }
 
 async function openLocal() {
-  if (!confirmDiscard()) return;
   // Preferred: File System Access API (lets us save in place later).
   if (window.showOpenFilePicker) {
+    let picked = false;
+    let pickedName = "the selected file";
     try {
       const [handle] = await window.showOpenFilePicker({
         // One combined filter: the picker shows all supported files at once
@@ -482,15 +736,22 @@ async function openLocal() {
         multiple: false,
       });
       const file = await handle.getFile();
+      picked = true;
+      pickedName = file.name;
       if (RE_PLAINTEXT.test(file.name)) {
         await loadPlaintextDraft(await file.text(), file.name);
       } else {
-        await load(await file.text(), file.name, handle);
+        const decoded = await readXmlFile(file);
+        await load(decoded.raw, file.name, handle, null, decoded);
       }
       return;
     } catch (err) {
       if (err && err.name === "AbortError") return; // user cancelled
-      // fall through to the input fallback on any other failure
+      if (picked) {
+        setStatus(`Could not open ${pickedName}: ${err.message}`);
+        return;
+      }
+      // The picker itself failed before yielding a file; use the input fallback.
     }
   }
   fileInput().click();
@@ -503,12 +764,18 @@ function fileInput() {
   _fileInput.addEventListener("change", async () => {
     const file = _fileInput.files && _fileInput.files[0];
     if (!file) return;
-    if (RE_PLAINTEXT.test(file.name)) {
-      await loadPlaintextDraft(await file.text(), file.name);
-    } else {
-      await load(await file.text(), file.name, null);
+    try {
+      if (RE_PLAINTEXT.test(file.name)) {
+        await loadPlaintextDraft(await file.text(), file.name);
+      } else {
+        const decoded = await readXmlFile(file);
+        await load(decoded.raw, file.name, null, null, decoded);
+      }
+    } catch (err) {
+      setStatus(`Could not open ${file.name}: ${err.message}`);
+    } finally {
+      _fileInput.value = "";
     }
-    _fileInput.value = "";
   });
   document.body.appendChild(_fileInput);
   return _fileInput;
@@ -548,12 +815,16 @@ const EXAMPLES = {
 
 /** Guard before any in-app document replacement (open, example, drop, recent). */
 function confirmDiscard() {
-  return !app.dirty || window.confirm(`Discard unsaved changes in ${app.docName}?`);
+  const staged = !!(sourceViewSession && sourceViewSession.hasChanges());
+  return (!app.dirty && !staged)
+    || window.confirm(`Discard unsaved changes in ${app.docName}?`);
 }
 
 async function loadExample(key) {
   let ex = EXAMPLES[key];
-  if (!ex || !confirmDiscard()) return;
+  if (!ex) return;
+  const replacement = authorizeDocumentReplacement();
+  if (!replacement) return;
   setStatus(`Loading ${ex.label}...`);
   try {
     let res = await fetch(ex.url, { cache: "no-store" });
@@ -572,6 +843,7 @@ async function loadExample(key) {
         const mres = await fetch(ex.manifest, { cache: "no-store" });
         if (mres.ok) {
           project = parseManifest(await mres.text());
+          project.schemaBaseUrl = new URL(".", new URL(ex.manifest, location.href)).href;
           // Ingest any Markdown mapping files the manifest references, next to it.
           // A missing mapping degrades to the built-in fallback, never blocks.
           const base = ex.manifest.replace(/[^/]+$/, "");
@@ -590,7 +862,12 @@ async function loadExample(key) {
         manifestNote = ` ${err.message}; built-in detection used instead.`;
       }
     }
-    await load(await res.text(), ex.file, null, project);
+    const decoded = decodeXmlBytes(await res.arrayBuffer());
+    const opened = await load(decoded.text, ex.file, null, project, {
+      replacement,
+      fileEncoding: { encoding: decoded.encoding, bom: decoded.bom },
+    });
+    if (!opened) return;
     app.source = { kind: "example", label: `Loaded example: ${ex.label}` };
     if (manifestNote && ex.done) ex = { ...ex, done: ex.done + manifestNote };
     if (ex.imageBase) {
@@ -618,7 +895,6 @@ async function openDropped(dt) {
   const file = dt.files && dt.files[0];
   if (!file) return;
   if (RE_PLAINTEXT.test(file.name)) {
-    if (!confirmDiscard()) return;
     try {
       await loadPlaintextDraft(await file.text(), file.name);
     } catch (err) {
@@ -635,11 +911,11 @@ async function openDropped(dt) {
   const handlePromise = item && item.getAsFileSystemHandle
     ? item.getAsFileSystemHandle().catch(() => null)
     : Promise.resolve(null);
-  if (!confirmDiscard()) return;
   const h = await handlePromise;
   const handle = h && h.kind === "file" ? h : null;
   try {
-    await load(await file.text(), file.name, handle);
+    const decoded = await readXmlFile(file);
+    await load(decoded.raw, file.name, handle, null, decoded);
   } catch (err) {
     setStatus(`Could not open ${file.name}: ${err.message}`);
   }
@@ -673,7 +949,6 @@ function setupDragDrop() {
 // ---- recent files (empty-state list) ----------------------------------------
 
 async function reopenRecent(rec) {
-  if (!confirmDiscard()) return;
   try {
     let perm = await rec.handle.queryPermission({ mode: "readwrite" });
     if (perm !== "granted") perm = await rec.handle.requestPermission({ mode: "readwrite" });
@@ -682,7 +957,8 @@ async function reopenRecent(rec) {
       return;
     }
     const file = await rec.handle.getFile();
-    await load(await file.text(), file.name, rec.handle);
+    const decoded = await readXmlFile(file);
+    await load(decoded.raw, file.name, rec.handle, null, decoded);
   } catch (err) {
     // The file moved or the handle died: drop the stale row instead of failing again.
     await recents.forgetRecent(rec.name);
@@ -718,29 +994,111 @@ async function renderRecents() {
 
 // ---- folio navigation ------------------------------------------------------
 
+function closeAnnotationProgress() {
+  const popover = $("ed-ann-popover");
+  const button = $("ed-ann-summary");
+  if (popover) popover.hidden = true;
+  if (button) button.setAttribute("aria-expanded", "false");
+}
+
+function updateAnnotationProgress() {
+  const wrap = $("ed-ann-progress");
+  const button = $("ed-ann-summary");
+  const caption = $("ed-ann-caption");
+  const pagesHost = $("ed-ann-pages");
+  if (!wrap || !button || !caption || !pagesHost) return;
+  const metadata = app.sourceMode === "metadata" || app.sourceMode === "metadata-form";
+  wrap.hidden = !app.state || metadata;
+  if (!app.state || metadata) { closeAnnotationProgress(); return; }
+
+  const summary = projectionCache.get(app, "annotation-pages",
+    () => annotationPageSummary(app.state, app.noteByWord));
+  const current = summary.pages[app.folio];
+  const terms = unitTerms(app.state.sourceProfile);
+  button.textContent = `Markup ${summary.annotatedPages}/${summary.totalPages}`;
+  button.classList.toggle("current", !!(current && current.count));
+  button.title = current && current.count
+    ? `This ${terms.singular} contains ${current.count} annotation${current.count === 1 ? "" : "s"}. Show all annotated ${terms.plural}.`
+    : `This ${terms.singular} has no detected annotations. Show all annotated ${terms.plural}.`;
+  caption.textContent = `${summary.annotatedPages} of ${summary.totalPages} ${terms.plural} contain ${summary.totalAnnotations} detected annotations.`;
+  clear(pagesHost);
+  for (const page of summary.pages.filter((item) => item.count > 0)) {
+    const sourceLabel = page.label !== String(page.index + 1) ? `; source label ${page.label}` : "";
+    const kinds = [...page.kinds].join(", ");
+    const pageButton = el("button", {
+      class: "ed-ann-page" + (page.index === app.folio ? " active" : ""),
+      type: "button", text: String(page.index + 1),
+      title: `${terms.singular} ${page.index + 1}${sourceLabel}: ${page.count} annotation${page.count === 1 ? "" : "s"}${kinds ? ` (${kinds})` : ""}`,
+      "aria-label": `Go to annotated ${terms.singular} ${page.index + 1}`,
+    });
+    pageButton.addEventListener("click", () => {
+      closeAnnotationProgress();
+      gotoFolio(page.index);
+      if (app.viewMode === "continuous") requestAnimationFrame(() => {
+        const target = document.querySelector(`#ed-reading [data-folio="${page.index}"]`);
+        if (target) target.scrollIntoView({ block: "start" });
+      });
+    });
+    pagesHost.appendChild(pageButton);
+  }
+  if (!summary.annotatedPages) {
+    pagesHost.appendChild(el("span", { class: "ed-ann-empty", text: `No annotation-bearing ${terms.plural} detected.` }));
+  }
+}
+
+function currentReviewSummary() {
+  return projectionCache.get(app, "review-pages", () => reviewPageSummary(app.state));
+}
+
+function updateReviewProgress() {
+  const button = $("ed-review-summary");
+  if (!button) return;
+  const metadata = app.sourceMode === "metadata" || app.sourceMode === "metadata-form";
+  button.hidden = !app.state || metadata;
+  if (!app.state || metadata) return;
+  const summary = currentReviewSummary();
+  const current = summary.pages[app.folio] || null;
+  const terms = unitTerms(app.state.sourceProfile);
+  button.textContent = `Reviewed ${summary.reviewedPages}/${summary.totalPages}`;
+  button.disabled = !current || !current.markable;
+  button.setAttribute("aria-pressed", String(!!(current && current.reviewed)));
+  button.title = current && current.reviewed
+    ? `This ${terms.singular} is editorially reviewed. Click to reopen it for review.`
+    : current && current.markable
+      ? `Mark the current ${terms.singular} as editorially reviewed.`
+      : `This projected ${terms.singular} has no TEI anchor on which to store review state.`;
+}
+
 function updateFolioButtons() {
   const n = app.state ? app.state.folios.length : 0;
-  const continuous = app.viewMode === "continuous";
+  const metadata = app.sourceMode === "metadata" || app.sourceMode === "metadata-form";
+  const pager = $("ed-folio-label") && $("ed-folio-label").parentElement;
+  if (pager) pager.hidden = metadata;
+  // XML source is always unit-scoped, even when the reading view is stored as
+  // continuous. Returning to Reading text restores that stored choice.
+  const continuous = app.viewMode === "continuous" && !app.sourceMode;
   // In continuous view the prev/next arrows have nothing to step through; the
   // label states the total instead, and the view-mode toggle stays.
   $("btn-prev").hidden = continuous;
   $("btn-next").hidden = continuous;
   $("btn-prev").disabled = !app.state || app.folio <= 0;
   $("btn-next").disabled = !app.state || app.folio >= n - 1;
-  const f = app.state ? app.state.folios[app.folio] : null;
+  const terms = unitTerms(app.state?.sourceProfile);
   $("ed-folio-label").textContent = !app.state ? "-"
-    : continuous ? `${n} page${n === 1 ? "" : "s"}`
-    : (f ? `page ${app.folio + 1}/${n}${f.n ? ` (${f.n})` : ""}` : "-");
+    : continuous ? `${n} ${n === 1 ? terms.singular : terms.plural}`
+    : unitPositionLabel(app.state, app.folio);
   const vm = $("btn-viewmode");
   if (vm) {
-    // The toggle is meaningful only with more than one page.
-    vm.hidden = !app.state || n <= 1;
+    // The toggle is meaningful only with more than one navigation unit.
+    vm.hidden = !app.state || n <= 1 || app.sourceMode;
     vm.textContent = continuous ? "▤" : "□"; // stacked vs single page
     vm.title = continuous
-      ? "Continuous view (all pages). Click for page-by-page."
-      : "Page-by-page view. Click for continuous (all pages).";
+      ? `Continuous view (all ${terms.plural}). Click for one ${terms.singular} at a time.`
+      : `One ${terms.singular} at a time. Click for continuous view.`;
     vm.setAttribute("aria-pressed", String(continuous));
   }
+  updateAnnotationProgress();
+  updateReviewProgress();
 }
 
 function setViewMode(mode) {
@@ -752,7 +1110,15 @@ function setViewMode(mode) {
 
 function gotoFolio(i) {
   if (!app.state) return;
-  app.folio = Math.max(0, Math.min(app.state.folios.length - 1, i));
+  if (app.sourceMode && sourceViewSession && sourceViewSession.hasChanges()) {
+    setStatus(app.sourceMode === "metadata-form"
+      ? `Apply or reset the staged metadata fields before changing ${unitTerms(app.state.sourceProfile).plural}.`
+      : `Apply or cancel the staged XML before changing ${unitTerms(app.state.sourceProfile).plural}.`);
+    return;
+  }
+  const next = Math.max(0, Math.min(app.state.folios.length - 1, i));
+  if (next !== app.folio) sessionSafety.abortKind("proposal", "Requested page changed");
+  app.folio = next;
   render();
 }
 
@@ -817,18 +1183,20 @@ const MENTION_KIND = Object.freeze({
 });
 
 function entityMetaMap() {
-  const meta = new Map();
-  if (!app.state) return meta;
-  const all = standoff.readEntities(app.state.doc);
-  for (const [key, type] of [
-    ["persons", "person"], ["places", "place"], ["orgs", "org"],
-    ["works", "work"], ["events", "event"],
-  ]) {
-    for (const e of all[key] || []) {
-      if (e.id) meta.set(e.id, { name: e.name, kind: MENTION_KIND[type], ai: !!e.ai });
+  if (!app.state) return new Map();
+  return projectionCache.get(app, "entity-meta", () => {
+    const meta = new Map();
+    const all = standoff.readEntities(app.state.doc);
+    for (const [key, type] of [
+      ["persons", "person"], ["places", "place"], ["orgs", "org"],
+      ["works", "work"], ["events", "event"],
+    ]) {
+      for (const e of all[key] || []) {
+        if (e.id) meta.set(e.id, { name: e.name, kind: MENTION_KIND[type], ai: !!e.ai });
+      }
     }
-  }
-  return meta;
+    return meta;
+  });
 }
 
 /**
@@ -837,18 +1205,40 @@ function entityMetaMap() {
  * (this page / this document / index only) instead of listing the raw standOff.
  */
 function entityUsage() {
-  const usage = new Map();
-  app.state.folios.forEach((folio, fi) => {
-    for (const line of folio.lines) {
-      for (const c of line.cells) {
-        if (!c.mention) continue;
-        const rec = usage.get(c.mention) || { count: 0, onPage: false };
-        rec.count += 1;
-        if (fi === app.folio) rec.onPage = true;
-        usage.set(c.mention, rec);
+  const index = projectionCache.get(app, "entity-usage", () => {
+    const usage = new Map();
+    const seen = new Set();
+    app.state.folios.forEach((folio, fi) => {
+      for (const line of folio.lines) {
+        for (const cell of line.cells) {
+          const layers = (cell.layers || []).filter((candidate) =>
+            candidate.kind === "mention" && candidate.ref);
+          if (!layers.length && cell.mention) {
+            layers.push({ kind: "mention", ref: cell.mention });
+          }
+          for (const layer of layers) {
+            const record = usage.get(layer.ref) || { count: 0, pages: new Set() };
+            record.pages.add(fi);
+            const key = layer.standOffGroupId
+              ? `${layer.ref}:stand-off:${layer.standOffGroupId}`
+              : layer.el?.outerStart != null
+                ? `${layer.ref}:inline:${layer.el.outerStart}`
+                : `${layer.ref}:cell:${cell.id}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              record.count += 1;
+            }
+            usage.set(layer.ref, record);
+          }
+        }
       }
-    }
+    });
+    return usage;
   });
+  const usage = new Map();
+  for (const [id, record] of index) {
+    usage.set(id, { count: record.count, onPage: record.pages.has(app.folio) });
+  }
   return usage;
 }
 
@@ -882,12 +1272,14 @@ function semanticWrapTitle(elNode) {
 
 function renderReading() {
   const host = $("ed-reading");
+  sourceViewSession = null;
   clear(host);
   // The view tabs name what the pane currently shows; the source view drops
   // the body padding (the editor frame brings its own) so nothing overflows.
   syncViewTabs();
   if (!app.state) { host.classList.remove("src"); renderEmptyReading(host); return; }
   host.classList.toggle("src", app.sourceMode);
+  if (app.sourceMode === "metadata-form") { renderMetadataForm(host); return; }
   if (app.sourceMode) { renderSourceView(host); return; }
   const continuous = app.viewMode === "continuous";
   host.classList.toggle("continuous", continuous);
@@ -899,7 +1291,7 @@ function renderReading() {
   }
   const mentions = entityMetaMap();
   if (continuous) {
-    // All folios stacked under page separators. The "active" folio (which the
+    // All units stacked under separators. The active unit (which the
     // facsimile tracks) stays app.folio and follows the hovered line.
     app.currentLines = (folios[app.folio] || {}).lines || [];
     folios.forEach((folio, fi) => {
@@ -910,21 +1302,24 @@ function renderReading() {
     const folio = folios[app.folio];
     app.currentLines = folio ? folio.lines : [];
     if (!folio || !folio.lines.length) {
-      host.appendChild(el("div", { class: "ed-empty", text: "This folio has no transcribed text." }));
+      const terms = unitTerms(app.state.sourceProfile);
+      host.appendChild(el("div", { class: "ed-empty", text: `This ${terms.singular} has no transcribed text.` }));
       return;
     }
     renderFolioInto(host, folio, app.folio, mentions);
   }
 }
 
-/** A labelled rule between pages in the continuous view; a click activates that
- *  page so the facsimile tracks it. */
+/** A labelled rule between units in the continuous view. */
 function renderPageSeparator(folio, fi) {
-  const label = folio.n != null ? `Page ${folio.n}` : `Page ${fi + 1}`;
+  const terms = unitTerms(app.state.sourceProfile);
+  const label = folio.navigationUnit?.label
+    || (folio.n != null ? `${terms.singular} ${folio.n}` : `${terms.singular} ${fi + 1}`);
   const sep = el("div", { class: "ed-page-sep", dataset: { folio: String(fi) } },
     [el("span", { class: "ed-page-sep-label", text: label })]);
   sep.addEventListener("click", () => {
     if (app.folio === fi) return;
+    sessionSafety.abortKind("proposal", "Requested page changed");
     app.folio = fi;
     app.currentLines = (app.state.folios[fi] || {}).lines || [];
     updateFolioButtons();
@@ -951,8 +1346,12 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
     row.appendChild(el("span", { class: "ed-line-n" + (!docN && !hasDocN ? " pos" : ""), text: label }));
     const body = el("span", { class: "ed-line-body" });
     line.cells.forEach((cell, k) => {
-      if (k > 0) body.appendChild(document.createTextNode(" "));
-      const note = app.noteByWord.get(cell.id);
+      if (k > 0 && !cell.joinLeft) body.appendChild(document.createTextNode(" "));
+      const noteKey = app.noteByWord.has(cell.id) ? cell.id : cell.facs;
+      const noteTexts = noteKey ? (app.noteByWord.get(noteKey) || []) : [];
+      const noteDetails = noteKey ? (app.noteDetails.get(noteKey) || []) : [];
+      const note = noteTexts.join("; ");
+      const aiNoteDetail = noteDetails.find((detail) => detail.resp === app.aiResp) || null;
       // A gap is a read-only marker (no text); other critical kinds add a class so
       // the wrapped reading text shows its editorial status (dotted / struck / added).
       const critClass = cell.crit ? " crit-" + cell.crit : "";
@@ -967,7 +1366,8 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
       // Unified provenance: a cell reads as the AI family when its linked entity is
       // AI-proposed OR any wrapping layer carries the responsibility id, so a proposed
       // markup/criticism/note construct (not only an entity mention) shows violet.
-      const aiProv = (meta && meta.ai) || cellHasAiLayer(cell);
+      const aiNote = !!aiNoteDetail;
+      const aiProv = (meta && meta.ai) || cellHasAiLayer(cell) || aiNote;
       const provClass = aiProv ? " ed-w-ai" : "";
       // F4: the normalized variant shows @norm where a word carries one, the
       // text as written otherwise; gap cells keep their marker. The diplomatic
@@ -1007,9 +1407,11 @@ function renderFolioInto(host, folio, folioIndex, mentions) {
         const sel = window.getSelection();
         if (sel && !sel.isCollapsed) return; // the selection owns this click
         if (cell.gap && !cellHasAiLayer(cell)) { beginCritic(span, cell); return; }
+        if (aiNote) { annot.openProposedNoteReview(span, aiNoteDetail); return; }
         // Overlapping annotations: a click on stacked layers opens the inspector,
         // which lists every layer and routes per layer, rather than guessing one.
-        if (stacked || cellHasAiLayer(cell)) { annot.openLayersInspector(span, cell); return; }
+        const standOffMention = cell.layers?.some((layer) => layer.kind === "mention" && layer.standOff);
+        if (stacked || standOffMention || cellHasAiLayer(cell)) { annot.openLayersInspector(span, cell); return; }
         if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
         if (semWrap) { annot.openAttrEditor(span, cell); return; }
       });
@@ -1055,42 +1457,169 @@ function renderEmptyReading(host) {
 }
 
 /**
- * Editable XML source view (the Oxygen text-mode counterpart to the reading
- * view), mounted from source-view.js: syntax-highlighted overlay, line
- * numbers, explicit Check XML, Apply gated on well-formedness (the integrity
- * chip then shows any drift against the load baseline). The caret starts at
- * the current page's first reading cell.
+ * Editable page or metadata XML source, mounted from source-view.js. The view
+ * stages one exact raw span and substitutes it into the complete canonical
+ * document before validation or parsing, so every other byte stays untouched.
  */
-// Above this size the source view would freeze the tab (the gutter alone would
-// hold millions of line numbers); the reading view and Download stay available.
+// A pathologically large source span still gets a safety gate. Whole books do
+// not hit it because page source follows the folio segmentation and metadata
+// source is confined to teiHeader.
 const SOURCE_VIEW_LIMIT = 8_000_000;
 
+function computeSourceVocabulary() {
+  const elements = new Map();
+  const attributes = new Map();
+  const guidelines = guidelinesNow();
+  const addElement = (name, localName = name.replace(/^.*:/, "")) => {
+    if (!name || elements.has(name)) return;
+    const spec = guidelines ? elementByName(guidelines, localName) : null;
+    elements.set(name, {
+      name,
+      description: spec ? (spec.gloss || spec.desc || "") : "Used in the loaded document",
+    });
+    if (!attributes.has(localName)) attributes.set(localName, new Map());
+    const target = attributes.get(localName);
+    if (spec) for (const attr of spec.attributes || []) {
+      target.set(attr.ident, {
+        name: attr.ident,
+        description: attr.desc || "TEI attribute",
+        values: attr.valList ? attr.valList.items.map((item) => ({
+          value: item.ident,
+          description: item.desc || "TEI closed value",
+        })) : [],
+      });
+    }
+  };
+
+  walk(app.state.doc.root, (node) => {
+    if (node.type !== "element") return;
+    addElement(node.qname || node.localName, node.localName);
+    if (!attributes.has(node.localName)) attributes.set(node.localName, new Map());
+    const target = attributes.get(node.localName);
+    for (const attr of node.attrs || []) {
+      if (!target.has(attr.name)) target.set(attr.name, {
+        name: attr.name,
+        description: "Used on this element in the loaded document",
+        values: [],
+      });
+    }
+  });
+
+  if (guidelines && app.project) {
+    const scope = teiScopeForFile(app.project, app.docName);
+    for (const name of elementsForScope(guidelines, scope)) addElement(name);
+  }
+  for (const wrap of app.markup || []) if (wrap[2]) addElement(wrap[2]);
+
+  const attrObject = {};
+  for (const [elementName, items] of attributes) attrObject[elementName] = [...items.values()];
+  return { elements: [...elements.values()], attributes: attrObject };
+}
+
+function sourceVocabulary() {
+  const guidelinesKey = _guidelines ? "p5" : "document";
+  return projectionCache.get(app, `source-vocabulary:${guidelinesKey}`, computeSourceVocabulary);
+}
+
+function sourceValidationLabels() {
+  const schema = app.project && app.project.schema;
+  const sources = schemaSources(
+    schema,
+    null,
+    app.project && app.project.schemaBaseUrl,
+    app.project && app.project.localSchemas,
+  );
+  const names = sources.map((source) => source.name).join(", ");
+  return {
+    validationLabel: `Well-formedness · ${schema ? "project schema" : "TEI All"} on demand`,
+    validationTitle: `The browser checks XML well-formedness before Apply. Run browser schema validation for ${names} from the live-check details.`,
+  };
+}
+
+function renderMetadataForm(host) {
+  const sourceDoc = app.state.doc;
+  sourceViewSession = mountMetadataView(host, {
+    doc: sourceDoc,
+    onApply: (nextDoc) => {
+      if (nextDoc === sourceDoc) return true;
+      try {
+        const nextState = parseEdition(nextDoc.raw);
+        replaceSessionState(nextState, "Edit metadata");
+        setStatus("Metadata fields applied to the complete document");
+        render();
+        return true;
+      } catch (err) {
+        setStatus(`Metadata fields were not applied: ${err.message}`);
+        return false;
+      }
+    },
+    onEditXml: () => setSourceMode("metadata"),
+  });
+}
+
 function renderSourceView(host) {
+  const metadata = app.sourceMode === "metadata";
   const leave = () => {
-    app.sourceMode = false;
+    app.sourceMode = metadata ? "metadata-form" : false;
     refreshAfterStandoffEdit();
   };
-  if (app.state.raw.length > SOURCE_VIEW_LIMIT) {
-    const mb = (app.state.raw.length / 1_000_000).toFixed(0);
+  const slice = metadata
+    ? elementSourceSlice(app.state, "teiHeader")
+    : folioSourceSlice(app.state, app.folio);
+  if (!slice) {
     host.appendChild(el("div", { class: "ed-empty", text:
-      `This document is too large for the in-browser source editor (${mb} MB). `
-      + "Edit it in the reading view, or use Download and a desktop editor for raw XML work." }));
+      "This document has no teiHeader metadata to edit." }));
     return;
   }
-  const folio = app.state.folios[app.folio];
-  const firstCell = folio && folio.lines[0] && folio.lines[0].cells[0];
-  mountSourceView(host, {
-    value: serialize(app.state),
-    caret: firstCell && Number.isInteger(firstCell.start) ? firstCell.start : 0,
-    wellFormed: validationView.isWellFormed,
+  if (slice.value.length > SOURCE_VIEW_LIMIT) {
+    const mb = (slice.value.length / 1_000_000).toFixed(0);
+    const terms = unitTerms(app.state.sourceProfile);
+    host.appendChild(el("div", { class: "ed-empty", text:
+      `This ${metadata ? "teiHeader" : terms.singular} is too large for the in-browser source editor (${mb} MB). `
+      + "Use Download and a desktop editor for this raw XML span." }));
+    return;
+  }
+  const sourceState = app.state;
+  const pageTotal = app.state.folios.length;
+  const terms = unitTerms(app.state.sourceProfile);
+  const sourceLabel = metadata
+    ? "Metadata (teiHeader)"
+    : pageTotal
+      ? `${unitPositionLabel(app.state, app.folio)} XML`
+      : "Document XML";
+  const statusLabel = metadata ? "Metadata XML" : sourceLabel;
+  let lineStart = 1;
+  for (let at = sourceState.raw.indexOf("\n"); at >= 0 && at < slice.start;
+    at = sourceState.raw.indexOf("\n", at + 1)) lineStart++;
+  const lineEnd = lineStart + slice.value.split(/\r\n|\r|\n/).length - 1;
+  const stagedValue = slice.value.replace(/\r\n|\r/g, "\n");
+  const sourceNewline = (/\r\n|\r|\n/.exec(slice.value) || ["\n"])[0];
+  const sourceText = (text) => text === stagedValue
+    ? slice.value
+    : text.replace(/\r\n|\r|\n/g, sourceNewline);
+  const candidate = (text) => spliceSourceSlice(sourceState, slice, sourceText(text));
+  sourceViewSession = mountSourceView(host, {
+    value: slice.value,
+    caret: 0,
+    lineStart,
+    scopeLabel: `${sourceLabel} · lines ${lineStart}-${lineEnd}`,
+    scopeTitle: metadata
+      ? "The complete teiHeader is staged here. Check and Apply validate the complete document."
+      : pageTotal
+        ? `Only this ${terms.singular}'s exact raw XML is staged here. Check and Apply validate the complete document.`
+        : "The complete document XML is staged here because no navigation boundary was found.",
+    vocabulary: sourceVocabulary(),
+    ...sourceValidationLabels(),
+    wellFormed: (text) => validationView.isWellFormed(candidate(text)),
     onApply: (text) => {
       try {
-        const changed = text !== app.state.raw;
-        app.state = parseEdition(text);
-        app.noteByWord = standoff.noteIndex(app.state.doc);
-        app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
-        if (changed) setDirty(true);
-        setStatus(changed ? "XML source applied" : "XML source unchanged");
+        const raw = candidate(text);
+        const changed = raw !== sourceState.raw;
+        if (changed) {
+          const nextState = parseEdition(raw);
+          replaceSessionState(nextState, statusLabel);
+        }
+        setStatus(changed ? `${statusLabel} applied to the complete document` : `${statusLabel} unchanged`);
         leave();
         return true;
       } catch (err) {
@@ -1098,7 +1627,7 @@ function renderSourceView(host) {
         return false;
       }
     },
-    onCancel: () => { setStatus("Source edits discarded"); leave(); },
+    onCancel: () => { setStatus(`${statusLabel} edits discarded`); leave(); },
   });
 }
 
@@ -1139,8 +1668,8 @@ function beginTextInput(span, cell) {
     const nextCore = inp.value;
     if (nextCore !== core) {
       try {
-        app.state = editCellCore(app.state, cell.id, nextCore);
-        setDirty(true);
+        const nextState = editCellCore(app.state, cell.id, nextCore);
+        replaceSessionState(nextState, "Edit text");
       } catch (err) {
         setStatus(`Edit failed: ${err.message}`);
       }
@@ -1201,7 +1730,9 @@ function beginReadingsInput(span, cell) {
     if (diplVal !== core || normVal !== norm) {
       try {
         const next = editCellReadings(app.state, cell.id, { core: diplVal, norm: normVal });
-        if (next !== app.state) { app.state = next; setDirty(true); }
+        if (next !== app.state) {
+          replaceSessionState(next, "Edit readings");
+        }
         else setStatus("Edit not applied: this word wraps further markup.");
       } catch (err) {
         setStatus(`Edit failed: ${err.message}`);
@@ -1243,9 +1774,7 @@ function commitStandoff(fn, { label, failPrefix = "Edit", noopLabel = null } = {
       if (noopLabel) setStatus(noopLabel);
       return false;
     }
-    app.state = r.edition;
-    app.noteByWord = r.notes;
-    setDirty(true);
+    replaceSessionState(r.edition, label || failPrefix, r.notes);
     if (label) setStatus(label);
     refreshAfterStandoffEdit();
     return true;
@@ -1393,7 +1922,8 @@ function authorDeleteElement(cell) {
 
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
 function beginNote(span, cell) {
-  const existing = app.noteByWord.get(cell.id) || "";
+  const existingNotes = app.noteByWord.get(cell.id) || app.noteByWord.get(cell.facs) || [];
+  const existing = existingNotes[0] || "";
   const inp = el("input", {
     class: "ed-w-input",
     type: "text",
@@ -1565,7 +2095,8 @@ function imageUrlForFolio(i) {
 function docHasImages() {
   if (!app.state) return false;
   if (app.imageBase) return true;
-  return app.state.folios.some((f) => f.surface && f.surface.graphic);
+  return app.state.folios.some((f) => f.surface && f.surface.graphic)
+    || app.state.sourceProfile?.facsimile?.mode === "source-doc";
 }
 
 // ---- right-pane context panels (M2.14 dual view) -----------------------------
@@ -1579,7 +2110,7 @@ const PANELS = [
   {
     id: "facs", label: "Facsimile", host: "ed-panel-facs",
     title: "Page image with TEI zones; hovering a zone highlights the linked text and vice versa",
-    unavailableTitle: "This document carries no page images",
+    unavailableTitle: "This document carries no resolvable facsimile resources",
     available: () => docHasImages(),
     render: () => renderFacsimile(),
   },
@@ -1588,6 +2119,12 @@ const PANELS = [
     title: "All index entities (persons, places, organisations, works, events) with their authority ids and mention counts",
     available: () => true,
     render: () => overlay.renderIndex(),
+  },
+  {
+    id: "source", label: "Source",
+    title: "The source model inferred from this TEI's structure and the available navigation channels",
+    available: () => !!app.state,
+    render: () => renderSourceProfilePanel(),
   },
   {
     id: "project", label: "Project", host: "ed-panel-project",
@@ -1606,7 +2143,7 @@ function activePanels() {
 function panelHost(p) {
   let host = $(p.host || `ed-panel-${p.id}`);
   if (!host) {
-    host = el("div", { class: "ed-panel", id: `ed-panel-${p.id}` });
+    host = el("div", { class: "ed-panel", id: `ed-panel-${p.id}`, role: "tabpanel" });
     host.hidden = true;
     document.querySelector(".ed-panel-body").appendChild(host);
   }
@@ -1639,17 +2176,22 @@ function updatePanels() {
       ? !!app.projectFolder
       : !!app.state && (!p.available || p.available());
     const active = p.id === app.panel;
+    const host = panelHost(p);
     const tab = el("button", {
       class: "ed-tab" + (active ? " active" : ""), type: "button", role: "tab",
+      id: `ed-panel-tab-${p.id}`,
       "aria-selected": String(active),
+      "aria-controls": host.id,
       title: avail ? p.title : (p.unavailableTitle || p.title),
       text: p.label,
     });
+    host.setAttribute("aria-labelledby", tab.id);
     tab.disabled = !avail;
     tab.addEventListener("click", () => showPanel(p.id));
     tabsHost.appendChild(tab);
-    panelHost(p).hidden = !active;
+    host.hidden = !active;
   }
+  syncTablist(tabsHost);
 }
 
 function showPanel(id) {
@@ -1670,16 +2212,110 @@ function renderActivePanel() {
   else if (p.mount) p.mount(panelHost(p));
 }
 
+function sourceProfileLabel(id) {
+  return String(id || "").split("-").map((part) =>
+    part ? part[0].toUpperCase() + part.slice(1) : "").join(" ");
+}
+
+function renderSourceProfilePanel() {
+  const host = $("ed-panel-source");
+  const profile = app.state?.sourceProfile;
+  if (!host || !profile) return;
+  clear(host);
+
+  const summary = el("div", { class: "ed-section" });
+  summary.appendChild(el("h4", { text: "Source model" }));
+  summary.appendChild(el("div", { class: "ed-kv" }, [
+    el("b", { text: "Primary navigation" }),
+    el("span", { class: "ed-kv-value", text: profile.navigation.primary.label }),
+  ]));
+  summary.appendChild(el("div", { class: "ed-kv" }, [
+    el("b", { text: "Units" }),
+    el("span", { class: "ed-kv-value", text: String(profile.navigation.primary.units.length) }),
+  ]));
+  summary.appendChild(el("div", { class: "ed-kv" }, [
+    el("b", { text: "Facsimile model" }),
+    el("span", { class: "ed-kv-value", text: sourceProfileLabel(profile.facsimile.mode || "none") }),
+  ]));
+  summary.appendChild(el("p", {
+    class: "ed-val-note",
+    text: "This model is derived from TEI structures. A project manifest may select another navigation channel only when matching units exist.",
+  }));
+  host.appendChild(summary);
+
+  const structures = el("div", { class: "ed-section" });
+  structures.appendChild(el("h4", { text: "Detected structures" }));
+  const present = profile.capabilities.filter((capability) => capability.present);
+  if (!present.length) {
+    structures.appendChild(el("span", { class: "ed-empty", text: "No specialised TEI structures were detected." }));
+  } else {
+    const capabilityList = el("div", { class: "ed-source-capabilities" });
+    for (const capability of present) {
+      capabilityList.appendChild(el("span", {
+        class: `ed-val-chip ${capability.enabled ? "ok" : "warn"}`,
+        text: sourceProfileLabel(capability.id),
+        title: capability.evidence.join("; ") || sourceProfileLabel(capability.id),
+      }));
+    }
+    structures.appendChild(capabilityList);
+  }
+  host.appendChild(structures);
+
+  const navigation = el("div", { class: "ed-section" });
+  navigation.appendChild(el("h4", { text: "Available navigation" }));
+  for (const channel of profile.navigation.channels.filter((candidate) => candidate.units.length)) {
+    navigation.appendChild(el("div", { class: "ed-kv" }, [
+      el("b", { text: channel.label }),
+      el("span", {
+        class: "ed-kv-value",
+        text: `${channel.units.length} unit${channel.units.length === 1 ? "" : "s"}${channel.id === profile.navigation.primary.id ? " (primary)" : ""}`,
+      }),
+    ]));
+  }
+  host.appendChild(navigation);
+
+  if (profile.issues.length) {
+    const issues = el("div", { class: "ed-section" });
+    issues.appendChild(el("h4", { text: "Profile notes" }));
+    for (const issue of profile.issues) {
+      issues.appendChild(el("div", { class: "ed-val-warn", text: `${issue.message} ${issue.resolution || ""}`.trim() }));
+    }
+    host.appendChild(issues);
+  }
+}
+
 function renderFacsimile() {
   if (!app.state || app.panel !== "facs" || app.rightCollapsed) return;
-  const ctrl = ensureFacsimile();
-  if (!ctrl) return;
   const folio = app.state.folios[app.folio];
   const surface = folio && folio.surface;
+  const externalRef = folio?.navigationUnit?.facsimileRefs
+    ?.find((value) => /^https?:\/\//i.test(value)) || null;
   // Prefer the hardcoded demo image base; otherwise resolve the surface's
   // <graphic url> (absolute URL, or a local filename via the page-image store),
   // so opened TEI and on-ramp drafts with attached page images both show.
   const imageUrl = imageUrlForFolio(app.folio) || pageImageStore.resolve(surface) || null;
+  if (!imageUrl && externalRef) {
+    if (facsimile) {
+      facsimile.destroy();
+      facsimile = null;
+    }
+    const host = $("ed-osd");
+    if (!host) return;
+    clear(host);
+    host.appendChild(el("div", { class: "ed-empty" }, [
+      el("p", { text: "This unit links to an external facsimile resource." }),
+      el("a", {
+        class: "ed-btn",
+        href: externalRef,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        text: "Open linked facsimile",
+      }),
+    ]));
+    return;
+  }
+  const ctrl = ensureFacsimile();
+  if (!ctrl) return;
   ctrl.showPage({
     imageUrl,
     surface,
@@ -1744,9 +2380,44 @@ function highlightMentions(entity) {
 
 // ---- save / download -------------------------------------------------------
 
+async function authorizeOutput(raw, action) {
+  setStatus(`Validating the configured schema set before ${action.toLowerCase()}...`);
+  try {
+    const result = await validationView.requireValidForOutput(raw, action);
+    if (result.ok) return result.authorization;
+    setStatus(result.message);
+    validationView.showDetails();
+  } catch (err) {
+    setStatus(`${action} blocked because schema validation could not complete: ${err.message}`);
+    validationView.showDetails();
+  }
+  return null;
+}
+
+function outputAuthorizationCurrent(authorization, action) {
+  if (validationView.isOutputAuthorizationCurrent(authorization)) return true;
+  setStatus(`${action} blocked: the document or configured schema set changed after validation. Run ${action} again for the current revision.`);
+  validationView.showDetails();
+  return false;
+}
+
+async function saveTargetChanged() {
+  if (!app.fileHandle || !app.fileSnapshot) return false;
+  const latest = await app.fileHandle.getFile();
+  return fileVersionChanged(app.fileSnapshot, fileVersion(latest));
+}
+
 async function save() {
   if (!app.state) return;
-  const raw = serialize(app.state);
+  let raw;
+  try {
+    raw = targetDocument(app.state.doc, app.project).raw;
+  } catch (err) {
+    setStatus(`Save failed while preparing the project format: ${err.message}`);
+    return;
+  }
+  const authorization = await authorizeOutput(raw, "Save");
+  if (!authorization) return;
   // Whether THIS document owns the recovery slot: only a draft's own save may
   // clear it; saving an unrelated document must not discard a stored draft.
   const wasDraft = documentFacts.isUnsavedDraft();
@@ -1759,24 +2430,48 @@ async function save() {
   // A plaintext draft has no file yet: first save creates the .xml in the
   // project folder, then the normal in-place path takes over.
   await projectFolderUi.finalizeSaveTarget();
+  if (!outputAuthorizationCurrent(authorization, "Save")) return;
   if (app.fileHandle && app.fileHandle.createWritable) {
     try {
+      if (await saveTargetChanged()) {
+        setStatus(`Save blocked: ${app.docName} changed outside teiCrafter. Download a copy or reload the file before saving in place.`);
+        return;
+      }
+      if (!outputAuthorizationCurrent(authorization, "Save")) return;
+    } catch (err) {
+      setStatus(`Save blocked because the current file could not be checked for external changes (${err.message}). Download a copy or reload it.`);
+      return;
+    }
+    try {
+      const bytes = encodeXmlBytes(raw, { bom: !!(app.fileEncoding && app.fileEncoding.bom) });
       const writable = await app.fileHandle.createWritable();
-      await writable.write(raw);
+      if (!outputAuthorizationCurrent(authorization, "Save")) {
+        if (typeof writable.abort === "function") await writable.abort();
+        return;
+      }
+      await writable.write(bytes);
       await writable.close();
-      setDirty(false);
+      try {
+        const savedFile = await app.fileHandle.getFile();
+        app.fileSnapshot = fileVersion(savedFile);
+      } catch { app.fileSnapshot = null; }
+      const stillCurrent = validationView.isOutputAuthorizationCurrent(authorization);
+      if (stillCurrent) setDirty(false);
       if (wasDraft) documentFacts.clearDraftRecovery(); // the draft now has a real file
       // Attached page images live next to the TEI in the same folder.
       const img = await pageImageStore.persist(app.projectFolder && app.projectFolder.dir);
       const note = img.written ? `, ${img.written} page image(s)` : "";
       const failNote = img.failed ? ` (${img.failed} image(s) could not be written)` : "";
-      setStatus(`Saved in place: ${app.docName}${note}${failNote}`);
+      const formatNote = usesInlineGND(app.project) ? " as inline-GND" : "";
+      setStatus(stillCurrent
+        ? `Saved in place${formatNote}: ${app.docName}${note}${failNote}`
+        : `Saved the validated revision${formatNote}: ${app.docName}${note}${failNote}. The document changed during the write and remains unsaved.`);
       return;
     } catch (err) {
       setStatus(`Save in place failed (${err.message}); downloading instead`);
     }
   }
-  download();
+  if (!await download(raw, authorization)) return;
   setDirty(false);
   // The download also produced the TEI file; the draft's recovery slot (and
   // only the draft's) is no longer the only copy.
@@ -1789,23 +2484,41 @@ async function save() {
   }
 }
 
-function download() {
+async function download(preparedRaw = null, preparedAuthorization = null) {
   if (!app.state) return;
-  const raw = serialize(app.state);
-  const blob = new Blob([raw], { type: "application/xml" });
+  let raw = preparedRaw;
+  if (raw == null) {
+    try {
+      raw = targetDocument(app.state.doc, app.project).raw;
+    } catch (err) {
+      setStatus(`Download failed while preparing the project format: ${err.message}`);
+      return false;
+    }
+  }
+  const authorization = preparedAuthorization || await authorizeOutput(raw, "Download");
+  if (!authorization || !outputAuthorizationCurrent(authorization, "Download")) return false;
+  let bytes;
+  try {
+    bytes = encodeXmlBytes(raw, { bom: !!(app.fileEncoding && app.fileEncoding.bom) });
+  } catch (err) {
+    setStatus(`Download failed while encoding UTF-8 XML: ${err.message}`);
+    return false;
+  }
+  const blob = new Blob([bytes], { type: "application/xml;charset=UTF-8" });
   const url = URL.createObjectURL(blob);
   const a = el("a", { href: url, download: app.docName || "edition.xml" });
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  setStatus(`Downloaded ${app.docName || "edition.xml"}`);
+  const formatNote = usesInlineGND(app.project) ? " in its inline-GND save format" : "";
+  setStatus(`Downloaded ${app.docName || "edition.xml"}${formatNote}`);
+  return true;
 }
 
 /** True when the loaded document's project opts into the inline-GND interchange. */
 function docHasInlineGndExport() {
-  const project = app.projectFolder ? app.projectFolder.project : app.project;
-  return !!(app.state && project && project.interchange === "inline-gnd");
+  return !!(app.state && usesInlineGND(app.project));
 }
 
 /**
@@ -1816,6 +2529,41 @@ function docHasInlineGndExport() {
 function syncInlineExport() {
   const btn = $("btn-export-inline");
   if (btn) btn.hidden = !docHasInlineGndExport();
+  const saveBtn = $("btn-save");
+  const downloadBtn = $("btn-download");
+  if (saveBtn) saveBtn.title = docHasInlineGndExport()
+    ? "Save the inline-GND project format in place, or download it when direct save is unavailable"
+    : "Save in place (File System Access) or download";
+  if (downloadBtn) downloadBtn.title = docHasInlineGndExport()
+    ? "Download this document in its inline-GND project format"
+    : "Download a copy of the current TEI";
+}
+
+/** Show the folder attachment only when the TEI names local facsimile files. */
+function syncFacsimileFolderAction() {
+  const btn = $("btn-attach-facsimiles");
+  if (!btn) return;
+  btn.hidden = !(app.state && pageImageStore.referencedNames().size);
+}
+
+async function attachFacsimileFolder() {
+  if (!app.state) return;
+  if (!pageImageStore.supportsFolderAttachment()) {
+    setStatus("This browser cannot attach a local facsimile folder. Use a Chromium-based browser with the File System Access API. Editing and XML downloads remain available.");
+    return;
+  }
+  try {
+    const result = await pageImageStore.attachFolder();
+    if (result.cancelled) {
+      setStatus("Facsimile folder selection cancelled");
+      return;
+    }
+    const unresolved = result.missing.length;
+    const missingNote = unresolved ? ` ${unresolved} referenced image(s) were not found.` : "";
+    setStatus(`Attached ${result.folderName}: resolved ${result.found} of ${result.requested} referenced image(s). Files remain local and were not copied.${missingNote}`);
+  } catch (err) {
+    setStatus(`Facsimile folder could not be attached: ${err.message}`);
+  }
 }
 
 /**
@@ -1824,7 +2572,7 @@ function syncInlineExport() {
  * pipeline's "_final.xml". Reading text is byte-preserved; only the markup shape
  * changes (toInlineGND). The in-editor document is untouched.
  */
-function downloadInlineGND() {
+async function downloadInlineGND() {
   if (!app.state) return;
   let raw;
   try {
@@ -1833,6 +2581,8 @@ function downloadInlineGND() {
     setStatus(`Inline-GND export failed: ${err.message}`);
     return;
   }
+  const authorization = await authorizeOutput(raw, "Inline-GND export");
+  if (!authorization || !outputAuthorizationCurrent(authorization, "Inline-GND export")) return;
   const name = inlineGndFilename(app.docName);
   const blob = new Blob([raw], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
@@ -1873,11 +2623,14 @@ function setRightCollapsed(on, persist = true, rerender = true) {
   app.rightCollapsed = on;
   const main = $("ed-main");
   if (main) main.classList.toggle("right-collapsed", on);
-  const btn = $("ed-collapse-btn");
-  if (btn) {
-    btn.setAttribute("aria-pressed", String(on));
-    btn.title = on ? "Show the context pane" : "Hide the context pane";
-    btn.textContent = on ? "‹" : "›"; // restore the pane / collapse it away
+  const splitter = $("ed-splitter");
+  if (splitter) {
+    splitter.setAttribute("aria-valuetext", on
+      ? "Context pane hidden"
+      : `Left pane ${splitter.getAttribute("aria-valuenow") || "52"} percent`);
+    splitter.title = on
+      ? "Click or press Enter to show the context pane"
+      : "Drag or use arrow keys to resize; Enter toggles the context pane; Home resets";
   }
   if (persist) saveDocLayout({ collapsed: on });
   // Re-render the now-visible panel so OpenSeadragon sizes to the restored width.
@@ -1890,6 +2643,12 @@ function setSplitPct(pct, persist = true) {
   if (!main) return;
   pct = Math.max(10, Math.min(90, pct));
   main.style.setProperty("--ed-split", pct + "%");
+  const splitter = $("ed-splitter");
+  if (splitter) {
+    const rounded = Math.round(pct);
+    splitter.setAttribute("aria-valuenow", String(rounded));
+    if (!app.rightCollapsed) splitter.setAttribute("aria-valuetext", `Left pane ${rounded} percent`);
+  }
   if (persist) saveDocLayout({ split: Math.round(pct * 10) / 10 });
 }
 
@@ -1898,10 +2657,6 @@ function setupSplitter() {
   const splitter = $("ed-splitter");
   const left = $("ed-pane-left");
   if (!main || !splitter || !left) return;
-  // The collapse handle lives on the splitter; its pointer/double-click events
-  // must not start a resize drag or trigger the reset (its own click toggles).
-  const toggle = $("ed-collapse-btn");
-  if (toggle) ["pointerdown", "dblclick"].forEach((ev) => toggle.addEventListener(ev, (e) => e.stopPropagation()));
   const widthPct = (px) => (px / (main.getBoundingClientRect().width || 1)) * 100;
   const clamp = (pct) => {
     const minPct = widthPct(SPLIT_MIN_PX);
@@ -1938,7 +2693,8 @@ function setupSplitter() {
     try { splitter.releasePointerCapture(e.pointerId); } catch (_) { /* not captured */ }
     document.body.style.cursor = "";
     const collapsed = main.classList.contains("right-collapsed");
-    if (!moved && collapsed) setRightCollapsed(false);            // plain click on the collapsed rail restores
+    const onChevron = e.clientX < splitter.getBoundingClientRect().left;
+    if (!moved && (collapsed || onChevron)) setRightCollapsed(!collapsed);
     else if (moved && !collapsed) saveDocLayout({ split: Math.round(curPct() * 10) / 10 });
     moved = false;
   };
@@ -1950,6 +2706,7 @@ function setupSplitter() {
     if (e.key === "ArrowLeft") { setSplitPct(clamp(curPct() - step)); e.preventDefault(); }
     else if (e.key === "ArrowRight") { setSplitPct(clamp(curPct() + step)); e.preventDefault(); }
     else if (e.key === "Home") { setSplitPct(50); e.preventDefault(); }
+    else if (e.key === "Enter" || e.key === " ") { setRightCollapsed(!app.rightCollapsed); e.preventDefault(); }
   });
 }
 
@@ -1975,13 +2732,36 @@ function applyDocLayout() {
 // Instantiated once at startup; dependencies flow in via a ctx object, the
 // surfaces (popovers, overlay, modal) flow back through the returned APIs.
 
+function aiAnchor(scope = null) {
+  let resolved = scope;
+  if (!resolved && app.state && app.state.folios.length) {
+    resolved = createProposalScope(app.state, app.folio);
+  }
+  return {
+    documentName: app.docName,
+    sourceMode: app.sourceMode,
+    folio: resolved ? {
+      index: resolved.folioIndex,
+      start: resolved.folioStart,
+      end: resolved.folioEnd,
+      raw: resolved.folioRaw,
+    } : null,
+    cells: resolved ? resolved.cells : [],
+  };
+}
+
+const beginAiJob = (kind, scope = null) => sessionSafety.beginJob(kind, aiAnchor(scope));
+const aiJobCurrent = (job) => sessionSafety.isJobCurrent(job, currentRaw());
+const finishAiJob = (job) => sessionSafety.finishJob(job);
+const abortAiJob = (job, reason) => sessionSafety.abortJob(job, reason);
+
 const overlay = createEntityIndex({
   app, setStatus, commitStandoff,
   gotoFolio, highlightMentions, entityUsage,
   showPanel,
 });
 const annot = createAnnotationUi({
-  app, setStatus, commitStandoff,
+  app, setStatus, setDirty, commitStandoff,
   entityMetaMap, entityUsage,
   runLookup: overlay.runLookup,
   revealEntity: overlay.revealEntity,
@@ -1997,14 +2777,18 @@ const annot = createAnnotationUi({
   },
 });
 const projectFolderUi = createProjectFolder({
-  app, setStatus, setDirty, confirmDiscard, load,
+  app, setStatus, setDirty, load,
   showPanel, updatePanels, teiVocabularyLine,
   getProjectPanelHost: () => panelHost(activePanels().find((p) => p.id === "project")),
   // Project-flow plaintext draft: same neutral draft badge and Source provenance
   // as the direct draft path (the wording differs: a project draft saves in place).
   onPlaintextDraft: (txtName) => { app.source = { kind: "draft", txtName }; documentFacts.updateDocStrip(); },
 });
-const validationView = createValidationView({ app });
+const validationView = createValidationView({
+  app,
+  schemaDocumentRaw: () => targetDocument(app.state.doc, app.project).raw,
+  onSchemaSourcesChanged: handleSchemaSourcesChanged,
+});
 const documentFacts = createDocumentFacts({
   app, setStatus, setDirty, load, render, renderActivePanel,
 });
@@ -2016,7 +2800,10 @@ const pageImageStore = createPageImages({ app, rerenderPanel: () => renderActive
 // way); llmEnabled() (the build flag AND the per-user runtime preference) controls
 // whether the AI entry points are visible, so turning AI off leaves a fully
 // deterministic editor with no AI surfaces. applyLlmGate() re-runs on the toggle.
-const genModal = setupGenModal({ load, markGenerated, setDirty, setStatus, app });
+const genModal = setupGenModal({
+  load, markGenerated, setDirty, setStatus, app,
+  authorizeDocumentReplacement, beginAiJob, aiJobCurrent, finishAiJob, abortAiJob,
+});
 function applyLlmGate() {
   const on = llmEnabled();
   $("btn-generate").hidden = !on;
@@ -2030,10 +2817,18 @@ function applyLlmGate() {
 // on-ramp set (in memory); without a key the call fails with a clear hint.
 async function proposeOnFolio() {
   if (!app.state || !llmEnabled()) return;
-  const folio = app.state.folios[app.folio];
+  if (app.sourceMode) {
+    setStatus("Return to Reading text before requesting annotation proposals.");
+    return;
+  }
+  const stateSnapshot = app.state;
+  const folioIndex = app.folio;
+  const folio = stateSnapshot.folios[folioIndex];
   if (!folio) return;
+  const terms = unitTerms(stateSnapshot.sourceProfile);
+  const scope = createProposalScope(stateSnapshot, folioIndex);
   const folioText = folio.lines.map((l) => l.cells.map((c) => c.text).join("")).join("\n").trim();
-  if (!folioText) { setStatus("Nothing to propose on this page."); return; }
+  if (!folioText) { setStatus(`Nothing to propose in this ${terms.singular}.`); return; }
   const eff = app.project ? llmForFile(app.project, app.docName) : null;
   const systemPrompt = eff && eff.systemPrompt ? eff.systemPrompt : "";
   const mapping = eff && eff.mapping && app.project && app.project.llmMappings
@@ -2042,27 +2837,42 @@ async function proposeOnFolio() {
   const resp = (eff && eff.responsibility) || standoff.AI_RESP;
   const btn = $("btn-propose");
   if (btn) btn.disabled = true;
-  setStatus("Asking the model for annotation proposals on this page...");
+  setStatus(`Asking the model for annotation proposals in this ${terms.singular}...`);
+  const job = beginAiJob("proposal", scope);
   try {
-    const reply = await complete(buildSuggestPrompt(folioText, { systemPrompt, mapping, vocabulary }));
+    const reply = await complete(buildSuggestPrompt(folioText, { systemPrompt, mapping, vocabulary }),
+      { signal: job.signal });
+    if (!aiJobCurrent(job)) return;
+    if (app.folio !== folioIndex || app.sourceMode !== job.snapshot.anchor.sourceMode) {
+      setStatus(`The proposal response was discarded because the requested ${terms.singular} is no longer active.`);
+      return;
+    }
     const proposals = parseSuggestions(reply);
-    if (!proposals.length) { setStatus("The model proposed no annotations for this page."); return; }
-    const result = applyProposals(app.state, proposals, { resp });
+    if (!proposals.length) { setStatus(`The model proposed no annotations for this ${terms.singular}.`); return; }
+    const result = applyProposals(stateSnapshot, proposals, { resp, scope });
     if (!result.applied.length) {
-      setStatus(`None of the ${proposals.length} proposal(s) could be placed on this page.`);
+      setStatus(`None of the ${proposals.length} proposal(s) could be placed in this ${terms.singular}.`);
       return;
     }
     // Make the @resp a real pointer, then adopt the proposed doc through the single
     // mutation path so it renders violet, marks dirty, and stays reviewable.
     const marked = standoff.ensureRespStmt(result.state.doc, resp);
+    const createdDeclaration = marked !== result.state.doc;
+    const proposalBaseline = app.proposalBaseline || { raw: stateSnapshot.doc.raw, dirty: app.dirty };
     const skip = result.skipped.length ? ` ${result.skipped.length} could not be placed.` : "";
-    commitStandoff(() => marked, {
+    const committed = commitStandoff(() => marked, {
       label: `Proposed ${result.applied.length} annotation(s): violet and unverified, confirm or reject each.${skip}`,
       failPrefix: "Propose",
     });
+    if (committed) {
+      if (createdDeclaration) app.proposalRespCreated.add(resp);
+      app.proposalBaseline = proposalBaseline;
+    }
   } catch (err) {
+    if (job.signal.aborted || (err && err.name === "AbortError")) return;
     setStatus(`Proposal failed: ${err.message}. Set a provider and API key via "New from text (LLM)" first.`);
   } finally {
+    finishAiJob(job);
     if (btn) btn.disabled = false;
   }
 }
@@ -2082,21 +2892,29 @@ if (llmEnabled() && location.hash === "#generate") genModal.open();
  * the .xml and the images together.
  */
 async function buildFromTextAndImages({ text, title, images }) {
+  const replacement = authorizeDocumentReplacement();
+  if (!replacement) return false;
   const pageImages = pageImageStore.fromUploads(images);
   const tei = teiFromPlaintext(text, title, { images: images.map((im) => ({ name: im.name })) });
   const xmlName = `${title}.xml`;
   const inFolder = !!app.projectFolder;
-  await adoptDraft({
+  const opened = await adoptDraft({
     tei, xmlName, txtName: title,
     project: inFolder ? app.projectFolder.project : null,
     pageImages,
+    replacement,
     statusMsg: `Crafted ${xmlName} from text with ${images.length} page image(s) attached. `
       + (inFolder
         ? "Save writes the TEI and the images into the project folder."
         : "Save downloads the TEI; open or create a project folder to keep the images with it."),
   });
+  if (!opened) {
+    for (const rec of pageImages.values()) if (rec && rec.url) URL.revokeObjectURL(rec.url);
+    return false;
+  }
   if (inFolder) app.saveTarget = { dir: app.projectFolder.dir, name: xmlName };
   setDirty(true);
+  return true;
 }
 const imageOnramp = setupImageOnramp({ build: buildFromTextAndImages });
 
@@ -2178,27 +2996,69 @@ if (aiToggle && FEATURES.llmOnRamp) {
   aiToggle.remove();
 }
 setupDragDrop();
-// Left pane view switcher: reading text or XML source, one always active.
-function setSourceMode(on) {
+setupTablist($("ed-view-tabs"));
+setupTablist($("ed-reading-variant"));
+setupTablist($("ed-panel-tabs"));
+// Left pane view switcher: reading text, page XML, or structured/raw metadata.
+function setSourceMode(mode) {
   if (!app.state) return; // no document: the text views stay inert
-  if (app.sourceMode === on) return;
-  app.sourceMode = on;
+  const next = mode === "page" || mode === "metadata" || mode === "metadata-form" ? mode : false;
+  if (app.sourceMode === next) return;
+  if (app.sourceMode && sourceViewSession && sourceViewSession.hasChanges()) {
+    setStatus(app.sourceMode === "metadata-form"
+      ? "Apply or reset the staged metadata fields before changing views."
+      : "Apply or cancel the staged XML before changing views.");
+    return;
+  }
+  sessionSafety.abortKind("proposal", "Requested page context changed");
+  app.sourceMode = next;
   annot.removeSelPopover();
   annot.removeMenu();
   render();
 }
 $("view-reading").addEventListener("click", () => setSourceMode(false));
-$("view-xml").addEventListener("click", () => setSourceMode(true));
+$("view-xml").addEventListener("click", () => setSourceMode("page"));
+$("view-metadata").addEventListener("click", () => setSourceMode("metadata-form"));
 // F4 reading-variant switcher (visible only for dual-reading documents).
 $("variant-dipl").addEventListener("click", () => setReadingVariant("dipl"));
 $("variant-norm").addEventListener("click", () => setReadingVariant("norm"));
 $("btn-prev").addEventListener("click", () => gotoFolio(app.folio - 1));
 $("btn-next").addEventListener("click", () => gotoFolio(app.folio + 1));
 $("btn-viewmode").addEventListener("click", () => setViewMode(app.viewMode === "continuous" ? "paged" : "continuous"));
+$("ed-ann-summary").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const popover = $("ed-ann-popover");
+  const open = popover.hidden;
+  popover.hidden = !open;
+  $("ed-ann-summary").setAttribute("aria-expanded", String(open));
+});
+$("ed-review-summary").addEventListener("click", () => {
+  if (!app.state) return;
+  const current = currentReviewSummary().pages[app.folio];
+  if (!current || !current.markable) return;
+  const next = setFolioReviewed(app.state, app.folio, !current.reviewed);
+  const unit = unitTerms(app.state.sourceProfile).singular;
+  commitStandoff(() => next.doc, {
+    label: current.reviewed
+      ? `${unit[0].toUpperCase()}${unit.slice(1)} reopened for editorial review`
+      : `${unit[0].toUpperCase()}${unit.slice(1)} marked as editorially reviewed`,
+    failPrefix: "Review state",
+  });
+});
+document.addEventListener("click", (event) => {
+  const wrap = $("ed-ann-progress");
+  if (wrap && !wrap.contains(event.target)) closeAnnotationProgress();
+});
 // Page turning where one expects it: arrow keys, unless typing in an input or
 // an inline chooser is open, or the continuous view (which has no pages to step).
 document.addEventListener("keydown", (e) => {
-  if (!app.state || app.viewMode === "continuous") return;
+  if (e.key === "Escape" && !$("ed-ann-popover").hidden) {
+    closeAnnotationProgress();
+    $("ed-ann-summary").focus();
+    return;
+  }
+  if (!app.state || app.viewMode === "continuous"
+    || app.sourceMode === "metadata" || app.sourceMode === "metadata-form") return;
   if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
   const t = e.target;
   if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
@@ -2207,15 +3067,23 @@ document.addEventListener("keydown", (e) => {
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });
 $("btn-save").addEventListener("click", save);
-$("btn-download").addEventListener("click", download);
+$("btn-download").addEventListener("click", () => download());
+$("btn-undo").addEventListener("click", () => applyHistory("undo"));
+$("btn-redo").addEventListener("click", () => applyHistory("redo"));
+document.addEventListener("keydown", (event) => {
+  const command = historyCommand(event);
+  if (!command) return;
+  event.preventDefault();
+  applyHistory(command);
+});
 $("btn-export-inline").addEventListener("click", downloadInlineGND);
+$("btn-attach-facsimiles").addEventListener("click", attachFacsimileFolder);
 
-// View controls: text zoom (a global preference) and the context-pane collapse
-// toggle. Ctrl/Cmd+\ mirrors the collapse button; the splitter resizes the panes.
+// View controls: text zoom and the context-pane separator. Ctrl/Cmd+\ mirrors
+// the separator's Enter action; arrow keys resize the panes.
 $("ed-zoom-in").addEventListener("click", () => applyZoom(currentZoom() + ZOOM_STEP));
 $("ed-zoom-out").addEventListener("click", () => applyZoom(currentZoom() - ZOOM_STEP));
 $("ed-zoom-reset").addEventListener("click", () => applyZoom(1));
-$("ed-collapse-btn").addEventListener("click", () => setRightCollapsed(!app.rightCollapsed));
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "\\" && app.state) {
     e.preventDefault();

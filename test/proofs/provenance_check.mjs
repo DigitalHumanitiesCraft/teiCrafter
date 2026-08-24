@@ -12,7 +12,7 @@
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
 import { parseEdition } from "../../docs/js/editor/edition.js";
 import { markCritical, unwrapCritical } from "../../docs/js/editor/criticism.js";
-import { addNote, ensureRespStmt } from "../../docs/js/editor/standoff.js";
+import { addNote, ensureRespStmt, hasRespReference, removeRespStmtIfUnused } from "../../docs/js/editor/standoff.js";
 
 let passed = 0, failed = 0;
 function check(cond, label) {
@@ -79,6 +79,13 @@ check(ensureRespStmt(noTitle, "#ai") === noTitle, "ensureRespStmt no-ops (SAME d
 // a custom responsibility id
 check(ensureRespStmt(parseDocument(noteDoc), "#model").serialize().includes('<respStmt xml:id="model">'),
   "ensureRespStmt honours a custom responsibility id");
+
+check(removeRespStmtIfUnused(ensureRespStmt(parseDocument(noteDoc), "#ai"), "#ai").serialize() === noteDoc,
+  "a session-created respStmt is removed byte-exactly after the final proposal is resolved");
+check(removeRespStmtIfUnused(ensureRespStmt(withNote, "#ai"), "#ai").serialize().includes('<respStmt xml:id="ai">'),
+  "the respStmt remains while an @resp token still points to it");
+check(hasRespReference(withNote, "#ai") && !hasRespReference(parseDocument(noteDoc), "#ai"),
+  "responsibility references are detected as whitespace-delimited @resp tokens");
 
 console.log("=".repeat(66));
 if (failed === 0) {

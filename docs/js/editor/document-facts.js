@@ -18,7 +18,7 @@
  *   ctx: {
  *     app,                       // shared mutable editor state (state, source, fileHandle, docName, ...)
  *     setStatus(msg), setDirty(d),
- *     load(raw, name, handle, project) -> Promise,  // for restoreDraft
+ *     load(raw, name, handle, project) -> Promise<boolean>,  // for restoreDraft
  *     render(),                  // full re-render (empty pane offer, after discard)
  *     renderActivePanel(),       // re-render the active context panel after a restore
  *   }
@@ -29,6 +29,7 @@ import { serialize } from "./edition.js";
 import { typeForFile } from "./project-manifest.js";
 import { saveDraft, loadDraft, clearDraft } from "./draft-recovery.js";
 import { requireCtx } from "./ctx.js";
+import { unitTerms } from "./unit-labels.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -45,10 +46,13 @@ export function createDocumentFacts(ctx) {
 
   // ---- document facts (strip, panel, title) ---------------------------------
 
-  /** The detected editing unit as a plain noun ("words" or "lines"). */
+  /** The local editing units present in the current reading projection. */
   function editingUnit(plural = true) {
-    const word = app.state && app.state.profile === "word";
-    return plural ? (word ? "words" : "lines") : (word ? "word" : "line");
+    const kinds = new Set((app.state?.cells || []).map((cell) => cell.editingKind));
+    if (kinds.has("token") && kinds.has("text-run")) return "text runs and tokens";
+    if (kinds.has("token")) return plural ? "tokens" : "token";
+    if (kinds.has("gap") && kinds.size === 1) return plural ? "gaps" : "gap";
+    return plural ? "text runs" : "text run";
   }
 
   /**
@@ -87,7 +91,8 @@ export function createDocumentFacts(ctx) {
     const docType = typeForFile(app.project, app.docName);
     if (docType) facts.push(`Type: ${docType.label}`);
     facts.push(`Editing unit: ${editingUnit()}`);
-    facts.push(`${app.state.folios.length} page(s)`);
+    const terms = unitTerms(app.state.sourceProfile);
+    facts.push(`${app.state.folios.length} ${app.state.folios.length === 1 ? terms.singular : terms.plural}`);
 
     for (const f of facts) {
       strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
@@ -196,7 +201,8 @@ export function createDocumentFacts(ctx) {
   async function restoreDraft(record) {
     // Load the stored raw with no handle, then re-mark it as a handle-less draft
     // so Save falls back to a download and the strip wording matches a draft.
-    await load(record.raw, record.docName || "draft.xml", null);
+    const opened = await load(record.raw, record.docName || "draft.xml", null);
+    if (!opened) return;
     app.source = { kind: "draft", txtName: record.sourceName || null };
     updateDocStrip();
     renderActivePanel();

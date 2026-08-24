@@ -9,9 +9,9 @@
  *   - rejectConstruct removes the construct. A reading-text wrapper (an entity name
  *     wrap, a markup wrap, an <unclear>/<del>/<add>) is unwrapped, restoring the
  *     surrounded reading text verbatim, so reject is the exact inverse of the wrap.
- *     A standOff <note> is removed with its body; a self-closing <gap/> is removed
- *     in place (a gap's replaced text is gone by TEI design, not recoverable from
- *     the gap alone).
+ *     A standOff <note> is removed with its body. A proposed gap keeps its exact
+ *     source bytes in a temporary TEI <choice>; confirm commits the <gap/>, while
+ *     reject restores those bytes.
  *
  * Both act on the construct ELEMENT the cell.layers projection already surfaces
  * (layer.el, or the gap cell's single layer), reuse the generic engine ops only,
@@ -21,6 +21,11 @@
 
 import { getAttr, removeAttr, spliceDocument, isReadingContext } from "./tei-document.js";
 import { AI_RESP } from "./standoff.js";
+import {
+  confirmProposalGap,
+  proposalGapParts,
+  rejectProposalGap,
+} from "./proposal-gap.js";
 
 /**
  * Confirm a proposed construct: drop its responsibility marker so it reads as
@@ -31,9 +36,11 @@ import { AI_RESP } from "./standoff.js";
  */
 export function confirmConstruct(doc, el, opts = {}) {
   if (!el || el.type !== "element") return doc;
+  const want = opts.resp === undefined ? AI_RESP : opts.resp;
+  const gapParts = proposalGapParts(el, want);
+  if (gapParts) return confirmProposalGap(doc, gapParts);
   const cur = getAttr(el, "resp");
   if (cur == null) return doc;
-  const want = opts.resp === undefined ? AI_RESP : opts.resp;
   if (want != null && cur !== want) return doc;
   return removeAttr(doc, el, "resp");
 }
@@ -52,6 +59,8 @@ export function rejectConstruct(doc, el, opts = {}) {
   if (!el || el.type !== "element") return doc;
   if (el.outerStart == null || el.outerEnd == null) return doc;
   const want = opts.resp === undefined ? AI_RESP : opts.resp;
+  const gapParts = proposalGapParts(el, want);
+  if (gapParts) return rejectProposalGap(doc, gapParts);
   if (want != null && getAttr(el, "resp") !== want) return doc;
 
   // A non-reading construct (a standOff <note>) carries no reading text to keep:

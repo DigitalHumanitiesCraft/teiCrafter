@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-07-27
+updated: 2026-08-24
 language: en
-version: 0.23
+version: 0.31
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,52 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-08-24: the effective schema set became live profile evidence
+
+Trigger: Schema Profile inspection and Source Profile resolution existed as separate layers, so the interface could not use the repository default, project schema set, or session upload as live vocabulary evidence. Decision: the browser now inspects the effective ordered set after document opening and every session schema change. Vocabulary schemas combine conjunctively, while Schematron remains constraint evidence. Unavailable and partially resolved schemas produce unknown allowances and keep structural capabilities available. Evidence that leaves navigation unchanged updates derived information without rerendering the reading surface; this preserves an active selection while asynchronous schema inspection completes. Reason: authoring affordances need conservative evidence that can improve the interface without inheriting the output gate's authority to block work. Save and Download continue to require a valid result from every configured schema for the current target bytes.
+
+## 2026-08-24: source interpretation and output authorization became compositional
+
+Trigger: the real UFBAS workflow and type-diverse TEI fixtures showed that global folio, word or line modes concealed legitimate document structures. Fixed header fields, one-schema validation, transient review state, and inline-only selections created similar reductions at other boundaries. Decision: Source Profiles now compose a namespace-aware document inventory, optional conservative Schema Profile evidence, and manifest policy; the associated Navigation Model retains every source-backed channel and local editing granularity. The same refactoring exposes the complete TEI header through safe scalar projections plus exact XML, stores review as targeted `revisionDesc/change` evidence, and represents cross-structure or discontinuous annotations through grouped stand-off spans.
+
+Decision: Save and Download now require a current authorization for the exact projected output from every schema in the ordered effective set. Invalid, unavailable, empty, or stale results block output, while TEI All applies only when a project provides no schema. LLM services gained a trusted code-level adapter boundary and persistent document responsibility, and the portable file workflow now has browser evidence in Chromium and Firefox. Reason: heterogeneous TEI needs an interface that states how it interpreted the source and refuses to erase distinctions it cannot serialize. The real UFBAS path, including accessibility checks in both browsers, supports the integrated browser claim; the real Wenzelsbibel codex supports the local word, dual-reading, facsimile, and no-op engine claim, while its committed browser evidence remains a synthetic structural twin and cross-file image annotations remain an explicit seam.
+
+## 2026-08-24: the refactor established explicit document sessions and a four-level acceptance gate
+
+Trigger: the whole-book UFBAS workflow exposed that individually correct features did not yet form a safe editing session. Asynchronous model results could outlive their source revision, project context could change before a replacement succeeded, file encoding and external save conflicts were implicit, and "annotated" did not state whether a page had been reviewed. Decision: every open document now has a session identity, revision, bounded patch history, dirty savepoint and cancellable asynchronous jobs. Loading, project adoption, proposal application, save-in-place and Undo/Redo all cross this boundary. Annotation coverage and editorial review are separate XML-backed states. The XML core resolves TEI by namespace URI, retains arbitrary source prefixes, and excludes foreign equal-local-name elements from TEI projections and mutations.
+
+The same session established a layered acceptance gate through deterministic Node proofs, Python/lxml fidelity tiers, browser interaction with Axe, and a real-object browser run. The repository now carries a pinned Vite, TypeScript, Biome and Playwright toolchain, a CI verification job, local OpenSeadragon and fonts, TEI P5 4.11.0 TEI All, browser RelaxNG/XSD validation, and flat project-folder schema loading with a session upload override. The real UFBAS run exposed state-dependent contrast and focus defects. The lesson is that corpus realism belongs inside the acceptance method because the synthetic material did not render the legend, fallback line numbers and scroll state that exposed those defects.
+
+## 2026-08-24: whole-book progress and metadata use progressive disclosure
+
+Trigger: after the first UFBAS whole-book pass, the editor preserved and exposed the data but did not answer two everyday questions directly: which pages already carry annotations, and which common header values can be changed without editing raw XML. Decision: the pager gains an annotation-coverage map computed from exact page spans, with an explicit project-folder scan for unopened files; Metadata opens on grouped existing common fields, keeps mixed content XML-only, and retains the complete exact header one click away. The raw source gains document- and Guidelines-derived completion while labelling schema validation as offline. The reason is progressive disclosure: frequent, structurally safe tasks become direct, while arbitrary TEI remains available through the lossless source boundary and expensive folder work remains user-triggered.
+
+## 2026-08-24: UFBAS acceptance separated page XML from document metadata
+
+Trigger: the complete browser path on the real UFBAS book confirmed responsive page source editing and byte-faithful download, while also showing that the preserved `teiHeader` had no visible editing surface. Decision: the left text surface gains a Metadata tab for the complete exact `teiHeader`, using the same complete-document Check and Apply boundary as page XML; a missing header disables the tab. Both source scopes open at their left boundary and refuse to lose staged edits on navigation. Raw header XML is the first metadata surface because it represents arbitrary TEI without reducing the header to a project-specific partial form.
+
+## 2026-08-24: whole-book XML source editing follows the current page
+
+Trigger: the Urfehde whole-book TEI made source mode slow and crossed the highlighting safety threshold, leaving its XML black. Decision: source mode stages the current folio's exact raw span and keeps the complete document as the validation and commit boundary. Elements use blue; attribute names and values share yellow-orange. Page navigation refuses to discard staged source edits, and the existing source surface gains the small keyboard behaviours expected from a code editor. This keeps large editions responsive while preserving the byte-faithful document contract.
+
+## 2026-08-24: the page position stays one horizontal control
+
+Trigger: a late-book page position wrapped between the page arrows, and the dual-reading case compressed a longer folio label further. Decision: the pager keeps its arrows and page position on one line, while a constrained pane head may wrap only between complete control groups. This preserves a stable navigation shape across document sizes and optional header controls.
+
+## 2026-08-22: the real Hersch pilot closed the AI review gap and hardened generation
+
+Trigger: a browser run on representative real Hersch documents exercised correction, facsimiles, zones, index work, live GND lookup, inline-GND handover, and local Mistral assistance in one workflow. The local model returned proposals that were syntactically placeable but editorially unreliable, including unsupported classifications, and repeatedly failed to produce the minimum complete TEI requested by the generation on-ramp. Decision: the human gate now covers every proposal kind, including standOff notes at their reading marker; after the final proposal is resolved, session-created responsibility metadata is removed when unused, preserving a clean source when every proposal is rejected. The generation path now supplies an exact minimum TEI P5 skeleton and refuses malformed XML, `DOCTYPE`, the wrong root or namespace, incomplete `fileDesc`, and missing `text/body` before the response can replace the current document. This preserves the useful local-model experiment while preventing structural non-compliance from entering the deterministic editor state.
+
+## 2026-08-22: local Ollama model ids follow the installed runtime
+
+Trigger: the live pilot found Ollama and a tagged Mistral model on the test machine, but the editor offered only repository-owned aliases and therefore could not select the installed id. Decision: cloud providers remain catalogue-bound, while Ollama exposes a free model-id field and passes any non-empty exact id to the local endpoint. An empty value still resolves to the configured Ollama default. The local runtime is authoritative for locally installed models, so the interface must accept the ids reported by `ollama list` without weakening the catalogue guard for external providers.
+
+## 2026-08-22: the Hersch project format became a transparent editing boundary
+
+Trigger: the real Hersch corpus is exchanged as inline-GND files, including annotated entity previews and unannotated final TEI, while teiCrafter's annotation surfaces operate on a standOff register. Decision: the exact `TEI@type="naegeli"` signature selects a built-in Hersch profile when no manifest is present. Opening lifts existing inline mentions into the working register, and ordinary Save or Download projects the register back into inline GND. This retains the corpus format at the same file target and lets an unannotated final acquire annotations without requiring a manifest or a filename convention.
+
+The same workflow needed access to page scans that remain in the sibling project's `docs/images/{id}` directories. A separate local-folder action resolves the TEI's bare graphic filenames for one browser session and marks those files as external, so Save never copies or publishes them. The browser capability is stated at the action point because XML editing remains useful when the directory picker is unavailable.
 
 ## 2026-07-27: LEAF-Writer recorded as related work
 
@@ -37,7 +83,7 @@ Trigger: the lane order for M3 named a specific deliverable the autonomous build
 
 What the wiring proof adds over the existing inline-GND proofs. The structural proof works at the tei-document layer; this one goes through the edition layer (`parseEdition`/`serialize`/`state.doc`), the path the editor actually uses, and pins the two invariants a UI download depends on: the bytes the button transforms are the canonical current document (`serialize(state) === state.doc.raw`, so the export is never a stale snapshot), and an in-editor edit is reflected in a re-export. The download filename derivation is pinned in the same proof.
 
-Reconciliation with the order. The order also asked to scope M4 (the inline-GND re-open path) without building it; that engine was already built and proven a fixed point in the prior round (`fromInlineGND`), so M4 is ahead of the order, with only the load-time wiring left, and that is held on one editorial decision (the Save-behavior fork, a klaerung item). The order's green count (46) predated the re-open proof; with the wiring proof the gate is 47, reported as drift rather than smoothed.
+Reconciliation with the order. The order also asked to scope M4 (the inline-GND re-open path) without building it; that engine was already built and proven a fixed point in the prior round (`fromInlineGND`), so M4 is ahead of the order, with only the load-time wiring left, and that is held on one editorial decision (the Save-behavior fork, a klaerung item). The dedicated wiring proof superseded the earlier gate report. Run totals remain in test output.
 
 ## 2026-06-21 (autonomous): the inline-GND export wired into the editor UI
 
@@ -63,7 +109,7 @@ The export profile. The editor keeps editing in the general standOff model; inli
 
 Two shape questions were settled by the reference corpus rather than guessed, the discipline this project already holds for claims. All three types take `@ref="GND:..."`: the gold uses `@ref` on `bibl` 53 times against `@corresp` twice, and the schema permits a `GND:` value on `bibl`'s loose `anyURI` `@ref`, so the earlier guess that `bibl` needs `@corresp` was dropped against the data. Places are unannotated, because the gold carries no `placeName`.
 
-Verification kept honest about what it measures. The structural contract is a synthetic, committable proof (`inline_gnd_check`). The project goal itself, validity against `zbz_hersch.rng`, is a second proof (`inline_gnd_schema_check`) that annotates a real pipeline file through the engine, exports it, and validates the result against the real schema with the lxml harness; it is sibling- and lxml-gated and SKIPs cleanly, the established stance for rights-restricted objects. The open remainder is the export affordance in the editor UI, a download entry, which is a public surface and waits for the operator browser trace.
+Verification kept honest about what it measures. The structural contract is a synthetic, committable proof (`inline_gnd_check`). The project goal itself, validity against `zbz_hersch.rng`, is a second proof (`inline_gnd_schema_check`) that annotates a real pipeline file through the engine, exports it, and validates the result against the real schema with the lxml harness; it runs only when the sibling material and lxml are available, the established stance for rights-restricted objects. The open remainder is the export affordance in the editor UI, a download entry, which is a public surface and waits for the operator browser trace.
 
 Consolidation. The bounded ancestor walk that finds a mention's enclosing `<name>` was copied verbatim in three standOff functions (`linkMention`, `linkMentionRange`, `unwrapMention`); it is now one `enclosingName` helper, behaviour-preserving under the gate. Reason: projection and mutation must agree on "already linked", and three copies of that rule are three places for it to drift.
 
