@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt><title>Browser smoke edition</title></titleStmt>
+      <publicationStmt><p>Synthetic E2E fixture.</p></publicationStmt>
+      <sourceDesc><p>Synthetic local image fixture.</p></sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <facsimile>
+    <surface xml:id="surface_1" ulx="0" uly="0" lrx="1280" lry="800">
+      <graphic url="assets/editor-screenshot.png"/>
+      <zone xml:id="zone_1" ulx="20" uly="20" lrx="500" lry="160"/>
+    </surface>
+  </facsimile>
+  <text>
+    <body>
+      <div type="document">
+        <pb n="1" facs="#surface_1"/>
+        <p><lb facs="#zone_1"/>A deterministic browser test line.</p>
+      </div>
+    </body>
+  </text>
+</TEI>
