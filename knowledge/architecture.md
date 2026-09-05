@@ -14,7 +14,6 @@ status: active
 created: 2026-02-05
 updated: 2026-08-24
 language: en
-version: 0.21
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
 ---

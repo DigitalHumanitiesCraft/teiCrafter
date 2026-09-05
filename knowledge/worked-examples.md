@@ -14,7 +14,6 @@ status: active
 created: 2026-06-08
 updated: 2026-08-24
 language: en
-version: 0.21
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Source Profiles]]", "[[Digital Scholarly Editing]]"]
 related: [project, specification, testing, integration]
 ---

@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
-version: 0.21
+version: "0.22"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
 related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples]
 ---
@@ -22,6 +22,12 @@ related: [project, data, specification, architecture, design, journal, testing, 
 # teiCrafter Knowledge Base
 
 teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Output leaves the editor only after the exact projected bytes pass every configured schema for the current document revision.
+
+## Documentation maintenance
+
+This index owns the shared documentation schema version in its top-level `version` field. Other knowledge documents inherit it and omit that field. Change this version only when the shared document contract changes, such as required metadata or document functions. Content edits do not require a schema version change or edits to unrelated documents.
+
+Each document's `updated` date records its latest substantive change. Removing an inherited version field alone preserves that date. Git identifies the complete content revision. Nested `template.version` identifies the source template and changes only when adopting a different template version. The frozen SZD contract in [converter-reference.md](converter-reference.md) retains its independently owned top-level version.
 
 ## Documents
 

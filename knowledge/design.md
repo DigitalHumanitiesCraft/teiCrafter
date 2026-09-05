@@ -14,7 +14,6 @@ status: active
 created: 2026-05-27
 updated: 2026-08-24
 language: en
-version: 0.22
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture]
 ---

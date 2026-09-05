@@ -12,9 +12,8 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
-version: 0.32
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +21,10 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-09-05: documentation versions gained one owner
+
+Trigger: a focused frontend pilot caused version edits in knowledge documents whose content was unaffected. Decision: the index owns the shared documentation schema version; other documents inherit it, including the journal. Git records content revisions, document dates track substantive changes, and the frozen converter contract keeps its independent version. Reason: a correction should require maintaining only the documents it affects.
 
 ## 2026-08-24: session closure became clean-checkout and pane-width portable
 
