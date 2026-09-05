@@ -46,7 +46,7 @@ const record = reviewRecordForAnchor(reviewed.doc, reviewedAnchor);
 check("reviewing creates a stable xml:id on an unanchored unit",
   getXmlId(reviewedAnchor) === "teicrafter-review-pb-1");
 check("reviewing writes a TEI revisionDesc/change record",
-  reviewed.doc.raw.includes(`<change type="review" subtype="verified" target="#teicrafter-review-pb-1" who="${DETAILS.who}" when="${DETAILS.when}">${DETAILS.rationale}</change>`));
+  record?.type === "review" && record.status === "verified" && record.fingerprint?.startsWith("urn:teicrafter:review-scope:v1:sha256:"));
 check("the record exposes reviewer, timestamp, rationale and target",
   record?.who === DETAILS.who && record.when === DETAILS.when
     && record.rationale === DETAILS.rationale && record.targetIds[0] === getXmlId(reviewedAnchor));
@@ -59,17 +59,17 @@ const again = setFolioReviewed(reviewed, 0, true, DETAILS);
 check("setting the same review information is a SAME-state no-op", again === reviewed);
 
 const cleared = setFolioReviewed(reviewed, 0, false);
-check("clearing removes the review record", readReviewRecords(cleared.doc).length === 0);
+check("reopening retains the review history", readReviewRecords(cleared.doc).length === 2 && !reviewPageSummary(cleared).pages[0].reviewed);
 check("clearing preserves the stable unit anchor and unrelated ana data",
   cleared.doc.raw.includes('xml:id="teicrafter-review-pb-1"')
     && cleared.doc.raw.includes('ana="#source-reviewed"'));
-check("an empty generated revisionDesc is removed", !cleared.doc.raw.includes("revisionDesc"));
+check("the original verified record remains in revisionDesc", readReviewRecords(cleared.doc)[0].status === "verified");
 check("clearing is idempotent", setFolioReviewed(cleared, 0, false) === cleared);
 
 section("Legacy fallback and non-destructive migration");
 
 const legacy = parseEdition(wrap(`<pb n="1" ana="#source-reviewed ${REVIEW_TOKEN}"/><p>legacy</p>`));
-check("a legacy ana token remains readable", reviewPageSummary(legacy).reviewedPages === 1);
+check("a legacy ana token does not establish current verification", reviewPageSummary(legacy).reviewedPages === 0 && legacy.raw.includes(REVIEW_TOKEN));
 const migrated = setFolioReviewed(legacy, 0, true, DETAILS);
 check("setting a legacy review also creates the standard record", readReviewRecords(migrated.doc).length === 1);
 check("migration retains the legacy marker", migrated.doc.raw.includes(REVIEW_TOKEN));
@@ -118,25 +118,25 @@ const sharedRaw = wrap(
 );
 const sharedState = parseEdition(sharedRaw);
 const sharedNoop = setReviewRecord(sharedState.doc, sharedState.folios[0].pb, DETAILS);
-check("an unchanged shared review record is idempotent", sharedNoop.doc === sharedState.doc);
+check("a shared historical record acquires separate current scope evidence", readReviewRecords(sharedNoop.doc).length === 2 && sharedNoop.doc.raw.includes('target="#p1 #p1 #p2"'));
 const split = setReviewRecord(sharedState.doc, sharedState.folios[0].pb, {
   ...DETAILS,
   rationale: "First page checked separately.",
 });
 const splitRecords = readReviewRecords(split.doc);
-check("editing one unit splits a shared target without changing the other unit",
-  splitRecords.some((item) => item.targets.length === 1 && item.targets[0] === "#p2")
+check("reviewing one unit preserves the complete shared history",
+  splitRecords.some((item) => item.targets.join(" ") === "#p1 #p1 #p2")
     && splitRecords.some((item) => item.targets.length === 1 && item.targets[0] === "#p1"
       && item.rationale === "First page checked separately."));
 check("foreign revision entries survive shared-target edits",
   split.doc.raw.includes('<change type="encoding" when="2026-08-01">Keep</change>'));
 check("unmanaged attributes survive an edited review record",
-  split.doc.raw.includes('target="#p2"') && split.doc.raw.includes('xml:lang="en"'));
+  split.doc.raw.includes('target="#p1 #p1 #p2"') && split.doc.raw.includes('xml:lang="en"'));
 const splitState = parseEdition(split.doc.raw);
 const firstCleared = setFolioReviewed(splitState, 0, false);
-check("clearing one unit preserves the other unit's shared review",
-  reviewPageSummary(firstCleared).reviewedPages === 1
-    && reviewPageSummary(firstCleared).pages[1].reviewed);
+check("reopening one unit preserves historical evidence for the other unit",
+  reviewPageSummary(firstCleared).pages[1].status === "historical"
+    && firstCleared.raw.includes('target="#p1 #p1 #p2"'));
 
 section("Fail-closed anchors and TEI All validity");
 
@@ -164,8 +164,8 @@ const refusedStructuredEdit = setReviewRecord(structuredState.doc, structuredSta
   ...DETAILS,
   rationale: "Flattened replacement",
 });
-check("structured review rationale fails closed instead of losing inline data",
-  !refusedStructuredEdit.ok && refusedStructuredEdit.doc === structuredState.doc
+check("new review evidence preserves structured historical rationale",
+  refusedStructuredEdit.ok && readReviewRecords(refusedStructuredEdit.doc).length === 2
     && refusedStructuredEdit.doc.raw.includes("<name>Chris</name>"));
 
 const schemaText = fs.readFileSync("docs/schemas/tei-p5-4.11.0/tei_all.rng", "utf8");

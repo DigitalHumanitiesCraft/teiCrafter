@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
@@ -38,11 +38,11 @@ TEI identity is determined by the namespace URI `http://www.tei-c.org/ns/1.0`. T
 
 | Form | Ingest rule | Output rule |
 | --- | --- | --- |
-| TEI XML file | Decode supported XML encodings, retain exact source, and derive a Source Profile | Encode the schema-authorized projected source for Save or Download |
+| TEI XML file | Decode UTF-8 with an optional BOM; reject unsupported or conflicting encodings, retain exact source, and derive a Source Profile | Encode the schema-authorized projected source for Save or Download |
 | Project folder | Read TEI, plaintext, manifest, mapping, and resolvable schema resources through a granted directory handle | Write to the granted file when supported; otherwise use a schema-gated download |
 | Plaintext or Markdown | Convert deterministically to minimal TEI using blank lines as paragraphs and `\|N\|` as a page milestone | Save or download the resulting TEI |
-| Model-generated TEI | Accept only a self-contained, well-formed TEI P5 document with the minimum header and text body | Persist document-level responsibility and require human review plus schema authorization |
-| Model proposals | Map bounded JSON proposals to exact source operations and mark each construct with `@resp` | Confirm removes proposal provenance; reject removes the proposed construct |
+| Model-generated TEI | Accept only a self-contained, well-formed TEI P5 document with the minimum header and text body | Persist document-level responsibility and require schema authorization for TEI output; human review remains separate evidence |
+| Model proposals | Map bounded JSON proposals to exact source operations and mark each construct with `@resp` | Confirm retains origin and records acceptance separately; reject reverses the proposed construct |
 
 Plaintext conventions transport structure that is present in the source text. Semantic pseudo-syntax is excluded because a typo would silently create a scholarly assertion outside the editor's review and validation surfaces.
 
@@ -109,7 +109,7 @@ The effective schema set comes from one source.
 
 Each execution result records schema identity, type, source, validity, diagnostics, and availability. Output authorization additionally binds the aggregate result to the document session, document revision, exact projected bytes, and effective schema-set key. A nonempty result set authorizes output only when every result is valid.
 
-RelaxNG `include` and `externalRef`, plus XSD `include`, `import`, and `redefine`, can resolve through served URLs. A granted project folder can provide bare dependency filenames from the same folder. Nested or missing project dependencies remain unavailable. A standalone session upload has no implicit dependency bundle. No XML catalog fallback is provided.
+RelaxNG `include` and `externalRef`, plus XSD `include`, `import`, and `redefine`, can resolve through served URLs. A granted project folder resolves nested relative dependencies inside its root with bounded traversal and cycle detection. Missing resources and paths outside the root remain unavailable. A standalone session upload has no implicit dependency bundle. No XML catalog fallback is provided.
 
 Raw Schematron supports the ISO namespace, XPath 1.0 query bindings, namespaces, default phases, scalar lets, assertions, reports, diagnostics, and common child or attribute rule contexts. Includes, abstract patterns, advanced match patterns, node-set lets, and XPath 2.0 or later require precompiled XSLT. Compiled Schematron must produce a valid SVRL `schematron-output` document through the browser's XSLT processor. An unsupported construct or runtime blocks output as unavailable.
 
@@ -130,9 +130,15 @@ Direct editing is limited to projections with a byte-safe inverse.
 
 Changed values are XML-escaped and applied as descending exact splices. Unchanged values produce no splice, which preserves entity spelling and all untouched bytes. Creation, deletion, and restructuring use the complete header XML surface.
 
+## Local recovery and portable working copies
+
+IndexedDB database `teicrafter.recovery`, store `sessions`, holds version 1 checkpoints keyed by independent session UUIDs. Records contain canonical `raw`, document name/source, file encoding, original manifest text, local schema resources, schema settings, capture time, staged input and image blobs. Staged modes are `page`, `metadata`, `metadata-form` and `inline`; each records its navigation unit and either source text, field ID/value pairs, or a cell ID with core/normalized input.
+
+Portable files use `.teicrafter.json` and `{ format: "teicrafter-working-copy", version: 1, record: ... }`. Images use `{ name, type, base64 }` instead of Blob values. The bundle is editing state, not validated TEI. Native handles, object URLs and the provider's memory-only API key fields are not serialized. Import assigns a fresh session identity and recreates image URLs. Legacy single-draft localStorage content is removed only after its IndexedDB migration commits.
+
 ## Review Record
 
-A verified unit is represented in the relevant document or corpus-member header.
+A review is represented in the relevant document or corpus-member header. The following historical form has no fingerprint and therefore does not establish current review by itself.
 
 ```xml
 <revisionDesc>
@@ -144,7 +150,9 @@ A verified unit is represented in the relevant document or corpus-member header.
 </revisionDesc>
 ```
 
-The target points to a stable `xml:id` on the primary navigation unit. The editor creates a unique identifier when the unit lacks one. Existing revision content and unmanaged attributes remain intact. Ambiguous `revisionDesc` structures, duplicate identifiers, structured rationales, or a missing header cause the review mutation to fail closed. Legacy `@ana="#teicrafter-reviewed"` markers remain readable and can be cleared without removing unrelated tokens.
+The target points to a stable `xml:id` on the primary navigation unit. New records add a `corresp` token consisting of `urn:teicrafter:review-scope:v1:sha256:` followed by the 64 lowercase hexadecimal digest characters. The digest covers the exact UTF-8 source range: a page runs from its pb to the next pb in its text owner, and a container covers its outer XML. Contained revisionDesc ranges are excluded. Changes outside this scope do not invalidate its review; whitespace changes inside it do. The latest record must be verified and its fingerprint must match for current review.
+
+The editor creates a unique identifier when the unit lacks one. Reopening appends a `subtype="reopened"` record; historical, shared and unmanaged revision content remains intact. Ambiguous revision structures, duplicate identifiers or a missing header cause review storage to fail closed. Legacy `@ana="#teicrafter-reviewed"` markers can be removed without removing unrelated tokens, but never count as current evidence.
 
 ## Cross-structure and discontinuous annotations
 
@@ -184,16 +192,22 @@ Generated whole-document TEI carries the configured responsibility on the TEI ro
 
 Reload detection requires both the root pointer and the declared responsibility. Per-construct proposals also use `@resp`. Project policy may replace `#ai` with another local responsibility pointer.
 
+Acceptance retains the complete `resp` token list and adds `urn:teicrafter:proposal:accepted:` plus the URI-encoded responsibility token to `ana`. For example, accepting responsibility `#ai` adds `urn:teicrafter:proposal:accepted:%23ai`. Existing analysis tokens remain. Pending status and origin are independent: the matching acceptance marker resolves that responsibility's proposal, while its origin remains available after reload. An accepted gap retains these attributes when its reversible choice is collapsed.
+
 Provider configuration distinguishes data from executable behaviour. Built-in providers and the custom OpenAI-compatible endpoint use declarative endpoint, model, and authentication settings. A registered adapter supplies application-code functions for request construction and response extraction. Endpoint validation rejects embedded credentials. Keys remain memory-only.
 
 ## Evidence material
 
 | Material | Rights and storage | Evidence supplied |
 | --- | --- | --- |
-| UFBAS Urfehde TEI | Real object supplied locally | Whole-book Source Profile, navigation, complete header, review, exact download, TEI All gate, and accessibility in Chromium and Firefox |
+| UFBAS Urfehde TEI | Real object supplied locally | Historical whole-book browser evidence; current reproduction requires the local source, with availability recorded in the run report |
 | Wenzelsbibel Codex 2759 and image annotations | Real rights-local project material | Word tokens, dual readings, surfaces, zones, IIIF references, TEI-level apparatus, and the need for cross-document range support |
 | Jeanne Hersch TEI | Real rights-local project material plus committed synthetic twin | Inline-GND interchange, register projection, facsimile zones, and project-specific workflows |
 | Stefan Zweig Digital source material | Upstream project data plus generated TEI fixtures | Page-JSON conversion and catalogue-document integration |
 | Type-diverse synthetic fixtures | Committed and redistributable | Reproducible Source Profile, navigation, span, schema, and browser coverage |
+
+## Licence boundary
+
+The committed [hsa-7711 transcription](../docs/data/editor/hsa-7711/README.md) and [SZD conversion](../docs/data/editor/szd/NOTICE.md) have their own source and licence declarations. TEI [schema](../docs/schemas/tei-p5-4.11.0/NOTICE.md) and [guidelines](../docs/data/tei/NOTICE.md) notices govern vendored reference material.
 
 Real third-party TEI is never committed when its licence does not permit redistribution. A structural twin captures only the encoding properties needed for reproducible tests. [Testing](testing.md) states which claims use real material and which use a twin.

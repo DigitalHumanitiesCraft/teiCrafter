@@ -5,6 +5,7 @@ import {
   decodeEntities,
   escapeAttr,
   escapeText,
+  assertEditableEntities,
   getAttr,
   parseDocument,
   textNodes,
@@ -209,6 +210,7 @@ export function applyMetadataEdits(doc, fields, values) {
     if (!field.editable || !byId.has(field.id)) continue;
     const value = String(byId.get(field.id));
     if (value === field.value) continue;
+    assertEditableEntities(doc.raw.slice(field.start, field.end));
     const encoded = field.kind === "attribute"
       ? escapeAttr(value, field.quote)
       : field.lead + escapeText(value) + field.trail;
@@ -231,14 +233,14 @@ export function mountMetadataView(host, opts = {}) {
   const root = el("div", { class: "ed-meta-root" });
   const scope = el("span", {
     class: "ed-src-scope",
-    text: `teiHeader inventory · ${editable.length} editable · ${xmlOnly} XML-only`,
+    text: opts.readOnly ? "teiHeader inventory · read only" : `teiHeader inventory · ${editable.length} editable · ${xmlOnly} XML-only`,
     title: "Every teiHeader element and attribute is inventoried. Simple text and attribute values are editable; structured XML remains byte-safe in Edit XML.",
   });
   const result = el("span", { class: "ed-src-result", "aria-live": "polite" });
   const xmlBtn = el("button", {
     class: "ed-btn",
     type: "button",
-    text: "Edit XML",
+    text: opts.readOnly ? "View XML" : "Edit XML",
     title: "Open the complete exact teiHeader XML, including structured and project-specific metadata",
   });
   const applyBtn = el("button", {
@@ -256,6 +258,7 @@ export function mountMetadataView(host, opts = {}) {
     title: "Restore the field values currently stored in the document",
   });
   root.appendChild(el("div", { class: "ed-src-bar" }, [scope, result, xmlBtn, applyBtn, resetBtn]));
+  applyBtn.hidden = resetBtn.hidden = !!opts.readOnly;
 
   const form = el("form", { class: "ed-meta-form" });
   const controls = new Map();
@@ -300,6 +303,7 @@ export function mountMetadataView(host, opts = {}) {
             ? el("textarea", { rows: "2", spellcheck: "false" })
             : el("input", { type: "text", autocomplete: "off", spellcheck: "false" });
           control.value = field.value;
+          control.readOnly = !!opts.readOnly;
           control.setAttribute("aria-label", `${field.label} (${field.path})`);
           control.addEventListener("input", sync);
           controls.set(field.id, control);
@@ -319,13 +323,24 @@ export function mountMetadataView(host, opts = {}) {
     }
   }
 
+  const apply = () => {
+    if (opts.readOnly) return false;
+    if (!changed()) return true;
+    try {
+      const next = applyMetadataEdits(opts.doc, fields, values());
+      if (typeof opts.onApply === "function" && opts.onApply(next) === false) return false;
+      result.className = "ed-src-result ok";
+      result.textContent = "applied";
+      return true;
+    } catch (error) {
+      result.className = "ed-src-result err";
+      result.textContent = error.message;
+      return false;
+    }
+  };
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    if (!changed()) return;
-    const next = applyMetadataEdits(opts.doc, fields, values());
-    if (typeof opts.onApply === "function" && opts.onApply(next) === false) return;
-    result.className = "ed-src-result ok";
-    result.textContent = "applied";
+    apply();
   });
   applyBtn.addEventListener("click", () => form.requestSubmit());
   resetBtn.addEventListener("click", () => {
@@ -342,6 +357,12 @@ export function mountMetadataView(host, opts = {}) {
   return {
     hasChanges: changed,
     values,
+    value: () => [...values()],
+    apply,
+    restore: (entries) => {
+      for (const [id, value] of entries) if (controls.has(id)) controls.get(id).value = value;
+      sync();
+    },
     focus: () => {
       const first = controls.values().next().value;
       if (first) first.focus();

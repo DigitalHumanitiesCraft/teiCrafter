@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import { EditorSession } from "../../docs/js/editor/editor-session.js";
+
+const parse = (raw) => ({ doc: { raw }, projection: "reading" });
+const session = new EditorSession(parse);
+session.load(parse("original"));
+session.replace(parse("corrected"), "Correct text");
+const before = session.snapshot();
+session.readOnly = true;
+assert.throws(() => session.replace(parse("background result")), /read only/);
+assert.equal(session.undo(), null);
+assert.equal(session.redo(), null);
+assert.equal(session.canUndo(), false);
+assert.equal(session.replace(parse("corrected")), false);
+session.reproject({ ...parse("corrected"), projection: "metadata" });
+assert.throws(() => session.reproject(parse("mutated")), /cannot change/);
+assert.equal(session.isCurrent(before), true);
+assert.equal(session.dirty, true);
+session.readOnly = false;
+assert.equal(session.undo().state.doc.raw, "original");
+assert.equal(session.redo().state.doc.raw, "corrected");
+console.log("readonly_session_check passed: mutation rejection, stable revision, retained history");

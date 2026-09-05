@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture]
@@ -24,7 +24,7 @@ related: [project, specification, architecture]
 
 teiCrafter presents source-backed editorial actions and keeps structural risk visible. The interface adapts to the loaded TEI without pretending to know its scholarly genre from a filename. Project policy can refine that interpretation. Every destructive or output-sensitive action names its scope and explains a refusal.
 
-The human editor remains the decision maker. Deterministic transformations use ordinary interface colours. Machine-origin content carries persistent TEI provenance and a distinct violet treatment until a human resolves it. Review state is explicit scholarly evidence and has its own control, separate from annotation coverage.
+The human editor remains the decision maker. Deterministic transformations use ordinary interface colours. Machine-origin content retains its provenance and violet origin treatment after acceptance; dashed proposal styling distinguishes pending work. Review state is explicit scholarly evidence and has its own control, separate from annotation coverage.
 
 ## Visual identity and tokens
 
@@ -38,7 +38,7 @@ All components consume CSS custom properties from the shared token system. Compo
 | Brand and action | `--color-header`, `--color-gold`, `--color-gold-hover`, `--color-link` | Site identity, primary actions, focus, and accessible links |
 | Text | `--color-text`, `--color-text-body`, `--color-text-secondary`, `--color-text-muted`, `--color-text-inverse` | Reading text and information hierarchy |
 | State | `--color-confident`, `--color-review`, `--color-problem` with tint partners | Categorical success, review, warning, and failure |
-| Model provenance | `--color-ai`, `--color-ai-tint` | Generated or proposed content awaiting human review |
+| Model provenance | `--color-ai`, `--color-ai-tint` | Generated or proposed content, with separate pending and accepted states |
 | Annotation | Entity-specific foreground and background tokens | Human and confirmed semantic layers |
 | Geometry | `--space-*`, `--radius-*`, `--shadow-*` | Rhythm, grouping, focus, and elevation |
 | Type | `--font-ui`, `--font-mono`, `--font-serif` | Controls, XML or identifiers, and public narrative text |
@@ -49,9 +49,15 @@ Status uses categories and words. Numeric confidence is absent because the appli
 
 The populated editor has two panes. The left pane holds Reading text, XML source, and Metadata. The right pane is a registry of context panels such as Facsimile, Index, Source, and project-specific additions. A keyboard-operable splitter resizes or collapses the context pane, and a narrow layout stacks both panes vertically.
 
-Document identity sits below the toolbar and reports the loaded name, provenance, project, type, source model, and save target. The site header retains site identity. The empty editor uses the same frame with a direct load prompt, recent file handles where available, and draft recovery when present.
+Document identity sits below the toolbar and reports the loaded name, provenance, project, type, source model, and save target. The site header retains site identity. The empty editor uses the same frame with a direct load prompt, recent file handles where available, and independent recovery offers when present.
 
 The toolbar groups file actions. Save is the primary gold action because it commits the current scholarly state to the chosen target. Download creates a copy and uses neutral styling. View and context switching remain in their pane headers. A document replacement asks before discarding unsaved work.
+
+Working copy names a portable preservation action for unfinished XML, staged fields and attached images. It does not imply schema validation. Separate recovery offers identify earlier sessions, with Restore and explicit Discard. Read only protects document mutations across views; Edit document deliberately restores editing. Unfinished visible edits must be resolved before entering read-only mode.
+
+Unfinished reading, XML and metadata controls retain their values and caret during background refresh. A blocked navigation or history action directs the editor to Apply or to the surface's cancel/reset action. Download feedback says that a download was requested and that local recovery remains; it does not claim a durable save. Input begun during a pending native write blocks completion and remains available to the editor.
+
+New document opens one intake with a document starter, transcription, optional source facts and optional images. Help beside the starter states the resulting encoding. Letter facts appear only for correspondence; dictionary entries and encyclopedia articles use separate choices and show the detected entry count. The existing editor remains the destination. Project folders use keyboard-operable, collapsible directory groups with full relative paths as accessible file names.
 
 Pane-header controls wrap as a complete secondary row when the current pane cannot hold the view tabs and document controls side by side. This rule follows the resizable pane width rather than assuming that the browser viewport predicts the available editor width, and it keeps every tab free from pointer overlap across supported font metrics.
 
@@ -68,6 +74,8 @@ A manifest override that cannot be satisfied stays visible as an issue. The edit
 A plain click positions the cursor. Double-click opens exact text or dual-reading editing. A click on an existing annotation opens its layer or mention editor. Right-click and text selection expose scholarly actions. The selection remains visibly painted while a popover holds focus.
 
 Local cell structure controls the available edit. Tokens expose token text and encoded reading attributes. Other nodes expose exact text runs. The interface does not apply a document-wide word or line label when both forms coexist.
+
+The displayed reading follows source adjacency and the selected choice branch. Diplomatic prefers orig/sic/abbr; Normalized prefers reg/corr/expan. Apparatus currently shows the lemma, or first reading if no lemma exists. XML retains all alternatives. Keyboard arrows traverse cells and F2 or Enter enters a supported editor; composition input does not trigger a premature commit.
 
 Annotation visibility comes from actual projected layers. Entity types use muted categorical colours. Nested or overlapping layers receive a stacked underline and an inspector that lists every layer. Missing pointers and model provenance use explicit text in tooltips and status messages.
 
@@ -93,9 +101,9 @@ XML source stages the current primary navigation range where a safe boundary exi
 
 Markup coverage reports where semantic markup exists. Review reports which primary navigation units carry a TEI Review Record. Both controls remain visually and semantically separate.
 
-The review control marks or reopens the current primary unit. A successful action writes or removes a targeted `revisionDesc/change` and updates the summary. If the header or revision history cannot accept a lossless record, the control leaves the document unchanged and reports the exact reason.
+The review control marks or reopens the current primary unit. A successful action appends a targeted `revisionDesc/change` and retains history. A changed source fingerprint produces changed since review; older fingerprint-free records remain historical. If the header or revision history cannot accept a lossless record, the control leaves the document unchanged and reports the exact reason.
 
-Review defaults are visible through the persisted XML. The current compact control does not expose a full reviewer-details form. Projects that require named editorial roles should provide the responsibility pointer through their workflow until that form exists.
+The review dialog collects a reviewer URI or TEI pointer and rationale, explains the source scope, and identifies the default as an unnamed local editor. It shows the previous record when present. External register entries and other units require their own review.
 
 ## Output schema gate
 
@@ -109,7 +117,7 @@ RelaxNG and XSD dependency limits and raw Schematron subset limits appear beside
 
 Violet appears only for model-origin content. A generated-document banner, proposal layers, proposed notes, and model actions use the same family. Dashed outlines and the canonical label `AI-proposed, unverified` make provenance perceptible without colour.
 
-Whole-document provenance is read from TEI after reload. A matching root `@resp` and header `respStmt` restore the generated banner. A transient generation flag alone has no lasting authority. Confirm removes proposal responsibility from a construct. Reject removes the proposal. Unused responsibility metadata created for the proposal session can then be cleaned up.
+Whole-document provenance is read from TEI after reload. A matching root `@resp` and header `respStmt` restore the generated banner. A transient generation flag alone has no lasting authority. Confirm adds an acceptance marker while retaining all responsibility pointers. Accepted origin has a solid violet border and explicit text. Reject removes a pending proposal; cleanup only removes session-created declarations with no remaining references.
 
 Provider choice supports built-in services, a configurable OpenAI-compatible endpoint, and adapters registered by trusted application code. Endpoint and model fields explain which values are stored. API-key fields state their memory-only lifetime. Disabling LLM assistance removes model surfaces while leaving deterministic editing intact.
 
@@ -128,7 +136,7 @@ Capability absence is explained at the action point. XML, metadata, reading text
 - Popovers and dialogs return focus to the originating control or reading location.
 - Every action is reachable without hover, and hover-only emphasis also appears on keyboard focus.
 - Model provenance, validation, review, and annotation state use text or pattern in addition to colour.
-- Body and paragraph copy use the darker body token that meets the serious and critical automated accessibility gate on the real UFBAS workflow in Chromium and Firefox.
+- Body and paragraph copy use the darker body token verified in historical real UFBAS runs. Current browser and accessibility results, with fixture availability, belong in the dated run report.
 - Motion respects `prefers-reduced-motion` where animation is decorative.
 
 ## Label discipline

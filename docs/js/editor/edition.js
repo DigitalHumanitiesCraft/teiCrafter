@@ -41,6 +41,7 @@ import {
 } from "./tei-document.js";
 import { resolveSourceProfile } from "./source-profile.js";
 import { resolvedSpanGroups, spanEntityId } from "./span-projection.js";
+import { readingSeparator } from "./reading-policy.js";
 
 // Back-compat re-exports (old names used elsewhere).
 export const escapeXmlText = escapeText;
@@ -146,6 +147,7 @@ export function rawOffsetForDisplay(rawSlice, dOff) {
  * and out-of-range/non-integer offsets return null.
  */
 export function cellRawOffset(cell, displayOffset) {
+  if (cell?.node?.type === "cdata") return null;
   if (!cell || cell.gap || cell.start == null || typeof cell.rawText !== "string") return null;
   if (!Number.isInteger(displayOffset) || displayOffset < 0) return null;
   const dispLen = decodeEntities(cell.rawText).length;
@@ -175,6 +177,7 @@ function buildState(doc) {
   const { surfaces, byId: surfaceById } = readSurfaces(doc);
   const zoneIndex = indexZonesById(surfaces);
   let hasWordTokens = false;
+  let hasAlternatives = false;
 
   // Pre-order event stream: page breaks, line starts, and reading-text cells,
   // all in document order.
@@ -183,6 +186,7 @@ function buildState(doc) {
     if (n.type === "element") {
       if (!isTeiElement(n)) return;
       if (n.localName === "w") hasWordTokens = true;
+      if (n.localName === "choice") hasAlternatives = true;
       if (n.localName === "pb") events.push({ k: "pb", el: n });
       else if (n.localName === "lb" || n.localName === "l") events.push({ k: "line", el: n });
       else if (BLOCK_LINE.has(n.localName)) events.push({ k: "block" });
@@ -191,7 +195,7 @@ function buildState(doc) {
       // it the same way text cells are (no header/facsimile/standOff ancestor), so a
       // gap in a non-reading subtree never leaks into the reading view.
       else if (n.localName === "gap" && isReadingContext(n)) events.push({ k: "gap", el: n });
-    } else if (n.type === "text" && isReadingText(n)) {
+    } else if (isReadingText(n)) {
       const text = textOf(doc, n);
       if (text.trim()) events.push({ k: "cell", node: n, text });
     }
@@ -204,7 +208,7 @@ function buildState(doc) {
   let curFolio = null;
   let curLine = null;
   let cellSeq = 0;
-  let hasDualReadings = false;
+  let hasDualReadings = hasAlternatives;
   const profile = hasWordTokens ? "word" : "line";
 
   const newFolio = (pbEl) => {
@@ -344,16 +348,8 @@ function buildState(doc) {
   };
   const pushCell = (cell) => {
     const previous = curLine.cells[curLine.cells.length - 1] || null;
-    if (!cell.gap && previous && !previous.gap
-      && previous.node.parent === cell.node.parent) {
-      const siblings = cell.node.parent.children || [];
-      const from = siblings.indexOf(previous.node);
-      const to = siblings.indexOf(cell.node);
-      cell.joinLeft = from >= 0 && to > from
-        && siblings.slice(from + 1, to).every((node) => isTeiElement(node, "anchor"));
-    } else {
-      cell.joinLeft = false;
-    }
+    cell.separator = readingSeparator(doc, previous, cell);
+    cell.joinLeft = !!previous && !cell.separator;
     curLine.cells.push(cell);
     cells.push(cell);
     cellById.set(cell.id, cell);
@@ -732,6 +728,9 @@ export function editCellCore(state, cellId, newCore) {
  * empty norm="" would claim a normalization, its absence does not). Both the
  * content and the attributes change in ONE re-parse. Returns a NEW model, or the
  * SAME state when nothing changes.
+ * @param {ReturnType<typeof parseEdition>} state
+ * @param {string} cellId
+ * @param {{ core?: string, norm?: string }} [readings]
  */
 export function editCellReadings(state, cellId, { core, norm } = {}) {
   const cell = state.cellById.get(cellId);

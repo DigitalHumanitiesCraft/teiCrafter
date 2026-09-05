@@ -1,10 +1,11 @@
-/** Resolve manifest schema references against one flat project folder. */
+/** Resolve schema references and dependencies inside a granted project folder. */
 
 import {
   normalizeSchemaSet,
   schemaDependencyRefs,
   schemaPathExtension,
 } from "./schema-set.js";
+import { projectPath } from "./project-path.js";
 
 const DEFINITIONS = Object.freeze({
   relaxng: { type: "relaxng", extensions: [".rng"] },
@@ -22,12 +23,9 @@ function isFlat(name) {
 
 function dependencyPath(parent, href) {
   try {
-    const resolved = new URL(href, `https://teicrafter.invalid/project/${parent.replace(/\\/g, "/")}`);
-    if (resolved.origin !== "https://teicrafter.invalid") return null;
-    return decodeURIComponent(resolved.pathname.replace(/^\/project\//, ""));
-  } catch {
-    return String(href || "").replace(/\\/g, "/");
-  }
+    if (/^(?:\/|[a-z][a-z0-9+.-]*:)/i.test(href)) return null;
+    return projectPath(parent.replace(/[^/]+$/, "").split("/").map(encodeURIComponent).join("/") + href);
+  } catch { return null; }
 }
 
 export function projectSchemaRequests(schema) {
@@ -46,18 +44,23 @@ export function projectSchemaRequests(schema) {
 }
 
 /**
- * `read(name)` resolves a bare filename to its XML text or null when absent.
+ * `read(path)` resolves a project-relative path to XML text or null when absent.
  * Every requested path receives either text or a stable unavailable diagnosis.
  */
 export async function loadProjectSchemaFiles(schema, read) {
-  const loaded = {};
+  const loaded = Object.create(null);
   const queue = [...projectSchemaRequests(schema)];
-  const queued = new Set(queue.map((request) => `${request.type}\u0000${request.path}`));
+  const queued = new Set(queue.map((request) => {
+    try { return `${request.type}\u0000${projectPath(request.path)}`; }
+    catch { return `${request.type}\u0000${request.path}`; }
+  }));
   for (let index = 0; index < queue.length; index++) {
     const request = queue[index];
-    if (!request.flat) {
+    let safePath;
+    try { safePath = projectPath(request.path, !!request.dependency); }
+    catch (error) {
       loaded[request.path] = {
-        unavailable: `Project-folder schema "${request.path}" is unavailable: use a bare filename from the same folder; nested paths are not supported.`,
+        unavailable: `Project-folder schema "${request.path}" is unavailable: ${error.message}`,
       };
       continue;
     }
@@ -68,18 +71,18 @@ export async function loadProjectSchemaFiles(schema, read) {
       continue;
     }
     try {
-      const text = await read(request.path);
+      const text = await read(safePath);
       if (typeof text !== "string") {
         loaded[request.path] = {
           unavailable: `Project-folder schema "${request.path}" is unavailable: the file is missing from the project folder.`,
         };
         continue;
       }
-      loaded[request.path] = { text };
+      loaded[request.path] = { text, path: safePath };
       if (request.type !== "relaxng" && request.type !== "xsd") continue;
       for (const dependency of schemaDependencyRefs(text, request.type)) {
         if (dependency.missing) continue;
-        const path = dependencyPath(request.path, dependency.href);
+        const path = dependencyPath(safePath, dependency.href);
         if (path === null) continue;
         const key = `${request.type}\u0000${path}`;
         if (queued.has(key)) continue;

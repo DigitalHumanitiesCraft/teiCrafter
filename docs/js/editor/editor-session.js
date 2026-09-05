@@ -52,6 +52,7 @@ export class EditorSession {
     this.nextToken = 1;
     this.currentToken = 0;
     this.savedToken = 0;
+    this.readOnly = false;
   }
 
   load(state) {
@@ -72,6 +73,7 @@ export class EditorSession {
     const after = rawOf(nextState);
     const patch = minimalPatch(before, after);
     if (!patch) return false;
+    if (this.readOnly) throw new Error("The document is read only. Choose Edit document to change it.");
 
     if (this.cursor < this.history.length) {
       const removed = this.history.splice(this.cursor);
@@ -141,11 +143,11 @@ export class EditorSession {
   }
 
   canUndo() {
-    return this.cursor > 0;
+    return !this.readOnly && this.cursor > 0;
   }
 
   canRedo() {
-    return this.cursor < this.history.length;
+    return !this.readOnly && this.cursor < this.history.length;
   }
 
   undoLabel() {

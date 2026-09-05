@@ -1,0 +1,115 @@
+[
+  {
+    "case": "literal-text-entry",
+    "typed": "Literal &amp;",
+    "displayed": "Literal &",
+    "xml": "<p>Literal &amp;</p>"
+  },
+  {
+    "case": "literal-text-entry",
+    "typed": "Literal &#65;",
+    "displayed": "Literal A",
+    "xml": "<p>Literal &#65;</p>"
+  },
+  {
+    "case": "literal-text-entry",
+    "typed": "&unknown;",
+    "displayed": "&unknown;",
+    "xml": "<p>&unknown;</p>"
+  },
+  {
+    "case": "reading-projection",
+    "content": "<p>un<hi>klar</hi>!</p>",
+    "cells": [
+      {
+        "text": "un",
+        "joinLeft": false
+      },
+      {
+        "text": "klar",
+        "joinLeft": false
+      },
+      {
+        "text": "!",
+        "joinLeft": false
+      }
+    ],
+    "sourcePreserved": true
+  },
+  {
+    "case": "reading-projection",
+    "content": "<p><choice><orig>olde</orig><reg>old</reg></choice></p>",
+    "cells": [
+      {
+        "text": "olde",
+        "joinLeft": false
+      },
+      {
+        "text": "old",
+        "joinLeft": false
+      }
+    ],
+    "sourcePreserved": true
+  },
+  {
+    "case": "reading-projection",
+    "content": "<p><app><lem>alpha</lem><rdg>beta</rdg></app></p>",
+    "cells": [
+      {
+        "text": "alpha",
+        "joinLeft": false
+      },
+      {
+        "text": "beta",
+        "joinLeft": false
+      }
+    ],
+    "sourcePreserved": true
+  },
+  {
+    "case": "reading-projection",
+    "content": "<p><![CDATA[Visible text]]></p>",
+    "cells": [],
+    "sourcePreserved": true
+  },
+  {
+    "case": "front-body-back",
+    "cells": [
+      "BODY"
+    ]
+  },
+  {
+    "case": "review-after-edit",
+    "before": 1,
+    "after": 1
+  },
+  {
+    "case": "confirm-provenance",
+    "resp": "#ai",
+    "changed": true,
+    "remainingMarkup": "<hi>"
+  },
+  {
+    "case": "confirm-provenance",
+    "resp": "#ai #editor",
+    "changed": false,
+    "remainingMarkup": "<hi resp=\"#ai #editor\">"
+  },
+  {
+    "case": "first-save-existing-target",
+    "calls": [
+      {
+        "name": "letter.xml",
+        "options": {
+          "create": true
+        }
+      }
+    ],
+    "adoptedExistingHandle": true,
+    "snapshot": null
+  },
+  {
+    "case": "image-name-collision-stub",
+    "finalContents": "new image"
+  }
+]

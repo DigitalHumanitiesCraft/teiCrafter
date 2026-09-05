@@ -3,10 +3,8 @@
  * and the standOff index degrades gracefully on header-less input.
  *
  * Guards two confirmed regressions:
- *  - Entity asymmetry: escapeText/escapeAttr used to re-escape an existing
- *    &nbsp;/&#233;/&quot;/&apos; (a no-op edit corrupted unrelated markup, e.g.
- *    &nbsp; -> &amp;nbsp;). A no-op must return a byte-identical document, and a
- *    real edit must not corrupt a neighbouring entity in the same node.
+ *  - No-op edits preserve entity spelling. Changed input is literal text;
+ *    unresolved named entities require exact source editing.
  *  - addEntity used to throw an uncaught TypeError on TEI lacking a teiHeader.
  *
  * Run: node test/proofs/edit_fidelity.mjs   (exit 0 = all pass)
@@ -14,6 +12,7 @@
 
 import { parseEdition, editCell, serialize, xmlIdSet } from "../../docs/js/editor/edition.js";
 import { parseDocument, editAttrValue, firstByLocal } from "../../docs/js/editor/tei-document.js";
+import assert from "node:assert/strict";
 import { addEntity, readEntities, linkMention } from "../../docs/js/editor/standoff.js";
 
 const cellByText = (state, t) => state.cells.find((c) => c.text === t);
@@ -52,12 +51,10 @@ for (const cell of state0.cells) {
 }
 check(allNoop, "no-op editCell on entity-bearing cells is byte-identical (all cells)");
 
-// A real edit on w1 must change only that word and leave the &nbsp; intact.
+// Unknown entities cannot safely be interpreted by a plain-text control.
 const w1 = state0.cellById.get("w1");
-const edited = editCell(state0, "w1", "Hallo!" + w1.text.slice("Hallo".length)); // "Hallo!&nbsp;Welt"
-const expected = RAW.replace(">Hallo&nbsp;Welt<", ">Hallo!&nbsp;Welt<");
-check(serialize(edited) === expected, "real edit on w1 preserves the neighbouring &nbsp;");
-check(!serialize(edited).includes("&amp;nbsp;"), "no &amp;nbsp; corruption introduced");
+assert.throws(() => editCell(state0, "w1", "Hallo!" + w1.text.slice("Hallo".length)), /unresolved XML entity/);
+check(true, "unresolved entity edits require exact XML instead of guessing character values");
 check(serialize(state0) === RAW, "the original state is left untouched (immutability)");
 
 // --- 2. Entity round-trip through the attribute path ------------------------

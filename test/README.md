@@ -1,65 +1,65 @@
-# teiCrafter Test and Validation Harness
+# Tests and validation
 
-Testing-first eval harness for the Wenzelsbibel (WB) Editor-path round-trip. It builds the
-measuring stick (fixtures + graded validators + a machine-readable report) before the editor
-features, so every later change can be measured. The test approach and the
-proof inventory live in `knowledge/testing.md`.
+Run commands from the repository root. The acceptance method and evidence limits belong to [knowledge/testing.md](../knowledge/testing.md); browser gestures and operator observations belong to [acceptance/BROWSER-CHECKS.md](acceptance/BROWSER-CHECKS.md).
 
-## What "validate" means here
+## Required checks
 
-The harness runs OUTSIDE the browser (Node orchestration + Python/lxml for real schema
-validation), so it can be invoked headlessly and its JSON report becomes the feedback signal.
+Use the Node/npm versions in [package.json](../package.json) and Python with lxml 5.4.0. Install dependencies and the pinned browsers:
 
-| Level | Check | Engine |
-|------|-------|--------|
-| L1 | Text/word fidelity: every `<w>` text preserved in order (no word loss) | Python + lxml |
-| L3 | Structural invariants: counts (surface/zone/standOff/note/w/lb/l/pb), namespace, pointer integrity | Python + lxml |
-| L2 | Real schema validity: TEI All RelaxNG + project Schematron | Python + lxml (RelaxNG, isoschematron) |
+```bash
+npm ci
+npx playwright install chromium firefox
+npm run verify
+npm run test:e2e
+```
 
-MVP gate (current milestone): well-formed AND L1 pass (no `<w>` loss) AND L3 counts preserved.
-L2 is always reported (full L1/L2/L3 breakdown) but does not gate yet. For a round-trip, L2 is
-scored as a DIFF (new errors introduced) because the raw codex may not be tei_all-valid as-is.
+`verify` runs required Node proofs, the Python/lxml harness and its negative self-test, the curated JavaScript typecheck, Biome, the Vite build and the deployment-asset contract. It requires the exact Node/npm versions and working native compiler/build packages. The offline type proof never downloads a compiler or substitutes a global one.
+
+`test:e2e` builds and serves the production artifact, then runs Chromium and Firefox with CSP, keyboard, recovery, schema, output and Axe scenarios. A failed interaction is a regression to investigate; a declared missing real-object fixture is a different evidence boundary. On constrained hosts, `npm run test:e2e -- --workers=1` runs the same cases sequentially.
+
+## Focused and optional runs
+
+```bash
+node test/run_all.mjs staged_input_check
+node test/run_all.mjs persistence_coordinator_check
+node test/harness/selftest.mjs
+node test/harness/run.mjs
+npm run verify:full-corpus
+```
+
+`node test/run_all.mjs` without a filter also includes optional corpus proofs. The SZD sweep needs the sibling Page-JSON corpus; an absent source directory can fail that broad local run. `npm run verify` explicitly excludes the SZD full sweep and port-parity gate. Do not describe a skipped or unavailable corpus as tested.
+
+The real UFBAS browser case requires `UFBAS_TEI`; the Wenzelsbibel engine proof accepts `WB_CODEX`. Shell-specific examples are in [knowledge/testing.md](../knowledge/testing.md#running-the-gates).
+
+## Fidelity harness
+
+The offline harness compares a candidate with a reference. Its levels are text fidelity (L1), structural invariants (L3), and formal schema evidence (L2). Schema diagnostics may be compared before and after an intentional edit when a reference is not valid under the comparison schema. This comparative harness is separate from the browser's mandatory output schema gate.
+
+```bash
+python test/harness/validate.py --input reference.xml --candidate candidate.xml --manifest manifest.json --rng docs/schemas/tei-p5-4.11.0/tei_all.rng
+```
+
+The negative self-test deliberately corrupts fixtures so that an ineffective validator cannot silently pass. The synthetic run reports each level separately.
 
 ## Layout
 
-```
-test/
-  fixtures-synthetic/   COMMITTED. Synthetic WB structural twin (no ONB data).
-  fixtures/             GITIGNORED. Real ONB-derived folio slices live here, locally only.
-  schemas/              tei_all.rng (gitignored, fetch on demand); project .sch.
-  harness/
-    validate.py         The validator (L1/L2/L3, gate, JSON report). The core.
-    run.mjs             Node orchestrator: candidate -> validate -> collect reports.
-    selftest.mjs        Proves the harness: identity => pass, corrupted => fail.
-  tools/
-    extract_folio.py    Deterministic streaming extractor (run on the real codex).
-  reports/              GITIGNORED. Harness output (JSON + human-readable).
-```
+| Path | Responsibility |
+| --- | --- |
+| [proofs/](proofs/) | Node contracts for XML, reading, mutation, input ownership, persistence, schemas and integration. |
+| [e2e/](e2e/) | Built-browser workflows; app, safety and persistence scenarios. |
+| [fixtures-synthetic/](fixtures-synthetic/) | Committed original synthetic TEI, schema and source-profile fixtures. |
+| `fixtures/` | Ignored rights-local source material. |
+| [harness/](harness/) | Node orchestration and Python/lxml validation. |
+| [generators/](generators/) | Reproducible synthetic data and local corpus extraction. |
+| `reports/` | Ignored generated harness output. |
+| [../reports/](../reports/) | Maintained dated project assessments and implementation evidence. |
 
-## Run
+## Local Wenzelsbibel extraction
 
-```
-# Prove the harness works (DoD negative test): identity passes, corruption fails.
-node test/harness/selftest.mjs
+The real codex and extracted slices remain outside tracked fixtures. With a permitted local copy:
 
-# Validate one candidate against a reference fixture.
-python test/harness/validate.py --input <reference.xml> --candidate <candidate.xml> \
-       --manifest <manifest.json> [--sch <schema.sch>] [--rng test/schemas/tei_all.rng]
-
-# Orchestrated run over configured fixtures (writes test/reports/...).
-node test/harness/run.mjs
+```bash
+python test/generators/extract_folio.py --codex /path/to/codex-2759.xml --surfaces 1 5 40 --name codex-selected-surfaces --out test/fixtures/wb/
 ```
 
-## Using the REAL Wenzelsbibel codex (when provided)
-
-The real `codex-2759.xml` (~78 MB, ONB) is NOT in this repo and must never be committed.
-When you have it locally:
-
-```
-python test/generators/extract_folio.py --codex /path/to/codex-2759.xml \
-       --surfaces 1 5 40 --out test/fixtures/wb/
-```
-
-This slices folio-sized fixtures (each its own reference) into the gitignored `test/fixtures/`.
-Then point `run.mjs` / `validate.py` at those files. A guard refuses to run if any ONB-derived
-file is git-tracked.
+Point the harness at the extracted references and explicitly pass the vendored `--rng` path shown above; the legacy extractor manifest may name a local schema path. Its rights guard rejects tracked ONB-derived input. Use committed synthetic twins for reproducible public tests.

@@ -1,0 +1,112 @@
+{
+  "date": "2026-09-05",
+  "scope": "Input/persistence refactoring and documentation increment, verified before the session-close checkpoint; not release acceptance.",
+  "sessionCloseReport": "session-close-2026-09-05.md",
+  "baseCommit": "6f52bef7119a891ad0715ea227532d6e065fb6bc",
+  "platform": "Windows",
+  "toolchain": {
+    "node": "24.13.0",
+    "npm": "11.6.2",
+    "typescript": "7.0.2",
+    "biome": "2.5.10",
+    "vite": "8.2.2",
+    "playwright": "1.62.1",
+    "chromiumRevision": "1234",
+    "firefoxRevision": "1538"
+  },
+  "runs": [
+    {
+      "command": "npm run verify",
+      "status": "passed",
+      "nodeProofs": {
+        "passed": 88,
+        "skipped": 3,
+        "failed": 0
+      },
+      "skippedProofs": [
+        "hersch_loadability.mjs",
+        "hersch_profile_workflow_check.mjs",
+        "inline_gnd_real_hersch_check.mjs"
+      ],
+      "otherGates": [
+        "Python/lxml negative self-test and synthetic tiers",
+        "TypeScript",
+        "Biome",
+        "Vite",
+        "deployment artifact contract"
+      ]
+    },
+    {
+      "command": "npx playwright test --project=chromium --workers=1",
+      "status": "passed",
+      "passed": 33,
+      "skipped": 2,
+      "failed": 0,
+      "skipReasons": [
+        "Firefox-specific scenario",
+        "UFBAS_TEI not supplied"
+      ]
+    },
+    {
+      "command": "npx playwright test --project=firefox --workers=1",
+      "status": "failed",
+      "passed": 28,
+      "skipped": 1,
+      "failed": 6,
+      "skipReasons": [
+        "UFBAS_TEI not supplied"
+      ]
+    },
+    {
+      "command": "npx playwright test --project=firefox --workers=1 --grep 'range collector stays|overlapping entity layers|Firefox uses|failed inline input|unfinished input during|project folders expose'",
+      "status": "failed",
+      "passed": 2,
+      "failed": 4,
+      "afterChange": "Control-character fault injection explicitly sets the invalid control value because Firefox text insertion strips U+0001.",
+      "remainingFailures": [
+        "Range collector cancellation followed by Download",
+        "Firefox Download/Save fallback",
+        "Unfinished input during native writing",
+        "Nested-project Save"
+      ],
+      "failureClass": "Output/validation timeouts; root cause not established"
+    },
+    {
+      "command": "npx playwright test --project=chromium --workers=1 --grep 'failed inline input'",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "afterChange": "Explicit invalid control-value injection"
+    },
+    {
+      "kind": "Isolated source-module Firefox probe",
+      "status": "valid",
+      "schema": "Repository TEI P5 4.11.0 TEI All",
+      "elapsedMs": 86514,
+      "input": "Minimal TEI with fileDesc and one body paragraph",
+      "boundary": "Single cold source-module observation on this host; not a performance budget or cross-browser acceptance"
+    },
+    {
+      "command": "node test/proofs/schema_validation_check.mjs; npm run check:biome; npm run build",
+      "status": "passed",
+      "afterChange": "Final informational schema-dependency wording correction only"
+    }
+  ],
+  "limitations": [
+    "Firefox release gate remains open",
+    "Optional SZD full corpus absent and not certified",
+    "Manual native picker permissions, abrupt process failure and editorial pilot not newly certified",
+    "Large dynamic libxml chunk advisory remains",
+    "Verification was captured before the session-close commit; no tag, release or deployment created"
+  ],
+  "documentationAudit": "documentation-audit-2026-09-05.json",
+  "finalBehaviorNote": "The complete browser runs precede a test-only fault-injection correction, one code-comment cleanup and the final schema-dependency help-text correction. Targeted validation after those changes is recorded above.",
+  "fileHashes": {
+    "package.json": "d7e2b33b119c30fa1599f190f1438ca76d94712102548173aa91eb1939270bc1",
+    "package-lock.json": "2fc7d4efca37ef694786be2f01d640d21eeffd6f64db910f76a90496a8942648",
+    "docs/js/editor/output-controller.js": "c1513a49e30c2a65378acadfdab40fb0e7982122fcce2876d333b1110078571b",
+    "docs/js/editor/staged-input.js": "4fb5a1bb626b7b169a0b5cfac85eee8e271103e4d25bd5494a52ed7d3a8463da",
+    "docs/js/editor/recovery-coordinator.js": "d3799c24bd3575a40653106bae245ac785f3dbde14b7f5f11adf8b38875c867d",
+    "test/e2e/persistence.spec.js": "733cc11fde998eca15531db0c85a6e7482e27b4e6ceb89cb41eb4f38c1a5f44f"
+  }
+}

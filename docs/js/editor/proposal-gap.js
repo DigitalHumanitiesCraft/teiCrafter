@@ -1,6 +1,7 @@
 /** Reversible TEI representation for a proposed gap. */
 
-import { escapeAttr, getAttr, getAttrObj, spliceDocument } from "./tei-document.js";
+import { escapeAttr, getAttr, parseDocument, spliceDocument } from "./tei-document.js";
+import { acceptProposal, isPendingProposal } from "./proposal-provenance.js";
 
 const directChild = (el, localName) => (el.children || [])
   .find((child) => child.type === "element" && child.localName === localName) || null;
@@ -21,25 +22,20 @@ export function proposalGapParts(el, expectedResp) {
   while (choice && choice.type === "element" && choice.localName !== "choice") choice = choice.parent;
   if (!choice || choice.type !== "element" || choice.localName !== "choice") return null;
   const resp = getAttr(choice, "resp");
-  if (!resp || (expectedResp != null && resp !== expectedResp)) return null;
+  if (!resp || (expectedResp != null && !isPendingProposal(choice, expectedResp))) return null;
   const orig = directChild(choice, "orig");
   const reg = directChild(choice, "reg");
   const gap = reg && directChild(reg, "gap");
-  if (!orig || !gap || getAttr(gap, "resp") !== resp) return null;
+  if (!orig || !gap || (expectedResp != null && !isPendingProposal(gap, expectedResp))) return null;
   if (orig.contentStart == null || orig.contentEnd == null) return null;
-  return { choice, orig, gap, resp };
+  return { choice, orig, gap, resp, expectedResp };
 }
 
-/** Accept the proposal by replacing the reversible choice with its clean gap. */
+/** Accept the gap while retaining its responsibility and acceptance markers. */
 export function confirmProposalGap(doc, parts) {
-  const attr = getAttrObj(parts.gap, "resp");
-  let gapRaw = doc.raw.slice(parts.gap.outerStart, parts.gap.outerEnd);
-  if (attr) {
-    let start = attr.start - parts.gap.outerStart;
-    const end = attr.end - parts.gap.outerStart;
-    if (start > 0 && /\s/.test(gapRaw[start - 1])) start -= 1;
-    gapRaw = gapRaw.slice(0, start) + gapRaw.slice(end);
-  }
+  const fragment = parseDocument(doc.raw.slice(parts.gap.outerStart, parts.gap.outerEnd));
+  const gap = fragment.root.children.find((node) => node.type === "element");
+  const gapRaw = acceptProposal(fragment, gap, parts.expectedResp || parts.resp).raw;
   return spliceDocument(doc, parts.choice.outerStart, parts.choice.outerEnd, gapRaw);
 }
 

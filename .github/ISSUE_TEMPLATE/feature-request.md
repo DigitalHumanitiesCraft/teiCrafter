@@ -9,7 +9,9 @@ edition, not only the UI change)
 
 **Proposed behavior**
 
-**Material it applies to** (word-level TEI, line-level TEI, plaintext,
-project manifests, ...)
+**Material it applies to** (letter, charter, legal source, dictionary entry,
+encyclopedia article, mixed token/prose TEI, plaintext or project configuration)
+
+**Expected result** (one concrete input/action/output example)
 
 **Workaround today** (if any)

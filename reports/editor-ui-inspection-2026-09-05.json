@@ -1,0 +1,22 @@
+[
+  {
+    "view": "starter",
+    "width": 1440,
+    "violations": []
+  },
+  {
+    "view": "starter",
+    "width": 768,
+    "violations": []
+  },
+  {
+    "view": "starter",
+    "width": 390,
+    "violations": []
+  },
+  {
+    "view": "reading",
+    "width": 1440,
+    "violations": []
+  }
+]

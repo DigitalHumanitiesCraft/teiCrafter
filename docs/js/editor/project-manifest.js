@@ -390,6 +390,7 @@ export function parseManifest(input) {
 
   return {
     source: "manifest",
+    manifestSource: typeof input === "string" ? input : JSON.stringify(input),
     name: m.name.trim(),
     schema: schemaDef(m.schema),
     iiifImageTemplate,

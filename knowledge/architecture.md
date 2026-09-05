@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
@@ -42,7 +42,15 @@ XML source string
 
 The editor session adds identity and time to that immutable document value. Session state records the loaded document, a monotonically changing revision, dirty savepoint, patch history, file encoding and target, project context, and cancellable asynchronous work. A successful operation commits through one mutation boundary and invalidates revision-bound projections such as schema authorization.
 
-`editor-app.js` coordinates the session, view controllers, output projections, and file actions. It also restores whole-document generated state after load by calling `hasGeneratedDraftProvenance(doc, responsibility)`. That predicate requires a root `@resp` token and a matching header `respStmt`, which prevents a transient UI flag from becoming the source of provenance truth.
+`EditorSession.readOnly` rejects changed replacements and prevents history mutations while allowing byte-identical reprojection. The UI also gates inline, source, metadata, index, annotation, review and pending model actions. Leaving read-only mode retains the existing undo history. A mode switch with unfinished visible input is refused rather than implicitly applying it.
+
+`session-recovery.js` stores independently keyed checkpoints in IndexedDB and resolves writes only after transaction completion. `recovery-coordinator.js` clones each captured record before queueing and orders writes and explicit-ID deletion. Storage failure returns a failed result and leaves the queue usable. `document-facts.js` supplies recovery presentation and restoration through that coordinator. `working-copy.js` exports and imports a portable bundle containing canonical XML, staged input, schema/project configuration and image bytes. Recovery recreates object URLs and does not reuse native file handles. A download request does not clear recovery or establish a saved document.
+
+`staged-input.js` owns one unfinished-input surface through `hasChanges`, `value`, `apply` and `restore`. Mount captures the owning session and source string; Apply refuses stale ownership. Reading input, unit/header XML and metadata fields share this contract. Unfinished controls survive ordinary re-renders; navigation, history and unrelated source mutations refuse to displace them. An explicit Apply enters the mutation boundary, and a failed Apply retains its controls and recoverable values.
+
+`output-controller.js` captures projected bytes, encoding, filename and recovery identity, then obtains schema authorization. It serializes native Save, checks the target's external version, and rechecks authorization and staged input across asynchronous boundaries. New input during a write aborts before close when possible. An older completed write cannot mark a later revision or another session saved, write the other session's images, or remove its checkpoint. The controller injects file, image, recovery, validation and status adapters; `download-file.js` owns temporary browser download URLs.
+
+`editor-app.js` coordinates the session, view controllers, output projections, and file actions. `reading-view.js` renders source-backed cells and owns their keyboard navigation and annotation dispatch. `inline-editor.js` owns plain and dual-reading input controls; selection and annotation actions remain in `annotation-ui.js`. Internal imports use one unversioned module URL per file, while Vite hashes production assets. The shell also restores whole-document generated state after load by calling `hasGeneratedDraftProvenance(doc, responsibility)`. That predicate requires a root `@resp` token and a matching header `respStmt`, which prevents a transient UI flag from becoming the source of provenance truth.
 
 ## Source discovery and navigation
 
@@ -74,7 +82,7 @@ Schema inspection is asynchronous and has no authority to block opening. A missi
 
 `project-manifest.js` parses `teicrafter.project.json`, validates known fields, binds files to document types, and resolves effective per-file policy. `uiProfileForFile` merges project and type policy. The manifest parser emits the canonical ordered `schema.schemas` shape.
 
-`schema-set.js` normalizes canonical and legacy schema declarations into ordered entries. It retains repeated types and reports malformed declarations as issues. `project-schema-files.js` loads top-level project resources plus the supported bare same-folder RelaxNG and XSD dependencies from a granted directory handle. Served projects resolve dependencies through URLs. A session upload represents a complete override and has only the selected resource unless the runtime can fetch its references.
+`schema-set.js` normalizes canonical and legacy schema declarations into ordered entries. It retains repeated types and reports malformed declarations as issues. `project-path.js` bounds traversal to the granted folder and separates URI decoding from actual filenames. `project-schema-files.js` discovers nested RelaxNG and XSD dependencies relative to each containing schema, retaining canonical resource URLs and terminating cycles. The project inventory retains each document's parent directory for derived XML and image persistence. Served projects resolve dependencies through URLs. A session upload represents a complete override and has only the selected resource unless the runtime can fetch its references.
 
 The project layer also supplies markup, TEI authoring scope, indices, reconciliation, image resolution, declared views, interchange, and type-aware LLM settings. Built-in project profiles provide the same runtime shape for bare files recognized by an exact source signature. A parsed manifest takes precedence over source-signature fallback.
 
@@ -91,7 +99,11 @@ Each editing surface has a pure projection and a lossless inverse.
 | Review state | Target identifier plus header revision record |
 | Inline-GND interchange | Target-only serialization projection that leaves editor state unchanged |
 
-All mutation modules return the input document when an operation is invalid, ambiguous, or semantically unchanged. The app commits only a changed, reparsed document. Undo and Redo apply inverse patches to canonical source, so derived profiles and views are rebuilt from the resulting document.
+Mutation modules preserve semantic no-ops and refuse operations without a safe inverse, either through an unchanged result or an explanatory error. Literal input escapes every ampersand; unresolved named entities cannot silently acquire a guessed expansion during an edit. XML-illegal characters are rejected. The app commits only a changed, reparsed document. Undo and Redo apply inverse patches to canonical source, so derived profiles and views are rebuilt from the resulting document.
+
+`reading-policy.js` selects one branch of a TEI choice or apparatus while retaining every branch in canonical source. Diplomatic and normalized priorities are explicit; apparatus currently selects lemma, then the first reading. Prose follows source adjacency, token spacing honours punctuation and joins, and unselected alternatives cannot contribute whitespace. Reading includes front, body, back and CDATA. CDATA and selections crossing alternatives route to source editing when the interactive inverse is not safe.
+
+`starter-profiles.js` builds new deterministic TEI from an explicitly selected transcription, letter, charter, legal-source, dictionary-entry or encyclopedia-article template. `image-onramp.js` exposes the compact intake and only shows correspondence fields for the letter template. Existing XML is never rebuilt from a starter. Entry input separates records by blank lines and uses the first line as headword or heading; the two lexicon encodings remain distinct. All templates use the ordinary load, recovery and schema-gated output paths.
 
 ## Complete header architecture
 
@@ -107,9 +119,11 @@ Each inventory item carries an exact projection category. Text-only and empty pa
 2. Reuse its unique `xml:id` or insert a prefix-faithful unique identifier.
 3. Select the relevant document or corpus-member header.
 4. Reuse a compatible `revisionDesc` container or create one.
-5. Add, update, split, or remove the target on a review `change` while preserving unrelated history.
+5. Append a verified or reopened review `change`, preserving historical and shared records.
 
-The transaction refuses duplicate identifiers, incompatible revision structures, and structured rationale edits that lack a safe inverse. `review-progress.js` projects these records onto primary navigation units and also reads the legacy marker. Annotation progress is calculated separately.
+The transaction refuses ambiguous identifiers and incompatible revision structures. `review-evidence.js` computes a versioned SHA-256 fingerprint of the reviewed source range while excluding revision history. `review-progress.js` distinguishes current, changed, historical and reopened state. A legacy marker or fingerprint-free record never establishes current review. `review-dialog.js` collects reviewer and rationale before confirmation. Annotation progress is calculated separately; linked register content outside the reviewed source range is not certified by that review.
+
+`proposal-provenance.js` records per-responsibility acceptance independently from `resp`. Confirmed constructs retain their origin and any human co-responsibility. Pending and accepted origin use distinct projections; an accepted gap retains the same evidence after its reversible choice is collapsed.
 
 ## Stand-off span architecture
 
@@ -135,7 +149,7 @@ current session and revision
 
 `schema-validation.js` owns schema source normalization and execution. RelaxNG and XSD run through local libxml2-WASM. Raw Schematron is compiled through the documented browser XPath subset. Precompiled Schematron runs through `XSLTProcessor` and must return valid SVRL. Every runtime limit becomes an unavailable result instead of an implicit pass.
 
-`validation-view.js` owns the revision-bound authorization snapshot and explanatory UI. It compares the exact document object and projected source in addition to scalar revision identifiers. `editor-app.js` asks the view to validate, awaits completion, and checks authorization again before file output. External file-version conflicts use the same fail-closed principle.
+`validation-view.js` owns the revision-bound authorization snapshot and explanatory UI. It compares the exact document object and projected source in addition to scalar revision identifiers. `editor-app.js` supplies the validation adapter to `output-controller.js`, which resolves staged input, awaits authorization and rechecks its binding across file-output operations. External file-version conflicts use the same fail-closed principle.
 
 Repository TEI All enters only when no project schema or session override exists. Multi-schema aggregation succeeds when the result set is nonempty and every entry is valid. Ordering is retained for diagnostics and reproducibility.
 
@@ -145,7 +159,9 @@ The portable path uses an `<input type="file">` for ingest and a Blob download f
 
 Native File System Access appears behind feature detection. A Chromium browser that provides file and directory handles can save in place, scan a project folder, and resolve local images or schema dependencies. These capabilities enhance persistence and project integration without changing the canonical document or output gate.
 
-Browserslist expresses the deployment baseline as `baseline widely available`. Playwright runs the application in Chromium and Firefox. Accessibility checks execute in the browser against rendered state, including the real UFBAS workflow.
+`file-target.js` creates unused derived filenames and treats only NotFound as absence. Page-image persistence compares actual bytes before reusing an existing image; differing files are not replaced. Serialized save operations recheck authorization across asynchronous boundaries, abort failed writable streams when supported, and retain recovery until XML and required images have been written. The browser API cannot provide a cross-process transaction across XML and several image files.
+
+Browserslist expresses the deployment baseline as `baseline widely available`. Playwright runs the application in Chromium and Firefox. Accessibility checks execute in the browser against rendered state, including an optional real UFBAS workflow when its source is supplied.
 
 ## LLM service boundary
 

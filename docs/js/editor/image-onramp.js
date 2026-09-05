@@ -19,6 +19,7 @@
  */
 
 import { el, clear } from "./dom.js";
+import { STARTER_PROFILES, starterEntries } from "./starter-profiles.js";
 
 // Image-byte signatures, so a file named without an extension (e.g. "IMG.1")
 // still gets a correct, portable filename for the TEI and the saved file.
@@ -68,7 +69,7 @@ export function setupImageOnramp(ctx) {
     });
 
     const head = el("div", { class: "ed-modal-head" }, [
-      el("span", { id: "onramp-title", text: "New from text and page images" }),
+      el("span", { id: "onramp-title", text: "New document from a transcription" }),
       (ids.close = el("button", { class: "ed-btn", title: "Close", text: "Close" })),
     ]);
 
@@ -77,6 +78,23 @@ export function setupImageOnramp(ctx) {
       (ids.name = el("input", { type: "text", value: "letter", spellcheck: "false",
         placeholder: "file name without extension" })),
     ]);
+
+    ids.profile = el("select", { "aria-label": "Document starter" });
+    for (const profile of STARTER_PROFILES) ids.profile.appendChild(el("option", { value: profile.id, text: profile.label }));
+    ids.profileHelp = el("p", { class: "ed-starter-help", id: "onramp-profile-help" });
+    ids.profile.setAttribute("aria-describedby", "onramp-profile-help");
+    const profileField = el("label", { class: "ed-field" }, [el("span", { text: "Document starter" }), ids.profile]);
+    const known = (key, label, placeholder) => {
+      ids[key] = el("input", { type: "text", placeholder });
+      return el("label", { class: "ed-field" }, [el("span", { text: label }), ids[key]]);
+    };
+    ids.correspondence = el("div", { class: "ed-starter-fields" }, [
+      known("sender", "Sender (optional)", "Known sender"),
+      known("recipient", "Recipient (optional)", "Known recipient"),
+      known("date", "Date as written (optional)", "For example, around 1700?"),
+      known("place", "Place sent from (optional)", "Known place"),
+    ]);
+    const sourceField = known("source", "Source description (optional)", "Archive, shelfmark or description of the transcription source");
 
     ids.text = el("textarea", { rows: "8",
       placeholder: "Paste the transcription. Insert |2| where page 2 begins, |3| for page 3, and so on; the first page starts automatically." });
@@ -101,12 +119,12 @@ export function setupImageOnramp(ctx) {
     ids.thumbs = el("div", { class: "onramp-thumbs" });
     ids.reconcile = el("div", { class: "onramp-reconcile" });
     const imageField = el("div", { class: "ed-field" }, [
-      el("span", { text: "Page images (drag order = page order)" }),
+      el("span", { text: "Page images (optional, in page order)" }),
       ids.drop, ids.thumbs, ids.reconcile,
     ]);
 
     ids.status = el("div", { class: "ed-modal-status" });
-    const body = el("div", { class: "ed-modal-body" }, [nameField, textField, imageField, ids.status]);
+    const body = el("div", { class: "ed-modal-body" }, [profileField, ids.profileHelp, nameField, ids.correspondence, sourceField, textField, imageField, ids.status]);
 
     ids.cancel = el("button", { class: "ed-btn", text: "Cancel" });
     ids.run = el("button", { class: "ed-btn ed-btn-primary", text: "Craft TEI",
@@ -154,6 +172,17 @@ export function setupImageOnramp(ctx) {
   }
 
   function updateReconcile() {
+    const profile = STARTER_PROFILES.find((item) => item.id === ids.profile.value);
+    ids.profileHelp.textContent = profile.help;
+    ids.correspondence.hidden = profile.id !== "letter";
+    ids.text.placeholder = profile.entries
+      ? "Headword or heading\nDefinition or article text\n\nNext headword or heading\nIts text"
+      : "Paste the transcription. Use |2| where the next page starts.";
+    if (profile.entries) {
+      ids.reconcile.textContent = `${starterEntries(ids.text.value).length} entries. ${items.length ? "Remove page images to create an entry collection." : "Entries are created in the supplied order. Page markers are treated as literal text."}`;
+      ids.reconcile.className = "onramp-reconcile" + (items.length ? " warn" : "");
+      return;
+    }
     const pages = pageCount(ids.text.value);
     const imgs = items.length;
     if (imgs === 0) {
@@ -218,6 +247,8 @@ export function setupImageOnramp(ctx) {
     revokeThumbs();
     ids.name.value = "letter";
     ids.text.value = "";
+    ids.profile.value = "generic";
+    for (const key of ["sender", "recipient", "date", "place", "source"]) ids[key].value = "";
     setStatus("");
     renderThumbs();
     root.hidden = false;
@@ -239,8 +270,10 @@ export function setupImageOnramp(ctx) {
     ids.run.disabled = true;
     setStatus("Crafting...", "busy");
     try {
-      await build({ text, title, images: items.map(({ file, name, type }) => ({ file, name, type })) });
-      close();
+      const metadata = Object.fromEntries(["sender", "recipient", "date", "place", "source"].map((key) => [key, ids[key].value]));
+      const opened = await build({ text, title, profile: ids.profile.value, metadata, images: items.map(({ file, name, type }) => ({ file, name, type })) });
+      if (opened !== false) close();
+      else setStatus("The current document was kept. This transcription is still available here.");
     } catch (err) {
       setStatus(`Could not build: ${err && err.message ? err.message : err}`, "err");
     } finally {
@@ -253,6 +286,7 @@ export function setupImageOnramp(ctx) {
     ids.cancel.addEventListener("click", close);
     ids.run.addEventListener("click", run);
     ids.text.addEventListener("input", updateReconcile);
+    ids.profile.addEventListener("change", updateReconcile);
     ids.addBtn.addEventListener("click", () => ids.imgInput.click());
     ids.imgInput.addEventListener("change", async () => { await addFiles(ids.imgInput.files); ids.imgInput.value = ""; });
     ids.loadTxt.addEventListener("click", () => ids.txtInput.click());

@@ -4,7 +4,7 @@ import {
 } from "../../docs/js/editor/project-schema-files.js";
 import { check, finish, section } from "./_assert.mjs";
 
-section("Flat project-folder schema sets");
+section("Project-folder schema sets");
 
 const schema = { relaxng: "edition.rng", xsd: null, schematron: "rules.xsl" };
 const requests = projectSchemaRequests(schema);
@@ -63,15 +63,34 @@ const nestedDependency = await loadProjectSchemaFiles(
     ? '<grammar xmlns="http://relaxng.org/ns/structure/1.0"><include href="schema/part.rng"/></grammar>'
     : null,
 );
-check("a nested dependency fails closed at the project-folder capability boundary",
-  nestedDependency["schema/part.rng"].unavailable.includes("nested paths are not supported"));
+check("a missing nested dependency has the same explicit diagnosis as a flat file",
+  nestedDependency["schema/part.rng"].unavailable.includes("file is missing"));
+
+const nestedReads = [];
+const nestedFiles = {
+  "schema/main.rng": '<grammar xmlns="http://relaxng.org/ns/structure/1.0"><include href="parts/one.rng"/></grammar>',
+  "schema/parts/one.rng": '<grammar xmlns="http://relaxng.org/ns/structure/1.0"><include href="../main.rng"/><include href="../../common.rng"/></grammar>',
+  "common.rng": '<grammar xmlns="http://relaxng.org/ns/structure/1.0"/>',
+};
+const nested = await loadProjectSchemaFiles({ relaxng: "schema/main.rng" }, async (name) => {
+  nestedReads.push(name);
+  return nestedFiles[name] ?? null;
+});
+check("nested dependencies resolve from their own parent and cycles terminate",
+  nested["schema/parts/one.rng"].text === nestedFiles["schema/parts/one.rng"]
+  && nested["common.rng"].text === nestedFiles["common.rng"] && nestedReads.length === 3);
+
+const escapedReads = [];
+const escaped = await loadProjectSchemaFiles({ relaxng: "../outside.rng" }, async (name) => escapedReads.push(name));
+check("a schema path outside the granted folder is never read",
+  escapedReads.length === 0 && escaped["../outside.rng"].unavailable.includes("leaves the granted"));
 
 const unavailable = await loadProjectSchemaFiles(
   { relaxng: "schema/edition.rng", xsd: null, schematron: "missing.sch" },
   async () => null,
 );
-check("nested references have an explicit unavailable diagnosis",
-  unavailable["schema/edition.rng"].unavailable.includes("nested paths are not supported"));
+check("missing nested references have an explicit unavailable diagnosis",
+  unavailable["schema/edition.rng"].unavailable.includes("file is missing"));
 check("missing flat files have an explicit unavailable diagnosis",
   unavailable["missing.sch"].unavailable.includes("file is missing"));
 

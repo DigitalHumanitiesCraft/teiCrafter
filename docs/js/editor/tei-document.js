@@ -137,27 +137,40 @@ function readName(raw, from) {
 
 // ---- escaping / entities ---------------------------------------------------
 
-// An '&' that already begins a valid entity / character reference (named, decimal,
-// or hex). These must NOT be re-escaped, or a round-trip would corrupt existing
-// markup (e.g. &nbsp; -> &amp;nbsp;). Every other '&' is a literal and is escaped.
-const RE_BARE_AMP = /&(?!#[0-9]+;|#x[0-9a-fA-F]+;|[A-Za-z][A-Za-z0-9._-]*;)/g;
+/** Reject characters XML 1.0 cannot represent, including lone surrogates. */
+export function assertXmlCharacters(value) {
+  for (const char of String(value)) {
+    const cp = char.codePointAt(0);
+    if (!(cp === 9 || cp === 10 || cp === 13 || (cp >= 32 && cp <= 0xd7ff)
+      || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff))) {
+      throw new TypeError(`XML cannot represent character U+${cp.toString(16).toUpperCase()}.`);
+    }
+  }
+}
+
+export function assertEditableEntities(raw) {
+  if (/&(?!(?:lt|gt|quot|apos|amp);)[A-Za-z][A-Za-z0-9._-]*;/.test(raw)) {
+    throw new TypeError("This value contains an unresolved XML entity. Edit its exact XML source to preserve the entity's meaning.");
+  }
+}
 
 /**
- * Escape literal text for an XML text node, leaving existing entities intact.
+ * Encode literal character data. Already-encoded XML must use source splices.
  * @param {string} s The text to escape.
  * @returns {string} The escaped text.
  */
 export function escapeText(s) {
-  return String(s).replace(RE_BARE_AMP, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  assertXmlCharacters(s);
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\r/g, "&#13;");
 }
 /**
- * Escape a value for an XML attribute, leaving existing entities intact.
+ * Encode a literal attribute value, preserving significant whitespace.
  * @param {string} s The value to escape.
  * @param {string} [quote] The enclosing quote character ('"' or "'").
  * @returns {string} The escaped attribute value.
  */
 export function escapeAttr(s, quote = '"') {
-  let out = String(s).replace(RE_BARE_AMP, "&amp;").replace(/</g, "&lt;");
+  let out = escapeText(s).replace(/\t/g, "&#9;").replace(/\n/g, "&#10;");
   out = quote === "'" ? out.replace(/'/g, "&apos;") : out.replace(/"/g, "&quot;");
   return out;
 }
@@ -167,14 +180,12 @@ export function escapeAttr(s, quote = '"') {
  * @returns {string} The decoded text.
  */
 export function decodeEntities(s) {
-  return String(s)
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-    .replace(/&amp;/g, "&");
+  const named = { lt: "<", gt: ">", quot: '"', apos: "'", amp: "&" };
+  return String(s).replace(/&(#x[0-9a-fA-F]+|#\d+|lt|gt|quot|apos|amp);/g, (reference, key) => {
+    if (named[key]) return named[key];
+    const cp = key.startsWith("#x") ? parseInt(key.slice(2), 16) : Number(key.slice(1));
+    return Number.isInteger(cp) && cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : reference;
+  });
 }
 
 // ---- tokenizer -------------------------------------------------------------
@@ -282,7 +293,7 @@ function parseAttrs(raw, tagStart, tagEnd) {
       prefix,
       namespaceURI: null,
       expandedName: localOf(m[1]),
-      value: decodeEntities(value),
+      value: decodeEntities(value.replace(/\r\n?/g, "\n").replace(/[\t\n]/g, " ")),
       rawValue: value,
       quote,
       valueStart,
@@ -540,6 +551,7 @@ export function textNodes(node) {
  * @returns {string} The decoded text.
  */
 export function textOf(doc, node) {
+  if (node.type === "cdata") return doc.raw.slice(node.start + 9, node.end - 3);
   return decodeEntities(doc.raw.slice(node.start, node.end));
 }
 
@@ -592,10 +604,15 @@ function splice(raw, start, end, replacement) {
  * @returns {TeiDocument} A new document, or the same one on a semantic no-op.
  */
 export function editTextNode(doc, node, newText) {
+  if (node.type === "cdata") {
+    if (textOf(doc, node) === String(newText)) return doc;
+    return parseDocument(splice(doc.raw, node.start, node.end, escapeText(newText)));
+  }
   const rawSlice = doc.raw.slice(node.start, node.end);
   // Semantic no-op: the user's text decodes to exactly what is already there, so
   // re-serializing would only churn entity spellings. Leave the bytes untouched.
   if (decodeEntities(rawSlice) === String(newText)) return doc;
+  assertEditableEntities(rawSlice);
   const escaped = escapeText(newText);
   if (escaped === rawSlice) return doc;
   return parseDocument(splice(doc.raw, node.start, node.end, escaped));
@@ -609,7 +626,8 @@ export function editTextNode(doc, node, newText) {
  */
 export function editAttrValue(doc, attr, newValue) {
   // Same semantic-no-op guard as editTextNode, on the attribute path.
-  if (decodeEntities(attr.rawValue) === String(newValue)) return doc;
+  if (attr.value === String(newValue)) return doc;
+  assertEditableEntities(attr.rawValue);
   const escaped = escapeAttr(newValue, attr.quote);
   if (escaped === attr.rawValue) return doc;
   return parseDocument(splice(doc.raw, attr.valueStart, attr.valueEnd, escaped));
@@ -824,8 +842,10 @@ export function editTextAndAttrs(doc, el, { text, set } = {}) {
         if (!RE_QNAME.test(qname)) return doc; // invalid name refuses the whole op
         if (attr) {
           // Replace value in place; skip the splice when it is a semantic no-op.
+          if (attr.value === value) continue;
+          assertEditableEntities(attr.rawValue);
           const escaped = escapeAttr(value, attr.quote);
-          if (decodeEntities(attr.rawValue) === value || escaped === attr.rawValue) continue;
+          if (escaped === attr.rawValue) continue;
           splices.push({ start: attr.valueStart, end: attr.valueEnd, repl: escaped });
         } else {
           addIns += ` ${qname}="${escapeAttr(value, '"')}"`;
@@ -843,6 +863,7 @@ export function editTextAndAttrs(doc, el, { text, set } = {}) {
   if (wantText) {
     const child = el.children[0];
     const rawSlice = doc.raw.slice(child.start, child.end);
+    if (decodeEntities(rawSlice) !== text) assertEditableEntities(rawSlice);
     const escaped = escapeText(text);
     // Same semantic no-op guard as editTextNode.
     if (!(decodeEntities(rawSlice) === text || escaped === rawSlice)) {
@@ -957,7 +978,7 @@ export function readingRoot(doc) {
   if (isTeiElement(documentElement, "TEI")) {
     const text = (documentElement.children || []).find((node) => isTeiElement(node, "text")) || null;
     const body = text && (text.children || []).find((node) => isTeiElement(node, "body"));
-    return body || text || documentElement;
+    return text || body || documentElement;
   }
   return firstTeiByLocal(doc.root, "body") || firstTeiByLocal(doc.root, "text") || doc.root;
 }
@@ -978,7 +999,7 @@ export function isReadingContext(node) {
  * @returns {boolean} True for a reading-context text node.
  */
 export function isReadingText(node) {
-  return node.type === "text" && isReadingContext(node);
+  return (node.type === "text" || node.type === "cdata") && isReadingContext(node);
 }
 
 function num(v) {

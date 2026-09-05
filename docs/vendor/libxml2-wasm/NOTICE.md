@@ -1,7 +1,7 @@
 # libxml2-wasm
 
 This directory vendors `libxml2-wasm` 0.7.1 from its published npm package.
-It provides the browser-side libxml2 RelaxNG validator.
+It provides the browser-side libxml2 RelaxNG and XSD validators.
 
 - npm integrity: `sha512-aZpJJL/j6T3D+5TmhG4D0ylR3mN6UzmqmBjyb/p+zEAaouG6GpfHiUNUzKR3vKCEoJt/Z2L15XPDCVPuFJIQhg==`
 - Package source: <https://www.npmjs.com/package/libxml2-wasm/v/0.7.1>

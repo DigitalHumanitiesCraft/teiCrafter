@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: active
 created: 2026-06-07
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
@@ -65,7 +65,7 @@ Save and Download validate the exact target representation. A project interchang
 
 Every configured schema runs. A project that declares both RelaxNG and Schematron receives one aggregate decision whose success requires both results. An unavailable dependency blocks output with the same authority as an invalid document.
 
-Served schemas may resolve relative URL dependencies. A user-opened project folder supports top-level resources and bare same-folder RelaxNG or XSD dependencies. Nested dependency trees and XML catalogs are outside the current folder contract. Raw Schematron must stay within the documented XPath 1.0 subset or arrive as compiled XSLT that produces SVRL.
+Served schemas may resolve relative URL dependencies. A user-opened project folder resolves nested relative RelaxNG and XSD dependencies within the granted root, with bounded traversal and cycle detection. Paths cannot escape that root. XML catalogs and portable session schema dependency bundles remain outside the current contract. Raw Schematron must stay within the documented XPath 1.0 subset or arrive as compiled XSLT that produces SVRL.
 
 TEI All supplies a safe repository default only when the project has no schema. A project-specific schema set replaces that default. A session upload replaces the project set temporarily and should be treated as an explicit operator decision.
 
@@ -79,11 +79,11 @@ Whole-document model provenance uses a TEI-root `@resp` pointer plus a matching 
 
 ## Review handoff
 
-Review state serializes as `teiHeader/revisionDesc/change` with a local target on the reviewed primary navigation unit. Downstream repositories can therefore read the reviewer, timestamp, status, rationale, and target without teiCrafter-specific UI state.
+Review state serializes as `teiHeader/revisionDesc/change` with a local target on the reviewed primary navigation unit. Downstream repositories can therefore read the reviewer, timestamp, status, rationale, target and source-scope fingerprint without teiCrafter-specific UI state. A matching fingerprint is required for current review; modified content retains its previous records as history.
 
 Projects should preserve these review changes alongside their existing revision history. A TEI corpus member receives review evidence in its own header. Annotation presence has no review semantics and should not be used as a substitute.
 
-The editor can read the historical `@ana="#teicrafter-reviewed"` marker for compatibility. New project contracts should use Review Records. A project requiring controlled reviewer identities or rationale vocabularies needs a workflow layer around the current default-details UI.
+The editor can read the historical `@ana="#teicrafter-reviewed"` marker for compatibility. New project contracts should use Review Records. The review dialog collects identity and rationale explicitly. A project requiring centrally controlled identities or rationale vocabularies still needs that policy layer.
 
 ## Span handoff
 
@@ -99,7 +99,7 @@ The current span transaction is document-local. Cross-file pointers need a proje
 
 The UFBAS Urfehde object enters as a complete TEI book without a required project manifest. Document evidence yields page and source structures, while repository TEI All supplies the default output schema. The generic header inventory exposes the real header without a corpus-specific form.
 
-The operational workflow uses portable file input and download, so it works in Chromium and Firefox. Review changes and schema authorization apply to the exact current source. Automated browser evidence covers the real local object and includes Axe in both engines. The object remains local because its redistribution status is separate from the editor's code licence.
+The operational workflow uses portable file input and download, so it works in Chromium and Firefox. Review changes and schema authorization apply to the exact current source. Historical automated browser evidence includes the real local object and Axe in both engines. Current runs certify this path only when the local source is supplied, as recorded in the dated report. The object remains local because its redistribution status is separate from the editor's code licence.
 
 ## Wenzelsbibel contract
 
@@ -134,6 +134,10 @@ This division keeps repository data auditable and prevents a project package fro
 The portable contract is local file input plus schema-gated Blob download. Chromium and Firefox both implement that route. Native file and directory handles are optional capabilities that improve save-in-place, project-folder, image, and dependency workflows.
 
 An integration must provide a usable result when those handles are absent. Save falls back to Download, project-folder actions stay hidden or disabled with an explanation, and editing remains available. Native capability detection must occur at the action boundary rather than through browser-name assumptions.
+
+Recovery and Working copy are independent of native file handles. Checkpoints preserve canonical UTF-8 source, visible staged input, nested settings and loaded image bytes. Working copy carries the portable representation as JSON; restoration must reacquire file and directory permissions. Attached external facsimile-folder resources remain external rather than becoming implicit native Save attachments.
+
+Native Save rechecks file identity and external modifications before writing, then binds completion to the captured session and revision. A download request is not proof of disk persistence. Failed, partial or superseded writes retain recovery. The format details belong to [data](data.md), and the queue and output-controller boundaries to [architecture](architecture.md).
 
 ## Integration checklist
 

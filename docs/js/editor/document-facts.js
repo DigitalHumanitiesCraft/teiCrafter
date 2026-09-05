@@ -3,9 +3,8 @@
  *
  * The factual, no-invented-data views of the loaded document: the slim strip
  * under the toolbar (#ed-docstrip), including the neutral plaintext-draft badge;
- * the editing-unit derivation it shares; and the unsaved-draft recovery wiring
- * (persist a handle-less plaintext draft to localStorage on the first dirty
- * change, offer to restore it in the empty reading pane).
+ * the editing-unit derivation it shares; and versioned local recovery wiring
+ * for canonical XML, staged input, project settings and attached image blobs.
  *
  * Contract:
  *   createDocumentFacts(ctx) -> {
@@ -25,9 +24,9 @@
  */
 
 import { el, clear } from "./dom.js";
-import { serialize } from "./edition.js";
-import { typeForFile } from "./project-manifest.js";
-import { saveDraft, loadDraft, clearDraft } from "./draft-recovery.js";
+import { typeForFile, parseManifest } from "./project-manifest.js";
+import { captureCheckpoint, createRecoveryStore, migrateLegacyDraft } from "./session-recovery.js";
+import { createRecoveryCoordinator } from "./recovery-coordinator.js";
 import { requireCtx } from "./ctx.js";
 import { unitTerms } from "./unit-labels.js";
 
@@ -38,6 +37,14 @@ export function createDocumentFacts(ctx) {
     ["setStatus", "setDirty", "load", "render", "renderActivePanel"],
     ["app"]);
   const { app, setStatus, setDirty, load, render, renderActivePanel } = ctx;
+  const recovery = createRecoveryStore();
+  const reportRecoveryError = (err) => setStatus(`Local recovery failed: ${err.message}. Download a working copy to keep your work.`);
+  const checkpoints = createRecoveryCoordinator({
+    store: recovery,
+    capture: () => app.state && app.recoveryId
+      ? captureCheckpoint(app, ctx.stagedSnapshot?.() || null, ctx.schemaSnapshot?.() || null) : null,
+    onError: reportRecoveryError,
+  });
 
   /** The project in force: the open folder's project wins over a detected one. */
   function activeProject() {
@@ -124,40 +131,23 @@ export function createDocumentFacts(ctx) {
     updateDocStrip();
   }
 
-  // ---- unsaved-draft recovery -----------------------------------------------
-  // A plaintext-derived draft (kind "draft", no file handle) is the only document
-  // that has no file behind it: a reload loses it. On the first dirty change it is
-  // persisted to localStorage (debounced); a successful save or a non-draft load
-  // clears the slot. The empty reading pane offers to restore it (renderDraftRecovery).
+  // ---- document recovery ---------------------------------------------------
+  // Each session has its own checkpoint. Switching files retains earlier work;
+  // only a complete native save or explicit discard removes that checkpoint.
 
   /** True when the current document is an unsaved draft with no file to fall back on. */
   function isUnsavedDraft() {
     return !!(app.state && app.source && app.source.kind === "draft" && !app.fileHandle);
   }
 
-  let _draftTimer = null;
-  const DRAFT_DEBOUNCE_MS = 1000;
-
-  /** Debounced persist of the current draft; a no-op for any non-draft document. */
+  /** Capture before queueing so a file switch cannot replace the pending revision. */
   function persistDraftIfNeeded() {
-    if (!isUnsavedDraft()) return;
-    if (_draftTimer) clearTimeout(_draftTimer);
-    _draftTimer = setTimeout(() => {
-      _draftTimer = null;
-      if (!isUnsavedDraft()) return;
-      saveDraft({
-        raw: serialize(app.state),
-        docName: app.docName,
-        sourceName: app.source.txtName || null,
-        savedAt: new Date().toISOString(),
-      });
-    }, DRAFT_DEBOUNCE_MS);
+    return checkpoints.persist();
   }
 
-  /** Drop any pending persist and clear the stored slot (on save or non-draft load). */
-  function clearDraftRecovery() {
-    if (_draftTimer) { clearTimeout(_draftTimer); _draftTimer = null; }
-    clearDraft();
+  /** Remove this session's checkpoint after earlier queued writes have completed. */
+  function clearDraftRecovery(id = app.recoveryId) {
+    return checkpoints.remove(id);
   }
 
   /**
@@ -166,12 +156,17 @@ export function createDocumentFacts(ctx) {
    * time, with Restore and Discard. A restored project draft has no directory
    * handle anymore, so it restores as a handle-less draft (Save downloads).
    */
-  function renderDraftRecovery(box) {
-    const record = loadDraft();
-    if (!record) return;
+  async function renderDraftRecovery(box) {
+    try {
+      await migrateLegacyDraft(recovery);
+      const records = await checkpoints.list();
+      for (const record of records) renderRecoveryRecord(box, record);
+    } catch (err) { reportRecoveryError(err); }
+  }
+
+  function renderRecoveryRecord(box, record) {
     const sec = el("div", { class: "ed-recent" });
-    const source = record.sourceName || "a plaintext file";
-    sec.appendChild(el("h2", { text: `Unsaved draft from ${source}` }));
+    sec.appendChild(el("h2", { text: "Recover local work" }));
     const list = el("div", { class: "ed-recent-list" });
 
     const row = el("div", { class: "ed-recent-row" });
@@ -185,13 +180,15 @@ export function createDocumentFacts(ctx) {
     list.appendChild(row);
 
     const restore = el("button", { class: "ed-recent-forget", type: "button", text: "Restore",
-      title: "Reopen this draft in the editor (Save downloads the TEI file)" });
+      title: "Restore XML, staged changes and attached images as a working copy" });
     restore.addEventListener("click", () => restoreDraft(record));
     row.appendChild(restore);
 
     const discard = el("button", { class: "ed-recent-forget", type: "button", text: "Discard",
       title: "Remove this recovered draft" });
-    discard.addEventListener("click", () => { clearDraftRecovery(); render(); });
+    discard.addEventListener("click", async () => {
+      if (await checkpoints.remove(record.id)) sec.remove();
+    });
     row.appendChild(discard);
 
     sec.appendChild(list);
@@ -201,13 +198,22 @@ export function createDocumentFacts(ctx) {
   async function restoreDraft(record) {
     // Load the stored raw with no handle, then re-mark it as a handle-less draft
     // so Save falls back to a download and the strip wording matches a draft.
-    const opened = await load(record.raw, record.docName || "draft.xml", null);
+    const project = record.projectManifest ? parseManifest(record.projectManifest) : null;
+    if (project && record.localSchemas) project.localSchemas = record.localSchemas;
+    if (project && record.schemaBaseUrl) project.schemaBaseUrl = record.schemaBaseUrl;
+    const opened = await load(record.raw, record.docName || "draft.xml", null, project, { projectFolder: null });
     if (!opened) return;
-    app.source = { kind: "draft", txtName: record.sourceName || null };
+    ctx.restoreSchema?.(record.schemaSettings);
+    app.recoveryId = record.id;
+    app.source = record.source || { kind: "draft", txtName: record.sourceName || null };
+    app.fileEncoding = record.fileEncoding || { encoding: "UTF-8", bom: false };
+    app.pageImages = new Map((record.images || []).filter((item) => item.blob instanceof Blob)
+      .map((item) => [item.name, { blob: item.blob, type: item.type, url: URL.createObjectURL(item.blob), persisted: false }]));
+    if (record.staged) ctx.restoreStaged?.(record.staged);
     updateDocStrip();
     renderActivePanel();
     setDirty(true); // unsaved by definition; this also re-persists the slot
-    setStatus("Restored an unsaved draft. Save downloads the TEI file.");
+    setStatus("Restored local work and attached images. Reopen the project folder to save files there; reconnect any unavailable schema resources before validated export.");
   }
 
   return {

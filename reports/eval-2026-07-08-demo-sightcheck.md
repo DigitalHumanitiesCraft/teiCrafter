@@ -1,5 +1,7 @@
 # Sight-check: the two demo object streams and the Wenzelsbibel codex load path
 
+Historical inspection of the July 2026 application. Preserve its observations as dated evidence; use the [report index](README.md) for current verification.
+
 Date: 2026-07-08. This is the delegated stand-in for the operator sight-check
 that stood open on the demo gate (M7.2): both worked-example objects taken
 end-to-end in the running browser editor, plus the Wenzelsbibel codex load path.

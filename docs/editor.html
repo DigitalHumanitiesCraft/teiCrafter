@@ -39,7 +39,7 @@
                             title="Write a teicrafter.project.json into a folder and open it as a project">New project...</button>
                     <span class="ed-dd-sep" role="separator"></span>
                     <button class="ed-dd-item" id="menu-new-from-text" role="menuitem"
-                            title="Build a starting TEI from plaintext and attach page images, in page order, in one step">New from text and images...</button>
+                            title="Choose a starter for a transcription, letter, charter, legal source or entry collection">New document...</button>
                     <span class="ed-dd-sep" role="separator"></span>
                     <button class="ed-dd-item" data-example="wb" role="menuitem">Wenzelsbibel (Codex 2759, word-level)</button>
                     <button class="ed-dd-item" data-example="zbz" role="menuitem">ZBZ Jeanne Hersch (letter with page scans, line-level)</button>
@@ -49,10 +49,13 @@
                             title="Turn AI assistance on or off for this browser. Off makes teiCrafter a fully deterministic editor with no AI features.">AI assistance: on</button>
                 </span>
             </span>
+            <button class="ed-btn" id="btn-open-working-copy" title="Restore a downloaded teiCrafter working copy">Open working copy</button>
             <button class="ed-btn ed-btn-ai" id="btn-generate" hidden title="Generate an initial TEI from plaintext with an LLM, then edit it here">New from text (LLM)</button>
         </div>
         <div class="sep ed-tool-doc" hidden></div>
         <div class="group ed-tool-doc" hidden>
+            <button class="ed-btn" id="btn-read-only" type="button" aria-pressed="false"
+                    title="Read and navigate without changing document content">Read only</button>
             <button class="ed-btn" id="btn-undo" type="button" disabled
                     aria-label="Undo document edit" aria-keyshortcuts="Control+Z Meta+Z"
                     title="Undo the last applied document edit (Ctrl/Cmd+Z)">Undo</button>
@@ -62,6 +65,7 @@
             <span class="sep" aria-hidden="true"></span>
             <button class="ed-btn ed-btn-primary" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
             <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
+            <button class="ed-btn" id="btn-working-copy" disabled title="Keep unfinished XML, staged edits and attached images without a schema gate">Working copy</button>
             <button class="ed-btn" id="btn-export-inline" hidden title="Export the inline-GND interchange copy (authority inline at each mention, no register) for the ZBZ pipeline">Export inline-GND</button>
             <button class="ed-btn" id="btn-attach-facsimiles" hidden
                     title="Choose a local folder that contains the bare image filenames referenced by this TEI">Attach facsimile folder</button>
@@ -147,6 +151,7 @@
                 </div>
                 <div class="ed-panel" id="ed-panel-index" role="tabpanel" hidden>
                     <input class="ed-idx-filter" id="idx-filter" type="text" placeholder="filter by name or id..."
+                           aria-label="Filter index by name or identifier"
                            title="Filter entities by name or id; matches are highlighted, Escape clears" />
                     <div class="ed-idx-workfilter" id="idx-workfilter" role="group" aria-label="Show only entries that still need editorial work">
                         <button type="button" class="ed-idx-wfbtn" data-mode="all" aria-pressed="true"

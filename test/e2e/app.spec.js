@@ -462,7 +462,7 @@ test("start page and editor workflow stay deterministic", async ({ browserName, 
   await source.fill(stagedSource);
   await page.locator("#view-metadata").click();
   await expect(page.locator("#view-xml")).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("#ed-status")).toContainText("Apply or cancel the staged XML");
+  await expect(page.locator("#ed-status")).toContainText("Apply or cancel the visible edits");
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await page.locator("#view-metadata").click();
@@ -472,7 +472,7 @@ test("start page and editor workflow stay deterministic", async ({ browserName, 
   await metadataInput.fill(`${title} E2E`);
   await page.locator("#view-reading").click();
   await expect(page.locator("#view-metadata")).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("#ed-status")).toContainText("Apply or reset the staged metadata");
+  await expect(page.locator("#ed-status")).toContainText("Apply or reset the visible edits");
   await page.locator(".ed-meta-root").getByRole("button", { name: "Apply" }).click();
   await expect(page.locator("#ed-status")).toContainText("Metadata fields applied");
 
@@ -645,14 +645,14 @@ test("Firefox uses capability-gated file input and schema-gated download fallbac
   expect(directDownload.suggestedFilename()).toBe("browser-smoke.xml");
   expect((await downloadedBytes(directDownload)).equals(readFileSync(fixturePath))).toBe(true);
   await expect(page.locator("#ed-val-chip")).toHaveText("schema and structural checks passed");
-  await expect(page.locator("#ed-status")).toContainText("Downloaded browser-smoke.xml");
+  await expect(page.locator("#ed-status")).toContainText("Download requested: browser-smoke.xml");
 
   const saveFallbackPromise = page.waitForEvent("download", { timeout: 60_000 });
   await page.locator("#btn-save").click();
   const saveFallback = await saveFallbackPromise;
   expect(saveFallback.suggestedFilename()).toBe("browser-smoke.xml");
   expect((await downloadedBytes(saveFallback)).equals(readFileSync(fixturePath))).toBe(true);
-  await expect(page.locator("#ed-status")).toContainText("Downloaded browser-smoke.xml");
+  await expect(page.locator("#ed-status")).toContainText("Download requested: browser-smoke.xml");
   await expectRuntimeClean();
 });
 
@@ -694,6 +694,7 @@ test("real Urfehde book supports the complete paged review workflow", async ({ p
 
   await page.locator("#view-reading").click();
   await page.locator("#ed-review-summary").click();
+  await page.getByRole("button", { name: "Mark reviewed", exact: true }).click();
   await expect(page.locator("#ed-review-summary")).toContainText("Reviewed 1/226");
   await page.keyboard.press("Control+Z");
   await expect(page.locator("#ed-review-summary")).toContainText("Reviewed 0/226");

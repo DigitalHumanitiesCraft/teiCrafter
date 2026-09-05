@@ -2,7 +2,8 @@
 
 A small project folder for the plaintext-to-TEI workflow: open this folder via
 "Load... > Open project folder...", click the .txt to get a deterministic
-line-level draft, save to create the .xml next to it, then annotate.
+line-level draft, annotate, then save to create an unused .xml filename next to
+the source. An existing XML file with the same stem is not overwritten.
 
 Source: Friedrich August Otto Benndorf to Hugo Schuchardt (02-00932), Vienna,
 1879-02-14. Edited by Hubert Szemethy (2022). In: Bernhard Hurch (ed.):

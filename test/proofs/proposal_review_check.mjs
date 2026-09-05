@@ -18,6 +18,7 @@ import { parseSuggestions } from "../../docs/js/editor/ai-suggest.js";
 import { applyProposals } from "../../docs/js/editor/proposal-apply.js";
 import { markCritical } from "../../docs/js/editor/criticism.js";
 import { confirmConstruct, rejectConstruct } from "../../docs/js/editor/proposal-review.js";
+import { isAcceptedProposal, isPendingProposal } from "../../docs/js/editor/proposal-provenance.js";
 import { AI_RESP } from "../../docs/js/editor/standoff.js";
 
 let passed = 0, failed = 0;
@@ -65,8 +66,9 @@ function aiNoteEl(raw) {
   const el = layerEl(base, "Schuchardt", "persName");
   check(!!el, "the proposed persName projects as an AI layer");
   const doc = confirmConstruct(parseDocument(base), el);
-  check(doc.raw.includes("<persName>Schuchardt</persName>"), "confirm keeps the persName, drops @resp");
-  check(!doc.raw.includes("<persName resp"), "no resp-marked persName remains");
+  const accepted = elementsByLocal(doc.root, "persName").find((node) => isAcceptedProposal(node, AI_RESP));
+  check(!!accepted && doc.raw.slice(accepted.contentStart, accepted.contentEnd) === "Schuchardt", "confirm keeps text and machine origin");
+  check(!isPendingProposal(accepted, AI_RESP), "the accepted construct is no longer pending");
   check(reparses(doc), "confirm re-parses byte-identically");
   check(doc.raw.includes('<date when="1879" resp="#ai">'), "the date proposal is untouched (confirm is per-construct)");
 }
@@ -101,7 +103,7 @@ function aiNoteEl(raw) {
 // --- 4. note: confirm keeps it, reject removes it; reading text never moves ---
 {
   const noteConfirm = confirmConstruct(parseDocument(base), aiNoteEl(base));
-  check(/<note target="#[^"]+">Honorific address\.<\/note>/.test(noteConfirm.raw), "confirm keeps the note, drops @resp");
+  check(elementsByLocal(noteConfirm.root, "note").some((node) => isAcceptedProposal(node, AI_RESP)), "confirm keeps the note and records acceptance separately");
   check(reparses(noteConfirm), "note confirm re-parses byte-identically");
 
   const noteReject = rejectConstruct(parseDocument(base), aiNoteEl(base));
@@ -123,7 +125,7 @@ function aiNoteEl(raw) {
 
   const gEl = parseEdition(gapDoc.raw).cells.find((c) => c.gap).layers[0].el;
   const conf = confirmConstruct(gapDoc, gEl);
-  check(conf.raw.includes("<gap/>") && !conf.raw.includes("<gap resp"), "gap confirm drops @resp");
+  check(elementsByLocal(conf.root, "gap").some((node) => isAcceptedProposal(node, AI_RESP)), "accepted gap retains its machine origin");
   check(reparses(conf), "gap confirm re-parses byte-identically");
 
   const gEl2 = parseEdition(gapDoc.raw).cells.find((c) => c.gap).layers[0].el;

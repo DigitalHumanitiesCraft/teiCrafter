@@ -124,7 +124,7 @@ export function createEntityIndex(ctx) {
         (doc) => standoff.setAuthority(doc, id, authority, value),
         { label: "Authority id updated", failPrefix: "Set authority id" }),
       onConfirm: (id) => commitStandoff(
-        (doc) => standoff.confirmEntity(doc, id),
+        (doc) => standoff.confirmEntity(doc, id, app.aiResp || standoff.AI_RESP),
         { label: "AI suggestion confirmed", failPrefix: "Confirm entity" }),
       onLookup: (id, { authority, query, anchor, onPick }) => runLookup(authority, query, anchor, onPick),
     });
@@ -178,7 +178,7 @@ export function createEntityIndex(ctx) {
   function renderIndex() {
     const panel = ensureIndexPanel();
     if (!panel || !app.state) return;
-    const all = standoff.readEntities(app.state.doc);
+    const all = standoff.readEntities(app.state.doc, app.aiResp || standoff.AI_RESP);
     const usage = entityUsage();
     for (const k of ["persons", "places", "orgs", "works", "events"]) {
       for (const e of all[k] || []) e.count = (usage.get(e.id) || {}).count || 0;
@@ -192,7 +192,9 @@ export function createEntityIndex(ctx) {
       declared || DEFAULT_SECTIONS,
       exportableEntityTypes(app.project),
     );
-    panel.render(all, sections);
+    panel.render(all, app.readOnly ? sections.map((section) => ({
+      ...section, readOnly: true, readOnlyNote: "Document is read only. Choose Edit document to change index entries.",
+    })) : sections);
     applyFilter($("idx-filter") ? $("idx-filter").value : "");
   }
 

@@ -35,7 +35,6 @@ import {
   textOf,
   spliceDocument,
   editAttrValue,
-  removeAttrInNamespace,
   escapeText,
   escapeAttr,
   ancestorWithXmlId,
@@ -49,6 +48,7 @@ import { resolvedSpanGroups, spanEntityId } from "./span-projection.js";
 // marker) or rejects (deletes the entity). It is a TEI @resp value, so it stays
 // schema-valid and round-trips losslessly.
 export const AI_RESP = "#ai";
+import { acceptProposal, hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 
 // Map an entity type to its list element, entity element, and name element.
 const TYPE_MAP = Object.freeze({
@@ -166,12 +166,13 @@ function readAuthorities(doc, el) {
   }));
 }
 
-function readOne(doc, el, type) {
+function readOne(doc, el, type, responsibility) {
   const desc = TYPE_MAP[type];
   const id = getXmlId(el);
   const name = firstChildText(doc, el, desc.name) || allText(doc, el) || "";
-  const ai = getAttr(el, "resp") === AI_RESP;
-  return { id, type, name, node: el, ai, authorities: readAuthorities(doc, el) };
+  const ai = isPendingProposal(el, responsibility);
+  const aiOrigin = hasResponsibility(el, responsibility);
+  return { id, type, name, node: el, ai, aiOrigin, authorities: readAuthorities(doc, el) };
 }
 
 /**
@@ -179,13 +180,13 @@ function readOne(doc, el, type) {
  * bibliographic element in the teiHeader (sourceDesc), so works are read scoped to
  * standOff/listBibl rather than document-wide, to avoid pulling in header citations.
  */
-function readType(doc, type) {
+function readType(doc, type, responsibility) {
   const standOff = topLevelStandOff(doc);
   if (!standOff) return [];
   const desc = TYPE_MAP[type];
   const out = [];
   for (const list of directChildren(standOff, desc.list)) {
-    for (const el of directChildren(list, desc.entity)) out.push(readOne(doc, el, type));
+    for (const el of directChildren(list, desc.entity)) out.push(readOne(doc, el, type, responsibility));
   }
   return out;
 }
@@ -197,12 +198,12 @@ function readType(doc, type) {
  * E = { id, type, name, node, authorities }; name from persName/placeName/orgName/
  * label/title else first text; authorities from <idno type="..."> children.
  */
-export function readEntities(doc) {
-  const persons = readType(doc, "person");
-  const places = readType(doc, "place");
-  const orgs = readType(doc, "org");
-  const events = readType(doc, "event");
-  const works = readType(doc, "work");
+export function readEntities(doc, responsibility = AI_RESP) {
+  const persons = readType(doc, "person", responsibility);
+  const places = readType(doc, "place", responsibility);
+  const orgs = readType(doc, "org", responsibility);
+  const events = readType(doc, "event", responsibility);
+  const works = readType(doc, "work", responsibility);
   return { persons, places, orgs, events, works };
 }
 
@@ -500,14 +501,14 @@ export function retypeEntity(doc, id, newType) {
 }
 
 /**
- * Confirm an AI-proposed entity: drop its resp="#ai" marker so it reads as a
- * human-verified entity. Reject is just deleteEntity. Returns a NEW doc, or the
+ * Confirm an AI-proposed entity while retaining origin and recording acceptance.
+ * Reject is just deleteEntity. Returns a NEW doc, or the
  * SAME doc when the entity is absent or carries no AI marker (no-op).
  */
-export function confirmEntity(doc, id) {
+export function confirmEntity(doc, id, responsibility = AI_RESP) {
   const el = findEntityElement(doc, id);
-  if (!el || getAttr(el, "resp") !== AI_RESP) return doc;
-  return removeAttrInNamespace(doc, el, null, "resp");
+  if (!el || !isPendingProposal(el, responsibility)) return doc;
+  return acceptProposal(doc, el, responsibility);
 }
 
 // ---- authority identifiers (idno) ------------------------------------------

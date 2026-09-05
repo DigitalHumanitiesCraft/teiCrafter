@@ -380,5 +380,12 @@ export function createValidationView(ctx) {
     isOutputAuthorizationCurrent,
     showDetails,
     activeSchemaSources: activeSources,
+    recoverySettings: () => ({ customSchema }),
+    restoreSettings: (settings) => {
+      customSchema = settings?.customSchema || null;
+      schemaRecord = null;
+      valCache = null;
+      ctx.onSchemaSourcesChanged?.();
+    },
   };
 }

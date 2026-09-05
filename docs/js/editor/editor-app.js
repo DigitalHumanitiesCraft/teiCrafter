@@ -2,12 +2,12 @@
  * teiCrafter Editor (Editor path) -- UI controller / shell.
  *
  * Wires the deterministic, DOM-free edition core (edition.js) to the shell in
- * editor.html. No LLM anywhere in this path: every change is a direct,
- * human-driven, lossless offset splice on the raw TEI string.
+ * editor.html. Deterministic edits and optional model proposals share the
+ * canonical session and lossless offset-splice mutation boundary.
  *
  * Since the M2.13 module split this file is the integrator: it owns the shared
  * app state, loading, rendering of the reading text, the live checks,
- * save/download, the inline cell editing (text / note / critical chooser), and
+ * output adapters, note and critical choosers, and
  * the dual-view shell (M2.14): the left pane is the text work surface (reading
  * text or XML source), the right pane hosts a switchable context panel from an
  * open registry (facsimile, entity index; a project profile can contribute
@@ -16,40 +16,41 @@
  *   - annotation-ui.js   context menu, annotate popover, annotation editor
  *   - entity-index.js    entity index panel + live authority lookup
  *   - source-view.js     editable XML source view
+ *   - inline-editor.js   reading text and dual-reading inputs
+ *   - staged-input.js    shared unfinished-input ownership
+ *   - output-controller.js validated save and download orchestration
  *   - gen-modal.js       LLM on-ramp ("New from text")
  */
 
 import {
   parseEdition,
-  editCellCore,
-  editCellReadings,
-  splitEdge,
   xmlIdSet,
   countTags,
-  attrTargetForCell,
   cellRawOffset,
   folioSourceSlice,
   elementSourceSlice,
   spliceSourceSlice,
   applySourceProfile,
-} from "./edition.js?v=20260824-ui4";
+} from "./edition.js";
 import { splitElement, mergeElements, insertLb, deleteElement } from "./structural.js";
 import { walk, decodeEntities } from "./tei-document.js";
 import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
-import * as standoff from "./standoff.js?v=20260824-ui4";
+import * as standoff from "./standoff.js";
 import { markCritical, unwrapCritical, removeGap, CRITICAL_KINDS } from "./criticism.js";
 import { createAnnotationUi } from "./annotation-ui.js";
 import { createEntityIndex } from "./entity-index.js";
-import { mountSourceView } from "./source-view.js?v=20260824-ui4";
-import { mountMetadataView } from "./metadata-view.js?v=20260824-ui4";
-import { annotationPageSummary } from "./annotation-progress.js?v=20260824-ui4";
+import { mountSourceView } from "./source-view.js";
+import { mountMetadataView } from "./metadata-view.js";
+import { annotationPageSummary } from "./annotation-progress.js";
 import { reviewPageSummary, setFolioReviewed } from "./review-progress.js";
+import { chooseReviewDetails } from "./review-dialog.js";
 import { setupGenModal } from "./gen-modal.js";
 import { setupImageOnramp } from "./image-onramp.js";
 import { createPageImages } from "./page-images.js";
 import { FEATURES, llmEnabled } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
+import { teiFromStarter, draftFilename } from "./starter-profiles.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
 import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFiles, llmForFile } from "./project-manifest.js";
 import { complete } from "../services/llm.js";
@@ -61,7 +62,7 @@ import { historyCommand } from "./history-shortcuts.js";
 import { createRevisionCache } from "./revision-cache.js";
 import { toInlineGND, inlineGndFilename } from "./inline-gnd.js";
 import { targetDocument, usesInlineGND, workingDocument } from "./interchange.js";
-import { createProjectFolder } from "./project-folder.js?v=20260824-ui4";
+import { createProjectFolder } from "./project-folder.js";
 import { createValidationView } from "./validation-view.js";
 import { schemaSetKey, schemaSources } from "./schema-validation.js";
 import { inspectSchemaSources } from "./schema-profile.js";
@@ -69,9 +70,17 @@ import { hasGeneratedDraftProvenance } from "./generated-provenance.js";
 import { resolveSourceProfile } from "./source-profile.js";
 import { unitPositionLabel, unitTerms } from "./unit-labels.js";
 import { setupTablist, syncTablist } from "./tabs.js";
-import { decodeXmlBytes, encodeXmlBytes } from "./file-encoding.js";
-import { fileVersion, fileVersionChanged } from "./file-version.js";
+import { decodeXmlBytes } from "./file-encoding.js";
+import { fileVersion } from "./file-version.js";
 import { createDocumentFacts } from "./document-facts.js";
+import { captureCheckpoint } from "./session-recovery.js";
+import { createStagedInput } from "./staged-input.js";
+import { createInlineEditor } from "./inline-editor.js";
+import { createOutputController } from "./output-controller.js";
+import { downloadFile } from "./download-file.js";
+import { encodeWorkingCopy, decodeWorkingCopy } from "./working-copy.js";
+import { createReadingView } from "./reading-view.js";
+import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 import {
   parseGuidelines, elementsForScope, elementByName,
   VENDORED_GUIDELINES_PATH, VENDORED_GUIDELINES_VERSION,
@@ -118,12 +127,26 @@ const app = {
   revision: 0,
   fileEncoding: { encoding: "UTF-8", bom: false },
   fileSnapshot: null,
+  recoveryId: null,
+  documentDirectory: null,
+  readOnly: false,
 };
 
 // Persistent facsimile controller (one OSD instance reused across folios),
 // created lazily once the DOM host exists.
 let facsimile = null;
-let sourceViewSession = null;
+const stagedInput = createStagedInput({
+  current: () => ({ sessionId: app.sessionId, raw: app.state?.raw || "" }),
+  blocked: setStatus,
+});
+const stagedSnapshot = () => stagedInput.snapshot();
+
+function resolveStagedOutput(action) {
+  if (stagedInput.apply()) return true;
+  void documentFacts.persistDraftIfNeeded();
+  setStatus(`${action} needs the visible edits to be applied. Correct them or use Working copy to preserve the unfinished input.`);
+  return false;
+}
 const sessionSafety = createSessionSafety();
 let activeSchemaProfile = null;
 let schemaProfileRequest = 0;
@@ -164,7 +187,7 @@ function reprojectSchemaProfile(evidence) {
   app.noteDetails = standoff.noteDetailIndex(app.state.doc);
   app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
   projectionCache.clear();
-  if (!changesNavigation || sourceViewSession?.hasChanges()) {
+  if (!changesNavigation || stagedInput.hasChanges()) {
     updateFolioButtons();
     documentFacts.updateDocStrip();
     if (app.panel === "source") renderActivePanel();
@@ -266,20 +289,44 @@ function adoptSessionState(notes = null) {
   app.noteDetails = standoff.noteDetailIndex(app.state.doc);
   app.folio = Math.max(0, Math.min(app.folio, app.state.folios.length - 1));
   setDirty(editorSession.dirty);
+  if (!editorSession.dirty) void documentFacts.persistDraftIfNeeded();
 }
 
 function replaceSessionState(nextState, label, notes = null) {
+  if (stagedInput.hasChanges()) throw new Error("Apply or cancel the visible edits before changing the document.");
   if (!editorSession.replace(profileEditionState(nextState), label)) return false;
   adoptSessionState(notes);
   return true;
 }
 
-function applyHistory(command) {
-  if (!app.state) return false;
-  if (sourceViewSession && sourceViewSession.hasChanges()) {
-    setStatus("Apply or cancel the staged source changes before undoing document edits.");
-    return false;
+function syncDocumentMode() {
+  const button = $("btn-read-only");
+  button.textContent = app.readOnly ? "Edit document" : "Read only";
+  button.setAttribute("aria-pressed", String(app.readOnly));
+  button.title = app.readOnly ? "Document is read only. Enable editing deliberately." : "Read and navigate without changing document content";
+  document.body.classList.toggle("ed-read-only", app.readOnly);
+  updateHistoryControls();
+  applyLlmGate();
+}
+
+function toggleDocumentMode() {
+  if (!app.state) return;
+  if (stagedSnapshot()) {
+    setStatus("Apply or cancel the visible edits before entering Read only. Working copy can preserve unfinished input.");
+    return;
   }
+  app.readOnly = !app.readOnly;
+  editorSession.readOnly = app.readOnly;
+  annot.removeMenu();
+  annot.removeSelPopover();
+  syncDocumentMode();
+  render();
+  setStatus(app.readOnly ? "Read only: text, XML, metadata, annotations and review are protected. Navigation and copying remain available." : "Document editing enabled.");
+}
+
+function applyHistory(command) {
+  if (!app.state || app.readOnly) return false;
+  if (!stagedInput.allowChange("undoing document edits")) return false;
   const result = command === "redo" ? editorSession.redo() : editorSession.undo();
   if (!result) return false;
   adoptSessionState();
@@ -290,6 +337,7 @@ function applyHistory(command) {
 
 function enableControls(on) {
   $("btn-download").disabled = !on;
+  $("btn-working-copy").disabled = !on;
   $("btn-save").disabled = !on;
   // The editor chrome is always present; only the document-scoped toolbar
   // group (Save/Download and the document name) toggles with a loaded document.
@@ -353,6 +401,7 @@ function syncReadingVariant() {
 }
 
 function setReadingVariant(variant) {
+  if (!stagedInput.allowChange("changing the reading variant")) return;
   if (variant !== "dipl" && variant !== "norm") return;
   if (app.readingVariant === variant) return;
   app.readingVariant = variant;
@@ -374,7 +423,7 @@ function setReadingVariant(variant) {
 // app.aiResp (the project's, or the default). Shared by the render, the legend and
 // the tooltip so the three cannot drift, and so a custom responsibility id is honoured.
 function cellHasAiLayer(cell) {
-  return !!(cell && cell.layers && cell.layers.some((l) => l.resp === app.aiResp));
+  return !!(cell && cell.layers && cell.layers.some((layer) => isPendingProposal(layer.el, app.aiResp)));
 }
 
 function buildLegend() {
@@ -583,14 +632,19 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   const workingDoc = workingDocument(openedState.doc, resolvedProject);
   const importedInterchange = workingDoc !== openedState.doc;
   const workingState = importedInterchange ? parseEdition(workingDoc.raw) : openedState;
+  stagedInput.clear();
   editorSession.load(profileEditionState(workingState, resolvedProject, name));
+  app.readOnly = editorSession.readOnly = !!opts.readOnly;
+  syncDocumentMode();
   app.state = editorSession.state;
   sessionSafety.replace(app.state.doc.raw);
   app.sessionId = editorSession.sessionId;
   app.revision = editorSession.revision;
   app.folio = 0;
+  app.recoveryId = crypto.randomUUID();
   app.sourceMode = false;
   app.fileHandle = handle || null;
+  app.documentDirectory = opts.directory || null;
   app.fileEncoding = opts.fileEncoding || { encoding: "UTF-8", bom: false };
   app.fileSnapshot = handle && opts.fileSnapshot ? opts.fileSnapshot : null;
   app.docName = name;
@@ -815,7 +869,7 @@ const EXAMPLES = {
 
 /** Guard before any in-app document replacement (open, example, drop, recent). */
 function confirmDiscard() {
-  const staged = !!(sourceViewSession && sourceViewSession.hasChanges());
+  const staged = !!stagedSnapshot();
   return (!app.dirty && !staged)
     || window.confirm(`Discard unsaved changes in ${app.docName}?`);
 }
@@ -1060,7 +1114,9 @@ function updateReviewProgress() {
   const current = summary.pages[app.folio] || null;
   const terms = unitTerms(app.state.sourceProfile);
   button.textContent = `Reviewed ${summary.reviewedPages}/${summary.totalPages}`;
-  button.disabled = !current || !current.markable;
+  if (current?.status === "changed") button.textContent += " · changed since review";
+  else if (current?.status === "historical") button.textContent += " · historical review";
+  button.disabled = app.readOnly || !current || !current.markable;
   button.setAttribute("aria-pressed", String(!!(current && current.reviewed)));
   button.title = current && current.reviewed
     ? `This ${terms.singular} is editorially reviewed. Click to reopen it for review.`
@@ -1103,6 +1159,7 @@ function updateFolioButtons() {
 
 function setViewMode(mode) {
   if (!app.state || (mode !== "paged" && mode !== "continuous") || app.viewMode === mode) return;
+  if (!stagedInput.allowChange("changing the reading layout")) return;
   app.viewMode = mode;
   saveDocLayout({ viewMode: mode });
   render();
@@ -1110,12 +1167,7 @@ function setViewMode(mode) {
 
 function gotoFolio(i) {
   if (!app.state) return;
-  if (app.sourceMode && sourceViewSession && sourceViewSession.hasChanges()) {
-    setStatus(app.sourceMode === "metadata-form"
-      ? `Apply or reset the staged metadata fields before changing ${unitTerms(app.state.sourceProfile).plural}.`
-      : `Apply or cancel the staged XML before changing ${unitTerms(app.state.sourceProfile).plural}.`);
-    return;
-  }
+  if (!stagedInput.allowChange("changing navigation units")) return;
   const next = Math.max(0, Math.min(app.state.folios.length - 1, i));
   if (next !== app.folio) sessionSafety.abortKind("proposal", "Requested page changed");
   app.folio = next;
@@ -1192,7 +1244,7 @@ function entityMetaMap() {
       ["works", "work"], ["events", "event"],
     ]) {
       for (const e of all[key] || []) {
-        if (e.id) meta.set(e.id, { name: e.name, kind: MENTION_KIND[type], ai: !!e.ai });
+        if (e.id) meta.set(e.id, { name: e.name, kind: MENTION_KIND[type], ai: isPendingProposal(e.node, app.aiResp), aiOrigin: hasResponsibility(e.node, app.aiResp) });
       }
     }
     return meta;
@@ -1245,42 +1297,20 @@ function entityUsage() {
 // Text-structure wrappers that carry no scholarly semantics: they must not get
 // the semantic-wrap treatment. Critical locals are styled by their own crit-*
 // classes (handled separately), so they are excluded here too.
-const STRUCTURE_WRAPS = new Set(["w", "l", "lb"]);
-const SEM_WRAP_EXCLUDE = new Set(["unclear", "del", "add", "gap"]);
-
-/**
- * The inline semantic element wrapping a cell's text (date, ref, salute, signed,
- * persName, ...), or null. Reuses attrTargetForCell (which already excludes the
- * reading containers p/head/note/body), then drops the bare text-structure
- * wrappers and the critical locals: what remains is a scholarly inline wrap whose
- * presence should be visible in the reading view. A linked mention is left to the
- * mention layer (it already shows). Returns the element node or null.
- */
-function semanticWrapFor(cell) {
-  if (!cell || cell.gap || cell.mention) return null;
-  const elNode = attrTargetForCell(cell);
-  if (!elNode) return null;
-  if (STRUCTURE_WRAPS.has(elNode.localName) || SEM_WRAP_EXCLUDE.has(elNode.localName)) return null;
-  return elNode;
-}
-
-/** Tooltip naming a semantic wrap and its attributes, e.g. "date when=1879-02-14". */
-function semanticWrapTitle(elNode) {
-  const attrs = (elNode.attrs || []).map((a) => `${a.name}=${a.value}`).join(" ");
-  return attrs ? `${elNode.localName} ${attrs}` : elNode.localName;
-}
-
 function renderReading() {
+  // Keep the actual controls, selection and caret while input is unfinished.
+  if (stagedInput.hasChanges()) return;
   const host = $("ed-reading");
-  sourceViewSession = null;
+  stagedInput.clear();
   clear(host);
-  // The view tabs name what the pane currently shows; the source view drops
-  // the body padding (the editor frame brings its own) so nothing overflows.
   syncViewTabs();
   if (!app.state) { host.classList.remove("src"); renderEmptyReading(host); return; }
   host.classList.toggle("src", app.sourceMode);
-  if (app.sourceMode === "metadata-form") { renderMetadataForm(host); return; }
-  if (app.sourceMode) { renderSourceView(host); return; }
+  if (app.sourceMode) {
+    if (app.sourceMode === "metadata-form") renderMetadataForm(host);
+    else renderSourceView(host);
+    return;
+  }
   const continuous = app.viewMode === "continuous";
   host.classList.toggle("continuous", continuous);
   const folios = app.state.folios;
@@ -1326,114 +1356,6 @@ function renderPageSeparator(folio, fi) {
     renderActivePanel();
   });
   return sep;
-}
-
-/** Render one folio's lines into host. folioIndex tags each row and cell so the
- *  line<->facsimile link resolves the right page in the continuous view. */
-function renderFolioInto(host, folio, folioIndex, mentions) {
-  // The gutter shows the document's own line label (@n). When this folio numbers
-  // no line (e.g. a plaintext draft emits bare <lb/>), fall back to a display-only
-  // 1-based position so the gutter still aids navigation; it is rendered faint and
-  // never written to the document. A folio that numbers any line keeps the @n and
-  // leaves unnumbered lines blank, so a real label never mixes with a synthetic one.
-  const hasDocN = folio.lines.some((l) => l.n != null);
-  folio.lines.forEach((line, lineIndex) => {
-    const row = el("div", { class: "ed-line", dataset: { folio: String(folioIndex), line: String(lineIndex) } });
-    // The line label sits in the gutter; the cells go into a body cell that wraps
-    // independently of the fixed-width number channel.
-    const docN = line.n != null;
-    const label = docN ? line.n : (hasDocN ? "" : String(lineIndex + 1));
-    row.appendChild(el("span", { class: "ed-line-n" + (!docN && !hasDocN ? " pos" : ""), text: label }));
-    const body = el("span", { class: "ed-line-body" });
-    line.cells.forEach((cell, k) => {
-      if (k > 0 && !cell.joinLeft) body.appendChild(document.createTextNode(" "));
-      const noteKey = app.noteByWord.has(cell.id) ? cell.id : cell.facs;
-      const noteTexts = noteKey ? (app.noteByWord.get(noteKey) || []) : [];
-      const noteDetails = noteKey ? (app.noteDetails.get(noteKey) || []) : [];
-      const note = noteTexts.join("; ");
-      const aiNoteDetail = noteDetails.find((detail) => detail.resp === app.aiResp) || null;
-      // A gap is a read-only marker (no text); other critical kinds add a class so
-      // the wrapped reading text shows its editorial status (dotted / struck / added).
-      const critClass = cell.crit ? " crit-" + cell.crit : "";
-      // M2.5 visibility layer: a linked mention renders in its entity-type colour;
-      // a mention of an AI-proposed (unconfirmed) entity renders in the violet AI
-      // family, so machine output stays separable (design.md). A mention whose
-      // target id is missing keeps the generic fallback style.
-      const meta = !cell.gap && cell.mention ? mentions.get(cell.mention) || null : null;
-      const mentionClass = !cell.gap && cell.mention
-        ? " mention" + (meta ? ` mention-${meta.kind}${meta.ai ? " mention-ai" : ""}` : "")
-        : "";
-      // Unified provenance: a cell reads as the AI family when its linked entity is
-      // AI-proposed OR any wrapping layer carries the responsibility id, so a proposed
-      // markup/criticism/note construct (not only an entity mention) shows violet.
-      const aiNote = !!aiNoteDetail;
-      const aiProv = (meta && meta.ai) || cellHasAiLayer(cell) || aiNote;
-      const provClass = aiProv ? " ed-w-ai" : "";
-      // F4: the normalized variant shows @norm where a word carries one, the
-      // text as written otherwise; gap cells keep their marker. The diplomatic
-      // variant always shows the text as written.
-      const display = cell.gap
-        ? "[...]"
-        : (app.readingVariant === "norm" && cell.w && cell.w.norm != null ? cell.w.norm : cell.text);
-      // Semantic-wrap visibility (M2.5 family): text inside a scholarly inline
-      // element (date, ref, salute, ...) that is neither a mention nor critical
-      // gets a subtle dotted underline and a tooltip naming the element and its
-      // attributes, so the markup is visible without changing text metrics.
-      const semWrap = semanticWrapFor(cell);
-      // Stacked annotations (e.g. a persName inside a seg): cell.layers carries the
-      // full nesting. When two or more layers overlap one text, show the stacked
-      // underline and route a click to the inspector instead of a single editor;
-      // the single dotted semantic-wrap underline is suppressed to avoid clutter.
-      const stacked = cell.layers && cell.layers.length >= 2;
-      const semClass = semWrap && !stacked ? " ed-w-sem" : "";
-      const semTitlePart = semWrap ? semanticWrapTitle(semWrap) : null;
-      const baseTitle = critTitle(cell, note, meta, !!semWrap);
-      const span = el("span", {
-        class: "ed-w" + (note ? " has-note" : "") + critClass + mentionClass + provClass + semClass + (stacked ? " ed-w-stacked" : ""),
-        dataset: { id: cell.id, folio: String(folioIndex), line: String(lineIndex), start: String(cell.start) },
-        text: display,
-        title: semTitlePart ? `${semTitlePart}; ${baseTitle}` : baseTitle,
-      });
-      // Editor paradigm (M2.10): a plain click only sets the cursor. Clicking an
-      // ANNOTATED element opens its editor: an entity mention its annotation
-      // editor, a scholarly inline wrap (date, ref, ...) its attribute editor, so
-      // the @when normalization sits one click from the marked text. A gap opens
-      // its remove chooser. Double-click edits the text directly (word- and
-      // line-level alike); selecting text annotates it; right-click opens the menu.
-      // Text editing and annotation are thus distinct modes reached by distinct
-      // gestures: a click never traps the line in an edit field.
-      span.addEventListener("click", (e) => {
-        if (e.detail > 1) return; // second click of a double-click
-        const sel = window.getSelection();
-        if (sel && !sel.isCollapsed) return; // the selection owns this click
-        if (cell.gap && !cellHasAiLayer(cell)) { beginCritic(span, cell); return; }
-        if (aiNote) { annot.openProposedNoteReview(span, aiNoteDetail); return; }
-        // Overlapping annotations: a click on stacked layers opens the inspector,
-        // which lists every layer and routes per layer, rather than guessing one.
-        const standOffMention = cell.layers?.some((layer) => layer.kind === "mention" && layer.standOff);
-        if (stacked || standOffMention || cellHasAiLayer(cell)) { annot.openLayersInspector(span, cell); return; }
-        if (cell.mention) { annot.openAnnotationEditor(span, cell); return; }
-        if (semWrap) { annot.openAttrEditor(span, cell); return; }
-      });
-      span.addEventListener("dblclick", (e) => {
-        e.stopPropagation();
-        if (cell.gap) return;
-        const c = app.state.cellById.get(cell.id);
-        if (!c) return;
-        // F4: a word whose text sits directly inside its <w> takes the two-field
-        // diplomatic/normalized editor (the engine's atomic op accepts it). A <w>
-        // wrapping further markup (e.g. <unclear>) is refused there, so it keeps
-        // the single-field text edit.
-        if (c.w && c.node.parent === c.w.el) beginReadingsInput(span, c);
-        else beginTextInput(span, c);
-      });
-      span.addEventListener("mouseenter", () => highlightLine(folioIndex, lineIndex));
-      span.addEventListener("mouseleave", () => clearLinks());
-      body.appendChild(span);
-    });
-    row.appendChild(body);
-    host.appendChild(row);
-  });
 }
 
 // ---- empty state (no document loaded) --------------------------------------
@@ -1538,9 +1460,10 @@ function sourceValidationLabels() {
 
 function renderMetadataForm(host) {
   const sourceDoc = app.state.doc;
-  sourceViewSession = mountMetadataView(host, {
+  stagedInput.mount(mountMetadataView(host, {
     doc: sourceDoc,
-    onApply: (nextDoc) => {
+    readOnly: app.readOnly,
+    onApply: (nextDoc) => stagedInput.commit(() => {
       if (nextDoc === sourceDoc) return true;
       try {
         const nextState = parseEdition(nextDoc.raw);
@@ -1552,9 +1475,9 @@ function renderMetadataForm(host) {
         setStatus(`Metadata fields were not applied: ${err.message}`);
         return false;
       }
-    },
+    }),
     onEditXml: () => setSourceMode("metadata"),
-  });
+  }), { mode: app.sourceMode, folio: app.folio });
 }
 
 function renderSourceView(host) {
@@ -1598,8 +1521,9 @@ function renderSourceView(host) {
     ? slice.value
     : text.replace(/\r\n|\r|\n/g, sourceNewline);
   const candidate = (text) => spliceSourceSlice(sourceState, slice, sourceText(text));
-  sourceViewSession = mountSourceView(host, {
+  stagedInput.mount(mountSourceView(host, {
     value: slice.value,
+    readOnly: app.readOnly,
     caret: 0,
     lineStart,
     scopeLabel: `${sourceLabel} · lines ${lineStart}-${lineEnd}`,
@@ -1611,7 +1535,7 @@ function renderSourceView(host) {
     vocabulary: sourceVocabulary(),
     ...sourceValidationLabels(),
     wellFormed: (text) => validationView.isWellFormed(candidate(text)),
-    onApply: (text) => {
+    onApply: (text) => stagedInput.commit(() => {
       try {
         const raw = candidate(text);
         const changed = raw !== sourceState.raw;
@@ -1626,136 +1550,9 @@ function renderSourceView(host) {
         setStatus(`Not applied, parse failed: ${err.message}`);
         return false;
       }
-    },
-    onCancel: () => { setStatus(`${statusLabel} edits discarded`); leave(); },
-  });
-}
-
-/** The plain text-correction input, extracted from beginEdit (M2.6 refactor). */
-function beginTextInput(span, cell) {
-  // Edit only the trimmed core; the node's edge whitespace (indentation/newlines)
-  // is re-attached on commit, so a line edit never collapses the surrounding
-  // formatting. Word-level <w> nodes have no edge whitespace (core === cell.text).
-  const [, core] = splitEdge(cell.text);
-
-  // A word-level <w> cell is short and edits inline in a single-line input. A
-  // line-level cell can be a whole paragraph, so it edits in a wrapping textarea
-  // that grows to its content; a single-line input would clip the text off-screen.
-  const multiline = app.state.profile !== "word";
-  let inp;
-  if (multiline) {
-    inp = el("textarea", { class: "ed-w-input ed-line-input", rows: "1" });
-    inp.value = core;
-    const autosize = () => { inp.style.height = "auto"; inp.style.height = `${inp.scrollHeight}px`; };
-    inp.addEventListener("input", autosize);
-    span.replaceWith(inp);
-    inp.focus();
-    inp.select();
-    autosize();
-  } else {
-    inp = el("input", { class: "ed-w-input", type: "text", value: core });
-    inp.style.width = `${Math.min(60, Math.max(2, core.length + 1))}ch`;
-    inp.style.maxWidth = "100%";
-    span.replaceWith(inp);
-    inp.focus();
-    inp.select();
-  }
-
-  let done = false;
-  const commit = () => {
-    if (done) return;
-    done = true;
-    const nextCore = inp.value;
-    if (nextCore !== core) {
-      try {
-        const nextState = editCellCore(app.state, cell.id, nextCore);
-        replaceSessionState(nextState, "Edit text");
-      } catch (err) {
-        setStatus(`Edit failed: ${err.message}`);
-      }
-    }
-    render(); // re-render the folio with refreshed offsets
-  };
-  const cancel = () => {
-    if (done) return;
-    done = true;
-    render();
-  };
-  inp.addEventListener("keydown", (e) => {
-    // Enter commits; in the multiline textarea Shift+Enter inserts a real newline.
-    if (e.key === "Enter" && !(multiline && e.shiftKey)) { e.preventDefault(); commit(); }
-    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
-  });
-  inp.addEventListener("blur", commit);
-}
-
-/**
- * F4 two-field edit on a dual-reading word: the diplomatic core (text content,
- * @orig kept in sync by the engine) and the normalized reading (@norm). Used in
- * place of beginTextInput when the cell's text sits directly inside its <w>
- * (the dblclick handler gates this; the engine refuses a <w> that wraps further
- * markup). An empty Normalized field removes @norm, which claims no normalization.
- */
-function beginReadingsInput(span, cell) {
-  const [, core] = splitEdge(cell.text);
-  const norm = cell.w.norm != null ? cell.w.norm : "";
-
-  const form = el("span", { class: "ed-readings-form" });
-  const field = (label, value) => {
-    const wrap = el("label", { class: "ed-readings-field" });
-    wrap.appendChild(el("span", { class: "ed-readings-label", text: label }));
-    const inp = el("input", { class: "ed-w-input", type: "text", value });
-    inp.style.width = `${Math.min(40, Math.max(2, value.length + 1))}ch`;
-    inp.style.maxWidth = "100%";
-    wrap.appendChild(inp);
-    form.appendChild(wrap);
-    return inp;
-  };
-  const diplInp = field("Diplomatic", core);
-  const normInp = field("Normalized", norm);
-
-  span.replaceWith(form);
-  // Focus the field matching the current variant, so the variant on screen is
-  // the one the cursor lands in.
-  const focusInp = app.readingVariant === "norm" ? normInp : diplInp;
-  focusInp.focus();
-  focusInp.select();
-
-  let done = false;
-  const commit = () => {
-    if (done) return;
-    done = true;
-    const diplVal = diplInp.value;
-    const normVal = normInp.value;
-    if (diplVal !== core || normVal !== norm) {
-      try {
-        const next = editCellReadings(app.state, cell.id, { core: diplVal, norm: normVal });
-        if (next !== app.state) {
-          replaceSessionState(next, "Edit readings");
-        }
-        else setStatus("Edit not applied: this word wraps further markup.");
-      } catch (err) {
-        setStatus(`Edit failed: ${err.message}`);
-      }
-    }
-    render();
-  };
-  const cancel = () => {
-    if (done) return;
-    done = true;
-    render();
-  };
-  const onKey = (e) => {
-    if (e.key === "Enter") { e.preventDefault(); commit(); }
-    else if (e.key === "Escape") { e.preventDefault(); cancel(); }
-  };
-  diplInp.addEventListener("keydown", onKey);
-  normInp.addEventListener("keydown", onKey);
-  // Commit only when focus leaves the whole form; moving between the two fields
-  // (relatedTarget still inside the form) must not commit.
-  form.addEventListener("focusout", (e) => {
-    if (!form.contains(e.relatedTarget)) commit();
-  });
+    }),
+    onCancel: () => { stagedInput.clear(); setStatus(`${statusLabel} edits discarded`); leave(); },
+  }), { mode: app.sourceMode, folio: app.folio });
 }
 
 // ---- the single standOff mutation path ---------------------------------------
@@ -1768,6 +1565,10 @@ function beginReadingsInput(span, cell) {
  * true on a real change, false on a no-op or failure.
  */
 function commitStandoff(fn, { label, failPrefix = "Edit", noopLabel = null } = {}) {
+  if (app.readOnly) {
+    setStatus("The document is read only. Choose Edit document to change it.");
+    return false;
+  }
   try {
     const r = standoff.applyMutation(app.state.doc, fn);
     if (!r.changed) {
@@ -1922,6 +1723,7 @@ function authorDeleteElement(cell) {
 
 /** Attach an editorial note to a cell: a small input, then a lossless standOff insert. */
 function beginNote(span, cell) {
+  if (app.readOnly) return;
   const existingNotes = app.noteByWord.get(cell.id) || app.noteByWord.get(cell.facs) || [];
   const existing = existingNotes[0] || "";
   const inp = el("input", {
@@ -1958,50 +1760,13 @@ function beginNote(span, cell) {
 // ---- textual-critical markup (M3.6) ----------------------------------------
 
 /** Tooltip for a reading cell, composed from its link / note / critical state. */
-function critTitle(cell, note, meta, semWrap) {
-  if (cell.gap) return "gap: omitted or illegible text; click to remove";
-  const parts = [];
-  if (cell.mention) {
-    // "unverified" is the one term for the unconfirmed-AI state everywhere
-    // (index panel, standOff contract); label consistency is a rule.
-    parts.push(meta
-      ? `Linked to ${meta.name || "(unnamed)"} (${cell.mention})${meta.ai ? "; AI-proposed, unverified" : ""}`
-      : `Linked to a missing entity (${cell.mention})`);
-  }
-  if (cell.crit) {
-    // The tooltip uses the same human label as the legend and the chooser
-    // buttons (CRITICAL_KINDS), never the raw TEI localName ("del"/"add").
-    const critLabel = (CRITICAL_KINDS[cell.crit] || {}).label || cell.crit;
-    parts.push(cell.critSole ? critLabel : `${critLabel} (shared markup)`);
-  }
-  if (note) parts.push(`note: ${note}`);
-  // A proposed markup/criticism construct (a wrapping layer marked with the
-  // responsibility id) reads as unverified AI, the same label as an AI mention.
-  const layerAi = cellHasAiLayer(cell);
-  if (layerAi && !(meta && meta.ai)) parts.push("AI-proposed, unverified");
-  // F4: a dual-reading cell names the other reading, so the variant not on
-  // screen is still visible in the tooltip.
-  if (cell.w && cell.w.norm != null) {
-    parts.push(app.readingVariant === "norm"
-      ? `as written: ${cell.text.trim()}`
-      : `normalized: ${cell.w.norm}`);
-  }
-  const stacked = cell.layers && cell.layers.length >= 2;
-  const aiCell = cellHasAiLayer(cell);
-  parts.push(stacked ? `click to inspect the ${cell.layers.length} annotations here; double-click to edit`
-    : aiCell ? "click to review the AI proposal (confirm or reject); double-click to edit"
-    : cell.mention ? "click to edit the annotation"
-    : semWrap ? "click to edit attributes; select text to annotate; double-click to edit; right-click for actions"
-    : "select text to annotate; double-click to edit; right-click for actions");
-  return parts.join("; ");
-}
-
 /**
  * Replace a cell with a small chooser of textual-critical actions, then apply the
  * chosen one losslessly. A gap cell offers only removal; any other cell offers the
  * four markers, plus "clear" when it already carries a wrapper.
  */
 function beginCritic(span, cell) {
+  if (app.readOnly) return;
   const host = $("ed-reading");
   // If a critical chooser is already open, rebuild the reading view first so we
   // never leave an orphaned one behind, then re-acquire this cell's span.
@@ -2381,140 +2146,48 @@ function highlightMentions(entity) {
 // ---- save / download -------------------------------------------------------
 
 async function authorizeOutput(raw, action) {
+  const sessionId = app.sessionId;
   setStatus(`Validating the configured schema set before ${action.toLowerCase()}...`);
   try {
     const result = await validationView.requireValidForOutput(raw, action);
+    if (sessionId !== app.sessionId) return null;
     if (result.ok) return result.authorization;
     setStatus(result.message);
     validationView.showDetails();
   } catch (err) {
+    if (sessionId !== app.sessionId) return null;
     setStatus(`${action} blocked because schema validation could not complete: ${err.message}`);
     validationView.showDetails();
   }
   return null;
 }
 
-function outputAuthorizationCurrent(authorization, action) {
-  if (validationView.isOutputAuthorizationCurrent(authorization)) return true;
-  setStatus(`${action} blocked: the document or configured schema set changed after validation. Run ${action} again for the current revision.`);
-  validationView.showDetails();
-  return false;
-}
-
-async function saveTargetChanged() {
-  if (!app.fileHandle || !app.fileSnapshot) return false;
-  const latest = await app.fileHandle.getFile();
-  return fileVersionChanged(app.fileSnapshot, fileVersion(latest));
-}
-
-async function save() {
+async function downloadWorkingCopy() {
   if (!app.state) return;
-  let raw;
   try {
-    raw = targetDocument(app.state.doc, app.project).raw;
-  } catch (err) {
-    setStatus(`Save failed while preparing the project format: ${err.message}`);
-    return;
-  }
-  const authorization = await authorizeOutput(raw, "Save");
-  if (!authorization) return;
-  // Whether THIS document owns the recovery slot: only a draft's own save may
-  // clear it; saving an unrelated document must not discard a stored draft.
-  const wasDraft = documentFacts.isUnsavedDraft();
-  // Built before a folder was opened? Adopt the open folder as the save target
-  // so this first Save lands the .xml AND the pending page images together.
-  if (!app.fileHandle && !(app.saveTarget && app.saveTarget.dir)
-    && app.projectFolder && app.projectFolder.dir && pageImageStore.countUnpersisted() > 0) {
-    app.saveTarget = { dir: app.projectFolder.dir, name: app.docName };
-  }
-  // A plaintext draft has no file yet: first save creates the .xml in the
-  // project folder, then the normal in-place path takes over.
-  await projectFolderUi.finalizeSaveTarget();
-  if (!outputAuthorizationCurrent(authorization, "Save")) return;
-  if (app.fileHandle && app.fileHandle.createWritable) {
-    try {
-      if (await saveTargetChanged()) {
-        setStatus(`Save blocked: ${app.docName} changed outside teiCrafter. Download a copy or reload the file before saving in place.`);
-        return;
-      }
-      if (!outputAuthorizationCurrent(authorization, "Save")) return;
-    } catch (err) {
-      setStatus(`Save blocked because the current file could not be checked for external changes (${err.message}). Download a copy or reload it.`);
-      return;
-    }
-    try {
-      const bytes = encodeXmlBytes(raw, { bom: !!(app.fileEncoding && app.fileEncoding.bom) });
-      const writable = await app.fileHandle.createWritable();
-      if (!outputAuthorizationCurrent(authorization, "Save")) {
-        if (typeof writable.abort === "function") await writable.abort();
-        return;
-      }
-      await writable.write(bytes);
-      await writable.close();
-      try {
-        const savedFile = await app.fileHandle.getFile();
-        app.fileSnapshot = fileVersion(savedFile);
-      } catch { app.fileSnapshot = null; }
-      const stillCurrent = validationView.isOutputAuthorizationCurrent(authorization);
-      if (stillCurrent) setDirty(false);
-      if (wasDraft) documentFacts.clearDraftRecovery(); // the draft now has a real file
-      // Attached page images live next to the TEI in the same folder.
-      const img = await pageImageStore.persist(app.projectFolder && app.projectFolder.dir);
-      const note = img.written ? `, ${img.written} page image(s)` : "";
-      const failNote = img.failed ? ` (${img.failed} image(s) could not be written)` : "";
-      const formatNote = usesInlineGND(app.project) ? " as inline-GND" : "";
-      setStatus(stillCurrent
-        ? `Saved in place${formatNote}: ${app.docName}${note}${failNote}`
-        : `Saved the validated revision${formatNote}: ${app.docName}${note}${failNote}. The document changed during the write and remains unsaved.`);
-      return;
-    } catch (err) {
-      setStatus(`Save in place failed (${err.message}); downloading instead`);
-    }
-  }
-  if (!await download(raw, authorization)) return;
-  setDirty(false);
-  // The download also produced the TEI file; the draft's recovery slot (and
-  // only the draft's) is no longer the only copy.
-  if (wasDraft) documentFacts.clearDraftRecovery();
-  // A plain download carries only the XML: attached page images stay behind.
-  const pending = pageImageStore.countUnpersisted();
-  if (pending) {
-    setStatus(`Downloaded ${app.docName || "edition.xml"}. ${pending} attached page image(s) are NOT in the download; `
-      + "open or create a project folder and Save to keep the images next to the TEI.");
-  }
+    const record = captureCheckpoint(app, stagedSnapshot(), validationView.recoverySettings());
+    const text = await encodeWorkingCopy(record);
+    const name = `${record.docName || "edition"}.teicrafter.json`;
+    downloadFile(text, name, "application/json");
+    setStatus(`Working copy download requested: ${name}. Includes XML, unfinished input and attached images; it is not a validated export. Local recovery is retained.`);
+  } catch (err) { setStatus(`Working copy failed: ${err.message}`); }
 }
 
-async function download(preparedRaw = null, preparedAuthorization = null) {
-  if (!app.state) return;
-  let raw = preparedRaw;
-  if (raw == null) {
+function openWorkingCopy() {
+  const input = el("input", { type: "file", accept: ".json" });
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (!file) return;
     try {
-      raw = targetDocument(app.state.doc, app.project).raw;
-    } catch (err) {
-      setStatus(`Download failed while preparing the project format: ${err.message}`);
-      return false;
-    }
-  }
-  const authorization = preparedAuthorization || await authorizeOutput(raw, "Download");
-  if (!authorization || !outputAuthorizationCurrent(authorization, "Download")) return false;
-  let bytes;
-  try {
-    bytes = encodeXmlBytes(raw, { bom: !!(app.fileEncoding && app.fileEncoding.bom) });
-  } catch (err) {
-    setStatus(`Download failed while encoding UTF-8 XML: ${err.message}`);
-    return false;
-  }
-  const blob = new Blob([bytes], { type: "application/xml;charset=UTF-8" });
-  const url = URL.createObjectURL(blob);
-  const a = el("a", { href: url, download: app.docName || "edition.xml" });
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  const formatNote = usesInlineGND(app.project) ? " in its inline-GND save format" : "";
-  setStatus(`Downloaded ${app.docName || "edition.xml"}${formatNote}`);
-  return true;
+      const record = decodeWorkingCopy(await file.text());
+      await documentFacts.restoreDraft(record);
+    } catch (err) { setStatus(`Working copy was not opened: ${err.message}`); }
+  });
+  input.click();
 }
+
+const save = () => outputController.save();
+const download = () => outputController.download();
 
 /** True when the loaded document's project opts into the inline-GND interchange. */
 function docHasInlineGndExport() {
@@ -2572,27 +2245,7 @@ async function attachFacsimileFolder() {
  * pipeline's "_final.xml". Reading text is byte-preserved; only the markup shape
  * changes (toInlineGND). The in-editor document is untouched.
  */
-async function downloadInlineGND() {
-  if (!app.state) return;
-  let raw;
-  try {
-    raw = toInlineGND(app.state.doc).raw;
-  } catch (err) {
-    setStatus(`Inline-GND export failed: ${err.message}`);
-    return;
-  }
-  const authorization = await authorizeOutput(raw, "Inline-GND export");
-  if (!authorization || !outputAuthorizationCurrent(authorization, "Inline-GND export")) return;
-  const name = inlineGndFilename(app.docName);
-  const blob = new Blob([raw], { type: "application/xml" });
-  const url = URL.createObjectURL(blob);
-  const a = el("a", { href: url, download: name });
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  setStatus(`Exported the inline-GND interchange copy ${name}`);
-}
+const downloadInlineGND = () => outputController.download("inline-gnd");
 
 // ---- view controls: zoom, collapse, splitter, layout persistence ------------
 // One persistence mechanism (storage.js, localStorage): text zoom is a global
@@ -2751,9 +2404,14 @@ function aiAnchor(scope = null) {
 }
 
 const beginAiJob = (kind, scope = null) => sessionSafety.beginJob(kind, aiAnchor(scope));
-const aiJobCurrent = (job) => sessionSafety.isJobCurrent(job, currentRaw());
+const aiJobCurrent = (job) => !app.readOnly && sessionSafety.isJobCurrent(job, currentRaw());
 const finishAiJob = (job) => sessionSafety.finishJob(job);
 const abortAiJob = (job, reason) => sessionSafety.abortJob(job, reason);
+
+const { beginTextInput, beginReadingsInput } = createInlineEditor({
+  app, stagedInput, replaceSessionState, setStatus, render,
+  persistRecovery: () => documentFacts.persistDraftIfNeeded(),
+});
 
 const overlay = createEntityIndex({
   app, setStatus, commitStandoff,
@@ -2776,6 +2434,10 @@ const annot = createAnnotationUi({
     isEmpty: structIsEmpty,
   },
 });
+const { renderFolioInto } = createReadingView({
+  app, annot, overlay, cellHasAiLayer, beginCritic, beginTextInput, beginReadingsInput,
+  setSourceMode, highlightLine, clearLinks,
+});
 const projectFolderUi = createProjectFolder({
   app, setStatus, setDirty, load,
   showPanel, updatePanels, teiVocabularyLine,
@@ -2791,11 +2453,60 @@ const validationView = createValidationView({
 });
 const documentFacts = createDocumentFacts({
   app, setStatus, setDirty, load, render, renderActivePanel,
+  stagedSnapshot,
+  schemaSnapshot: () => validationView.recoverySettings(),
+  restoreSchema: (settings) => validationView.restoreSettings(settings),
+  restoreStaged: (staged) => {
+    app.sourceMode = staged.mode === "inline" ? false : staged.mode;
+    app.folio = Math.max(0, Math.min(staged.folio, app.state.folios.length - 1));
+    render();
+    if (staged.mode === "inline") {
+      const cell = app.state.cellById.get(staged.cellId);
+      const span = [...document.querySelectorAll("#ed-reading .ed-w")].find((node) => node.dataset.id === staged.cellId);
+      if (cell && span) {
+        if (staged.value.norm != null && cell.w) beginReadingsInput(span, cell);
+        else beginTextInput(span, cell);
+        stagedInput.restore(staged.value);
+      }
+    } else stagedInput.restore(staged.value);
+  },
 });
 // Page-image store: resolves a surface <graphic url> to a displayable URL and
 // writes attached images next to the TEI on save (used by applyLoad, the
 // facsimile render, save, and the text+image on-ramp).
 const pageImageStore = createPageImages({ app, rerenderPanel: () => renderActivePanel() });
+const outputController = createOutputController({
+  capture: (kind) => app.state ? {
+    raw: (kind === "inline-gnd" ? toInlineGND(app.state.doc) : targetDocument(app.state.doc, app.project)).raw,
+    name: kind === "inline-gnd" ? inlineGndFilename(app.docName) : app.docName || "edition.xml",
+    bom: !!app.fileEncoding?.bom,
+    inlineGND: kind === "inline-gnd" || usesInlineGND(app.project),
+    sessionId: app.sessionId,
+    recoveryId: app.recoveryId,
+  } : null,
+  sessionId: () => app.sessionId,
+  resolveStaged: resolveStagedOutput,
+  hasStaged: () => stagedInput.hasChanges(),
+  authorize: authorizeOutput,
+  authorizationCurrent: (authorization) => validationView.isOutputAuthorizationCurrent(authorization),
+  prepareSaveTarget: async () => {
+    if (!app.fileHandle && !app.saveTarget?.dir && app.projectFolder?.dir && pageImageStore.countUnpersisted()) {
+      app.saveTarget = { dir: app.projectFolder.dir, name: app.docName };
+    }
+    await projectFolderUi.finalizeSaveTarget();
+  },
+  target: () => ({ handle: app.fileHandle, baseline: app.fileSnapshot,
+    directory: app.documentDirectory || app.projectFolder?.dir, name: app.docName }),
+  setFileSnapshot: (handle, snapshot) => { if (app.fileHandle === handle) app.fileSnapshot = snapshot; },
+  persistImages: (directory) => pageImageStore.persist(directory),
+  countImages: () => pageImageStore.countUnpersisted(),
+  markSaved: () => setDirty(false),
+  markDirty: () => setDirty(true),
+  persistRecovery: () => documentFacts.persistDraftIfNeeded(),
+  clearRecovery: (id) => documentFacts.clearDraftRecovery(id),
+  download: downloadFile,
+  status: setStatus,
+});
 // LLM on-ramp ("New from text"). The modal is always wired (its DOM exists either
 // way); llmEnabled() (the build flag AND the per-user runtime preference) controls
 // whether the AI entry points are visible, so turning AI off leaves a fully
@@ -2808,7 +2519,7 @@ function applyLlmGate() {
   const on = llmEnabled();
   $("btn-generate").hidden = !on;
   const propose = $("btn-propose");
-  if (propose) propose.hidden = !on;
+  if (propose) propose.hidden = !on || app.readOnly;
 }
 
 // In-context proposal flow: ask the model for annotations on the current page, in
@@ -2816,6 +2527,7 @@ function applyLlmGate() {
 // constructs the human confirms or rejects. The provider/model/key are the ones the
 // on-ramp set (in memory); without a key the call fails with a clear hint.
 async function proposeOnFolio() {
+  if (app.readOnly) return;
   if (!app.state || !llmEnabled()) return;
   if (app.sourceMode) {
     setStatus("Return to Reading text before requesting annotation proposals.");
@@ -2891,12 +2603,12 @@ if (llmEnabled() && location.hash === "#generate") genModal.open();
  * the on-ramp adopts the open folder as the save target so the first Save lands
  * the .xml and the images together.
  */
-async function buildFromTextAndImages({ text, title, images }) {
+async function buildFromTextAndImages({ text, title, images, profile = "generic", metadata = {} }) {
   const replacement = authorizeDocumentReplacement();
   if (!replacement) return false;
+  const tei = teiFromStarter({ text, title, profile, metadata, images: images.map((im) => ({ name: im.name })) });
   const pageImages = pageImageStore.fromUploads(images);
-  const tei = teiFromPlaintext(text, title, { images: images.map((im) => ({ name: im.name })) });
-  const xmlName = `${title}.xml`;
+  const xmlName = draftFilename(title);
   const inFolder = !!app.projectFolder;
   const opened = await adoptDraft({
     tei, xmlName, txtName: title,
@@ -3004,12 +2716,7 @@ function setSourceMode(mode) {
   if (!app.state) return; // no document: the text views stay inert
   const next = mode === "page" || mode === "metadata" || mode === "metadata-form" ? mode : false;
   if (app.sourceMode === next) return;
-  if (app.sourceMode && sourceViewSession && sourceViewSession.hasChanges()) {
-    setStatus(app.sourceMode === "metadata-form"
-      ? "Apply or reset the staged metadata fields before changing views."
-      : "Apply or cancel the staged XML before changing views.");
-    return;
-  }
+  if (!stagedInput.allowChange("changing views")) return;
   sessionSafety.abortKind("proposal", "Requested page context changed");
   app.sourceMode = next;
   annot.removeSelPopover();
@@ -3032,12 +2739,20 @@ $("ed-ann-summary").addEventListener("click", (event) => {
   popover.hidden = !open;
   $("ed-ann-summary").setAttribute("aria-expanded", String(open));
 });
-$("ed-review-summary").addEventListener("click", () => {
-  if (!app.state) return;
+$("btn-read-only").addEventListener("pointerdown", (event) => event.preventDefault());
+$("btn-read-only").addEventListener("click", toggleDocumentMode);
+$("ed-review-summary").addEventListener("click", async () => {
+  if (!app.state || app.readOnly) return;
+  if (!resolveStagedOutput("Review")) return;
   const current = currentReviewSummary().pages[app.folio];
   if (!current || !current.markable) return;
-  const next = setFolioReviewed(app.state, app.folio, !current.reviewed);
   const unit = unitTerms(app.state.sourceProfile).singular;
+  const state = app.state;
+  const details = current.reviewed ? { who: getSetting("reviewerIdentity", "urn:teicrafter:local-reviewer") }
+    : await chooseReviewDetails(unit, current.record);
+  if (!details) return;
+  if (app.state !== state) { setStatus("The document changed while review details were open. Review the current revision again."); return; }
+  const next = setFolioReviewed(app.state, app.folio, !current.reviewed, details);
   commitStandoff(() => next.doc, {
     label: current.reviewed
       ? `${unit[0].toUpperCase()}${unit.slice(1)} reopened for editorial review`
@@ -3068,6 +2783,8 @@ document.addEventListener("keydown", (e) => {
 });
 $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", () => download());
+$("btn-working-copy").addEventListener("click", () => downloadWorkingCopy());
+$("btn-open-working-copy").addEventListener("click", openWorkingCopy);
 $("btn-undo").addEventListener("click", () => applyHistory("undo"));
 $("btn-redo").addEventListener("click", () => applyHistory("redo"));
 document.addEventListener("keydown", (event) => {
@@ -3115,7 +2832,15 @@ document.addEventListener("keydown", (e) => {
 });
 
 window.addEventListener("beforeunload", (e) => {
-  if (app.dirty) { e.preventDefault(); e.returnValue = ""; }
+  if (app.dirty || stagedSnapshot()) { e.preventDefault(); e.returnValue = ""; }
+});
+document.addEventListener("input", (event) => {
+  if (event.target instanceof Element && event.target.closest(".ed-src-wrap, .ed-meta-form")) {
+    void documentFacts.persistDraftIfNeeded();
+  }
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && (app.dirty || stagedInput.hasChanges())) void documentFacts.persistDraftIfNeeded();
 });
 
 render(); // start state: the empty editor (no document) with its load prompt

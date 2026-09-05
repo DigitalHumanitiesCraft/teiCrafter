@@ -40,7 +40,7 @@ function localResourceMap(localSchemas) {
   if (!localSchemas) return null;
   const resources = {};
   for (const [path, value] of Object.entries(localSchemas)) {
-    resources[virtualSchemaUrl(path)] = value;
+    resources[virtualSchemaUrl(value.path || path)] = value;
   }
   return resources;
 }
@@ -77,7 +77,7 @@ export function schemaSources(projectSchema, customSchema = null, baseUrl = null
       sources.push({
         name: entry.name || pathName(entry.path),
         type,
-        documentUrl: virtualSchemaUrl(entry.path),
+        documentUrl: virtualSchemaUrl(local?.path || entry.path),
         resources,
         ...(local || {
           unavailable: `Project-folder schema "${entry.path}" is unavailable: the file was not loaded from the project folder.`,
@@ -160,7 +160,7 @@ export async function schemaResourceGraph(source) {
     if (typeof supplied === "string") return supplied;
     if (supplied && typeof supplied.text === "string") return supplied.text;
     if (url.startsWith("https://teicrafter.invalid/")) {
-      throw new Error(`Schema dependency ${url} was not loaded. Project folders support dependencies only as bare filenames in the same folder; session uploads contain only the selected file.`);
+      throw new Error(`Schema dependency ${url} was not loaded inside the granted project root. Session uploads contain only the selected file.`);
     }
     return fetchedText(url);
   }
@@ -642,7 +642,7 @@ export function schemaRuntimeNotes(sources) {
   const types = new Set(sourceArray(sources).map((source) => source.type));
   const notes = [];
   if (types.has("relaxng") || types.has("xsd")) {
-    notes.push("RelaxNG include/externalRef and XSD include/import/redefine work when every dependency can be fetched or is a bare file in the same opened project folder. Missing dependencies make validation unavailable and block output.");
+    notes.push("RelaxNG include/externalRef and XSD include/import/redefine work when every dependency can be fetched or resolved relative to its containing schema inside the granted project root. Missing dependencies make validation unavailable and block output.");
   }
   if (types.has("schematron")) {
     notes.push("Raw Schematron runs browser XPath 1.0 (xslt/xslt1) for common child/attribute rule contexts, namespaces, phases, scalar lets, asserts and reports. Includes, abstract patterns, advanced match patterns, node-set lets and XPath 2.0+ require compiled XSLT; they are unavailable and block output.");

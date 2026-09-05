@@ -1,0 +1,22 @@
+import assert from "node:assert/strict";
+import { parseEdition, editCellCore } from "../../docs/js/editor/edition.js";
+import { readingCellVisible, readingSeparator } from "../../docs/js/editor/reading-policy.js";
+const wrap = (body) => `<TEI xmlns="http://www.tei-c.org/ns/1.0"><text>${body}</text></TEI>`;
+const read = (state, variant = "dipl") => {
+  const cells = state.cells.filter((cell) => readingCellVisible(cell, variant));
+  return cells.map((cell, index) => readingSeparator(state.doc, cells[index - 1], cell, variant) + cell.text).join("");
+};
+assert.equal(read(parseEdition(wrap('<body><p>un<hi>klar</hi>!</p></body>'))), 'unklar!');
+assert.equal(read(parseEdition(wrap('<body><p><w>Hello</w><pc>,</pc><w>world</w><pc>!</pc></p></body>'))), 'Hello, world!');
+const choice = parseEdition(wrap('<body><p><choice><orig>vnd</orig><reg>und</reg></choice> <app><lem>Haus</lem><rdg>Hof</rdg></app></p></body>'));
+assert.equal(read(choice), 'vnd Haus');
+assert.equal(read(choice, 'norm'), 'und Haus');
+const hiddenSpace = parseEdition(wrap('<body><p><choice><orig>x</orig><reg><hi> </hi>z</reg></choice>y</p></body>'));
+assert.equal(read(hiddenSpace), 'xy', 'An unselected branch cannot add visible whitespace');
+assert.equal(read(hiddenSpace, 'norm'), 'zy');
+const cdata = parseEdition(wrap('<front><p>Front</p></front><body><p><![CDATA[A &amp; B]]></p></body><back><p>Back</p></back>'));
+assert.deepEqual(cdata.cells.map((cell) => cell.text), ['Front', 'A &amp; B', 'Back']);
+assert.equal(editCellCore(cdata, cdata.cells[1].id, 'A &amp; B'), cdata);
+const edited = editCellCore(cdata, cdata.cells[1].id, 'A ]]> B');
+assert.equal(edited.cells[1].text, 'A ]]> B');
+console.log('PASS: adjacency, token punctuation, selected alternatives and CDATA/front/back coverage.');

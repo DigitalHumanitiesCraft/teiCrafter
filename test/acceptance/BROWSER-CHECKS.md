@@ -12,8 +12,9 @@ coupling, the violet AI marker, the index panel, and every keyboard and
 pointer gesture live entirely in that DOM/event/timing layer.
 
 `test/proofs/interaction_check.mjs` lifts the popover dismissal identity guard
-into a headless predicate. `test/e2e/app.spec.js` automates the stable browser
-paths with Chromium and Axe. This file retains the complete gesture catalogue,
+into a headless predicate. `test/e2e/app.spec.js`, `safety.spec.js` and
+`persistence.spec.js` automate browser paths in Chromium and Firefox, including
+Axe audits in the configured document states. This file retains the complete gesture catalogue,
 including permission prompts, live external services and timing cases that
 still require a human operator. Run the automated and applicable manual checks
 whenever a change touches the editor UI, event handlers, facsimile viewer, or
@@ -52,13 +53,14 @@ On a local development host the built-in examples are visible (the
 below resolve. The public GitHub Pages deployment hides them; on the public
 deployment, open your own document instead.
 
-### Chromium-only caveat
+### Native file capabilities
 
-"Open project folder" and the directory-handle recents use the File System
-Access API, which only Chromium-based browsers (Chrome, Edge) implement. Run
-these checks in Chromium. Firefox and Safari can load a single picked or
-dropped file but cannot open a project folder or reopen a recent by handle, so
-the project-panel and recovery checks (VC-10, VC-11) do not apply there.
+Run directory-picker and native file-handle permission checks in a browser that
+provides File System Access, such as the configured Chromium target. Detect the
+capability at the action boundary. Portable file input, download, Working copy,
+read-only mode and IndexedDB recovery also apply to Firefox; VC-10 and VC-11 are
+not restricted to native project folders. Mocked handle tests exercise application
+logic, while actual permission dialogs still require an operator gesture.
 
 ### Example references used below
 
@@ -115,16 +117,14 @@ unambiguous).
 - Failure signature: the `@ref` does not appear, the mention is not wrapped, or
   the authority id is dropped from the standoff entry.
 
-### VC-5 Violet AI marker clears on confirmation
+### VC-5 Acceptance retains visible AI origin
 
-- Gesture: with an AI-generated or unverified mention present (machine-drafted
-  or unreviewed), confirm it.
-- Expected: the unverified mention shows in the violet token family
-  (`--color-ai`); confirming it clears the violet marker while the mention
-  itself (the wrap and its `@ref`) stays in place.
-- Failure signature: confirming removes the mention instead of only its marker,
-  the violet colour persists after confirmation, or a confirmed mention reverts
-  to violet on the next render.
+- Gesture: confirm a pending AI proposal, then save and reopen it.
+- Expected: the pending presentation changes to accepted origin in the violet
+  family. The complete `@resp` list remains, and a separate acceptance token
+  resolves the proposal. The markup and unrelated attributes remain intact.
+- Failure signature: origin disappears, acceptance is lost after reopening, the
+  construct is still pending, or confirming removes its content.
 
 ### VC-6 Save and reopen is byte-identical
 
@@ -177,15 +177,18 @@ unambiguous).
 - Failure signature: a blank or broken pane, a console error on empty state, or
   onboarding text that references an action that is not present.
 
-### VC-11 Draft badge and recovery
+### VC-11 Drafts, existing documents and staged-input recovery
 
-- Gesture: open a plaintext source (`.txt` or `.md`) as a line-level draft (the
-  hsa-7711 `.txt`, from the project panel or by drop). Reload the page before
-  the first save.
-- Expected: the draft shows a draft badge (machine transport, never AI-marked);
-  after the reload, a recovery offer restores the unsaved draft.
-- Failure signature: no draft badge, the draft opens marked as AI content
-  (violet), or the reload loses the unsaved draft with no recovery offer.
+- Gesture: open plaintext as a draft and an existing TEI as a separate session.
+  In each, leave an inline, XML or metadata field unfinished and reload. Include
+  invalid staged XML and a document with uploaded images. Restore the selected
+  checkpoint; also export and reopen a Working copy.
+- Expected: the draft badge is neutral. Separate recovery offers retain canonical
+  XML and unfinished input without applying invalid content. Loaded image bytes
+  and settings survive. Restoring a Working copy creates an independent session.
+- Failure signature: only drafts recover, another session is overwritten, staged
+  text is silently applied or lost, image bytes vanish, or native permission is
+  assumed to survive the portable bundle.
 
 ### VC-12 Validation tooltip honesty
 
@@ -199,26 +202,23 @@ unambiguous).
 
 ### VC-13 Confirm or reject an AI proposal per construct
 
-- Gesture: with an AI proposal present on a non-entity construct (a markup wrap such
-  as `<date>`, an `<unclear>`/`<del>`/`<add>`, an inline AI entity name-wrap, or a
-  `<gap/>`), click the violet construct. It opens the layers inspector. Use the
-  per-layer "confirm" or "reject". For a proposed standOff `<note>`, click its
-  violet note marker and use the equivalent controls in the note popover.
-- Expected: the inspector lists the construct's layer(s); a layer carrying the project
-  `@resp` shows a "confirm" and a "reject". Confirm drops the violet `@resp` marker and
-  keeps the markup (it reads as ordinary, human-accepted markup afterwards); reject
-  removes the construct (a reading-text wrapper restores the exact surrounded text, a
-  `<gap/>` marker is removed). A human-authored, unmarked construct shows no
-  confirm/reject. A save-reopen is byte-faithful to the intended change (VC-6). The
-  engine behind this is proven headless (`proposal_review_check`). After the final
-  proposal is resolved, a responsibility declaration created for this proposal
-  session disappears if no remaining `@resp` points to it. If every proposal was
-  rejected and no other edit occurred, the document returns to its prior clean state.
-- Failure signature: confirm removes the construct instead of only its marker, reject
-  loses or changes neighbouring reading text, confirm/reject appears on human markup,
-  the violet persists after confirm, the inspector does not open on a single AI
-  construct, the note marker provides no review controls, unused proposal provenance
-  remains after the last rejection, or a save-reopen diffs outside the intended span.
+- Gesture: open the layers inspector on a proposed markup wrapper, entity,
+  textual-critical construct or gap; confirm one and reject another. Repeat for
+  a stand-off note through its note marker.
+- Expected: pending layers expose confirm/reject. Confirmation retains all
+  responsibility tokens and adds the matching acceptance token, preserving
+  other analysis values. A reversible gap resolves its proposal branch through
+  the gap engine. Rejection restores the original reading branch or unwraps the
+  proposal without changing neighbouring text. Human-authored layers have no
+  proposal controls. Accepted origin remains visible after save/reopen.
+  A session-created responsibility declaration is removed only when no remaining
+  construct refers to it. Rejecting all proposals returns an otherwise unchanged
+  document to its baseline.
+- Failure signature: origin or unrelated responsibility/analysis tokens are lost,
+  rejection changes surrounding text, human layers receive proposal controls,
+  accepted layers remain pending, note controls are missing, or referenced
+  responsibility declarations disappear. See `proposal_review_check` and
+  `accepted_provenance_check` for the engine boundaries.
 
 ### VC-14 LLM layer off and on, Propose (AI) end-to-end
 
@@ -231,12 +231,12 @@ unambiguous).
 - Expected: with AI off the editor is a fully deterministic editor with no AI surface;
   with AI on "Propose (AI)" inserts each proposal inline as a violet `resp="#ai"`
   construct, confirmable or rejectable per construct (VC-13). A save and reopen is
-  byte-faithful to the intended change (VC-6): the confirmed constructs read as ordinary
-  markup and the rejected ones leave no trace. The engine behind the flow is proven
+  byte-faithful to the intended change (VC-6): confirmed constructs retain accepted
+  origin and rejected constructs restore their original reading content. The engine behind the flow is proven
   headless (`proposal_apply_check`, `proposal_review_check`, `llm_gate_check`).
 - Failure signature: an AI surface remains after AI is toggled off; "Propose (AI)"
   throws, returns nothing on a page that carries proposable text, or inserts a construct
-  that is not marked violet; a confirmed construct keeps its `@resp`; or a save and
+  that is not marked violet; a confirmed construct loses its `@resp` or acceptance token; or a save and
   reopen diffs outside the intended spans.
 
 ### VC-15 Hersch inline-GND open, save, download and export
@@ -275,8 +275,8 @@ unambiguous).
 - Expected: the picker is a separate document action. Matching bare filenames
   resolve from the selected directory for the current browser session and the
   facsimiles render. The files remain local: the editor creates display URLs and
-  does not copy the selected images into the TEI folder, a download, or a public
-  location. Missing filenames are counted in the status message. A browser without
+  does not copy the selected images into the TEI folder, an ordinary XML download,
+  or a public location. Recovery and Working copy can preserve loaded image bytes. Missing filenames are counted in the status message. A browser without
   the capability reports that a Chromium-based browser with the File System Access
   API is required, while XML editing and download remain available. The storage
   contract is proven by `facsimile_folder_check`.
@@ -321,22 +321,44 @@ unambiguous).
 
 ### VC-19 Annotation coverage, structured metadata and TEI completion
 
-- Gesture: open the real UFBAS whole-book TEI. Open the "Annotated" page map, jump
-  directly to page 4, then open Metadata. Change the Title without applying and try
-  to return to Reading text; Reset the staged field. Open "Edit XML", type `<per` at
-  a temporary caret, accept the `persName` completion, then Cancel.
-- Expected: the summary reports 226/226 annotation-bearing pages and 16,846 detected
-  annotations; page 4 opens and the map closes. Metadata presents 13 projected fields
-  (11 editable, 2 XML-only), including the original Title, and the pager plus annotation
-  map are hidden. A staged field blocks the view change with a precise status; Reset
-  restores the original Title. Raw metadata states "Well-formedness · schema offline",
-  offers `persName`, inserts it at the caret, and Cancel returns to the structured form
-  with the original document unchanged.
-- Failure signature: header elements inflate the annotation count, a page-map choice
-  opens the wrong folio, mixed metadata is flattened into an editable plain-text field,
-  staged form data disappears on a view change, the raw source implies schema validation
-  ran in the browser, completion changes bytes outside the typed prefix, or Cancel leaves
-  Metadata for the reading view.
+- Gesture: open a document with page annotations and a mixed header. Use the
+  Annotated map to navigate, stage a Metadata field, try to change views, then
+  Reset. Open complete header XML, request TEI completion, then Cancel.
+- Expected: the map counts source-backed annotations and selects the requested
+  unit. Metadata exposes the full inventory and marks unsafe form mappings
+  XML-only. Staged fields block displacement. Completion changes only its typed
+  prefix; Cancel restores the form. Validation labels distinguish a source Check
+  from authorization of the exact output and report unavailable schemas honestly.
+- Failure signature: header elements inflate coverage, fields are flattened,
+  unfinished data disappears, the wrong unit opens, completion changes unrelated
+  bytes, or the UI claims a schema result that did not run.
+
+### VC-20 Read-only mode and review evidence
+
+- Gesture: enable Read only and try F2, annotation, review, metadata Apply and
+  source Apply. Return to editing, record review with reviewer and rationale,
+  then change text within and outside the reviewed scope.
+- Expected: read-only navigation and inspection work without mutation. Earlier
+  Undo history survives. Review is current only when its scope fingerprint
+  matches; an in-scope edit retains the earlier review as history.
+- Failure signature: any editing path bypasses read-only mode, history is reset,
+  changed content remains currently reviewed, or older review records vanish.
+
+### VC-21 Starters and interrupted persistence
+
+- Gesture: create a letter with supplied facts only, then create thirty dictionary
+  entries and thirty encyclopedia articles in separate drafts. Navigate the units.
+  During a pending native Save, stage another edit. Exercise a storage failure
+  followed by a successful checkpoint.
+- Expected: the two entry starters retain their distinct TEI shapes and stable
+  IDs; no historical date is inferred. A newer edit remains unsaved and recoverable;
+  a failed storage write is reported and does not prevent subsequent checkpoints.
+- Failure signature: entries are flattened or merged, facts are invented, a delayed
+  Save marks newer input clean, or the checkpoint queue remains unusable after failure.
+
+The deterministic browser portions of VC-20 and VC-21 are in `safety.spec.js`
+and `persistence.spec.js`. Native picker permissions and realistic quota exhaustion
+still require an operator check; an injected aborted transaction is narrower evidence.
 
 ### VC-F-1 Index panel reflects the document's declared indices
 
@@ -506,8 +528,8 @@ unobserved.
   `interaction_check.mjs`.
 - Failure signature: the popover flickers open then closes on the same click, or
   opens only on every second click. (Source: the deferred mouseup at
-  annotation-ui.js:1030-1056 racing the span-click handler at
-  editor-app.js:956-966.)
+  `annotation-ui.js` mouseup dismissal racing the cell click handler in
+  `reading-view.js`.)
 
 ### VC-RACE-RECON Auto-reconcile after popover teardown
 
@@ -518,7 +540,7 @@ unobserved.
   replaced popover.
 - Failure signature: a lookup-results popover appears detached, attaches to the
   wrong anchor, or throws because its anchor is gone. (Source:
-  `maybeAutoReconcile` setTimeout(400) at annotation-ui.js:365-377.)
+  `maybeAutoReconcile` in `annotation-ui.js`.)
 
 ### VC-RACE-LOOKUP Authority lookup resolving after reopen
 
@@ -529,7 +551,7 @@ unobserved.
   reaches `commitAndReopen` against the current cell, not a stale one.
 - Failure signature: results render into a stale popover, or picking a candidate
   commits against the wrong cell. (Source: the awaited fetch in
-  `runAuthorityLookup`, authority-picker.js:42-67 and annotation-ui.js:337-351.)
+  `runAuthorityLookup` in `authority-picker.js` and its `annotation-ui.js` callback.)
 
 ### VC-RACE-FACS Zone overlays against a stale surface
 
@@ -540,12 +562,16 @@ unobserved.
   surface.
 - Failure signature: zone overlays from a previous page persist, or a zone hover
   highlights a line that belongs to a different folio. (Source: the OSD
-  `addZoneOverlays` open handler at facsimile.js:174-184 closing over the surface
+  `addZoneOverlays` open handler in `facsimile.js` closing over the surface
   captured at `showPage` time.)
 
-## Run log
+## Historical run log
 
-Record each operator pass: date, browser, and which checks passed or failed.
+The observations below retain the behavior and expectations of their recorded
+versions, including superseded proposal-provenance and schema UI behavior.
+They do not certify the current working tree. Add new run outcomes in a dated
+report and link them from [reports/README.md](../../reports/README.md). The current
+manual catalogue above describes expected behavior, not a completed operator pass.
 
 | Run | Result |
 |-----|--------|

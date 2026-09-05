@@ -17,11 +17,11 @@ Criterion-independent: the hook stores reference and required depth, it computes
 
 ## Artefacts this touches
 
-- `test/proofs/`, `test/fixtures-synthetic/` — the headless proofs and the fixtures they read
-- `docs/data/editor/` — the committed project fixtures a reference would attach to
-- `docs/js/editor/project-manifest.js` — the manifest that already declares the allowed markup per document type
-- `knowledge/testing.md` — the acceptance method and the harness levels
-- `knowledge/data.md` — the TEI the engine is proven against
+- `test/proofs/`, `test/fixtures-synthetic/` â€” the headless proofs and the fixtures they read
+- `docs/data/editor/` â€” the committed project fixtures a reference would attach to
+- `docs/js/editor/project-manifest.js` â€” the manifest that already declares the allowed markup per document type
+- `knowledge/testing.md` â€” the acceptance method and the harness levels
+- `knowledge/data.md` â€” the TEI the engine is proven against
 
 ## Open before implementation
 

@@ -53,6 +53,7 @@ import { runAuthorityLookup } from "./authority-picker.js";
 import { requireCtx } from "./ctx.js";
 import { shouldDismissPopover } from "./interaction-rules.js";
 import { confirmConstruct, rejectConstruct } from "./proposal-review.js";
+import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 import { exportableEntityTypes, usesInlineGND } from "./interchange.js";
 import { allowsArbitraryMarkup } from "./project-manifest.js";
 import { markCriticalRange } from "./criticism.js";
@@ -186,8 +187,15 @@ export function selectionTargetFromRange(state, range, folioIndex) {
 
   const startCell = state.cellById.get(startSpan.dataset.id);
   const endCell = state.cellById.get(endSpan.dataset.id);
+  if (startCell && endCell && selectedCellsBetween(state, startCell.id, endCell.id).some((cell) => cell.node.type === "cdata")) {
+    return { ok: false, code: "cdata-source", message: "Edit this CDATA region in XML source before adding inline markup." };
+  }
   if (!startCell || !endCell || startCell.gap || endCell.gap) {
     return { ok: false, code: "unknown-cell", message: "The selection no longer matches the current reading view." };
+  }
+  if (startSpan !== endSpan && selectedCellsBetween(state, startCell.id, endCell.id)
+    .some((cell) => cell.layers?.some((layer) => ["choice", "app"].includes(layer.localName)))) {
+    return { ok: false, code: "alternative-source", message: "This selection crosses editorial alternatives. Use XML source to specify exactly which readings the annotation covers." };
   }
   if (startSpan === endSpan) {
     let dFrom = Math.min(startOffset, endOffset);
@@ -364,7 +372,7 @@ export function createAnnotationUi(ctx) {
 
   /** The full entity record for an id, or null. */
   function findEntity(id) {
-    const all = standoff.readEntities(app.state.doc);
+    const all = standoff.readEntities(app.state.doc, app.aiResp || standoff.AI_RESP);
     return ["persons", "places", "orgs", "works", "events"]
       .flatMap((k) => all[k] || [])
       .find((e) => e.id === id) || null;
@@ -405,6 +413,7 @@ export function createAnnotationUi(ctx) {
    * cell offers edit / note / mark. Closes on click elsewhere or Escape.
    */
   function openContextMenu(x, y, span, cell) {
+    if (app.readOnly) return;
     removeMenu();
     removeSelPopover();
     const menu = el("div", { class: "ed-menu", id: "ed-menu" });
@@ -523,6 +532,7 @@ export function createAnnotationUi(ctx) {
    * confirm for AI proposals, relink, or remove the link (lossless unwrap).
    */
   function openAnnotationEditor(span, cell) {
+    if (app.readOnly) return;
     removeSelPopover();
     const host = reading();
     const meta = entityMetaMap().get(cell.mention) || null;
@@ -551,9 +561,9 @@ export function createAnnotationUi(ctx) {
         highlightMentions(entity);
       });
       if (meta && meta.ai) {
-        btn("confirm", "accept this AI proposal as verified (removes the violet marking)", () => {
+        btn("confirm", "accept this AI proposal while retaining its origin", () => {
           commitAndReopen(
-            (doc) => standoff.confirmEntity(doc, entity.id),
+            (doc) => standoff.confirmEntity(doc, entity.id, app.aiResp || standoff.AI_RESP),
             `Confirmed ${entity.name || entity.id}`,
             cell.id,
           );
@@ -677,6 +687,7 @@ export function createAnnotationUi(ctx) {
   // fully working free-text attribute editor (the degradation contract).
 
   function openAttrEditor(span, cell, targetEl) {
+    if (app.readOnly) return;
     removeMenu();
     removeSelPopover();
     // Default to the cell's innermost wrapping element; the overlap inspector passes
@@ -820,6 +831,7 @@ export function createAnnotationUi(ctx) {
    * editor answers "what is here" for overlapping/nested markup.
    */
   function openLayersInspector(span, cell) {
+    if (app.readOnly) return;
     removeMenu();
     removeSelPopover();
     const host = reading();
@@ -891,12 +903,15 @@ export function createAnnotationUi(ctx) {
         row.appendChild(b);
       }
       // An AI-proposed layer (its element carries the project @resp) gets the human
-      // gate here: confirm drops the marker and keeps the markup, reject removes the
+      // gate here: confirm records acceptance and keeps the origin, reject removes the
       // construct (a wrap restores the exact text). Engine in proposal-review.js,
       // proven headless; this is the per-layer review surface.
       const aiResp = app.aiResp || standoff.AI_RESP;
-      if (layer.el && layer.resp && layer.resp === aiResp) {
-        const cb = el("button", { class: "ed-act-btn ed-btn-ai", text: "confirm", title: "accept this AI proposal: drop the violet marker, keep the markup" });
+      if (layer.el && hasResponsibility(layer.el, aiResp) && !isPendingProposal(layer.el, aiResp)) {
+        pop.appendChild(el("p", { text: "AI-origin markup, accepted by an editor. The responsibility pointer is retained in XML." }));
+      }
+      if (layer.el && isPendingProposal(layer.el, aiResp)) {
+        const cb = el("button", { class: "ed-act-btn ed-btn-ai", text: "confirm", title: "accept this AI proposal while retaining its origin" });
         cb.addEventListener("click", (e) => {
           e.stopPropagation();
           removeSelPopover();
@@ -921,6 +936,7 @@ export function createAnnotationUi(ctx) {
 
   /** Review a proposed standOff note from the reading location named by @target. */
   function openProposedNoteReview(span, detail) {
+    if (app.readOnly) return;
     if (!detail || !detail.el) return;
     removeMenu();
     removeSelPopover();
@@ -1054,6 +1070,7 @@ export function createAnnotationUi(ctx) {
 
   /** Open the annotation editor on the current folio's first mention of an entity. */
   function openAnnotationEditorFor(id) {
+    if (app.readOnly) return;
     const folio = app.state.folios[app.folio];
     if (!folio) return;
     for (const line of folio.lines) {
@@ -1079,7 +1096,7 @@ export function createAnnotationUi(ctx) {
    * relink and the word-profile picker.
    */
   function entityMatches(selText, excludeId) {
-    const all = standoff.readEntities(app.state.doc);
+    const all = standoff.readEntities(app.state.doc, app.aiResp || standoff.AI_RESP);
     const excluded = excludeId instanceof Set
       ? excludeId
       : new Set(excludeId ? [excludeId] : []);
@@ -1227,6 +1244,7 @@ export function createAnnotationUi(ctx) {
    * empty input wraps without it).
    */
   function openSelPopover() {
+    if (app.readOnly) return;
     removeSelPopover();
     removeMenu();
     let target = selectionTarget();
@@ -1582,6 +1600,7 @@ export function createAnnotationUi(ctx) {
   // opens the annotate popover; Escape or a click elsewhere closes it. A
   // double-click (e.detail > 1) belongs to direct text editing, not annotation.
   document.addEventListener("mouseup", (e) => {
+    if (app.readOnly) return;
     if (!app.state || app.sourceMode) return;
     if (e.detail > 1) return;
     const inReading = e.target instanceof Element && e.target.closest("#ed-reading");
@@ -1624,7 +1643,7 @@ export function createAnnotationUi(ctx) {
   });
   // Right-click: the Oxygen-style context menu, on words and on selections.
   reading().addEventListener("contextmenu", (e) => {
-    if (!app.state || app.sourceMode) return;
+    if (!app.state || app.sourceMode || app.readOnly) return;
     e.preventDefault();
     const span = e.target instanceof Element ? e.target.closest(".ed-w") : null;
     const cell = span ? app.state.cellById.get(span.dataset.id) : null;

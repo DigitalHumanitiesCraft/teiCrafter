@@ -21,7 +21,7 @@ related: [project, data, specification, architecture, design, journal, testing, 
 
 # teiCrafter Knowledge Base
 
-teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Output leaves the editor only after the exact projected bytes pass every configured schema for the current document revision.
+teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Save and TEI Download require every configured schema to pass for the exact projected bytes. A separately labelled Working copy preserves unfinished work without claiming validated TEI output.
 
 ## Documentation maintenance
 
@@ -44,6 +44,12 @@ Each document's `updated` date records its latest substantive change. Removing a
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
 | [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
 
+## Reading routes
+
+Start with the [user overview](../README.md) for workflows and setup, [test guide](../test/README.md) for executable checks, and [report index](../reports/README.md) for dated evidence and release planning. Requirements in a plan are not claims that the feature is complete. A passing run certifies its recorded revision, fixtures and environment only.
+
+Current facts belong to their owning knowledge document. Reports retain historical observations; link a follow-up instead of rewriting an old failure as a pass. Keep upstream documentation, licences and the frozen converter contract intact unless their actual source or contract changes.
+
 ## Core vocabulary
 
 **Document inventory** records TEI elements, attributes, values, reading text, facsimile pointers, and schema processing instructions without treating foreign namespace lookalikes as TEI.
@@ -60,12 +66,18 @@ Each document's `updated` date records its latest substantive change. Removing a
 
 **Header inventory** exposes every element and ordinary attribute below the document's TEI header. Simple text and attribute values are directly editable. Mixed, structured, self-closing, and namespace-sensitive content remains visible through exact XML editing.
 
-**Review Record** is a TEI `revisionDesc/change` that identifies the reviewed navigation unit through a stable target and records reviewer, time, status, and rationale. Review state remains independent from annotation coverage.
+**Review Record** is a TEI `revisionDesc/change` that identifies the reviewed navigation unit through a stable target and records reviewer, time, status, rationale, and a source-scope fingerprint. Current review requires matching content evidence; historical records and annotation coverage remain separate.
 
 **Stand-off span group** represents a continuous cross-structure selection or a discontinuous selection as one TEI `spanGrp` containing one or more `span` elements. Exact boundary anchors preserve the source text and support round-trip projection.
+
+**Staged input** is a visible inline, XML or metadata edit that has not yet entered canonical XML. Apply may fail without losing the entered value; navigation and unrelated mutations must preserve it.
+
+**Recovery checkpoint** stores a document session and its staged input locally. A **Working copy** exports that unfinished state as portable JSON. Neither is a successful native Save nor a validated TEI download.
+
+**Accepted AI provenance** retains the origin pointer while recording human acceptance separately. Acceptance is not a schema result or a fingerprinted review of the surrounding navigation unit.
 
 **Open provider adapter** is an application-code extension point for nonstandard LLM protocols. A custom OpenAI-compatible endpoint is configurable in the interface. Project manifests remain declarative and cannot inject executable adapters.
 
 ## Evidence boundary
 
-Committed synthetic fixtures exercise type-diverse Source Profiles and browser interaction in Chromium and Firefox. The real UFBAS whole-book workflow covers navigation, metadata, review, schema-gated output, fallback download, and automated accessibility checks in both browsers. The rights-local Wenzelsbibel codex exercises the large word-level, dual-reading, facsimile, zone, and no-op engine path. Its committed browser example uses a synthetic structural twin, so real cross-document Wenzelsbibel interaction remains an integration seam.
+Committed synthetic fixtures exercise type-diverse Source Profiles and browser interaction in Chromium and Firefox. Historical real UFBAS runs exercised navigation, metadata, review, schema-gated output, fallback download, and automated accessibility checks in both browsers. The current run report states whether the rights-local source was present; a skipped scenario is not current real-object evidence. The rights-local Wenzelsbibel codex exercises the large word-level, dual-reading, facsimile, zone, and no-op engine path. Its committed browser example uses a synthetic structural twin, so real cross-document Wenzelsbibel interaction remains an integration seam.

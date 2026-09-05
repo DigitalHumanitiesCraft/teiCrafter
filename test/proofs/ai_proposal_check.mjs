@@ -57,8 +57,8 @@ const cp = readEntities(confirmed).persons[0];
 check(cp.ai === false, "confirm clears the AI marker (now verified)");
 check(cp.name === "Anna" && cp.authorities.some((a) => a.type === "GND" && a.value === "118649919"),
   "confirm preserves the name and the GND idno");
-check(!confirmed.raw.includes("resp="), "the resp attribute is fully removed");
-check(/<person xml:id="[^"]*"><persName>/.test(confirmed.raw), "the start tag is clean (no leftover double space)");
+check(confirmed.raw.includes('resp="#ai"') && cp.aiOrigin, "acceptance retains the machine responsibility");
+check(confirmed.raw.includes("urn:teicrafter:proposal:accepted:%23ai"), "acceptance has its own TEI analysis pointer");
 check(reparses(confirmed), "confirm re-parses byte-identically");
 
 // confirm again is a no-op (no marker left).

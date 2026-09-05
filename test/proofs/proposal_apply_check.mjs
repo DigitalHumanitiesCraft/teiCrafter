@@ -103,9 +103,9 @@ const gapChoice = gapResult.state.cells.find((cell) => cell.text === "Schuchardt
 const gapRejected = rejectConstruct(gapResult.state.doc, gapChoice);
 check(gapRejected.raw === SRC, "rejecting a proposed gap restores the original document byte-for-byte");
 const gapConfirmed = confirmConstruct(gapResult.state.doc, gapChoice);
-check(gapConfirmed.raw.includes('<gap reason="illegible"/>')
-  && !gapConfirmed.raw.includes("Schuchardt") && !gapConfirmed.raw.includes('resp="#ai"'),
-  "confirming a proposed gap commits the text-removing gap and drops AI provenance");
+check(/<gap\b(?=[^>]*reason="illegible")(?=[^>]*resp="#ai")(?=[^>]*ana="urn:teicrafter:proposal:accepted:%23ai")[^>]*\/>/.test(gapConfirmed.raw)
+  && !gapConfirmed.raw.includes("Schuchardt"),
+  "confirming a proposed gap commits the text-removing gap and retains AI origin");
 
 // --- 5. every applied construct projects as AI (resp on its layer) -----------
 const cellOf = (t) => finalState.cells.find((c) => c.text.trim() === t);

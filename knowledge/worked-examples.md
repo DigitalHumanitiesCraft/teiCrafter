@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/worked-example
 status: active
 created: 2026-06-08
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Source Profiles]]", "[[Digital Scholarly Editing]]"]
 related: [project, specification, testing, integration]
@@ -23,6 +23,21 @@ related: [project, specification, testing, integration]
 ## How to read the examples
 
 Each example identifies its source shape, the editing projection, the output contract, and the evidence boundary. A real-object observation establishes only the path that actually used the object. A synthetic twin establishes reproducible structure and browser interaction. Formal schema validity refers to the schema set that ran. Scholarly acceptance remains a project-editor decision.
+
+## Everyday editorial recipes
+
+These recipes use invented sample content unless a named local source is explicitly supplied. They exercise workflows without presenting invented text as a historical transcription.
+
+| Goal | Steps | Boundary to check |
+| --- | --- | --- |
+| Turn a transcription into a letter | Load... > New document; choose the letter starter, paste the transcription, enter available metadata, create, correct and request TEI Download | No inferred sender, date or place; the starter is deterministic and not AI-marked |
+| Edit an existing charter | Open its TEI; inspect Source, navigate its real sections/pages, edit simple metadata or use complete header XML, inspect registers, validate output | Preserve unrecognized diplomatic structures; dedicated charter forms are still planned |
+| Create thirty lexicon articles | Choose the encyclopedia-article starter and provide separated source blocks; inspect generated sections and IDs | Dictionary entries have a separate starter and TEI shape; creation/duplication and batch editing inside an existing edition are still planned |
+| Read an unfamiliar TEI | Open it and enable read-only mode; navigate, inspect metadata/source and change reading views | Editing shortcuts, annotation, review and source Apply cannot mutate the document |
+| Edit a legal source's metadata and indices | Inspect every header field, apply supported scalar edits, use XML for structured fields, edit existing entities and follow occurrences | An entity index is not a complete project-wide legal vocabulary or cross-document reference manager |
+| Preserve interrupted work | Leave an inline, XML or metadata edit unfinished; reload and restore its checkpoint, or export/reopen Working copy | Invalid staged XML survives as staged input; it does not become validated canonical TEI |
+
+Actual menu labels and fixture assertions are exercised by the browser suite. [Dated reports](../reports/README.md) state which runs passed and which material was available.
 
 ## Compositional Source Profile examples
 
@@ -55,14 +70,14 @@ The UFBAS Urfehde source is a real locally supplied TEI book. It combines whole-
 2. Inspect the Source panel and verify that page navigation comes from real page milestones.
 3. Move through the book in Reading text and open the exact current-page XML without staging the complete source in the editor.
 4. Open Metadata and inspect the complete header inventory. Common fields receive direct labels, while structured fields remain XML-only and retain the complete header route.
-5. Mark the current navigation unit reviewed. The TEI gains a targeted `revisionDesc/change`. Undo returns the prior exact source.
+5. Review the current navigation unit using the dialog, supplying reviewer and rationale. The TEI gains a targeted `revisionDesc/change` with a source-scope fingerprint. Editing that scope makes the record historical; Undo returns the prior exact source.
 6. Request Download or Save fallback. The editor applies repository TEI All because the source has no project schema set, validates the exact target bytes, and permits output only for the current revision.
 7. Compare the downloaded bytes with the intended source and mutation.
 8. Run the automated accessibility audit in the populated document state.
 
 ### Evidence
 
-The real workflow has been observed through Playwright in Chromium and Firefox. Both engines exercise Source Profile disclosure, navigation, complete metadata, review and Undo, the TEI All output gate, exact download, and Axe. The serious and critical audit is clear in the exercised state, including the paragraph contrast correction prompted by the earlier real-object run.
+Historical runs observed the real workflow through Playwright in Chromium and Firefox. This is prior evidence, not a claim that every subsequent run includes the local source. Both engines exercise Source Profile disclosure, navigation, complete metadata, review and Undo, the TEI All output gate, exact download, and Axe. The serious and critical audit is clear in the exercised state, including the paragraph contrast correction prompted by the earlier real-object run.
 
 The source remains outside the repository. Reproduction requires `UFBAS_TEI` to identify the local file. A missing path skips the real-object scenario and does not convert synthetic coverage into a real-object claim.
 
@@ -171,7 +186,7 @@ This projection exposes the entire header without pretending that every scholarl
 An editor reviews one entry in a paginated dictionary and then links a person whose name appears in separated phrases.
 
 1. Entry navigation is primary, while pages remain available as context.
-2. The review action ensures a stable identifier on the entry and writes a targeted review change in the header.
+2. The review dialog collects reviewer and rationale; the action ensures a stable identifier on the entry and writes a targeted, fingerprinted review change in the header.
 3. The editor selects the first phrase, chooses `add another segment`, moves to another page or entry, and selects the remaining phrase.
 4. Entity linking inserts boundary anchors and one `spanGrp` with ordered spans. The selected text stays unchanged.
 5. Every segment projects as the same mention. Relink updates the complete group.

@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { parseDocument, firstTeiByLocal, getUnqualifiedAttr } from "../../docs/js/editor/tei-document.js";
+import { confirmConstruct, rejectConstruct } from "../../docs/js/editor/proposal-review.js";
+import { isAcceptedProposal, isPendingProposal } from "../../docs/js/editor/proposal-provenance.js";
+import { proposalGapMarkup } from "../../docs/js/editor/proposal-gap.js";
+import { readEntities, confirmEntity } from "../../docs/js/editor/standoff.js";
+import { validateWithSchemas, schemaSources } from "../../docs/js/editor/schema-validation.js";
+const wrap = (text) => `<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Test</title></titleStmt><publicationStmt><p>Test</p></publicationStmt><sourceDesc><p>Test</p></sourceDesc></fileDesc></teiHeader><text><body><p>${text}</p></body></text></TEI>`;
+const doc = parseDocument(wrap('<hi resp="#human #ai" ana="#existing">A &amp; B</hi>'));
+const accepted = confirmConstruct(doc, firstTeiByLocal(doc.root, "hi"));
+const reopened = parseDocument(accepted.raw);
+const hi = firstTeiByLocal(reopened.root, "hi");
+assert.equal(getUnqualifiedAttr(hi, "resp"), "#human #ai");
+assert.equal(getUnqualifiedAttr(hi, "ana"), "#existing urn:teicrafter:proposal:accepted:%23ai");
+assert.equal(isAcceptedProposal(hi, "#ai"), true);
+assert.equal(isPendingProposal(hi, "#ai"), false);
+assert.equal(confirmConstruct(reopened, hi), reopened);
+assert.equal(rejectConstruct(reopened, hi), reopened, "accepted content is not a pending proposal to reject");
+const gapDoc = parseDocument(wrap(proposalGapMarkup("original", "#ai", "illegible")));
+const gapAccepted = confirmConstruct(gapDoc, firstTeiByLocal(gapDoc.root, "gap"));
+assert.equal(isAcceptedProposal(firstTeiByLocal(gapAccepted.root, "gap"), "#ai"), true);
+assert.equal(firstTeiByLocal(gapAccepted.root, "choice"), null);
+const register = parseDocument(wrap("Text").replace("<text>", '<standOff><listPerson><person xml:id="p1" resp="#custom #human"><persName>Fictional person</persName></person></listPerson></standOff><text>'));
+assert.equal(readEntities(register, "#custom").persons[0].ai, true);
+const confirmedRegister = confirmEntity(register, "p1", "#custom");
+assert.equal(readEntities(confirmedRegister, "#custom").persons[0].ai, false);
+assert.equal(readEntities(confirmedRegister, "#custom").persons[0].aiOrigin, true);
+assert.equal(getUnqualifiedAttr(readEntities(confirmedRegister).persons[0].node, "resp"), "#custom #human");
+const schema = [{ ...schemaSources(null)[0], text: readFileSync("docs/schemas/tei-p5-4.11.0/tei_all.rng", "utf8") }];
+for (const raw of [accepted.raw, gapAccepted.raw]) {
+  assert.equal((await validateWithSchemas(raw, schema))[0].status, "valid");
+}
+console.log("PASS: accepted origin, multiple responsibility pointers, preserved analysis and TEI All validity.");

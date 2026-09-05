@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
@@ -24,7 +24,7 @@ related: [architecture, specification, data]
 
 teiCrafter separates deterministic proof, formal validation, observed browser behaviour, accessibility evaluation, real-object evidence, and scholarly acceptance. A passing unit proof establishes only its pure contract. A browser run establishes the rendered interaction path. Schema validation establishes conformance to the schemas that actually ran. Automated accessibility checks establish the absence of the configured serious and critical findings in the exercised state. Editorial adequacy still requires a domain expert.
 
-Test output is the source of record for run totals and transient status. This document records claims, methods, inputs, and known limits without duplicating those figures.
+Test output and its [dated report](../reports/README.md) are the source of record for run totals and transient status. The evidence map describes test coverage; it does not certify an unexecuted run or a missing local fixture. This document records claims, methods, inputs, and known limits without duplicating those figures.
 
 ## Acceptance cascade
 
@@ -57,14 +57,19 @@ The offline MVP acceptance requires well-formed XML, text fidelity, and structur
 | Exact no-op and local splice fidelity | Generic round-trip, whitespace, namespace, mutation, file-encoding, and harness cases | Exact downloaded bytes are compared in Chromium and Firefox | Browser text decoding remains limited to supported XML encodings |
 | Compositional Source Profiles | Source Profile, fixture, schema-wiring, and terminology proofs cover inventory, navigation, local cells, active schema reprojection, and labels | Type-diverse fixtures open through the Source panel in both browsers | Very large documents still use whole-string structural projections when a schema restriction changes navigation |
 | Conservative Schema Profile | Schema Profile proofs cover ODD, reachable and included RelaxNG, broad or partial RelaxNG, XSD declarations, conjunctive sets, unavailable resources, and validation-only Schematron | Source-panel policy is exercised through manifest overrides | XSD evidence remains positive and approximate; raw Schematron supplies no authoring profile |
-| Canonical manifest schema set | Manifest, schema-set, and project-schema-file proofs preserve order, repeated kinds, and type overrides | Project and session sources are named in the validation popover | Folder dependencies are limited to bare same-folder files |
+| Canonical manifest schema set | Manifest, schema-set and project path proofs preserve order, repeated kinds, nested dependencies, URI decoding and bounded traversal | Project folder simulation verifies nested plaintext output and collision avoidance | Single-file schema uploads do not acquire a folder bundle |
 | Complete header inventory | `metadata_view_check.mjs` covers common and unknown elements, all ordinary attributes, XML-only shapes, foreign decoys, escaping, and no-op fidelity | UFBAS opens its real header, edits a safe field, and retains the exact XML route in both browsers | Creation and restructuring remain XML operations |
-| TEI Review Records | `review_progress_check.mjs` covers creation, update, clear, corpus scope, prefixes, shared targets, legacy markers, and fail-closed structures | UFBAS review, reopen, and Undo are exercised in both browsers | Default review details have no complete editing form |
+| TEI Review Records | Review progress/evidence checks cover append-only history, fingerprints, independent pages, Undo, corpus scope, prefixes, shared targets and conservative legacy interpretation | Safety scenarios exercise reviewer input, changed-since-review and reopening | Register and metadata content outside the reviewed range requires separate evidence |
 | Cross-structure and discontinuous spans | `span_annotations_check.mjs` and selection-combination checks cover anchors, groups, projection, relink, cleanup, and invalid overlap | A multi-segment entity is collected and downloaded as schema-valid TEI in both browsers | Interactive collection is entity-focused and remains within one document |
 | Multi-schema output authorization | `schema_validation_check.mjs` and validation-view checks cover ordered execution, invalid or unavailable aggregation, revision binding, exact projected bytes, and stale results | RelaxNG, XSD, raw Schematron, compiled Schematron, and blocked output paths run in both browsers | Browser Schematron implements the documented subset |
 | Firefox fallback | File capability and output-path proofs isolate native and fallback decisions | Firefox loads through file input, downloads exact bytes, and uses the same schema-gated download for Save | Native directory and file handles remain browser capabilities |
 | Open LLM adapters | `llm_adapter_check.mjs` and custom-provider checks cover registration, request mapping, response extraction, endpoint validation, and built-in protection | Provider selection shares the ordinary generation interface | Adapter discovery is trusted application code, with no executable manifest path |
 | Persistent generated provenance | `generated_provenance_check.mjs` covers root responsibility, matching `respStmt`, preservation of existing tokens, and reload recognition | Generated drafts use the same load and banner path | A malformed or dangling pointer is intentionally insufficient |
+| Literal input and recovery | Literal input, working-copy and reading-policy checks cover escaped entity syntax, illegal characters, staged payloads and image/file collisions | Safety scenarios reload unfinished inline, source and metadata work and retain multiple image-bearing sessions | Abrupt process termination and large checkpoints require further fault injection |
+| Persistence ownership | `persistence_coordinator_check.mjs` injects delayed writes, session/revision changes, pending input, quota errors, conflicts and download fallback; `staged_input_check.mjs` rejects stale edits and destructive remounts | `persistence.spec.js` exercises inline failure with Undo, metadata/XML Apply, input during native writing and an actual IndexedDB transaction abort followed by successful recovery | File System Access cannot atomically commit XML and every attached image; OS/process interruption remains outside simulated API timing |
+| Accepted proposal origin | Accepted-provenance checks preserve co-responsibility, analysis tokens, custom responsibility and accepted gaps; resulting XML is checked against TEI All | Safety scenarios inspect persisted origin after confirmation | Model output quality remains an editorial question |
+| Read-only behavior | Session checks reject changed replacements and history mutations while permitting reprojection | Safety scenarios traverse reading, XML and metadata and retain history on returning to editing | This is an application task mode, not operating-system file permissions |
+| Deterministic starters | Starter checks validate every template against vendored TEI All and create distinct dictionary/article collections | Safety scenarios create a supplied-facts letter and navigate thirty entries | Entry creation is not a complete batch-management workspace |
 | UFBAS operational workflow | Pure modules cover the mutations used by the scenario | The local real whole-book TEI exercises navigation, Source Profile disclosure, complete metadata, review, Undo, TEI All output, exact download, and Axe in Chromium and Firefox | The source is local and cannot be redistributed through the repository |
 | Wenzelsbibel engine workflow | `wb_codex_check.mjs` and dual-reading proofs exercise the local real codex plus synthetic guards | The committed browser workflow uses a structural twin in Chromium and Firefox | Real browser automation and cross-file image-annotation editing require local project data |
 
@@ -80,7 +85,7 @@ Schema tests distinguish resource discovery from validator execution.
 
 ### RelaxNG and XSD
 
-Synthetic main schemas exercise RelaxNG `include` and `externalRef`, plus XSD `include`, `import`, and `redefine`. Tests cover served dependencies, same-folder project resources, missing dependencies, and nested paths that the project-folder loader cannot resolve. Missing resources yield unavailable and block output.
+Synthetic main schemas exercise RelaxNG `include` and `externalRef`, plus XSD `include`, `import`, and `redefine`. Tests cover served and nested granted-folder dependencies, cycles, URI-encoded filenames and unavailable resources. A nested RelaxNG set is executed through the actual validation engine. Missing resources yield unavailable and block output.
 
 ### Raw Schematron
 
@@ -98,6 +103,8 @@ Source Profile reprojection has a separate interaction invariant. Schema evidenc
 
 ## Browser matrix
 
+`reports/source-browser-check.config.mjs` is a diagnostic configuration for Chromium against source served from docs. It does not replace the pinned production build and Chromium/Firefox release configuration. Current execution results and environment failures belong in the dated implementation status report, not in a permanent claim that the full release gate passed.
+
 Chromium covers the portable file flow and capability-gated native File System Access where the environment exposes it. Firefox covers the portable flow with native picker absence asserted. Shared scenarios execute navigation, metadata, review, discontinuous spans, schema diagnostics, stale output rejection, downloads, keyboard focus, and accessible state in both engines.
 
 The application declares `baseline widely available` through Browserslist. Playwright projects are the executable browser floor. Capability detection remains part of each scenario, so a missing native API is a tested fallback condition rather than a skipped product path.
@@ -108,7 +115,7 @@ The CI run is the clean-checkout portability check. Synthetic browser assets are
 
 The UFBAS scenario is enabled through `UFBAS_TEI`. It loads the supplied whole-book source through the browser file input and uses the real document throughout the workflow. The scenario verifies that Source Profile and navigation remain responsive, the complete header inventory is available, review survives the TEI mutation path, Undo restores state, TEI All authorizes the exact target, and the downloaded bytes match expectation.
 
-Axe runs within that real state in Chromium and Firefox. The observed workflow completes without serious or critical findings in both engines. This includes the body and paragraph contrast correction that the real object exposed. The statement applies to the exercised UFBAS state and does not replace manual WCAG review.
+Axe runs within that real state in Chromium and Firefox. Historical runs completed without serious or critical findings in both engines. Current evidence requires a new run with the real source; a missing `UFBAS_TEI` is a declared skip. This includes the body and paragraph contrast correction that the real object exposed. The statement applies to the exercised UFBAS state and does not replace manual WCAG review.
 
 ## Real Wenzelsbibel evidence
 
@@ -119,6 +126,8 @@ The Wenzelsbibel browser example deliberately falls back to a committed structur
 ## Running the gates
 
 The pinned Node and npm versions in `package.json` are part of reproducibility.
+
+The offline type proof invokes only the repository's pinned TypeScript entry. An absent native compiler is a declared skip in that proof, while the required verification gate fails independently on missing tools. There is no global compiler or unpinned `npx` fallback. The checked include set covers input, output, recovery and reading controllers plus XML and metadata surfaces and their dependencies; it does not yet cover every application controller as a root.
 
 ```powershell
 npm ci

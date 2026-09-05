@@ -20,7 +20,25 @@ related: [project, specification, architecture, testing]
 
 # teiCrafter Development Journal
 
-Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (dated reports record them; [testing](testing.md) owns the method), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-09-05: secure the development checkpoint with explicit open acceptance
+
+Trigger: the user requested a controlled session close, current project documentation and an Obsidian Active Work update. Decision: preserve the completed increment with a [dated re-entry report](../reports/session-close-2026-09-05.md), while keeping Firefox output latency and real-material acceptance open. The vault routes to the repository for implementation evidence. Reason: securing the work must retain its known limitations so the next session starts from the observed failure rather than assuming release readiness.
+
+## 2026-09-05: current knowledge and dated evidence have separate roles
+
+Trigger: the user requested a complete documentation refresh after the implementation and refactoring increments. Decision: user guidance, current contracts, release scope and dated verification receive distinct entry points and cross-links. Superseded observations remain labelled history; upstream notices and the frozen converter contract keep their source identity. Reason: readers must be able to tell which behavior exists, which work is planned and which environment an observation actually tested, without inferring product readiness from old totals.
+
+## 2026-09-05: explicit boundaries for input and persistence
+
+Trigger: the implementation review found that saving and navigation treated unfinished reading, XML and metadata inputs differently, while persistence remained coupled to the editor shell. Decision: these surfaces share one ownership contract, and output, recovery ordering and reading interactions have separate responsibilities. Delayed-write and storage-failure scenarios establish the boundary because a successful older write cannot certify newer work. Verification uses the installed pinned tools without an implicit global compiler or network fallback; the XML mutation model stays intact.
+
+## 2026-09-05: editorial preservation and explicit task choices
+
+Trigger: the project assessment and the requested letter, charter, lexicon, reading and legal-source workflows exposed gaps between exact XML splices and safe everyday work. Decision: literal input, collision-aware output, independent recovery and portable unfinished work are treated as document integrity requirements. Review now binds to the actual source scope and preserves history; confirming a proposal preserves its origin. Reason: editors need to distinguish what is preserved, what is validated, what was reviewed and what came from a model.
+
+Decision: read-only mode is enforced at the mutation boundary, nested projects retain source-relative resources, and explicit deterministic starters keep dictionary entries separate from encyclopedia articles. Existing XML continues to determine its own capabilities. Reason: task-specific convenience must not manufacture source facts or silently convert an edition to fit a form. The implementation remains an increment toward the planned release; validator portability, full authoring workspaces, performance budgets and complete pinned cross-browser acceptance still need work.
 
 ## 2026-09-05: documentation versions gained one owner
 

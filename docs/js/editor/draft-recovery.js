@@ -26,7 +26,8 @@ export const DRAFT_KEY = "teicrafter.draftRecovery.v1";
 export const MAX_DRAFT_CHARS = 4_000_000;
 
 function defaultStorage() {
-  return typeof window !== "undefined" ? window.localStorage : null;
+  try { return typeof window !== "undefined" ? window.localStorage : null; }
+  catch { return null; }
 }
 
 /**

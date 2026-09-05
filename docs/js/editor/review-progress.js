@@ -4,12 +4,12 @@ import {
   getUnqualifiedAttr,
   spliceDocument,
 } from "./tei-document.js";
-import { parseEdition } from "./edition.js?v=20260824-ui4";
+import { parseEdition } from "./edition.js";
 import {
   canStoreReviewRecord,
-  clearReviewRecords,
   findElementByXmlId,
   reviewRecordForAnchor,
+  reviewStateForAnchor,
   setReviewRecord,
 } from "./review-record.js";
 
@@ -29,9 +29,7 @@ function legacyIsReviewed(anchor) {
 
 export function folioIsReviewed(folio, doc = null) {
   const anchor = reviewAnchor(folio);
-  return Boolean(anchor && (
-    (doc && reviewRecordForAnchor(doc, anchor)) || legacyIsReviewed(anchor)
-  ));
+  return Boolean(anchor && doc && reviewRecordForAnchor(doc, anchor));
 }
 
 export function reviewPageSummary(state) {
@@ -39,6 +37,8 @@ export function reviewPageSummary(state) {
     index,
     label: folio.n != null ? String(folio.n) : String(index + 1),
     reviewed: folioIsReviewed(folio, state.doc),
+    status: reviewAnchor(folio) ? reviewStateForAnchor(state.doc, reviewAnchor(folio)).status : "unreviewed",
+    record: reviewAnchor(folio) ? reviewStateForAnchor(state.doc, reviewAnchor(folio)).record : null,
     markable: Boolean(reviewAnchor(folio) && (
       folioIsReviewed(folio, state.doc) || canStoreReviewRecord(state.doc, reviewAnchor(folio)).ok
     )),
@@ -81,11 +81,14 @@ export function setFolioReviewed(state, folioIndex, reviewed, options = {}) {
     return stored.doc === state.doc ? state : parseEdition(stored.doc.raw);
   }
 
-  const cleared = clearReviewRecords(state.doc, anchor, options);
-  if (!cleared.ok) return state;
-  let nextDocument = cleared.doc;
-  const nextAnchor = cleared.anchorId
-    ? findElementByXmlId(nextDocument, cleared.anchorId)
+  const latest = reviewStateForAnchor(state.doc, anchor);
+  if (latest.status === "reopened" && !legacyIsReviewed(anchor)) return state;
+  if (!latest.record && !legacyIsReviewed(anchor)) return state;
+  const reopened = setReviewRecord(state.doc, anchor, { status: "reopened", rationale: "Reopened for further editorial work.", ...options });
+  if (!reopened.ok) return state;
+  let nextDocument = reopened.doc;
+  const nextAnchor = reopened.anchorId
+    ? findElementByXmlId(nextDocument, reopened.anchorId)
     : anchor;
   if (nextAnchor) nextDocument = removeLegacyToken(nextDocument, nextAnchor);
   return nextDocument === state.doc ? state : parseEdition(nextDocument.raw);

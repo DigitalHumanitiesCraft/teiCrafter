@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: active
 created: 2026-02-05
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, testing]
@@ -22,17 +22,22 @@ related: [project, data, architecture, testing]
 
 ## Normative outcome
 
-teiCrafter shall let an editor work on heterogeneous TEI through source-backed projections while preserving the complete XML document. Every Save or Download shall be authorized against the exact output bytes for the current document revision. The interface shall explain its structural interpretation, scholarly provenance, review state, and any reason output is blocked.
+teiCrafter shall let an editor work on heterogeneous TEI through source-backed projections while preserving the complete XML document. Every TEI Save or Download shall be authorized against the exact output bytes for the current document revision. The explicitly unvalidated Working copy preserves session state through a separate JSON export. The interface shall explain its structural interpretation, scholarly provenance, review state, and any reason output is blocked.
 
 ## Document and session integrity
 
 - **D.1 Canonical source.** The complete XML source string is the canonical document state. Parsed nodes and browser DOM elements are temporary projections.
-- **D.2 Byte fidelity.** A load followed by a no-op shall return the identical byte sequence. An intentional edit shall alter only the exact source ranges required by that operation.
+- **D.2 Byte fidelity.** A supported UTF-8 file load followed by a no-op shall return the identical byte sequence, including an optional BOM. An intentional edit shall alter only the exact source ranges required by that operation.
 - **D.3 Namespace identity.** TEI operations shall identify elements through the TEI namespace URI and preserve the document's existing prefix policy. Foreign elements with equal local names shall remain outside TEI projections and mutations.
 - **D.4 Session identity.** Each loaded document shall have a distinct session identity, revision, dirty savepoint, bounded undo history, and cancellable asynchronous work. Results from another session or revision shall have no authority over the current document.
-- **D.5 Encoding and save conflicts.** The file boundary shall decode and re-encode only supported XML encodings. In-place save shall detect an external file-version conflict and fail closed.
+- **D.5 Encoding and save conflicts.** The file boundary shall decode and re-encode UTF-8 with an optional BOM, and reject unsupported encodings or conflicting declarations. In-place save shall detect an external file-version conflict and fail closed.
 - **D.6 Source scopes.** Page or unit XML, complete header XML, and complete-document XML shall commit through substitution into the canonical string. Well-formedness and validation shall evaluate the resulting complete document.
-- **D.7 Staged source.** Navigation shall refuse to discard staged XML edits. Apply shall reparse the full result before replacing canonical state.
+- **D.7 Staged input.** Reading, XML and metadata input shall share ownership of the session and source from which it was opened. Navigation, history, re-rendering and unrelated mutations shall not silently discard unfinished values. Apply shall reject stale ownership, reparse the full result before replacing canonical state, and retain input after failure.
+- **D.8 Literal input.** Text and attribute editors shall treat input as literal Unicode, escape entity-looking text, reject XML-illegal characters, and preserve unchanged lexical spellings. An unresolved named entity shall require exact XML editing if its value would change.
+- **D.9 Recovery.** Independent document sessions shall retain canonical XML, unfinished inline/source/metadata input, schema/project configuration and image blobs in versioned checkpoints. Storage errors shall be visible. A portable Working copy shall preserve unfinished work without a schema gate and without claiming validated output.
+- **D.10 Read only.** Read-only mode shall reject source-changing transactions and undo/redo while permitting navigation, inspection, search and copying. The interface shall refuse entry into that mode with unresolved visible edits.
+- **D.11 Safe targets.** A derived file shall choose an unused filename. Existing image content shall be reused only after exact comparison, and shall never be silently replaced. Recovery may be cleared after a complete native save or explicit discard; initiating a download is insufficient evidence.
+- **D.12 Asynchronous persistence.** Save and every TEI export shall resolve unfinished visible input and recheck authorization after asynchronous work. New input during a native write shall prevent a clean savepoint. Completion shall affect only the captured session and recovery identity. Checkpoints shall capture nested values before queueing; a storage failure shall remain visible and shall not disable subsequent attempts.
 
 ## Compositional Source Profiles
 
@@ -50,7 +55,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 
 - **P.1 Canonical schema set.** A manifest schema shall normalize to the ordered shape `{ schemas: [{ type, path, name? }, ...] }`. Order and repeated schema types shall be preserved.
 - **P.2 Schema types.** Manifest entries may declare RelaxNG, XSD, or Schematron resources. A project may combine RelaxNG and XSD when its editorial contract requires both.
-- **P.3 Resolution.** Served resources shall resolve relative to the manifest. An opened project folder may resolve a top-level schema and its bare same-folder dependencies.
+- **P.3 Resolution.** Served resources shall resolve relative to the manifest. An opened project folder shall resolve nested schema dependencies relative to each containing file, reject paths outside the granted root, and terminate dependency cycles.
 - **P.4 Session override.** A session schema upload shall replace the complete project schema set for that session. The interface shall identify the effective source.
 - **P.5 Default schema.** The vendored TEI P5 TEI All RelaxNG shall apply only when the project provides no schema set and no session override exists.
 - **P.6 Declarative boundary.** Manifests may configure data and policy. They shall not inject executable code, provider adapters, or arbitrary validation programs.
@@ -67,13 +72,15 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 
 ## Review Records
 
-- **R.1 Scholarly record.** Marking a unit reviewed shall create or update a TEI `revisionDesc/change` with `type="review"`, a review status in `subtype`, a local target, reviewer in `who`, an ISO date or timestamp in `when`, and a text rationale.
+- **R.1 Scholarly record.** Marking a unit reviewed shall append a TEI `revisionDesc/change` with `type="review"`, a review status in `subtype`, a local target, reviewer in `who`, an ISO date or timestamp in `when`, a text rationale, and a versioned source fingerprint in `corresp`.
 - **R.2 Stable target.** The review target shall identify the current primary navigation unit. The editor may add a unique `xml:id` to that unit when necessary.
 - **R.3 Corpus scope.** A reviewed unit inside a TEI corpus member shall place its record in that member's header.
 - **R.4 Preservation.** Existing revision history, unmanaged attributes, shared targets, and unrelated review records shall remain intact.
 - **R.5 Closed failure.** Missing headers, duplicate identifiers, ambiguous `revisionDesc` content, and structured rationales that cannot be changed losslessly shall block the review mutation with an explanation.
 - **R.6 State separation.** Annotation coverage and review status shall remain independent. Review certifies a human act and shall not be inferred from the presence of markup.
 - **R.7 Legacy reading.** The editor may read the legacy `@ana="#teicrafter-reviewed"` marker. Clearing review shall remove the recognized marker while preserving unrelated tokens.
+- **R.8 Current evidence.** Only a matching fingerprint on the latest verified record shall establish current review. Modified source shall become changed since review. Fingerprint-free records and legacy markers shall not establish current review. Reopening shall append history instead of deleting it.
+- **R.9 Review details.** Confirmation shall expose reviewer, rationale, prior record and covered source scope. Linked register content outside that range shall not be implicitly certified.
 
 ## Cross-structure and discontinuous spans
 
@@ -94,7 +101,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **V.4 Automatic execution.** Save and Download shall run the gate when no current authorization exists. The operation shall recheck authorization after asynchronous validation and immediately before output.
 - **V.5 Changed state.** A document edit, project change, schema override, or output-projection change shall invalidate the previous authorization.
 - **V.6 Explanation.** The validation surface shall identify repository, project, or session schema source; list every schema result; show diagnostics and runtime limits; and state why output is blocked.
-- **V.7 RelaxNG and XSD dependencies.** Includes, external references, imports, and redefinitions shall run only when every dependency can be fetched or resolved as a bare same-folder project file. Missing or nested unresolved resources shall yield unavailable.
+- **V.7 RelaxNG and XSD dependencies.** Includes, external references, imports, and redefinitions shall run only when every dependency can be fetched or resolved inside the granted project folder. Missing or unresolvable resources shall yield unavailable.
 - **V.8 Raw Schematron subset.** Browser execution shall accept the documented XPath 1.0 subset. Includes, abstract patterns, advanced match patterns, node-set lets, and XPath 2.0 or later shall yield unavailable unless the project supplies compiled XSLT.
 - **V.9 Compiled Schematron.** Compiled XSLT shall require browser `XSLTProcessor` support and a valid SVRL `schematron-output` result. Missing runtime support or invalid SVRL shall block output.
 - **V.10 Comparative harness.** Offline fidelity evaluation may report schema differences without gating. That comparative level shall remain distinct from browser output authorization.
@@ -105,6 +112,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **L.2 Generated document gate.** A generated response shall be well-formed, self-contained TEI P5, reject `DOCTYPE`, contain the required header and text body, and pass through ordinary document loading.
 - **L.3 Persistent provenance.** Generated TEI shall carry the configured responsibility on the TEI root and declare a matching `respStmt`. Reload shall restore the generated state only when both pieces agree.
 - **L.4 Proposal provenance.** Every inserted model proposal shall carry `@resp` and remain visibly unverified until a human confirms or rejects it.
+- **L.4a Acceptance and origin.** Confirmation shall add per-responsibility acceptance evidence without removing origin or other responsibility pointers. Accepted content shall remain visibly identifiable as model-origin; rejection shall address pending proposals.
 - **L.5 Credentials.** API keys shall remain in memory. Requests shall omit browser ambient credentials.
 - **L.6 Provider choice.** Built-in providers shall coexist with a configurable OpenAI-compatible endpoint. Application code may register validated adapters for nonstandard JSON request and response protocols.
 - **L.7 Adapter safety.** Built-in provider identifiers shall be immutable. Adapter endpoints shall use HTTP or HTTPS and contain no embedded credentials. A manifest shall have no executable adapter capability.
@@ -118,6 +126,10 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **B.5 Accessible state.** Keyboard access, focus, labels, status announcements, contrast, and validation errors shall remain perceivable in both browser engines.
 - **B.6 Facsimile degradation.** A missing image resolver or unsupported directory picker shall leave XML and reading-text editing available and explain the reduced capability.
 
+## Deterministic creation
+
+An explicit starter choice may create new transcription, correspondence, charter, legal-source, dictionary-entry or encyclopedia-article TEI. Templates shall not infer historical facts, force an existing document into a genre, or apply AI provenance to deterministic transport. Dictionary entries shall use entry/form/sense; encyclopedia articles shall use div/head/p. The creation path shall support the supplied thirty-entry scenario and ordinary recovery, navigation and output validation. These starters do not imply complete genre-specific authoring interfaces.
+
 ## Acceptance scenarios
 
 | Scenario | Acceptance condition |
@@ -126,7 +138,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 | Mixed source | Derive several simultaneous capabilities, select a source-backed primary channel, and retain local token and text-run editing |
 | Manifest override | Apply a valid project or document-type navigation policy and explain an unsatisfied override before falling back |
 | Complete header | Inventory every TEI header field, edit simple values exactly, and keep structured content XML-only |
-| Review | Write a targeted review change without altering unrelated revision history, then reopen and clear it safely |
+| Review | Append targeted evidence, detect source changes, restore current status on exact Undo, and reopen without erasing history |
 | Cross-structure mention | Collect separated ranges, write one stand-off group, project every segment, and remove the group without text loss |
 | Schema set | Execute every ordered schema and block when any result is invalid or unavailable |
 | Stale validation | Change the document after a valid result and require a new gate before output |
@@ -135,6 +147,10 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 | Wenzelsbibel codex | Exercise real word, dual-reading, facsimile, zone, and no-op engine behaviour; use the synthetic twin for committed browser interaction |
 
 ## Key decisions
+
+- **Preservation before validated delivery, 2026-09-05.** A schema failure must not prevent preserving unfinished work. Independent local checkpoints and an explicitly unvalidated portable Working copy complement schema-gated TEI output.
+- **Review and origin are separate evidence, 2026-09-05.** Review binds to source content and retains history. Proposal acceptance records a human decision while preserving machine and human responsibility pointers.
+- **Explicit creation and reading tasks, 2026-09-05.** Deterministic starters and a transaction-enforced read-only mode support editors with different TEI experience without rebuilding their existing XML.
 
 - **Exact source mutation, 2026-02-05.** Browser XML serializers can change scholarly source beyond an intended edit. teiCrafter therefore treats raw XML plus offsets as canonical state.
 - **Compositional Source Profiles, 2026-08-24.** Global word or line modes and folio-first navigation misrepresented dictionaries, drama, corpora, tables, correspondence, critical editions, and documents that combine several structures. Inventory, conservative schema evidence, and manifest policy now compose the interface.
@@ -149,7 +165,9 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 
 - The span engine supports generic annotation types, while the interactive multi-segment collector currently exposes entity linking. Additional scholarly types need UI contracts for their required attributes and review semantics.
 - Stand-off spans resolve within one TEI document. Cross-file Wenzelsbibel `corresp` and `#range(...)` editing needs a project document graph and target-document transaction model.
-- Review records use safe default reviewer, timestamp, status, and rationale values. A complete interface for editing those details remains open.
+- Review fingerprints cover source ranges, excluding revision history. Separate metadata/register review and cross-document responsibility scopes remain open.
+- Entry starters provide creation and navigation; safe duplication, reference-aware batch operations and a complete entry-management workspace remain open.
+- Apparatus reading currently selects lemma or first reading; witness selection and a complete disclosure of unsupported editorial semantics remain open.
 - Raw Schematron uses a bounded XPath 1.0 interpreter. Projects that rely on the complete ISO pipeline must provide compiled XSLT or validate outside the browser before teiCrafter can authorize output.
 - Provider adapters are registered by trusted application code. Declarative plugin discovery and remotely supplied executable adapters are outside the current security boundary.
 - The real Wenzelsbibel codex is rights-local. Reproducible browser automation uses a synthetic structural twin, so real cross-browser facsimile acceptance requires a locally supplied object.

@@ -1,4 +1,4 @@
-# teiCrafter -- Claude Code Instructions
+# teiCrafter: Project Instructions
 
 ## Language and Style
 - No emojis. Never in outputs, files, or commit messages.
@@ -12,13 +12,14 @@
 - Knowledge documents describe the current state only: no narrative of what a document previously carried, what moved where, or what no longer exists. History belongs in journal.md and in git. Dated decision provenance is kept only where it is the document's function: journal.md and the Key Decisions in specification.md.
 
 ## Project
-- A browser-based, lossless editor for arbitrary TEI-XML. Open an existing source, navigate by the structures it actually encodes (for example pages, entries, speech turns, corpus members, surfaces, source documents or sections), correct projected cells at word level when `<w>` is present and otherwise at line level, then save the canonical XML byte-faithfully outside the deliberate edits. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
-- Projects are folders with a declarative `teicrafter.project.json`. One project holds several document types, and the allowed markup binds to the type (`documentTypes` + the `files` map; project-level `markup` is the default, PID detection the fallback for bare files). "Open project folder" uses a once-granted File System Access directory handle (decision: not OPFS), Chromium-only; its `.xml`/`.txt`/`.md` files appear in the Project panel. Plaintext (`.txt`/`.md`) opens as a deterministic line-level draft (transport, never AI-marked; a `|N|` token becomes a page break), from the project panel or directly via picker/drop; in a project the first save creates the `.xml` next to the source, an unsaved draft survives a reload via a recovery offer. Separate from the LLM on-ramp.
+- A browser-based editor that preserves UTF-8 TEI outside deliberate edits. Unsupported encodings are rejected before editing. Open an existing source, navigate by the structures it actually encodes (for example pages, entries, speech turns, corpus members, surfaces, source documents or sections), correct encoded `<w>`/`<pc>` tokens and exact text runs according to each local cell, then save the canonical XML byte-faithfully outside the deliberate edits. The core is a generic, offset-true reader (raw string canonical, edits are offset splices, `serialize()` byte-identical).
+- Projects are folders with a declarative `teicrafter.project.json`. One project holds several document types, and the allowed markup binds to the type (`documentTypes` + the `files` map; project-level `markup` is the default, PID detection the fallback for bare files). "Open project folder" uses a once-granted File System Access directory handle (decision: not OPFS), Chromium-only; its `.xml`/`.txt`/`.md` files appear in the Project panel. Plaintext (`.txt`/`.md`) opens as a deterministic line-level draft (transport, never AI-marked; a `|N|` token becomes a page break), from the project panel or directly via picker/drop; in a project the first save creates the `.xml` next to the source, session checkpoints preserve drafts and existing documents, including staged inline/XML/metadata edits and loaded image bytes. First Save allocates an unused XML filename. Separate from the LLM on-ramp.
 - An optional LLM on-ramp ("New from text (LLM)") drafts an initial TEI from plaintext into the same editor, marked machine-generated and unreviewed (violet). The model assists; the human decides. Behind `FEATURES.llmOnRamp` (a build default plus a per-user toggle); AI off is a fully deterministic editor and the code stays in place.
 - Real cases: Wenzelsbibel (word-level), Jeanne Hersch / zbz-ocr-tei (line-level), Stefan Zweig / szd-htr (catalog TEI + Page-JSON, needs conversion first).
-- Client-only, deployed via GitHub Pages from `/docs`. ES modules are checked and bundled by the pinned Vite toolchain; the browser runtime has no backend dependency. The built-in examples (landing cards, Load... entries, `#example` deep link) show only on local development hosts (`FEATURES.examples`); the public deployment hides them.
+- Client-only: source lives in `docs/`, Vite builds to `dist/`, and the checks workflow uploads `dist/` as a Pages artifact. Publishing that artifact is a separate deployment step. ES modules are checked and bundled by the pinned Vite toolchain; the browser runtime has no backend dependency. The built-in examples (landing cards, Load... entries, `#example` deep link) show only on local development hosts (`FEATURES.examples`); the public deployment hides them.
 - An independent tool, not a module of EditionCrafter.
-- The earlier five-step LLM Generator app was removed in the 2026-05-30 consolidation (recoverable from git history). Do not reintroduce a stepper; both entries land in the one editor.
+- Deterministic starters, file input and model-assisted drafts land in one editor. Read-only mode blocks mutation paths. Accepted AI proposals retain their origin and receive a separate acceptance marker.
+- The target release is 0.2.0, while package.json remains 0.1.0 until release acceptance. Read [reports/README.md](reports/README.md) for current verification and remaining scope. Starter templates do not imply complete genre-specific workspaces.
 
 ## Knowledge Base (`knowledge/`)
 Function-separated per the Promptotyping convention. Read `INDEX.md` first; it carries the document map and the glossary.
@@ -42,7 +43,7 @@ Before generating or changing UI, read `knowledge/design.md`. Its principles are
 ## Knowledge Maintenance
 At the end of a session with code changes, update the affected knowledge documents:
 1. `architecture.md` for component, data-flow, or implementation-status changes.
-2. `journal.md` for a session entry and any new decisions. Journal style: an entry records the trigger, the decision and the reason, in a few sentences; no proof numbers or test counts (testing.md carries them), no implementation detail (architecture.md carries it), no file-by-file lists. Lessons worth keeping are part of the reason.
+2. `journal.md` for a session entry and any new decisions. Journal style: an entry records the trigger, the decision and the reason, in a few sentences; no proof numbers or test counts (dated run reports carry them), no implementation detail (architecture.md carries it), no file-by-file lists. Lessons worth keeping are part of the reason.
 3. `specification.md` for new decisions, resolved open questions, or requirement changes.
 4. `design.md` only if the visual or interaction layer changed.
 

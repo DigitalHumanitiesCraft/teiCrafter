@@ -80,7 +80,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
     const orphan = typeof entity.count === "number" && entity.count === 0;
 
     const row = el("div", {
-      class: "ed-idx-row" + (entity.ai ? " ed-idx-row-ai" : ""),
+      class: "ed-idx-row" + (entity.ai ? " ed-idx-row-ai" : entity.aiOrigin ? " ed-idx-row-ai-origin" : ""),
       dataset: { id: entity.id, name: entity.name || "", noid: noId ? "1" : "", orphan: orphan ? "1" : "" },
     });
 
@@ -91,7 +91,8 @@ export function createIndexPanel(hostEl, hooks = {}) {
       type: "button",
       title: entity.ai
         ? "AI-proposed, unverified. Confirm or delete it; click to jump to its first mention."
-        : "Jump to this entity's first mention in the text",
+        : entity.aiOrigin ? "AI-origin, accepted by an editor. Jump to its first mention."
+          : "Jump to this entity's first mention in the text",
       onclick: () => {
         setActive(entity.id);
         onSelect(entity);
@@ -99,6 +100,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
     }, [
       el("span", { class: "ed-idx-name", text: entity.name || "(unnamed)" }),
       el("span", { class: "ed-idx-id", text: entity.id }),
+      entity.aiOrigin && !entity.ai ? el("span", { class: "ed-idx-origin", text: "AI-origin, accepted" }) : null,
       typeof entity.count === "number" ? el("span", {
         class: "ed-idx-occ" + (orphan ? " ed-idx-occ-zero" : ""),
         text: `${entity.count}×`,
@@ -323,7 +325,9 @@ export function createIndexPanel(hostEl, hooks = {}) {
     if (total === 0) {
       root.appendChild(el("div", { class: "ed-idx-allempty",
         text: useSections.length
-          ? "No index entities yet. Select text in the reading view to create one, or add it in a section below."
+          ? useSections.every((section) => section.readOnly)
+            ? "No index entities in this document. The index is read only."
+            : "No index entities yet. Select text in the reading view to create one, or add it in a section below."
           : "This project declares no entity indices for the current document." }));
     }
     for (const section of useSections) {

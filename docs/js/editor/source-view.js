@@ -252,6 +252,12 @@ export function mountSourceView(host, opts = {}) {
     "aria-label": opts.scopeLabel || "XML source editor",
   });
   ta.value = initialValue;
+  ta.readOnly = !!opts.readOnly;
+  applyBtn.hidden = replaceInput.hidden = replaceBtn.hidden = replaceAllBtn.hidden = !!opts.readOnly;
+  if (opts.readOnly) {
+    cancelBtn.textContent = "Back to reading";
+    scope.textContent += " · read only";
+  }
   // Textareas expose normalised LF line endings even when the assigned XML uses
   // CRLF. Compare against the browser's staged representation so opening a page
   // never counts as an edit; the integrator restores the document's newline form.
@@ -290,6 +296,7 @@ export function mountSourceView(host, opts = {}) {
     });
   };
   const acceptCompletion = (index = completionIndex) => {
+    if (opts.readOnly) return false;
     const item = completions[index];
     if (!completionContext || !item) return false;
     const applied = applySourceCompletion(ta.value, completionContext, item);
@@ -300,6 +307,7 @@ export function mountSourceView(host, opts = {}) {
     return true;
   };
   const updateCompletions = (forced = false) => {
+    if (opts.readOnly) return;
     completionContext = sourceCompletionContext(ta.value, ta.selectionStart);
     completions = sourceCompletionItems(completionContext, opts.vocabulary || {});
     const show = completions.length > 0
@@ -381,6 +389,7 @@ export function mountSourceView(host, opts = {}) {
   // two spaces, Enter carries the current line's indentation, and Ctrl/Cmd+Enter
   // applies through the same full-document well-formedness gate as the button.
   const insertAtSelection = (text, caretDelta = text.length) => {
+    if (opts.readOnly) return;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     ta.value = ta.value.slice(0, start) + text + ta.value.slice(end);
@@ -388,6 +397,7 @@ export function mountSourceView(host, opts = {}) {
     ta.dispatchEvent(new Event("input", { bubbles: true }));
   };
   ta.addEventListener("keydown", (e) => {
+    if (opts.readOnly || e.isComposing) return;
     if ((e.ctrlKey || e.metaKey) && e.key === " ") {
       e.preventDefault();
       updateCompletions(true);
@@ -471,11 +481,13 @@ export function mountSourceView(host, opts = {}) {
     showCount();
   };
   const replaceCurrent = () => {
+    if (opts.readOnly) return;
     if (!findInput.value) return;
     computeMatches(findInput.value);
     if (matchIdx < 0 || matchIdx >= matches.length) { gotoMatch(1); return; }
     const s = matches[matchIdx];
     ta.value = ta.value.slice(0, s) + replaceInput.value + ta.value.slice(s + findInput.value.length);
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
     clearResult();
     refresh(); syncScroll();
     computeMatches(findInput.value);
@@ -483,10 +495,12 @@ export function mountSourceView(host, opts = {}) {
     else { matchIdx = -1; showCount(); }
   };
   const replaceAll = () => {
+    if (opts.readOnly) return;
     const q = findInput.value;
     if (!q) return;
     let count = 0;
     ta.value = ta.value.replace(new RegExp(escRe(q), "gi"), () => { count++; return replaceInput.value; });
+    ta.dispatchEvent(new Event("input", { bubbles: true }));
     clearResult();
     refresh(); syncScroll();
     matchIdx = -1; matches = [];
@@ -538,19 +552,20 @@ export function mountSourceView(host, opts = {}) {
   };
   checkBtn.addEventListener("click", runCheck);
   const applyChanges = () => {
+    if (opts.readOnly) return false;
     const wf = wellFormed(ta.value);
     if (!wf.ok) {
       result.className = "ed-src-result err";
       result.textContent = wf.message;
       const pos = errorPosition(wf.message);
       if (pos && caretToLineCol(pos.line, pos.column)) markErrorLine(pos.line - lineStart + 1);
-      return;
+      return false;
     }
-    onApply(ta.value);
+    return onApply(ta.value) !== false;
   };
   applyBtn.addEventListener("click", applyChanges);
   ta.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    if (!e.isComposing && (e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
       applyChanges();
     }
@@ -579,5 +594,7 @@ export function mountSourceView(host, opts = {}) {
     focus: () => ta.focus(),
     hasChanges: () => ta.value !== originalValue,
     value: () => ta.value,
+    apply: applyChanges,
+    restore: (value) => { ta.value = value; refresh(); },
   };
 }

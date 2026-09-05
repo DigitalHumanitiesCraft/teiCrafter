@@ -27,6 +27,8 @@
  * local source.
  */
 
+import { existingFile, sameFileBytes } from "./file-target.js";
+
 // Graphic urls that need no store resolution (already loadable as-is).
 const RE_ABSOLUTE_URL = /^(?:https?:|data:|blob:)/i;
 const isBareFilename = (value) => !!value
@@ -86,14 +88,28 @@ export function createPageImages(ctx) {
     let written = 0, failed = 0;
     for (const [name, rec] of app.pageImages) {
       if (!rec || !rec.blob || rec.persisted || !referenced.has(name)) continue;
+      let writable = null;
       try {
+        const existing = await existingFile(dir, name);
+        if (existing) {
+          if (!await sameFileBytes(await existing.getFile(), rec.blob)) {
+            throw new Error(`An image named ${name} already exists with different content.`);
+          }
+          rec.persisted = true;
+          continue;
+        }
         const h = await dir.getFileHandle(name, { create: true });
-        const w = await h.createWritable();
-        await w.write(rec.blob);
-        await w.close();
+        if ((await h.getFile()).size !== 0) throw new Error(`${name} changed before it could be written.`);
+        writable = await h.createWritable();
+        await writable.write(rec.blob);
+        await writable.close();
+        writable = null;
         rec.persisted = true;
         written++;
-      } catch { failed++; }
+      } catch {
+        if (writable?.abort) { try { await writable.abort(); } catch { /* The original failure remains recoverable. */ } }
+        failed++;
+      }
     }
     return { written, failed };
   }
@@ -105,6 +121,7 @@ export function createPageImages(ctx) {
    * effort: a missing or unreadable file is skipped.
    */
   async function resolveFromDirectory(dir, replace = false, external = false) {
+    const images = app.pageImages;
     const wanted = [...referencedNames()].filter((name) => replace || !app.pageImages.has(name));
     let found = 0;
     let changed = 0;
@@ -114,6 +131,7 @@ export function createPageImages(ctx) {
       try {
         const handle = await dir.getFileHandle(name);
         const file = await handle.getFile();
+        if (app.pageImages !== images) return { found, missing, requested: wanted.length };
         if (previous?.url) URL.revokeObjectURL(previous.url);
         app.pageImages.set(name, {
           url: URL.createObjectURL(file),
@@ -139,7 +157,7 @@ export function createPageImages(ctx) {
 
   /** Resolve bare graphic filenames beside a document opened from a project. */
   async function resolveFromFolder() {
-    const dir = app.projectFolder && app.projectFolder.dir;
+    const dir = app.documentDirectory || (app.projectFolder && app.projectFolder.dir);
     if (!dir || !app.state) return { found: 0, missing: [], requested: 0 };
     return resolveFromDirectory(dir);
   }

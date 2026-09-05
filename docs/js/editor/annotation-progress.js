@@ -8,7 +8,7 @@
  */
 
 import { isTeiElement, walk } from "./tei-document.js";
-import { folioSourceSlice } from "./edition.js?v=20260824-ui4";
+import { folioSourceSlice } from "./edition.js";
 import { REVIEW_TOKEN } from "./review-progress.js";
 import { resolvedSpanGroups } from "./span-projection.js";
 

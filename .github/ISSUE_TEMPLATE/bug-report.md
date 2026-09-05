@@ -18,6 +18,9 @@ never attach rights-restricted edition data)
 **Environment**
 - Browser and version:
 - Where the app ran (public Pages deployment, local server):
+- Package version or Git revision, if known:
+- Project/schema configuration and selected document view:
+- Any unfinished inline, XML or metadata input when the problem occurred:
 
 **Data safety** (did the bug change bytes you did not edit, or lose work?
 This class of report is treated with priority.)

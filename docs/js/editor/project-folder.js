@@ -25,13 +25,15 @@
 import { el, clear } from "./dom.js";
 import { parseManifest, typeForFile, mappingFiles, MANIFEST_FILENAME } from "./project-manifest.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
-import { parseEdition } from "./edition.js?v=20260824-ui4";
-import { annotationPageSummary } from "./annotation-progress.js?v=20260824-ui4";
-import { noteIndex } from "./standoff.js?v=20260824-ui4";
+import { parseEdition } from "./edition.js";
+import { annotationPageSummary } from "./annotation-progress.js";
+import { noteIndex } from "./standoff.js";
 import { decodeXmlBytes } from "./file-encoding.js";
 import { fileVersion } from "./file-version.js";
+import { createUnusedFile, existingFile } from "./file-target.js";
 import { loadProjectSchemaFiles } from "./project-schema-files.js";
 import { requireCtx } from "./ctx.js";
+import { projectFile, projectFiles } from "./project-path.js";
 
 export function createProjectFolder(ctx) {
   requireCtx("createProjectFolder", ctx,
@@ -115,6 +117,26 @@ export function createProjectFolder(ctx) {
       return;
     }
     const list = el("div", { class: "ed-proj-list" });
+    const directories = new Map([["", list]]);
+    pf.collapsedDirectories ||= new Set();
+    const directoryList = (path) => {
+      if (directories.has(path)) return directories.get(path);
+      const parts = path.split("/");
+      const name = parts.pop();
+      const parent = directoryList(parts.join("/"));
+      const group = el("details", { class: "ed-proj-directory" });
+      group.open = !pf.collapsedDirectories.has(path);
+      group.appendChild(el("summary", { text: name }));
+      const children = el("div", { class: "ed-proj-children" });
+      group.appendChild(children);
+      group.addEventListener("toggle", () => {
+        if (group.open) pf.collapsedDirectories.delete(path);
+        else pf.collapsedDirectories.add(path);
+      });
+      parent.appendChild(group);
+      directories.set(path, children);
+      return children;
+    };
     for (const f of pf.files) {
       const docType = typeForFile(pf.project, f.name);
       const row = el("button", {
@@ -123,7 +145,8 @@ export function createProjectFolder(ctx) {
           ? "Plaintext: opens as a deterministic line-level TEI draft; Save writes the .xml into the project folder"
           : "Open this TEI file",
       });
-      row.appendChild(el("span", { class: "ed-proj-file-name", text: f.name }));
+      row.setAttribute("aria-label", f.name);
+      row.appendChild(el("span", { class: "ed-proj-file-name", text: f.name.split("/").at(-1) }));
       if (docType) row.appendChild(el("span", { class: "ed-proj-file-type", text: docType.label }));
       if (f.kind === "text") row.appendChild(el("span", { class: "ed-proj-file-kind", text: "plaintext" }));
       const status = annotationStatus(f);
@@ -145,7 +168,7 @@ export function createProjectFolder(ctx) {
         }));
       }
       row.addEventListener("click", () => openProjectFile(f));
-      list.appendChild(row);
+      directoryList(f.name.split("/").slice(0, -1).join("/")).appendChild(row);
     }
     host.appendChild(list);
   }
@@ -161,9 +184,9 @@ export function createProjectFolder(ctx) {
         const baseName = f.name.replace(/\.(txt|md)$/i, "");
         const xmlName = baseName + ".xml";
         const opened = await load(teiFromPlaintext(await file.text(), baseName), xmlName, null, project,
-          { projectFolder: folder });
+          { projectFolder: folder, directory: f.directory || folder.dir });
         if (!opened) return false;
-        app.saveTarget = { dir: folder.dir, name: xmlName };
+        app.saveTarget = { dir: f.directory || folder.dir, name: xmlName.split("/").at(-1), prefix: f.prefix || "" };
         setDirty(true);
         onPlaintextDraft(f.name);
         setStatus(`Drafted ${xmlName} deterministically from ${f.name} (text carried verbatim). Save writes it into the project folder.`);
@@ -171,6 +194,7 @@ export function createProjectFolder(ctx) {
         const decoded = decodeXmlBytes(await file.arrayBuffer());
         const opened = await load(decoded.text, f.name, f.handle, project, {
           projectFolder: folder,
+          directory: f.directory || folder.dir,
           fileEncoding: { encoding: decoded.encoding, bom: decoded.bom },
           fileSnapshot: fileVersion(file),
         });
@@ -186,15 +210,22 @@ export function createProjectFolder(ctx) {
   }
 
   async function adoptProjectFolder(dir) {
+    try { return await readProjectFolder(dir); }
+    catch (err) {
+      setStatus(`Could not read the project folder: ${err.message}`);
+      return false;
+    }
+  }
+
+  async function readProjectFolder(dir) {
     const files = [];
     const handles = new Map(); // name -> handle, to read manifest-referenced files
     let manifestText = null;
-    for await (const entry of dir.values()) {
-      if (entry.kind !== "file") continue;
-      handles.set(entry.name, entry);
-      if (entry.name === MANIFEST_FILENAME) manifestText = await (await entry.getFile()).text();
-      else if (/\.xml$/i.test(entry.name)) files.push({ name: entry.name, kind: "tei", handle: entry });
-      else if (/\.(txt|md)$/i.test(entry.name)) files.push({ name: entry.name, kind: "text", handle: entry });
+    for (const item of await projectFiles(dir)) {
+      handles.set(item.name, item.handle);
+      if (item.name === MANIFEST_FILENAME) manifestText = await (await item.handle.getFile()).text();
+      else if (/\.xml$/i.test(item.name)) files.push({ ...item, kind: "tei" });
+      else if (/\.(txt|md)$/i.test(item.name)) files.push({ ...item, kind: "text" });
     }
     files.sort((a, b) => a.name.localeCompare(b.name));
     let project = null, note = "";
@@ -221,8 +252,7 @@ export function createProjectFolder(ctx) {
       }
       if (project.schema) {
         project.localSchemas = await loadProjectSchemaFiles(project.schema, async (name) => {
-          const handle = handles.get(name);
-          if (!handle) return null;
+          const handle = await projectFile(dir, name, true);
           const decoded = decodeXmlBytes(await (await handle.getFile()).arrayBuffer());
           return decoded.text;
         });
@@ -276,8 +306,12 @@ export function createProjectFolder(ctx) {
       setStatus(`Could not open the folder: ${err.message}`);
       return;
     }
-    let exists = false;
-    try { await dir.getFileHandle(MANIFEST_FILENAME); exists = true; } catch { /* not a project yet */ }
+    let exists;
+    try { exists = await existingFile(dir, MANIFEST_FILENAME); }
+    catch (err) {
+      setStatus(`Could not inspect the project manifest: ${err.message}`);
+      return;
+    }
     if (exists) {
       setStatus("This folder already carries a teicrafter.project.json; opening it as a project.");
       await adoptProjectFolder(dir);
@@ -285,12 +319,20 @@ export function createProjectFolder(ctx) {
     }
     const name = window.prompt("Project name:", dir.name);
     if (name === null) return;
+    let writable;
     try {
+      if (await existingFile(dir, MANIFEST_FILENAME)) {
+        setStatus("A project manifest was created in this folder; opening that project.");
+        await adoptProjectFolder(dir);
+        return;
+      }
       const handle = await dir.getFileHandle(MANIFEST_FILENAME, { create: true });
-      const writable = await handle.createWritable();
+      if ((await handle.getFile()).size !== 0) throw new Error("The manifest changed before it could be written. Reopen the project folder.");
+      writable = await handle.createWritable();
       await writable.write(JSON.stringify({ teicrafter: 1, name: name.trim() || dir.name }, null, 2) + "\n");
       await writable.close();
     } catch (err) {
+      if (writable?.abort) await writable.abort().catch(() => {});
       setStatus(`Could not write the project manifest: ${err.message}`);
       return;
     }
@@ -306,18 +348,24 @@ export function createProjectFolder(ctx) {
    */
   async function finalizeSaveTarget() {
     if (app.fileHandle || !(app.saveTarget && app.saveTarget.dir)) return;
+    const target = app.saveTarget;
     try {
-      app.fileHandle = await app.saveTarget.dir.getFileHandle(app.saveTarget.name, { create: true });
+      const created = await createUnusedFile(target.dir, target.name);
+      if (app.saveTarget !== target) return;
+      app.fileHandle = created.handle;
+      app.fileSnapshot = fileVersion(created.file);
+      app.docName = (target.prefix || "") + created.name;
+      app.documentDirectory = target.dir;
       app.saveTarget = null;
       if (app.projectFolder) {
         const known = app.projectFolder.files.some((f) => f.name === app.docName);
         if (!known) {
-          app.projectFolder.files.push({ name: app.docName, kind: "tei", handle: app.fileHandle });
+          app.projectFolder.files.push({ name: app.docName, kind: "tei", handle: app.fileHandle, directory: target.dir, prefix: target.prefix || "" });
           app.projectFolder.files.sort((a, b) => a.name.localeCompare(b.name));
         }
       }
     } catch (err) {
-      setStatus(`Could not create ${app.saveTarget.name} in the project folder (${err.message}); downloading instead`);
+      setStatus(`Could not create ${target.name} in the project folder (${err.message}); downloading instead`);
     }
   }
 

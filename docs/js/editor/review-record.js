@@ -12,6 +12,7 @@ import {
   textOf,
   walk,
 } from "./tei-document.js";
+import { REVIEW_FINGERPRINT_PREFIX, reviewFingerprint } from "./review-evidence.js";
 
 export const REVIEW_TYPE = "review";
 export const REVIEW_STATUS_VERIFIED = "verified";
@@ -137,6 +138,8 @@ function recordFromElement(doc, element) {
     whoTokens: normalizedTokens(getUnqualifiedAttr(element, "who")),
     when: getUnqualifiedAttr(element, "when"),
     rationale: rationaleText(doc, element),
+    fingerprint: normalizedTokens(getUnqualifiedAttr(element, "corresp"))
+      .find((token) => token.startsWith(REVIEW_FINGERPRINT_PREFIX)) || null,
   };
 }
 
@@ -200,7 +203,9 @@ function generatedAnchorId(doc, anchor, hint) {
   const base = `teicrafter-review-${slug(anchor.localName) || "unit"}-${discriminator}`;
   let candidate = base;
   let suffix = 2;
-  while (findElementByXmlId(doc, candidate)) candidate = `${base}-${suffix++}`;
+  const occupied = new Set();
+  walk(doc.root, (node) => { const id = getXmlId(node); if (id) occupied.add(id); });
+  while (occupied.has(candidate)) candidate = `${base}-${suffix++}`;
   return candidate;
 }
 
@@ -290,15 +295,14 @@ function validatedDetails(options, existing = null) {
 
 function recordMarkup(context, id, details) {
   const name = qnameFor("change", context);
-  return `<${name} type="${REVIEW_TYPE}" subtype="${escapeAttr(details.status)}" target="#${escapeAttr(id)}" who="${escapeAttr(details.who)}" when="${escapeAttr(details.when)}">${escapeText(details.rationale)}</${name}>`;
+  return `<${name} type="${REVIEW_TYPE}" subtype="${escapeAttr(details.status)}" target="#${escapeAttr(id)}" who="${escapeAttr(details.who)}" when="${escapeAttr(details.when)}" corresp="${escapeAttr(details.fingerprint)}">${escapeText(details.rationale)}</${name}>`;
 }
 
 function appendRecord(doc, plan, id, details) {
   if (plan.kind === "new-revision") {
     const header = plan.container;
     const revisionName = qnameFor("revisionDesc", header);
-    const changeName = qnameFor("change", header);
-    const change = `<${changeName} type="${REVIEW_TYPE}" subtype="${escapeAttr(details.status)}" target="#${escapeAttr(id)}" who="${escapeAttr(details.who)}" when="${escapeAttr(details.when)}">${escapeText(details.rationale)}</${changeName}>`;
+    const change = recordMarkup(header, id, details);
     if (isMultilineContainer(doc, header) || /\r?\n/.test(trailingWhitespace(doc, header))) {
       const revisionIndent = childIndent(doc, header);
       const nl = newlineOf(doc);
@@ -359,31 +363,23 @@ export function setReviewRecord(doc, anchor, options = {}) {
   doc = anchored.doc;
   const id = anchored.id;
   const status = String(options.status || REVIEW_STATUS_VERIFIED).trim();
-  const existing = recordsForId(doc, id, status).at(-1) || null;
-  const details = validatedDetails(options, existing);
+  const existing = recordsForId(doc, id, null).at(-1) || null;
+  const fingerprint = reviewFingerprint(doc, anchored.anchor);
+  const current = existing?.status === status && existing.fingerprint === fingerprint;
+  const details = validatedDetails(options, current ? existing : null);
   if (!details.ok) return result(original, original, null, status, details.reason);
-
-  if (existing) {
-    if (sameDetails(existing, details)) return result(original, doc, id, details.status);
-    const updated = updatedRecord(doc, existing, id, details);
-    if (updated) return result(original, updated, id, details.status);
-    const remaining = targetsOtherThan(existing, id);
-    if (remaining.length) {
-      const separated = editTextAndAttrs(doc, existing.element, { set: { target: remaining.join(" ") } });
-      if (separated === doc) {
-        return result(original, original, null, status, "The shared review record could not be separated safely.");
-      }
-      const separatedAnchor = findElementByXmlId(separated, id);
-      const nextPlan = storagePlan(separated, separatedAnchor);
-      if (!nextPlan.ok) return result(original, original, null, status, nextPlan.reason);
-      return result(original, appendRecord(separated, nextPlan, id, details), id, details.status);
-    }
-    return result(original, original, null, status, "The existing review rationale contains structured markup and was left unchanged.");
-  }
-
+  if (!fingerprint) return result(original, original, null, status, "The review scope has no complete source boundary.");
+  details.fingerprint = fingerprint;
+  if (current && sameDetails(existing, details)) return result(original, doc, id, details.status);
   const nextPlan = storagePlan(doc, anchored.anchor);
   if (!nextPlan.ok) return result(original, original, null, status, nextPlan.reason);
-  return result(original, appendRecord(doc, nextPlan, id, details), id, details.status);
+  let next = appendRecord(doc, nextPlan, id, details);
+  const finalFingerprint = reviewFingerprint(next, findElementByXmlId(next, id));
+  if (finalFingerprint !== fingerprint) {
+    const record = recordsForId(next, id, status).at(-1);
+    next = editTextAndAttrs(next, record.element, { set: { corresp: finalFingerprint } });
+  }
+  return result(original, next, id, details.status);
 }
 
 function whitespaceOnly(doc, node) {
@@ -457,5 +453,16 @@ export function clearReviewRecords(doc, anchor, { status = REVIEW_STATUS_VERIFIE
 export function reviewRecordForAnchor(doc, anchor, status = REVIEW_STATUS_VERIFIED) {
   const checked = anchorCheck(doc, anchor);
   if (!checked.ok || !checked.id) return null;
-  return recordsForId(doc, checked.id, status).at(-1) || null;
+  const record = recordsForId(doc, checked.id, null).at(-1) || null;
+  return record?.status === status && record.fingerprint === reviewFingerprint(doc, anchor) ? record : null;
+}
+
+export function reviewStateForAnchor(doc, anchor) {
+  const checked = anchorCheck(doc, anchor);
+  if (!checked.ok || !checked.id) return { status: "unreviewed", record: null };
+  const record = recordsForId(doc, checked.id, null).at(-1) || null;
+  if (!record) return { status: "unreviewed", record: null };
+  if (!record.fingerprint) return { status: "historical", record };
+  if (record.status !== REVIEW_STATUS_VERIFIED) return { status: "reopened", record };
+  return { status: record.fingerprint === reviewFingerprint(doc, anchor) ? "reviewed" : "changed", record };
 }

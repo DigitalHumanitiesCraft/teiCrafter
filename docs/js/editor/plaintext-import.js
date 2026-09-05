@@ -18,14 +18,7 @@
  * Pure module: no DOM, no fetch, mutates nothing.
  */
 
-function escapeText(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/** Escape a string for use inside a double-quoted attribute (e.g. a filename). */
-function escapeAttr(s) {
-  return escapeText(s).replace(/"/g, "&quot;");
-}
+import { escapeText, escapeAttr } from "./tei-document.js";
 
 const MARKER = /\|(\d+)\|/g;
 

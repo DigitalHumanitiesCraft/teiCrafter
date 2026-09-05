@@ -10,6 +10,7 @@ published at https://stefanzweig.digital.
 - Licence: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), per the
   Stefan Zweig Digital platform. Attribution: Stefan Zweig Digital,
   Literaturarchiv Salzburg.
-- This file is the only real third-party object committed to the repository; all
-  other real material stays local-only (see `.gitignore` and
-  `knowledge/data.md`, section Licence Boundary).
+- This SZD object is redistributed under the licence above. Other committed
+  source materials have their own notices, including the hsa-7711 transcription.
+  Additional rights-local corpora remain excluded by `.gitignore`; see the
+  [data licence boundary](../../../../knowledge/data.md#licence-boundary).
