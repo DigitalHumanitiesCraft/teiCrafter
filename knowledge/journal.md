@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
-version: 0.32
+version: 0.33
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
 ---
@@ -22,6 +22,10 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (they live in [testing](testing.md) and would only go stale here), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-09-05: note navigation reused the existing annotation projection
+
+Readers needed a way to locate units containing notes within the existing Markup navigator. The implementation adds a local All/Notes filter over the existing annotation summary and retains the ordinary navigation guard. This keeps a reading convenience outside the document mutation boundary and makes unchanged source and history explicit acceptance conditions. A separate pilot report records the agent workflow and the limits of the available execution environment.
 
 ## 2026-08-24: session closure became clean-checkout and pane-width portable
 

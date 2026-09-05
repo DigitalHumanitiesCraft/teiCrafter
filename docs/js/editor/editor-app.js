@@ -34,7 +34,7 @@ import {
   applySourceProfile,
 } from "./edition.js?v=20260824-ui4";
 import { splitElement, mergeElements, insertLb, deleteElement } from "./structural.js";
-import { walk, decodeEntities } from "./tei-document.js";
+import { walk, decodeEntities, isTeiElement } from "./tei-document.js";
 import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js?v=20260824-ui4";
@@ -107,6 +107,7 @@ const app = {
   sourceMode: false,  // false | "page" | "metadata-form" | "metadata" for the left text surface
   readingVariant: "dipl", // F4: "dipl" | "norm", which reading the pane shows (only meaningful when state.hasDualReadings)
   viewMode: "paged",  // reading view: "paged" (one folio, pager) | "continuous" (all folios stacked); persisted per document
+  annotationProgressFilter: "all", // local popover filter: "all" | "notes"
   project: null,      // active project: manifest-parsed or PID-detected, or null
   projectFolder: null, // open project folder: { dir, name, files[], project }, or null (M2.9)
   markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
@@ -589,6 +590,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   app.sessionId = editorSession.sessionId;
   app.revision = editorSession.revision;
   app.folio = 0;
+  app.annotationProgressFilter = "all";
   app.sourceMode = false;
   app.fileHandle = handle || null;
   app.fileEncoding = opts.fileEncoding || { encoding: "UTF-8", bom: false };
@@ -997,16 +999,95 @@ async function renderRecents() {
 function closeAnnotationProgress() {
   const popover = $("ed-ann-popover");
   const button = $("ed-ann-summary");
-  if (popover) popover.hidden = true;
+  if (popover) {
+    popover.hidden = true;
+    popover.style.removeProperty("left");
+    popover.style.removeProperty("top");
+  }
   if (button) button.setAttribute("aria-expanded", "false");
+}
+
+function positionAnnotationProgress() {
+  const popover = $("ed-ann-popover");
+  const button = $("ed-ann-summary");
+  if (!popover || !button || popover.hidden) return;
+  const margin = 8;
+  const gap = 4;
+  const anchor = button.getBoundingClientRect();
+  const bounds = popover.getBoundingClientRect();
+  const maxLeft = Math.max(margin, window.innerWidth - bounds.width - margin);
+  const maxTop = Math.max(margin, window.innerHeight - bounds.height - margin);
+  popover.style.left = `${Math.min(Math.max(margin, anchor.right - bounds.width), maxLeft)}px`;
+  popover.style.top = `${Math.min(Math.max(margin, anchor.bottom + gap), maxTop)}px`;
+}
+
+function setAnnotationProgressFilter(filter) {
+  if (filter !== "all" && filter !== "notes") return;
+  app.annotationProgressFilter = filter;
+  updateAnnotationProgress();
+}
+
+function focusNoteInFolio(folioIndex) {
+  const reading = $("ed-reading");
+  if (!reading || !app.state) return false;
+  let target = reading.querySelector(`.ed-w.has-note[data-folio="${folioIndex}"]`);
+  if (!target) {
+    const folioRange = folioSourceSlice(app.state, folioIndex);
+    const inlineNoteRanges = [];
+    walk(app.state.doc.root, (node) => {
+      if (!isTeiElement(node) || node.localName !== "note") return;
+      if (node.outerStart < folioRange.end && node.outerEnd > folioRange.start) {
+        inlineNoteRanges.push({ start: node.outerStart, end: node.outerEnd });
+      }
+    });
+    target = [...reading.querySelectorAll(`.ed-w[data-folio="${folioIndex}"]`)].find((cell) => {
+      const start = Number(cell.dataset.start);
+      return inlineNoteRanges.some((range) => start >= range.start && start < range.end);
+    }) || null;
+  }
+  if (!target) return false;
+  target.tabIndex = -1;
+  target.classList.add("ed-note-target");
+  target.addEventListener("blur", () => target.classList.remove("ed-note-target"), { once: true });
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ block: "center", inline: "nearest" });
+  return true;
+}
+
+function navigateFromAnnotationProgress(page) {
+  closeAnnotationProgress();
+  if (!gotoFolio(page.index)) return;
+  const navigation = {
+    sessionId: app.sessionId,
+    revision: app.revision,
+    folio: app.folio,
+    state: app.state,
+    sourceMode: app.sourceMode,
+    viewMode: app.viewMode,
+  };
+  requestAnimationFrame(() => {
+    if (app.sessionId !== navigation.sessionId
+      || app.revision !== navigation.revision
+      || app.folio !== navigation.folio
+      || app.state !== navigation.state
+      || app.sourceMode !== navigation.sourceMode
+      || app.viewMode !== navigation.viewMode) return;
+    if (page.kinds.has("notes") && focusNoteInFolio(navigation.folio)) return;
+    if (app.viewMode === "continuous") {
+      const target = document.querySelector(`#ed-reading [data-folio="${navigation.folio}"]`);
+      if (target) target.scrollIntoView({ block: "start" });
+    }
+  });
 }
 
 function updateAnnotationProgress() {
   const wrap = $("ed-ann-progress");
   const button = $("ed-ann-summary");
+  const allFilter = $("ed-ann-filter-all");
+  const notesFilter = $("ed-ann-filter-notes");
   const caption = $("ed-ann-caption");
   const pagesHost = $("ed-ann-pages");
-  if (!wrap || !button || !caption || !pagesHost) return;
+  if (!wrap || !button || !allFilter || !notesFilter || !caption || !pagesHost) return;
   const metadata = app.sourceMode === "metadata" || app.sourceMode === "metadata-form";
   wrap.hidden = !app.state || metadata;
   if (!app.state || metadata) { closeAnnotationProgress(); return; }
@@ -1015,14 +1096,22 @@ function updateAnnotationProgress() {
     () => annotationPageSummary(app.state, app.noteByWord));
   const current = summary.pages[app.folio];
   const terms = unitTerms(app.state.sourceProfile);
+  const notesOnly = app.annotationProgressFilter === "notes";
+  const visiblePages = summary.pages.filter((item) => (
+    item.count > 0 && (!notesOnly || item.kinds.has("notes"))
+  ));
+  allFilter.setAttribute("aria-pressed", String(!notesOnly));
+  notesFilter.setAttribute("aria-pressed", String(notesOnly));
   button.textContent = `Markup ${summary.annotatedPages}/${summary.totalPages}`;
   button.classList.toggle("current", !!(current && current.count));
   button.title = current && current.count
     ? `This ${terms.singular} contains ${current.count} annotation${current.count === 1 ? "" : "s"}. Show all annotated ${terms.plural}.`
     : `This ${terms.singular} has no detected annotations. Show all annotated ${terms.plural}.`;
-  caption.textContent = `${summary.annotatedPages} of ${summary.totalPages} ${terms.plural} contain ${summary.totalAnnotations} detected annotations.`;
+  caption.textContent = notesOnly
+    ? `${visiblePages.length} of ${summary.totalPages} ${terms.plural} contain notes.`
+    : `${summary.annotatedPages} of ${summary.totalPages} ${terms.plural} contain ${summary.totalAnnotations} detected annotations.`;
   clear(pagesHost);
-  for (const page of summary.pages.filter((item) => item.count > 0)) {
+  for (const page of visiblePages) {
     const sourceLabel = page.label !== String(page.index + 1) ? `; source label ${page.label}` : "";
     const kinds = [...page.kinds].join(", ");
     const pageButton = el("button", {
@@ -1031,18 +1120,16 @@ function updateAnnotationProgress() {
       title: `${terms.singular} ${page.index + 1}${sourceLabel}: ${page.count} annotation${page.count === 1 ? "" : "s"}${kinds ? ` (${kinds})` : ""}`,
       "aria-label": `Go to annotated ${terms.singular} ${page.index + 1}`,
     });
-    pageButton.addEventListener("click", () => {
-      closeAnnotationProgress();
-      gotoFolio(page.index);
-      if (app.viewMode === "continuous") requestAnimationFrame(() => {
-        const target = document.querySelector(`#ed-reading [data-folio="${page.index}"]`);
-        if (target) target.scrollIntoView({ block: "start" });
-      });
-    });
+    pageButton.addEventListener("click", () => navigateFromAnnotationProgress(page));
     pagesHost.appendChild(pageButton);
   }
-  if (!summary.annotatedPages) {
-    pagesHost.appendChild(el("span", { class: "ed-ann-empty", text: `No annotation-bearing ${terms.plural} detected.` }));
+  if (!visiblePages.length) {
+    pagesHost.appendChild(el("span", {
+      class: "ed-ann-empty",
+      text: notesOnly
+        ? "No notes were detected in this document."
+        : `No annotation-bearing ${terms.plural} detected.`,
+    }));
   }
 }
 
@@ -1109,17 +1196,18 @@ function setViewMode(mode) {
 }
 
 function gotoFolio(i) {
-  if (!app.state) return;
+  if (!app.state) return false;
   if (app.sourceMode && sourceViewSession && sourceViewSession.hasChanges()) {
     setStatus(app.sourceMode === "metadata-form"
       ? `Apply or reset the staged metadata fields before changing ${unitTerms(app.state.sourceProfile).plural}.`
       : `Apply or cancel the staged XML before changing ${unitTerms(app.state.sourceProfile).plural}.`);
-    return;
+    return false;
   }
   const next = Math.max(0, Math.min(app.state.folios.length - 1, i));
   if (next !== app.folio) sessionSafety.abortKind("proposal", "Requested page changed");
   app.folio = next;
   render();
+  return true;
 }
 
 // ---- linking (zone <-> line) ----------------------------------------------
@@ -3028,10 +3116,17 @@ $("btn-viewmode").addEventListener("click", () => setViewMode(app.viewMode === "
 $("ed-ann-summary").addEventListener("click", (event) => {
   event.stopPropagation();
   const popover = $("ed-ann-popover");
-  const open = popover.hidden;
-  popover.hidden = !open;
-  $("ed-ann-summary").setAttribute("aria-expanded", String(open));
+  if (!popover.hidden) {
+    closeAnnotationProgress();
+    return;
+  }
+  popover.hidden = false;
+  $("ed-ann-summary").setAttribute("aria-expanded", "true");
+  positionAnnotationProgress();
 });
+window.addEventListener("resize", positionAnnotationProgress);
+$("ed-ann-filter-all").addEventListener("click", () => setAnnotationProgressFilter("all"));
+$("ed-ann-filter-notes").addEventListener("click", () => setAnnotationProgressFilter("notes"));
 $("ed-review-summary").addEventListener("click", () => {
   if (!app.state) return;
   const current = currentReviewSummary().pages[app.folio];

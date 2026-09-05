@@ -6,6 +6,19 @@ import { expect, test } from "@playwright/test";
 const fixturePath = fileURLToPath(new URL("./fixtures/browser-smoke.xml", import.meta.url));
 const sourceProfileFixtureUrl = new URL("../fixtures-synthetic/source-profiles/", import.meta.url);
 const urfehdePath = process.env.UFBAS_TEI || "";
+const markupProgressXml = `<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader><fileDesc><titleStmt><title>Markup progress</title></titleStmt><publicationStmt><p>Test</p></publicationStmt><sourceDesc><p>Test</p></sourceDesc></fileDesc></teiHeader>
+  <text><body>
+    <pb n="1"/><p><persName ref="#person-1">Ada</persName> plain text</p>
+    <pb n="2"/><p><w xml:id="noted-word">noted</w> text</p>
+    <pb n="3"/><p>plain text</p>
+  </body></text>
+  <standOff><listPerson><person xml:id="person-1"><persName>Ada</persName></person></listPerson><note target="#noted-word">Check this reading.</note></standOff>
+</TEI>`;
+const noteFreeProgressXml = `<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader><fileDesc><titleStmt><title>No notes</title></titleStmt><publicationStmt><p>Test</p></publicationStmt><sourceDesc><p>Test</p></sourceDesc></fileDesc></teiHeader>
+  <text><body><pb n="1"/><p>first</p><pb n="2"/><p>second</p></body></text>
+</TEI>`;
 
 const sourceProfileCases = [
   {
@@ -192,6 +205,19 @@ async function loadSyntheticFile(page) {
   await expect(page.locator("#ed-docstrip")).toContainText("browser-smoke.xml");
 }
 
+async function openXmlBuffer(page, name, xml) {
+  await page.locator("#btn-load").click();
+  const chooserPromise = page.waitForEvent("filechooser");
+  await page.locator("#menu-open").click();
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name,
+    mimeType: "application/xml",
+    buffer: Buffer.from(xml),
+  });
+  await expect(page.locator("#ed-docstrip")).toContainText(name);
+}
+
 async function useSessionSchema(page, name, text) {
   if (await page.locator("#ed-val-pop").getAttribute("hidden") !== null) {
     await page.locator("#ed-val-chip").click();
@@ -211,6 +237,32 @@ async function downloadedBytes(download) {
   const path = await download.path();
   if (!path) throw new Error("Playwright did not provide a local path for the completed download.");
   return readFileSync(path);
+}
+
+async function historyControlState(page) {
+  return page.locator("#btn-undo, #btn-redo").evaluateAll((buttons) => buttons.map((button) => ({
+    disabled: button.disabled,
+    ariaLabel: button.getAttribute("aria-label"),
+  })));
+}
+
+async function expectInsideViewport(page, locator) {
+  const boxes = await locator.evaluateAll((nodes) => nodes.map((node) => {
+    const bounds = node.getBoundingClientRect();
+    return {
+      left: bounds.left,
+      top: bounds.top,
+      right: bounds.right,
+      bottom: bounds.bottom,
+    };
+  }));
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const box of boxes) {
+    expect(box.left).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.right).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth));
+    expect(box.bottom).toBeLessThanOrEqual(await page.evaluate(() => window.innerHeight));
+  }
 }
 
 async function selectReadingText(page, needle) {
@@ -320,6 +372,178 @@ for (const fixture of sourceProfileCases) {
     await expectRuntimeClean();
   });
 }
+
+test("Markup progress filters note-bearing units without changing document state", async ({ page }) => {
+  const expectRuntimeClean = await monitorRuntime(page);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "showOpenFilePicker", {
+      value: undefined,
+      configurable: true,
+    });
+  });
+  await page.goto("/editor.html");
+  await openXmlBuffer(page, "markup-progress.xml", markupProgressXml);
+
+  await expect(page.locator("#ed-ann-summary")).toHaveText("Markup 2/3");
+  await page.locator("#ed-ann-summary").click();
+  await expect(page.locator("#ed-ann-filter-all")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ed-ann-pages .ed-ann-page")).toHaveCount(2);
+  const boundedPopover = page.locator(
+    "#ed-ann-popover, #ed-ann-filter-all, #ed-ann-filter-notes",
+  );
+  await expectInsideViewport(page, boundedPopover);
+  await page.setViewportSize({ width: 480, height: 720 });
+  await expectInsideViewport(page, boundedPopover);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expectInsideViewport(page, boundedPopover);
+
+  await page.locator("#ed-ann-filter-notes").focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#ed-ann-filter-notes")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ed-ann-caption")).toHaveText("1 of 3 pages contain notes.");
+  await expect(page.locator("#ed-ann-pages .ed-ann-page")).toHaveCount(1);
+  await expect(page.locator("#ed-ann-pages .ed-ann-page")).toHaveAttribute(
+    "aria-label",
+    "Go to annotated page 2",
+  );
+  await expect(page.locator("#ed-ann-summary")).toHaveText("Markup 2/3");
+  await expect(page.locator(".ed-docstrip-name")).not.toHaveClass(/dirty/);
+  await expect(page.locator("#btn-undo")).toBeDisabled();
+
+  await page.locator("#view-xml").click();
+  const source = page.locator(".ed-src-ta");
+  const originalPageSource = await source.inputValue();
+  const historyBeforeStaging = await historyControlState(page);
+  await page.locator("#ed-ann-summary").click();
+  await expect(page.locator("#ed-ann-filter-notes")).toHaveAttribute("aria-pressed", "true");
+  expect(await source.inputValue()).toBe(originalPageSource);
+
+  const stagedPageSource = originalPageSource.replace("plain text", "staged text");
+  await source.fill(stagedPageSource);
+  await page.getByRole("button", { name: "Go to annotated page 2" }).click();
+  await expect(page.locator("#ed-folio-label")).toContainText("page 1/3");
+  await expect(page.locator("#ed-status")).toContainText("Apply or cancel the staged XML");
+  await expect(page.locator("#ed-reading .ed-note-target")).toHaveCount(0);
+  await expect(source).toHaveValue(stagedPageSource);
+  expect(await historyControlState(page)).toEqual(historyBeforeStaging);
+
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.locator("#view-reading").click();
+  await page.locator("#ed-ann-summary").click();
+  await page.getByRole("button", { name: "Go to annotated page 2" }).click();
+  await expect(page.locator("#ed-folio-label")).toContainText("page 2/3");
+  let focusedNote = page.locator("#ed-reading .ed-note-target");
+  await expect(focusedNote).toHaveCount(1);
+  await expect(focusedNote).toHaveClass(/has-note/);
+  expect(await focusedNote.evaluate((node) => document.activeElement === node)).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#ed-reading .ed-note-target")).toHaveCount(0);
+
+  await page.locator("#btn-prev").click();
+  await page.locator("#btn-viewmode").click();
+  await expect(page.locator("#btn-viewmode")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#ed-ann-summary").click();
+  await page.getByRole("button", { name: "Go to annotated page 2" }).click();
+  focusedNote = page.locator("#ed-reading .ed-note-target");
+  await expect(focusedNote).toHaveCount(1);
+  await expect(focusedNote).toHaveClass(/has-note/);
+  await expect(focusedNote).toHaveAttribute("data-folio", "1");
+  expect(await focusedNote.evaluate((node) => document.activeElement === node)).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#ed-reading .ed-note-target")).toHaveCount(0);
+  await expect(page.locator(".ed-docstrip-name")).not.toHaveClass(/dirty/);
+  await expect(page.locator("#btn-undo")).toBeDisabled();
+
+  const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+  await page.locator("#btn-download").click();
+  const downloaded = await downloadedBytes(await downloadPromise);
+  expect(downloaded.equals(Buffer.from(markupProgressXml))).toBe(true);
+
+  await page.locator("#btn-viewmode").click();
+  await page.locator("#btn-prev").click();
+  await page.locator("#ed-ann-summary").click();
+  await page.evaluate(() => {
+    const result = document.querySelector('[aria-label="Go to annotated page 2"]');
+    if (!result) throw new Error("Could not find the note-bearing page result.");
+    const nativeAnimationFrame = window.requestAnimationFrame.bind(window);
+    let queuedCallback = null;
+    window.requestAnimationFrame = (callback) => {
+      queuedCallback = callback;
+      return 1;
+    };
+    try {
+      result.click();
+    } finally {
+      window.requestAnimationFrame = nativeAnimationFrame;
+    }
+    if (!queuedCallback) throw new Error("Markup navigation did not queue its focus callback.");
+    window.__flushStaleMarkupNavigation = () => queuedCallback(performance.now());
+  });
+  await openXmlBuffer(page, "replacement.xml", markupProgressXml);
+  await expect(page.locator("#ed-ann-filter-all")).toHaveAttribute("aria-pressed", "true");
+  await page.locator("#btn-viewmode").click();
+  await page.evaluate(() => {
+    const flush = window.__flushStaleMarkupNavigation;
+    delete window.__flushStaleMarkupNavigation;
+    flush();
+  });
+  await expect(page.locator("#ed-reading .ed-note-target")).toHaveCount(0);
+  expect(await page.evaluate(() => document.activeElement?.classList.contains("has-note"))).toBe(false);
+
+  await openXmlBuffer(page, "note-free.xml", noteFreeProgressXml);
+  await page.locator("#ed-ann-summary").click();
+  await expect(page.locator("#ed-ann-filter-all")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ed-ann-filter-notes")).toHaveAttribute("aria-pressed", "false");
+  await page.locator("#ed-ann-filter-notes").click();
+  await expect(page.locator("#ed-ann-pages .ed-ann-empty")).toHaveText(
+    "No notes were detected in this document.",
+  );
+
+  await page.keyboard.press("Escape");
+  await page.locator("#view-xml").click();
+  const noteFreeSource = page.locator(".ed-src-ta");
+  const inlineNoteSource = (await noteFreeSource.inputValue()).replace(
+    "<p>first</p>",
+    "<p><note>first</note></p>",
+  );
+  await noteFreeSource.fill(inlineNoteSource);
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page.locator("#ed-ann-summary")).toHaveText("Markup 1/2");
+  await page.locator("#ed-ann-summary").click();
+  await expect(page.locator("#ed-ann-filter-notes")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ed-ann-pages .ed-ann-page")).toHaveCount(1);
+
+  const historyAfterEdit = await historyControlState(page);
+  expect(historyAfterEdit[0].disabled).toBe(false);
+  expect(historyAfterEdit[0].ariaLabel).toMatch(/^Undo /);
+  expect(historyAfterEdit[1].disabled).toBe(true);
+  await page.locator("#ed-ann-filter-all").click();
+  await page.locator("#ed-ann-filter-notes").click();
+  expect(await historyControlState(page)).toEqual(historyAfterEdit);
+
+  await page.getByRole("button", { name: "Go to annotated page 1" }).click();
+  const focusedInlineNote = page.locator("#ed-reading .ed-note-target");
+  await expect(focusedInlineNote).toHaveCount(1);
+  await expect(focusedInlineNote).toContainText("first");
+  expect(await focusedInlineNote.evaluate((node) => document.activeElement === node)).toBe(true);
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#ed-reading .ed-note-target")).toHaveCount(0);
+  await page.locator("#btn-undo").click();
+  await expect(page.locator("#ed-ann-summary")).toHaveText("Markup 0/2");
+  await page.locator("#ed-ann-summary").click();
+  await expect(page.locator("#ed-ann-filter-notes")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ed-ann-pages .ed-ann-empty")).toHaveText(
+    "No notes were detected in this document.",
+  );
+  const historyAfterUndo = await historyControlState(page);
+  expect(historyAfterUndo[1].disabled).toBe(false);
+  expect(historyAfterUndo[1].ariaLabel).toMatch(/^Redo /);
+  await page.locator("#ed-ann-filter-all").click();
+  await page.locator("#ed-ann-filter-notes").click();
+  expect(await historyControlState(page)).toEqual(historyAfterUndo);
+  await expectA11ySmoke(page);
+  await expectRuntimeClean();
+});
 
 test("discontinuous range collector persists two segments as valid TEI stand-off", async ({ page }) => {
   test.setTimeout(90_000);

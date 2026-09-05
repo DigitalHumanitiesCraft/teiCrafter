@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
-version: 0.21
+version: 0.22
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
 ---
@@ -99,6 +99,10 @@ All mutation modules return the input document when an operation is invalid, amb
 `metadata-view.js` identifies the legitimate TEI header and inventories every descendant TEI element and ordinary attribute in source order. Common-field definitions provide labels and groups. They no longer limit coverage.
 
 Each inventory item carries an exact projection category. Text-only and empty paired elements expose their content span. Ordinary attributes expose their value span and lexical surroundings. Mixed or structured elements, self-closing elements, the header itself, and namespace declarations route to exact XML. Applying a form computes every changed value, XML-escapes it, and performs descending splices so earlier offsets remain valid. A form with no semantic change returns the original document.
+
+## Annotation progress navigation
+
+`annotation-progress.js` derives annotation kinds for each primary navigation unit, including notes projected through the existing note index. The Markup navigator consumes that summary for its All and Notes views. Its filter is local UI state in `editor-app.js`; it does not store another note index or commit a document mutation. Successful document replacement resets the filter. Result navigation uses the ordinary unit-navigation guard before scrolling or moving focus, so staged XML retains its existing protection. Deferred focus also checks the captured session, revision, projected state and active view context before touching the current reading surface.
 
 ## Review architecture
 

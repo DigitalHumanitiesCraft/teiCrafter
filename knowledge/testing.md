@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 version: 0.22
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
@@ -70,6 +70,8 @@ The offline MVP acceptance requires well-formed XML, text fidelity, and structur
 | Wenzelsbibel engine workflow | `wb_codex_check.mjs` and dual-reading proofs exercise the local real codex plus synthetic guards | The committed browser workflow uses a structural twin in Chromium and Firefox | Real browser automation and cross-file image-annotation editing require local project data |
 
 ## Source Profile fixtures
+
+The Markup Notes-filter scenario exercises local filtering, keyboard activation, paged and continuous navigation, document replacement, and staged-source refusal. Its state checks compare canonical source and session history before and after read-only interaction. These checks separate the filter's UI behavior from the existing annotation projection proofs. A run against directly served source establishes source-browser behavior only; the normal built-output browser gate remains a separate acceptance requirement.
 
 Committed fixtures cover paginated dictionary, paginated drama, spoken corpus, correspondence, critical edition, facsimile-only TEI, `sourceDoc`, and a document with several simultaneous capabilities. Each fixture asserts detected structures, available navigation, primary navigation, local reading-cell behaviour, and terminology. The unscoped Playwright matrix executes the same profile disclosure in Chromium and Firefox.
 

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
 version: 0.22
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
@@ -91,6 +91,8 @@ The form does not create an impression of completeness through omission. Unknown
 XML source stages the current primary navigation range where a safe boundary exists. The complete document appears when no narrower channel can be represented. Check and Apply always evaluate the complete substituted document. Find, replace, line navigation, indentation assistance, context completion, and keyboard Apply support source work. Reformatting remains absent because it would rewrite unrelated bytes.
 
 ## Review and progress
+
+The Markup navigator offers All and Notes filters with an explicit pressed state. Notes limits the result list to primary navigation units containing detected notes; the main Markup total continues to describe all detected annotations. A result opens its unit through ordinary navigation and brings an available note marker into focus. The focus indicator clears when focus moves away. The menu remains within the viewport when header controls wrap or the window narrows. Empty results are explained, and a newly loaded document starts with All.
 
 Markup coverage reports where semantic markup exists. Review reports which primary navigation units carry a TEI Review Record. Both controls remain visually and semantically separate.
 

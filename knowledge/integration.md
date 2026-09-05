@@ -12,9 +12,9 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: active
 created: 2026-06-07
-updated: 2026-08-24
+updated: 2026-09-05
 language: en
-version: 0.21
+version: 0.22
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
 ---
