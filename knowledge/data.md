@@ -14,7 +14,6 @@ status: active
 created: 2026-05-27
 updated: 2026-09-05
 language: en
-version: 0.22
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
   standards:

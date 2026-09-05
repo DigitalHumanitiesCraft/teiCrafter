@@ -14,7 +14,6 @@ status: active
 created: 2026-06-07
 updated: 2026-09-05
 language: en
-version: 0.22
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
 ---

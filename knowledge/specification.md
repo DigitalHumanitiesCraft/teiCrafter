@@ -14,7 +14,6 @@ status: active
 created: 2026-02-05
 updated: 2026-09-05
 language: en
-version: 0.22
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, testing]
 ---
