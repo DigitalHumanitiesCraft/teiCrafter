@@ -10,153 +10,161 @@ template:
   name: Vorlage Design
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
-status: active
+status: complete
 created: 2026-05-27
 updated: 2026-09-11
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
-related: [project, specification, architecture]
+related: [project, specification, architecture, data, testing, wenzelsbibel]
 ---
 
 # teiCrafter Design System
 
 ## Design position
 
-teiCrafter presents source-backed editorial actions and keeps structural risk visible. The interface adapts to the loaded TEI without pretending to know its scholarly genre from a filename. Project policy can refine that interpretation. Every destructive or output-sensitive action names its scope and explains a refusal.
+teiCrafter makes source-backed editorial actions and their scope visible. The interface adapts to observed TEI structures; project policy can refine that interpretation. A form offers direct editing where it can preserve the source and provides an exact XML route for structured or ambiguous content. Refusals identify the affected operation and leave the editor's input available.
 
-The human editor remains the decision maker. Deterministic transformations use ordinary interface colours. Machine-origin content retains its provenance and violet origin treatment after acceptance; dashed proposal styling distinguishes pending work. Review state is explicit scholarly evidence and has its own control, separate from annotation coverage.
+The human editor decides scholarly content. Deterministic transformations use ordinary interface colours. Model-origin content retains its provenance after acceptance, while a distinct pending treatment identifies proposals awaiting a decision. Review records describe an explicit editorial act. Annotation coverage, schema validity and review status remain separately labelled states.
+
+[Specification](specification.md) defines the required behaviour, [Data](data.md) defines its encoded representations, and [Testing](testing.md) defines the evidence needed to assess the interface.
 
 ## Visual identity and tokens
 
-The wordmark `<teiCrafter>` combines the TEI blue and yellow brand family. TEI yellow is the primary action colour, with dark text for contrast. TEI blue marks source and annotation interactions. Violet is reserved for model-origin content.
+The wordmark `<teiCrafter>` combines the TEI blue and yellow brand family. TEI yellow marks primary actions with dark text for contrast. TEI blue marks source and annotation interactions. Violet is reserved for model-origin content.
 
-All components consume CSS custom properties from the shared token system. Component styles introduce no raw colour values.
+Components consume the shared CSS custom properties. Component styles introduce no raw colour values.
 
 | Family | Tokens | Meaning |
 | --- | --- | --- |
-| Surface | `--color-surface`, `--color-surface-sunken`, `--color-panel`, `--color-secondary` | Document, pane, band, and control backgrounds |
-| Brand and action | `--color-header`, `--color-gold`, `--color-gold-hover`, `--color-link` | Site identity, primary actions, focus, and accessible links |
+| Surface | `--color-surface`, `--color-surface-sunken`, `--color-panel`, `--color-secondary` | Document, pane, band and control backgrounds |
+| Brand and action | `--color-header`, `--color-gold`, `--color-gold-hover`, `--color-link` | Site identity, primary actions, focus and links |
 | Text | `--color-text`, `--color-text-body`, `--color-text-secondary`, `--color-text-muted`, `--color-text-inverse` | Reading text and information hierarchy |
-| State | `--color-confident`, `--color-review`, `--color-problem` with tint partners | Categorical success, review, warning, and failure |
-| Model provenance | `--color-ai`, `--color-ai-tint` | Generated or proposed content, with separate pending and accepted states |
-| Annotation | Entity-specific foreground and background tokens | Human and confirmed semantic layers |
-| Geometry | `--space-*`, `--radius-*`, `--shadow-*` | Rhythm, grouping, focus, and elevation |
+| State | `--color-confident`, `--color-review`, `--color-problem` with tint partners | Categorical success, review, warning and failure |
+| Model provenance | `--color-ai`, `--color-ai-tint` | Generated or proposed content, with pending and accepted treatments |
+| Annotation | Entity-specific foreground and background tokens | Semantic layers |
+| Geometry | `--space-*`, `--radius-*`, `--shadow-*` | Spacing, grouping, focus and elevation |
 | Type | `--font-ui`, `--font-mono`, `--font-serif` | Controls, XML or identifiers, and public narrative text |
 
-Status uses categories and words. Numeric confidence is absent because the application has no calibrated confidence producer. Colour always has a second channel through labels, icons, borders, underlines, or patterns.
+Status uses categories and words. Numeric confidence requires a calibrated producer; the application currently supplies none. Colour has a second channel through text, borders, underlines or patterns.
 
 ## Editor frame
 
-The populated editor has two panes. The left pane holds Reading text, XML source, and Metadata. The right pane is a registry of context panels such as Facsimile, Index, Source, and project-specific additions. A keyboard-operable splitter resizes or collapses the context pane, and a narrow layout stacks both panes vertically.
+The left pane holds Reading text, XML source and Metadata. The right pane holds context panels, including Facsimile, Index, Source and supported editorial workspaces. A keyboard-operable splitter resizes or collapses the context pane; a narrow layout stacks the panes.
 
-Document identity sits below the toolbar and reports the loaded name, provenance, project, type, source model, and save target. The site header retains site identity. The empty editor uses the same frame with a direct load prompt, recent file handles where available, and independent recovery offers when present.
+Document identity below the toolbar identifies the source, project interpretation and save target. The empty editor provides a direct load prompt, recent handles where supported and independent recovery offers. View tabs stay in their pane headers. Pane-header controls wrap according to the available pane width so that resized panes retain accessible targets.
 
-The toolbar groups file actions. Save is the primary gold action because it commits the current scholarly state to the chosen target. Download creates a copy and uses neutral styling. View and context switching remain in their pane headers. A document replacement asks before discarding unsaved work.
+The toolbar distinguishes actions by their actual effect.
 
-Working copy names a portable preservation action for unfinished XML, staged fields, attached project documents and loaded images. It does not imply schema validation. Project package identifies the separate delivery action that validates every XML document before requesting one ZIP download. Native Save retains its active-file scope. Separate recovery offers identify earlier sessions, with Restore and explicit Discard. Read only protects document mutations across views; Edit document deliberately restores editing. Unfinished visible edits must be resolved before entering read-only mode.
+| Action | Meaning presented to the editor |
+| --- | --- |
+| Save | Validate and write the active document through its writable handle, or use the download fallback |
+| Download | Request a schema-authorized copy of the current XML |
+| Working copy | Preserve unfinished XML, staged fields and the attached project collection without a schema gate |
+| Project package | Validate each XML document and request one ZIP containing the project collection |
+| Restore | Reopen a preserved session and its companions |
+| Discard | Explicitly remove the selected preserved work |
+| Read only / Edit document | Disable or restore source-changing actions while retaining inspection |
 
-Unfinished reading, XML and metadata controls retain their values and caret during background refresh. A blocked navigation or history action directs the editor to Apply or to the surface's cancel/reset action. Download feedback says that a download was requested and that local recovery remains; it does not claim a durable save. Input begun during a pending native write blocks completion and remains available to the editor.
+Save is the primary gold action. Copy and preservation actions use neutral styling. Download feedback reports a requested download and retained recovery. A browser download supplies no evidence that the user has stored the file durably.
 
-New document opens one intake with a document starter, transcription, optional source facts and optional images. Help beside the starter states the resulting encoding. Letter facts appear only for correspondence; dictionary entries and encyclopedia articles use separate choices and show the detected entry count. The existing editor remains the destination. Project folders use keyboard-operable, collapsible directory groups with full relative paths as accessible file names.
+Reading, XML, Metadata and workspace forms share Apply and Cancel semantics. Unfinished values and caret position survive background refresh. Navigation, history or another mutation cannot silently replace the active input owner. A blocked action directs the editor back to that surface; a failed Apply keeps the entered values. XML source and Metadata retain ownership while open, so a context form presents a return hint instead of mounting another editor.
 
-Pane-header controls wrap as a complete secondary row when the current pane cannot hold the view tabs and document controls side by side. This rule follows the resizable pane width rather than assuming that the browser viewport predicts the available editor width, and it keeps every tab free from pointer overlap across supported font metrics.
+Switching attached documents checkpoints the current collection first. A storage error or intervening edit leaves the current document active and explains the failed switch. Each file retains its own source and schema settings. Native Save remains an active-file operation. The [project collection contract](specification.md#project-and-schema-declarations) governs package output and recovery.
+
+New document provides an explicit starter, transcription, optional source facts and images. Nearby help describes the resulting encoding. Correspondence facts appear with that starter; dictionary and encyclopedia choices remain distinct. Existing XML opens through the ordinary loader. Project-folder groups are keyboard-operable and use full relative paths as accessible file names.
 
 ## Source Profile disclosure
 
-The Source context panel explains how the interface interpreted the loaded TEI. It shows detected structures, the primary navigation channel, other available channels, authoring scope, and resolution issues. The wording states that the model derives from TEI structures and that a manifest can select another channel only when matching units exist.
+The Source panel explains the detected structures, primary navigation channel, additional channels, authoring scope and resolution issues. Its language identifies the TEI evidence behind the projection. A manifest can request another channel when matching source units exist.
 
-The pager uses the primary channel's labels and source identifiers. Generic terms such as document or unit appear where a more specific term would claim unsupported knowledge. Page language is reserved for real page navigation. Entry, speech turn, record, row, section, surface, corpus member, and source document labels follow their actual anchors.
+Pager and review labels follow the primary channel. Page, entry, speech turn, record, row, section, surface, corpus member and source document terms require their corresponding source anchors. Generic unit labels remain available where the evidence does not justify a more specific name.
 
-A manifest override that cannot be satisfied stays visible as an issue. The editor continues with a safe source-backed channel. Ambiguity is disclosed in the same place, which lets an editor judge whether the chosen projection fits the source.
+An unsatisfied manifest request or ambiguous interpretation remains visible beside the selected fallback. The editor can then inspect the source or revise project policy without losing access to the document.
 
 ## Reading surface
 
-A plain click positions the cursor. Double-click opens exact text or dual-reading editing. A click on an existing annotation opens its layer or mention editor. Right-click and text selection expose scholarly actions. The selection remains visibly painted while a popover holds focus.
+A plain click positions the cursor. Double-click opens exact text or dual-reading editing. Existing annotation layers open their inspector; right-click and text selection expose scholarly actions. Selection stays visibly painted while a popover holds focus. Keyboard arrows traverse cells, and F2 or Enter opens a supported editor. Composition input cannot commit prematurely.
 
-Local cell structure controls the available edit. Tokens expose token text and encoded reading attributes. Other nodes expose exact text runs. The interface does not apply a document-wide word or line label when both forms coexist.
+Local cells determine the edit controls. Encoded tokens expose their text and reading attributes; other readable content uses exact text runs. Mixed documents retain both forms. The reading preserves source adjacency and selects the appropriate encoded choice branch. The [reading representations](data.md) define the source contract.
 
-The displayed reading follows source adjacency and the selected choice branch. Diplomatic prefers orig/sic/abbr; Normalized prefers reg/corr/expan. Apparatus base text shows the lemma, or first reading if no lemma exists. Choosing a witness selects explicit attestations and reports missing or ambiguous readings, omissions and fragment boundaries. Text outside encoded apparatus stays base text, which the witness pane explains. XML retains all alternatives. Keyboard arrows traverse cells and F2 or Enter enters a supported editor; composition input does not trigger a premature commit.
+Base apparatus text displays the lemma, falling back to the first reading when no lemma is encoded. Witness selection uses explicit attestations and discloses missing or ambiguous attribution, omissions and fragment boundaries. Text outside encoded apparatus remains base text. All alternatives remain available in XML and the Witnesses pane.
 
-Annotation visibility comes from actual projected layers. Entity types use muted categorical colours. Nested or overlapping layers receive a stacked underline and an inspector that lists every layer. Missing pointers and model provenance use explicit text in tooltips and status messages.
+Entity types use muted categorical colours. Nested and overlapping layers receive stacked underlines and an inspector listing each layer. Missing targets and model provenance appear in text as well as visual treatment.
 
 ### Cross-structure and discontinuous selection
 
-The selection popover offers `add another segment`. Activating it keeps the current range, returns focus to the reading surface, and asks for another range in the same or another primary navigation unit. Collected text is presented as separated segments before the editor chooses an entity or creates one.
+**Add another segment** retains the current range and returns focus to the reading surface. The editor can collect another range in the same or a different navigation unit. The popover shows separated passages before an entity is selected or created.
 
-The collector refuses overlapping collected ranges. A selection that crosses structure or overlaps an existing mention routes to the stand-off representation. Every projected segment remains clickable and identifies the shared annotation. Relink changes the complete group. Remove deletes the group while retaining its text.
+Overlapping collected ranges are refused. A range crossing XML structure or existing markup uses the stand-off route. Each visible segment opens the shared annotation; relinking and removal address that group. The [span contract](specification.md#cross-structure-and-discontinuous-spans) defines preservation and boundary cleanup.
 
-When the selected output contract is inline-GND, the popover explains that cross-structure, discontinuous, and overlapping annotations cannot be represented and blocks the action. This message appears before an editor can mistake an unavailable serialization for a successful annotation.
+For inline-GND output, the interface explains which crossing, overlapping or discontinuous selection cannot be represented and blocks the affected annotation action.
 
 ## Metadata and exact XML
 
-Metadata opens a complete inventory of the current TEI header. Common fields retain their familiar group headings and labels. Every other TEI header element and attribute remains visible through a generated label and path.
+Metadata presents the complete TEI header inventory. Familiar fields keep their labels and grouping; project-specific fields remain discoverable by generated label and exact path.
 
-An editable input means that teiCrafter has a lossless inverse for the value. Text-only paired elements and ordinary attributes receive direct controls. Mixed or structured elements, self-closing elements, containers, and namespace declarations show an XML-only state. `Edit XML` opens the complete exact header without reducing it to the form projection.
+An editable field means that a lossless inverse is available. Structured, mixed, self-closing or namespace-sensitive content displays **XML-only** with an exact XML route. Inspecting an unchanged field preserves its source spelling. Dedicated witness actions follow their bounded contract even when their records occur inside the header.
 
-The form does not create an impression of completeness through omission. Unknown project fields appear alongside common fields. An unchanged form produces no source mutation, so entity spelling and lexical details survive a simple inspection.
-
-XML source stages the current primary navigation range where a safe boundary exists. The complete document appears when no narrower channel can be represented. Check and Apply always evaluate the complete substituted document. Find, replace, line navigation, indentation assistance, context completion, and keyboard Apply support source work. Reformatting remains absent because it would rewrite unrelated bytes.
+XML source exposes the current navigation range where a safe boundary exists, otherwise the complete document. Check and Apply evaluate the complete substituted XML. Find, replace, line navigation, indentation assistance, context completion and keyboard Apply support source work. Automatic reformatting would rewrite unrelated source and is outside this surface's interaction contract.
 
 ## Review and progress
 
-The Markup navigator offers All and Notes filters with an explicit pressed state. Notes limits the result list to primary navigation units containing detected notes; the main Markup total continues to describe all detected annotations. A result opens its unit through ordinary navigation and brings an available note marker into focus. The focus indicator clears when focus moves away. The menu remains within the viewport when header controls wrap or the window narrows. Empty results are explained, and a newly loaded document starts with All.
+The Markup navigator offers All and Notes filters with an explicit pressed state. Notes limits the unit list to detected notes while the main total continues to describe all annotations. A result opens its source unit and focuses an available marker. Empty results are explained, and document replacement resets the filter.
 
-Markup coverage reports where semantic markup exists. Review reports which primary navigation units carry a TEI Review Record. Both controls remain visually and semantically separate.
+Markup coverage describes the presence of semantic markup. Review describes an editor's recorded examination of the current primary unit. Marking or reopening review retains history. Source changes produce **changed since review**; historical evidence remains inspectable. [Review Records](specification.md#review-records) govern the relationship between the visible status and the encoded evidence.
 
-The review control marks or reopens the current primary unit. A successful action appends a targeted `revisionDesc/change` and retains history. A changed source fingerprint produces changed since review; older fingerprint-free records remain historical. If the header or revision history cannot accept a lossless record, the control leaves the document unchanged and reports the exact reason.
-
-The review dialog collects a reviewer URI or TEI pointer and rationale, explains the source scope, and identifies the default as an unnamed local editor. It shows the previous record when present. External register entries and other units require their own review.
+The review dialog requests reviewer identity and rationale, identifies its default as an unnamed local editor, shows a prior record when present and explains the covered source range. An external register entry or another unit requires its own review. A structurally unsafe record mutation leaves the source unchanged with a specific explanation.
 
 ## Output schema gate
 
-The validation popover contains a section named `Output schema gate`. It identifies whether the effective schema came from the repository default, project manifest, or session override. Results appear in configured order with schema names, categorical validity, diagnostics, and factual runtime notes.
+The validation details identify the effective repository, project or session schema set. Results retain configured order and show schema names, categorical validity, diagnostics and applicable runtime limits. Unsupported rules or unresolved dependencies appear as **unavailable**, with a concrete recovery route such as supplying the dependency or compiled XSLT.
 
-Save and Download can start validation. While it runs, the output action announces progress. Invalid, unavailable, empty, or stale results use the problem family and state that output is blocked. A changed revision invalidates the success state immediately. The interface never presents an earlier green result as authority for later bytes.
+Save and Download may initiate validation. Progress distinguishes schema preparation, XML parsing, validation and reuse of an identical successful result. The main interface remains usable during worker execution. Changed state invalidates output authorization; an earlier success cannot be shown as permission for different bytes.
 
-RelaxNG and XSD dependency limits and raw Schematron subset limits appear beside the affected set. A missing include or unsupported Schematron construct is described as unavailable. The user receives a concrete next action, such as supplying a resolvable dependency or compiled XSLT.
+**Cancel validation** ends pending work without authorizing output. The editor can request validation again. Project package has its own cancellation control and reports success only after every XML file is authorized. Errors identify the affected document or schema. The [output gate requirements](specification.md#fail-closed-multi-schema-output-gate) define these decisions; [Architecture](architecture.md) describes worker and cache ownership.
 
 ## Entry and witness interaction
 
-The Entries pane combines a searchable collection list with source-bound details. Display sorting is independent of source order, and the completeness filter identifies absent identity, heading or text. Selecting an entry or following its local reference opens the corresponding source unit. Tables have bounded scroll regions with keyboard access. The detail form labels structured or ambiguous content as XML-only; an empty document body requires an explicit encoding choice before its first entry can be created.
+The Entries pane combines a searchable collection with source-bound details. Sorting changes display order, and completeness identifies missing identity, heading or text. Selecting an entry or following a local reference opens its source unit. Bounded table regions support keyboard scrolling. An empty body requires an explicit encoding choice before its first entry is created.
 
-Duplication retains the source entry and selects the new copy. Deletion exposes the complete subtree scope and blocking references before confirmation. Batch editing starts from explicit checkboxes or the current matching set, names the active-file scope and shows concrete before/after values. Changing a field invalidates its preview. Apply creates one Undo step, and restored unfinished batch input requires another preview.
+Direct fields identify their target and expose structured or ambiguous values through XML. Duplication retains the original and selects the copy. **Preview deletion** names the whole subtree and displays blocking references; confirmation is available only for a safe current preview. These actions operate on the active XML file.
 
-The Witnesses pane separates reading selection from source mutation. Editors can inspect every apparatus alternative and its direct attribution while selecting a locally defined witness. Unresolved external definitions remain visible. Description forms, exact witness XML and reading-attribution controls share Apply, Cancel and staged recovery. Read-only mode preserves inspection while disabling mutation controls. Opening XML or Metadata leaves staged-input ownership with that editor, so a context form cannot silently displace unfinished source.
+Batch editing starts with checkboxes or **Select all matching**, then **Batch edit selected**. The editor chooses local language or number and inspects concrete before/after values. A field change invalidates the preview. Apply creates one Undo step. Recovery retains unfinished targets and values while requiring another preview. The [entry requirements](specification.md#entry-management) define duplication, reference protection and batch scope.
+
+The Witnesses pane separates **Reading witness** from source edits. It exposes every apparatus alternative and direct attribution. **New witness** creates a description in the selected list; structured descriptions use **Edit witness XML**. Reading-attribution controls change the selected reading's witness pointers. Missing definitions, ambiguous readings and existing external pointers remain visible. Arbitrary list restructuring and external-reference conventions use exact XML.
+
+Witness forms share staged recovery and read-only behaviour. The [witness contract](specification.md#witness-reading-and-descriptions) defines supported evidence and preservation. Selecting a witness expresses a reading preference and provides no scholarly acceptance of that witness's reconstruction.
 
 ## Wenzelsbibel interaction
 
-The Wenzelsbibel context pane offers task-specific forms beside the ordinary reading, exact XML and metadata surfaces. The transcription form pairs diplomatic and normalized readings; a bounded word table keeps the editor controls visible. Existing apparatus entries retain all encoded types and separate language and responsibility fields. Image forms expose descriptive, attribution, ICONCLASS and text-relation fields; a linked miniature can open in the facsimile viewer with its zone in focus.
+The Wenzelsbibel workspace places specialized forms beside the shared reading, XML and metadata surfaces. Bounded word tables keep transcription controls accessible. Apparatus forms retain existing type, language and responsibility values. The [Wenzelsbibel contract](wenzelsbibel.md) owns the field mapping and operating routes.
 
-Companion files are explicitly attached under Linked project documents. Their current source and settings remain in the project collection when another document becomes active and when work is restored. Word-range selection uses source IDs and preserves the active form. Selecting a related image from a word opens its source record through the normal session boundary. Apply, Cancel, read-only mode and recovery have the same meaning as in the generic editor. ICONCLASS lookup runs only after a user action and requires selecting a returned concept before form Apply.
+Companions are explicitly attached under **Linked project documents**. A word-range picker preserves the active form. Following an image reference from a codex word opens that image record through the normal document-switch boundary. The miniature viewer focuses an available codex zone and explains missing image access.
 
-Project checks distinguish cross-file reference failures, structural problems and editorial completeness. The normal output gate retains its own status. During vocabulary-schema compilation, the validation indicator reports Preparing schema while the rest of the interface remains responsive.
+ICONCLASS lookup follows an explicit search or notation request. A selected result fills fields for review before Apply; manual values remain usable if the service fails. Project checks distinguish relationship failures, structural issues and editorial completeness. Their findings retain separate labels from output-schema authorization.
 
 ## Model assistance
 
-Violet appears only for model-origin content. A generated-document banner, proposal layers, proposed notes, and model actions use the same family. Dashed outlines and the canonical label `AI-proposed, unverified` make provenance perceptible without colour.
+Generated-document banners, proposal layers and model actions use violet. Dashed outlines and **AI-proposed, unverified** identify pending proposals without relying on colour. Accepted model-origin content uses solid violet treatment and explicit origin text. Confirmation retains responsibility evidence; rejection addresses pending proposals.
 
-Whole-document provenance is read from TEI after reload. A matching root `@resp` and header `respStmt` restore the generated banner. A transient generation flag alone has no lasting authority. Confirm adds an acceptance marker while retaining all responsibility pointers. Accepted origin has a solid violet border and explicit text. Reject removes a pending proposal; cleanup only removes session-created declarations with no remaining references.
-
-Provider choice supports built-in services, a configurable OpenAI-compatible endpoint, and adapters registered by trusted application code. Endpoint and model fields explain which values are stored. API-key fields state their memory-only lifetime. Disabling LLM assistance removes model surfaces while leaving deterministic editing intact.
+Reload restores model-origin state from matching source declarations. Provider controls distinguish endpoint and model settings from memory-only API keys. Disabling assistance removes model surfaces while preserving deterministic work. [Specification](specification.md#llm-assistance-and-provenance) defines provenance and provider constraints.
 
 ## Browser capability disclosure
 
-Open and Download form the portable workflow in Chromium and Firefox. Save uses an existing writable native handle when available. Without one, Save follows the schema-gated download path. Project-folder, recent-handle, and local-image actions appear only when the browser exposes the required capability.
-
-Capability absence is explained at the action point. XML, metadata, reading text, review, and download remain available in Firefox. This prevents a Chromium-only enhancement from becoming an implied product requirement.
+File input and Download provide the portable Chromium and Firefox workflow. A native writable handle enables in-place Save; otherwise Save uses validated Download. Folder and handle controls appear only where the capability exists. Missing capabilities and unavailable images are explained at the affected action while source editing remains accessible.
 
 ## Accessibility contract
 
-- Tabs use proper tablist relationships and roving keyboard focus.
-- The splitter exposes separator role, value, orientation, and keyboard control.
+- Tabs use tablist relationships and roving keyboard focus.
+- The splitter exposes its separator role, value, orientation and keyboard controls.
 - Reading and panel regions have visible focus and accessible names.
-- Status, loading, validation, and failure messages use live regions where state changes asynchronously.
-- Popovers and dialogs return focus to the originating control or reading location.
-- Every action is reachable without hover, and hover-only emphasis also appears on keyboard focus.
-- Model provenance, validation, review, and annotation state use text or pattern in addition to colour.
-- Body and paragraph copy use the darker body token verified in historical real UFBAS runs. Current browser and accessibility results, with fixture availability, belong in the dated run report.
-- Motion respects `prefers-reduced-motion` where animation is decorative.
+- Asynchronous status, loading, validation and failures use appropriate live regions.
+- Popovers and dialogs return focus to their originating control or reading location.
+- Actions remain reachable without hover; hover emphasis also appears on keyboard focus.
+- Provenance, validation, review and annotations use text or pattern alongside colour.
+- Body copy uses the darker body-text token; contrast and automated accessibility checks apply to the actual rendered views.
+- Decorative motion respects `prefers-reduced-motion`.
 
 ## Label discipline
 
-One command keeps one label across toolbar, tooltip, dialog, and status text. Terms derived from a Source Profile remain consistent across pager, review, source scope, and context panels. `AI-proposed, unverified` names unresolved model output. `Output schema gate` names the authorization boundary. `XML-only` names metadata that requires exact source editing.
+One command keeps one label across its control, tooltip, dialog and status. Source-derived terms remain consistent across pager, review and context panels. **AI-proposed, unverified**, **Output schema gate** and **XML-only** identify distinct provenance, authorization and editing states.

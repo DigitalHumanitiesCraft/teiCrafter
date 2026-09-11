@@ -22,7 +22,7 @@
 - The target release is 0.2.0, while package.json remains 0.1.0 until release acceptance. Read [reports/README.md](reports/README.md) for current verification and remaining scope. Starter templates do not imply complete genre-specific workspaces.
 
 ## Knowledge Base (`knowledge/`)
-Function-separated per the Promptotyping convention. Read `INDEX.md` first; it carries the document map and the glossary.
+Function-separated per the Promptotyping convention. After this action layer, read `knowledge/INDEX.md`, `knowledge/handoff.md` and the latest journal decision. Verify the current Git state before relying on a dated observation.
 
 | Document | Read first when |
 |----------|-----------------|
@@ -33,6 +33,7 @@ Function-separated per the Promptotyping convention. Read `INDEX.md` first; it c
 | design.md | UI, visual, or interaction work (the aesthetic value source) |
 | testing.md | the test approach, the acceptance method, engine proofs, or the harness is in question |
 | journal.md | how a decision came about |
+| handoff.md | received deltas still require verification or integration |
 | integration.md | working across the sibling projects: cross-project data flow or the tool boundary |
 | converter-reference.md | building or verifying the SZD Page-JSON to TEI converter |
 | worked-examples.md | the SZD or ZBZ object taken end-to-end in the editor is in question |
@@ -51,7 +52,9 @@ At the end of a session with code changes, update the affected knowledge documen
 The documentation version policy is owned by [INDEX.md](knowledge/INDEX.md#documentation-maintenance). Follow it when changing knowledge documents. Distill: one function per document, cross-link via `related:` rather than repeat.
 
 ## Handoff and re-entry
-There is no root HANDOFF.md and no knowledge/HANDOFF.md. Durable re-entry is the newest journal.md entry. A volatile working-state snapshot (branch and tip, uncommitted work, the immediate next step, open threads) is written as a dated file under `reports/`, an action-layer note exempt from the knowledge conventions, without Promptotyping frontmatter. The lane-handoff skill writes to a dated `reports/` file or records a durable decision in the journal, never volatile state into a knowledge document.
+`knowledge/handoff.md` is the permanent process inbox for received deltas awaiting integration. Keep it active even when empty; the canonical empty text is `Keine offenen Handoff-Punkte.`. Each open item carries `Received`, `Source`, `Target` and `Context`. Verify the source and destination, integrate durable content into its owning document, record the outcome in `knowledge/journal.md`, then remove the processed item. Release requirements remain in the release scope catalogue.
+
+Use Git, the owning knowledge documents and dated verification reports for normal session re-entry. Create a dated exceptional handoff under `handoffs/` only when necessary context cannot be recovered from those sources. Historical snapshots in `reports/` retain their original evidence boundary. Do not create a session dump to repeat the maintained knowledge base.
 
 ## Working model (lane protocol)
 teiCrafter is edited directly. Sibling-repo work (szd-htr, zbz-ocr-tei) goes out as orders and is never edited from here. Securing is decoupled from approval: commits to this lane's own paths push to main autonomously, tags and releases stay operator-gated. Research steering (the milestone register, the backlog, the paper material) lives in the operator's private vault, not in this repository.

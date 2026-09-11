@@ -10,13 +10,13 @@ template:
   name: Vorlage Index
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
-status: active
+status: complete
 created: 2026-05-27
 updated: 2026-09-11
 language: en
-version: "0.22"
+version: "0.23"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples, wenzelsbibel]
+related: [project, data, specification, architecture, design, journal, handoff, testing, integration, converter-reference, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Knowledge Base
@@ -27,7 +27,11 @@ teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives
 
 This index owns the shared documentation schema version in its top-level `version` field. Other knowledge documents inherit it and omit that field. Change this version only when the shared document contract changes, such as required metadata or document functions. Content edits do not require a schema version change or edits to unrelated documents.
 
+Frontmatter status describes document maturity. Consolidated reference documents use `complete`; the ongoing journal and handoff inbox use `active`. Neither value claims software release acceptance or scholarly ratification.
+
 Each document's `updated` date records its latest substantive change. Removing an inherited version field alone preserves that date. Git identifies the complete content revision. Nested `template.version` identifies the source template and changes only when adopting a different template version. The frozen SZD contract in [converter-reference.md](converter-reference.md) retains its independently owned top-level version.
+
+The required process documents are the decision [journal](journal.md) and the continuously present [handoff inbox](handoff.md). The inbox contains received deltas awaiting integration; its empty state is `Keine offenen Handoff-Punkte.`. A journal entry records a processed delta's source, destination and outcome. Accepted release requirements belong in the [release scope](../reports/implementation-plan-0.2.0.md).
 
 ## Documents
 
@@ -44,10 +48,15 @@ Each document's `updated` date records its latest substantive change. Removing a
 | [Wenzelsbibel](wenzelsbibel.md) | Which editorial models, project forms and cross-file conventions support the Wenzelsbibel workflow? |
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
 | [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
+| [Handoff](handoff.md) | Which received deltas still require verification and integration? |
 
 ## Reading routes
 
 Start with the [user overview](../README.md) for workflows and setup, [test guide](../test/README.md) for executable checks, and [report index](../reports/README.md) for dated evidence and release planning. Requirements in a plan are not claims that the feature is complete. A passing run certifies its recorded revision, fixtures and environment only.
+
+For session re-entry, read [CLAUDE.md](../CLAUDE.md), this index, the handoff inbox and the latest journal decision. Follow their links to the owning contract and the [editorial completion report](../reports/editorial-completion-2026-09-11.md). Check Git for the actual branch, revision and uncommitted changes before continuing.
+
+Repository knowledge uses standard Markdown. Established public filenames remain stable, including `wenzelsbibel.md` for the specialized editorial contract and `worked-examples.md` for editorial recipes. `reports/` owns dated observations and the release scope catalogue. Browser source lives in `docs/`; `dist/` is generated build output. Rights-local editions remain external to the repository.
 
 Current facts belong to their owning knowledge document. Reports retain historical observations; link a follow-up instead of rewriting an old failure as a pass. Keep upstream documentation, licences and the frozen converter contract intact unless their actual source or contract changes.
 
@@ -71,7 +80,7 @@ Current facts belong to their owning knowledge document. Reports retain historic
 
 **Stand-off span group** represents a continuous cross-structure selection or a discontinuous selection as one TEI `spanGrp` containing one or more `span` elements. Exact boundary anchors preserve the source text and support round-trip projection.
 
-**Staged input** is a visible inline, XML, metadata or Wenzelsbibel form edit that has not yet entered canonical XML. Apply may fail without losing the entered value; navigation and unrelated mutations must preserve it.
+**Staged input** is a visible inline, XML, metadata, entry, witness or Wenzelsbibel form edit that has not yet entered canonical XML. Apply may fail without losing the entered value; navigation and unrelated mutations must preserve it.
 
 **Recovery checkpoint** stores the active session, staged input and attached project documents locally. A **Working copy** exports that unfinished state as portable JSON without schema authorization. A **Project package** is a ZIP delivery artifact whose XML files have each passed their effective schema set. Downloading either artifact retains recovery.
 
@@ -85,4 +94,6 @@ Current facts belong to their owning knowledge document. Reports retain historic
 
 ## Evidence boundary
 
-Committed synthetic fixtures exercise type-diverse Source Profiles and browser interaction in Chromium and Firefox. Historical real UFBAS runs exercised navigation, metadata, review, schema-gated output, fallback download, and automated accessibility checks in both browsers. The current run report states whether a rights-local source was present; a skipped scenario is not current real-object evidence. Wenzelsbibel engine proofs and opt-in browser workflows separately exercise the codex and image annotations. Its committed examples and mandatory browser scenarios use synthetic material. [Dated evidence](../reports/README.md) records performance, source anomalies and the actual verification boundary.
+The [editorial completion report](../reports/editorial-completion-2026-09-11.md) owns the full local run with real Wenzelsbibel sources, the independent Linux CI result, exact revisions, input hashes, toolchain, omissions and measured validation latency. The local run exercises both Chromium and Firefox. CI uses redistributable fixtures and explicitly records missing rights-local inputs.
+
+Historical real UFBAS runs remain prior evidence; the final local editorial run did not have that source. Passing code and schema checks establish the recorded technical behavior. Scholarly adequacy, a complete review of the edition and user acceptance remain separate. [Testing](testing.md) defines how these claims are evaluated and reproduced.

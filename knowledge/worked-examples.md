@@ -10,12 +10,12 @@ template:
   name: Vorlage Worked Example
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/worked-example
-status: active
+status: complete
 created: 2026-06-08
 updated: 2026-09-11
 language: en
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Source Profiles]]", "[[Digital Scholarly Editing]]"]
-related: [project, specification, testing, integration]
+related: [project, specification, testing, integration, wenzelsbibel, converter-reference]
 ---
 
 # teiCrafter Worked Examples
@@ -38,7 +38,7 @@ These recipes use invented sample content unless a named local source is explici
 | Preserve interrupted work | Leave an inline, XML, metadata or specialized form edit unfinished; reload and restore its checkpoint, or export/reopen Working copy | Invalid staged XML survives as staged input; attached project documents retain their source and settings |
 | Deliver an attached project | Choose Project package after editing attached documents and resolving visible input | Every XML file must pass its own schemas before one ZIP is requested; native Save remains scoped to the active file |
 
-Actual menu labels and fixture assertions are exercised by the browser suite. [Dated reports](../reports/README.md) state which runs passed and which material was available.
+Actual menu labels and fixture assertions are exercised by the browser suite. The [editorial completion report](../reports/editorial-completion-2026-09-11.md) owns the current full local and CI evidence. [Testing](testing.md) defines reproduction, omissions and failure criteria.
 
 ## Entry collection workflow
 
@@ -120,7 +120,13 @@ The Wenzelsbibel codex supplies a demanding TEI edition shape.
 
 The rights-local proof parses the complete codex, identifies the word and project profiles, preserves a no-op exactly, resolves IIIF image targets, and derives usable zone bounds from point geometry. Dual-reading edits update diplomatic text, an existing `@orig`, and `@norm` atomically. An empty normalized value removes `@norm`, while a missing `@orig` remains missing.
 
-This evidence applies to the local engine and profile path. It establishes that the complete real object can pass through the offset model and facsimile resolver. Separate opt-in Chromium and Firefox workflows exercise the real source through `WB_CODEX` and `WB_IMAGES`; the source files remain local, and dated reports record which cases ran.
+This engine evidence establishes that the complete real object can pass through the offset model and facsimile resolver. The full real-source evaluation also exercises Chromium and Firefox using `WB_CODEX`, `WB_IMAGES` and `WB_PAGE_ROOT`. The source files remain local.
+
+### Observed browser path on the real sources
+
+The final real-source run opens the complete codex, changes a normalized reading, compares all unaffected bytes and reverses the edit. The original codex contains a schema-invalid sole `choice/sic` wrapper; the test applies an explicit repair to its working copy before requesting validated output. It checks the exact downloaded XML and a project ZIP containing that codex and the original image-annotation document. Captured source hashes establish that the local originals remained unchanged.
+
+These observations establish the exercised editing, validation and delivery path. They do not establish that every scholarly annotation has been reviewed. The [completion report](../reports/editorial-completion-2026-09-11.md) owns the revision, source fingerprints, timings and skipped UFBAS scenarios. The complete first schema validation remains a substantial operation on this source.
 
 ### Browser path through the structural twin
 
@@ -137,6 +143,10 @@ Open Bildannotationen.xml and attach the codex under Linked project documents. S
 New shared registers creates a separate TEI document for persons, places and peoples. Open companions for editing to move between files; the project retains each edited source, encoding and schema settings. A restored checkpoint or reopened Working copy recreates the attached collection. Refresh an attachment explicitly after an external file change.
 
 Choose Project package to validate each XML document and request one ZIP containing the collection and eligible loaded images. An invalid member, cancellation or a changed captured state blocks the whole package. Working copy remains the preservation route for unfinished data, and native Save still affects one active file. [The Wenzelsbibel contract](wenzelsbibel.md) supplies the detailed encodings and walkthrough.
+
+In Import PAGE XML, select the PAGE files and their METS ordering evidence when available. Create the separate TEI draft, inspect its import notices, and review the transferred text and geometry. Retain the original export as source evidence. The importer does not merge the draft into the codex or infer scholarly Bible mappings.
+
+For image records, use the supplied editorial profile in its editing phase while information is incomplete. Explicit review checks completeness. The profile was authored for this implementation because the project's original `Bilderfassung.sch` was unavailable; passing it does not establish acceptance by the edition team.
 
 ## Jeanne Hersch inline-GND workflow
 
@@ -162,7 +172,7 @@ The SZD lane combines catalogue TEI with Page-JSON from handwriting recognition.
 
 ### Editorial path
 
-1. Convert Page-JSON into minimal TEI using the repository converter.
+1. Convert Page-JSON into minimal TEI using the [reference generator](../test/generators/szd-pagejson-to-tei.mjs) or the local [Python port](../pipeline/export_tei.py) under the frozen converter contract.
 2. Open the result with its project manifest when project-specific type, markup, image, schema, or LLM policy is needed.
 3. Let Source Profile derive navigation and local cell behaviour from the converted TEI.
 4. Correct text and metadata through exact projections.

@@ -10,12 +10,12 @@ template:
   name: Vorlage Projekt-Wissensdokument
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
-status: active
+status: complete
 created: 2026-02-05
 updated: 2026-09-11
 language: en
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
-related: [data, specification, architecture, design, journal, integration]
+related: [data, specification, architecture, design, journal, integration, testing, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Project Overview
@@ -40,27 +40,22 @@ Common editorial work remains direct. The editor supports reading-text correctio
 | Existing charter or legal source | Source-derived navigation, full header inventory, entity registers, exact XML | Dedicated diplomatic and legal-source forms |
 | A set of lexicon entries | Separate starters, filterable entry details, creation, safe duplication, reference-protected deletion and previewed document-local batches | Project-specific fields and operations across several entry files |
 | Reading without editing | Explicit read-only mode, witness selection, disclosed attestations, source inspection and exact witness XML | External witness resolution and reconstruction of unencoded witness text |
+| Wenzelsbibel transcription and annotation | Specialized transcription, commentary, Bible mapping, image annotation, registers, project checks and PAGE import within the common editor | Scholarly ratification of the local editorial profile and review of the resulting edition |
 | Facsimile correction and review | Text/image alignment, annotations, proposals and fingerprinted review records | Cross-document transactions and a real editorial pilot |
 
 The interface adapts to actual TEI structure, schema evidence, project policy and the selected task. A starter supplies initial XML; it does not make every document of that genre compatible with a specialized form. The [implementation plan](../reports/implementation-plan-0.2.0.md) owns the release scope and acceptance criteria.
 
 ## Scholarly control
 
-The human editor authorizes every substantive change. Model output enters as visibly unverified material with TEI `@resp` provenance. A generated document remains identifiable after reload when the TEI root points to the configured responsibility and the header contains the matching `respStmt`. Confirm and reject actions resolve proposed constructs through the same lossless mutation path used for manual editing. Confirmation retains the origin pointer and adds durable acceptance evidence; accepted content stays distinguishable in the violet family after reopening.
+The human editor authorizes substantive changes. Optional model output enters as visibly unverified material with durable provenance. Confirmation retains its origin and records human acceptance separately. Editorial review records who reviewed a source-backed unit and the content to which that review applied; later edits can make it historical. Annotation coverage, model acceptance and editorial review remain distinct facts. Their encodings are owned by [data.md](data.md), and their visible treatment by [design.md](design.md).
 
-Editorial review is represented as TEI evidence. A `revisionDesc/change` record targets a stable identifier on the reviewed primary navigation unit and records reviewer, time, status, rationale and a source-scope fingerprint. Changes to that content make the earlier review historical until a new review is recorded. Annotation coverage and review answer different questions and remain separate in the interface and document model.
-
-Selections that cross XML structures or consist of separated segments use TEI stand-off spans. The editor inserts exact boundary anchors and stores the semantic relation in one `spanGrp`. Inline projection remains available where the target format can express the selection. Formats such as inline-GND refuse cross-structure, overlapping, or discontinuous output because that interchange shape cannot carry those relations.
+Cross-structure or discontinuous selections can use stand-off spans within one document. An interchange format must be able to carry those relations before output is permitted. The [integration contract](integration.md) defines the project boundaries.
 
 ## Output trust boundary
 
-Save and Download are authorization points. The editor validates the exact projected output against an ordered schema set. The authorization belongs to one document session, revision, schema set, and byte string. A changed document or configuration invalidates it. Every configured schema must return a valid result. Invalid, unavailable, missing, or stale results block output and explain the reason in the interface.
+Save and TEI Download validate the exact projected output against every effective schema. An invalid, unavailable, missing or stale result blocks output. TEI All supplies the default when the project provides no schema. Currentness and schema-runtime limits are defined in [specification.md](specification.md) and implemented as described in [architecture.md](architecture.md).
 
-A project manifest supplies the project schema set. A session upload replaces that set for the current session. TEI P5 TEI All is the repository default when the project supplies no schema. RelaxNG and XSD run locally through the browser validator. Raw and compiled Schematron use bounded browser runtimes whose unsupported constructs produce an unavailable result and therefore block output.
-
-A separately labelled Working copy exports unfinished session state and attached project documents without schema authorization. Local recovery checkpoints preserve the same document collection and staged edits. Project package validates each XML document against its effective schemas before requesting one ZIP download. A requested download retains recovery because the browser cannot establish that the user saved the file. Native Save establishes a savepoint for the active file; unsaved companion documents continue to require preservation.
-
-The offline Python fidelity harness has a different purpose. It compares text fidelity, structural invariants, and schema diagnostics before and after edits. Its comparative schema level remains evidence rather than an output authorization. The browser gate governs actual Save and Download operations.
+Working copy preserves unfinished input and attached project documents independently of schema validity. Project package validates each XML member before producing one ZIP. Native Save writes the active file. Requesting a download preserves recovery because the browser cannot establish that the user saved the artifact. [Data](data.md) owns the portable formats; [testing](testing.md) distinguishes output authorization from independent fidelity evidence.
 
 ## Browser and deployment model
 
@@ -84,11 +79,13 @@ External LLM services are optional. Built-in providers and a configurable OpenAI
 
 teiCrafter preserves arbitrary TEI through exact source views and targeted splices. Form projections intentionally cover only operations with a lossless mapping back to the source. Complete reformatting, wholesale DOM serialization, silent schema repair, and automatic scholarly acceptance fall outside the product contract.
 
-The browser inspects the effective repository, project, or session schema set after opening a document and after a session override changes. Multiple vocabulary schemas contribute conjunctive evidence. Schematron remains constraint evidence for validation. An unavailable or partially resolved vocabulary schema leaves the affected capabilities unknown, so profile inspection cannot block opening or suppress a structurally observed capability without sound negative evidence. This descriptive path remains separate from the fail-closed output gate.
+Schema inspection contributes conservative evidence to authoring. It leaves unknown capabilities available for source inspection and cannot silently suppress observed TEI structures. Output validation independently requires a successful result for the complete effective schema set.
 
-The stand-off span engine operates within one TEI document. The Wenzelsbibel workspace edits separate image annotations and shared registers through an explicitly attached document collection. Its forms create and resolve cross-file pointers and codex range expressions against the retained sources. Recovery and Working copy preserve that collection across reopening, while Project package provides a single validated delivery artifact. Native writes remain file-scoped. Concurrent editing and an atomic transaction across several external files remain outside this contract.
+The [Wenzelsbibel specialization](wenzelsbibel.md) edits the codex, separate image annotations and shared registers within one persistent document collection. It provides a local editorial model for peoples, Bible references and image-record checks. The original `Bilderfassung.sch` was unavailable; the supplied profile still requires scholarly ratification. PAGE import produces a separate draft for review. Concurrent editing and an atomic transaction across several external files remain outside the product contract.
 
 Entry management likewise changes the active XML document. Its deletion protection covers references to the selected subtree within that file, and its batch fields are limited to local language and number attributes. Witness reading requires explicit attestation; absent or ambiguous attribution never establishes agreement with the base text. Unsupported compound pointer semantics and structured field inverses remain visible through exact XML.
+
+The [editorial completion report](../reports/editorial-completion-2026-09-11.md) establishes the tested technical scope and real-codex performance. The initial full validation of a large codex remains costly, even though identical successful results can be reused. The application remains a research preview until editorial and user acceptance and an explicit release decision.
 
 ## Project origin and comparisons
 

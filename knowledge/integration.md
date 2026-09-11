@@ -10,7 +10,7 @@ template:
   name: Vorlage Integration
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
-status: active
+status: complete
 created: 2026-06-07
 updated: 2026-09-11
 language: en
@@ -20,149 +20,97 @@ related: [project, data, specification, architecture, design, testing]
 
 # teiCrafter Integration Contracts
 
-## Integration principle
+## Exchange boundary
 
-teiCrafter accepts TEI as the primary exchange object. A project can add a manifest, schemas, image resolution, mapping guidance, and an interchange projection. The editor still opens the document when project configuration is absent. Source structure remains the first source of interface evidence, while the project layer states editorial policy that cannot be inferred safely.
+TEI is the primary exchange object. A project may add a manifest, schemas, image resolution, model mapping and a target-format projection. A bare document remains openable without project configuration. Source structure supplies interface evidence; project policy supplies editorial choices that cannot be inferred safely.
 
 ```text
-upstream source or TEI
+upstream source
   -> optional deterministic conversion
-  -> TEI plus optional project contract
-  -> Source Profile and editorial work
+  -> TEI with optional project configuration
+  -> editorial work on canonical source
   -> exact target projection
-  -> ordered schema-set authorization
-  -> project repository or download
+  -> authorization by every effective schema
+  -> native file or portable download
 ```
 
-## Project package contract
+[Data](data.md) defines the encodings; [architecture](architecture.md) locates their implementation. [Testing](testing.md) defines evidence required for interoperability claims. Results for particular sources and environments belong in [dated reports](../reports/README.md).
 
-A project package may contain these durable roles.
+## Project folder and schema handoff
 
-| Role | Contract |
+A granted project folder can supply independently openable TEI, plaintext, `teicrafter.project.json`, schema resources, model-mapping Markdown and local images. The manifest binds filenames to document types and supplies project defaults. [The manifest contract](data.md#project-manifest) defines the canonical fields and ordered schema set. Mapping text is declarative source context and cannot execute code.
+
+Upstream producers encode real navigation anchors. Page milestones and surfaces support page or facsimile navigation; entries, article divisions, speech turns, records, corpus members and source documents retain their TEI structures. Several channels can coexist. `uiProfile` can choose among available channels or suppress an inappropriate capability. An unsupported requested channel produces an issue and a source-backed fallback.
+
+Schema resources have two roles. Conservative inspection supplies authoring evidence, while complete execution decides whether an exact output is authorized. Missing resources leave inspection evidence unknown and block schema-gated output. Every configured schema must succeed. A target-format conversion runs before validation, so the target repository receives the representation that was actually checked.
+
+Served schemas resolve relative URL dependencies. Granted folders resolve nested relative RelaxNG and XSD resources within their root, with cycle and traversal limits. A standalone schema upload does not grant access to neighbouring files. XML catalogs and portable implicit dependency discovery remain outside the contract. Raw and compiled Schematron must satisfy the [supported runtime forms](data.md#schema-set-and-validation-result).
+
+An uploaded override belongs to its document and replaces that document's project set until reset. Project collections and recovery retain those choices separately. New companion documents receive their own defaults. Opening a package restores schema settings; it grants no continuing validation authorization.
+
+## Downstream editorial evidence
+
+Projects can use the complete TEI header. The generic metadata interface exposes scalar fields and exact XML for structured content; specialized witness operations also create and edit supported header structures. Existing project-specific declarations remain preserved. Responsibility pointers used for generated material must resolve to local declarations after save and reopen.
+
+| Evidence | Downstream interpretation |
 | --- | --- |
-| TEI documents | Each document must remain independently openable and provide its own structural evidence |
-| `teicrafter.project.json` | Declares project name, file-to-type bindings, schema set, UI policy, markup, indices, views, images, reconciliation, interchange, and LLM settings |
-| Schema resources | Form an ordered set whose every entry must authorize the exact output |
-| LLM mapping Markdown | Supplies editorial mapping guidance as data beside the manifest |
-| Local images | Resolve through document pointers or project policy after the user grants access |
-| External images | Resolve through IIIF Image or Presentation contracts where configured |
+| [Review Record](data.md#review-record) | A header revision change targets a unique source unit; current review requires its verified scope fingerprint to match |
+| [Stand-off annotation](data.md#cross-structure-and-discontinuous-annotations) | A span group is one semantic annotation with ordered segments; flattening it loses discontinuity semantics |
+| [Machine provenance](data.md#machine-provenance) | Origin survives acceptance through separate responsibility and acceptance tokens |
+| [Entry and witness encoding](data.md#entry-and-witness-encodings) | Scalar forms edit supported mappings; apparatus attribution follows explicitly encoded pointers |
 
-The canonical schema declaration is `schema.schemas`. Entries retain manifest order and contain `type`, `path`, and optional `name`. Project loaders and served examples normalize this declaration into the same runtime set. Legacy declarations remain an ingest compatibility path and should not be authored for new projects.
+A review certifies only its encoded source scope. Annotation presence, historical markers and external register changes have separate semantics. Projects that require centrally controlled reviewer identities or rationale vocabularies must supply that editorial policy.
 
-Project-level `uiProfile` can request an available primary navigation channel and disable capabilities that are inappropriate for the workflow. A matching document type overrides the primary channel and contributes further disabled capabilities. The manifest does not declare a monolithic edition genre. The same project can contain letters, dictionaries, corpora, source documents, or other TEI shapes.
+Entry duplication rewrites supported pointers inside the copied subtree. Deletion and batch checks operate within the active XML file. Cross-file references therefore require a separate editorial check. List sorting preserves source order, and a batch does not imply project-wide ID relinking or text replacement.
 
-## Source Profile handoff
+Witness reading selection changes a projection and preserves the exchange XML. Missing or ambiguous attribution remains explicit. External definitions and unsupported apparatus-location methods require source-level interpretation; the editor does not claim a complete reconstruction of witness text.
 
-Upstream systems should encode real document structure in TEI. Pages use page milestones or facsimile surfaces. Dictionary entries use `entry`; encyclopedia articles can use `div` with `type='entry'` or `type='article'`. Speech turns use source elements such as `u` or `sp`. Tables, records, source documents, apparatus, correspondence metadata, and logical sections retain their TEI structures. teiCrafter inventories those features and exposes supported capabilities within explicit project policy.
+A target vocabulary must be able to represent current annotations. The inline-GND projection blocks cross-structure, discontinuous and overlapping spans that it cannot encode. No automatic flattening supplies a substitute target.
 
-A project should use `uiProfile` only when editorial policy must choose among real channels or suppress a misleading affordance. An unavailable request is reported and falls back. The manifest must not fabricate a navigation unit that has no source anchor.
+## Wenzelsbibel
 
-The effective schema set strengthens this handoff after the initial structural projection. Closed reachable RelaxNG resources can provide positive and negative vocabulary evidence, including resolved includes. XSD contributes approximate positive evidence across resolved includes and imports. Multiple vocabulary schemas combine conjunctively. Schematron contributes validation constraints without vocabulary claims. Missing or partial resources leave capabilities unknown and keep the document open. A session upload or reset recomputes the Source Profile from the newly effective set.
+The codex supplies word-level diplomatic text, `@orig` and `@norm`, page and line milestones, surfaces, graphics, zones and stand-off apparatus. Project identity or an explicit manifest workspace selects the specialization. IIIF resolution maps graphics to image services; source point geometry can provide zone bounds where rectangle attributes are absent.
 
-## Output and schema handoff
+The image-annotation document references the codex through cross-file `corresp` and range expressions. Shared persons, places and peoples reside in a separate register document. The workspace resolves links against explicitly attached, retained companion snapshots and edits the active file. Each companion keeps its own source, encoding, images, schemas and dirty state through switching, recovery and Working copy.
 
-Save and Download validate the exact target representation. A project interchange projection therefore runs before schema authorization. The resulting validation snapshot belongs to the current session, revision, byte string, and schema set. A later edit or project change requires another authorization.
+Those snapshots do not watch the filesystem. Later external changes require explicit loading and reconciliation. A validated project package delivers the retained XML collection as one artifact. Native Save remains document-local and does not provide an atomic write to every original file.
 
-Every configured schema runs. A project that declares both RelaxNG and Schematron receives one aggregate decision whose success requires both results. An unavailable dependency blocks output with the same authority as an invalid document.
+PAGE XML with optional METS produces a separate draft with recorded ordering and diagnostics. The [Wenzelsbibel contract](wenzelsbibel.md) owns its mapping, apparatus, verse, register and image forms and the authored editorial schema. A declared project schema set overrides bundled defaults. Schema validity does not establish the scholarly correctness of those choices or substitute for a missing source-project schema.
 
-Served schemas may resolve relative URL dependencies. A user-opened project folder resolves nested relative RelaxNG and XSD dependencies within the granted root, with bounded traversal and cycle detection. Paths cannot escape that root. XML catalogs and portable session schema dependency bundles remain outside the current contract. Raw Schematron must stay within the documented XPath 1.0 subset or arrive as compiled XSLT that produces SVRL.
+Local originals and redistributable structural twins have separate evidence roles, described in [testing](testing.md#real-material-and-reproducibility). An interaction claim based on the complete original codex must identify a run that actually supplied it.
 
-TEI All supplies a safe repository default only when the project has no schema. A project-specific schema set replaces that default. A session upload replaces the project set temporarily and should be treated as an explicit operator decision.
+## Other source projects
 
-## Complete header handoff
+### UFBAS
 
-Projects may use the full TEI header. Common fields receive direct familiar controls, and every other TEI header field appears through the generic inventory. Text-only values and ordinary attributes are candidates for direct editing. Mixed, structured, self-closing, and namespace-sensitive structures remain exact XML.
+The Urfehde object opens as a complete TEI book without a required manifest. Source evidence provides navigation and header access; repository TEI All supplies the default output schema. The portable file-and-download workflow supports review and output in Chromium and Firefox. The original remains local, and current whole-book or accessibility evidence requires a run with `UFBAS_TEI` supplied.
 
-An integration must not rely on a fixed teiHeader subset. Project-specific declarations, authority data, responsibility statements, revision history, profile descriptions, and encoding descriptions remain preserved. Structural header authoring stays in XML until a project-specific form has a proven lossless inverse.
+### Jeanne Hersch and zbz-ocr-tei
 
-Whole-document model provenance uses a TEI-root `@resp` pointer plus a matching `respStmt`. A project LLM configuration may replace the default `#ai` pointer. That responsibility must remain local and resolvable after a save and reopen.
+Hersch stores person, organisation and work references inline through GND-oriented attributes. `fromInlineGND` lifts them into the working register projection; `toInlineGND` derives the target for schema-gated output. A manifest declares `interchange: "inline-gnd"`, or a bare source is recognized by the exact `TEI@type="naegeli"` signature. An unchanged source remains a fixed point.
 
-## Review handoff
+Local facsimile graphics can be granted separately. They remain external resources and are not implicitly copied by Save. Firefox retains the portable XML workflow when directory handles are unavailable.
 
-Review state serializes as `teiHeader/revisionDesc/change` with a local target on the reviewed primary navigation unit. Downstream repositories can therefore read the reviewer, timestamp, status, rationale, target and source-scope fingerprint without teiCrafter-specific UI state. A matching fingerprint is required for current review; modified content retains its previous records as history.
+### Stefan Zweig Digital and szd-htr
 
-Projects should preserve these review changes alongside their existing revision history. A TEI corpus member receives review evidence in its own header. Annotation presence has no review semantics and should not be used as a substitute.
+The upstream combination of catalogue TEI and handwriting-recognition Page-JSON requires deterministic conversion before editor intake. [Converter reference](converter-reference.md) owns the frozen byte-level contract. The converter remains a separate boundary so extraction changes cannot silently redefine editor semantics.
 
-The editor can read the historical `@ana="#teicrafter-reviewed"` marker for compatibility. New project contracts should use Review Records. The review dialog collects identity and rationale explicitly. A project requiring centrally controlled identities or rationale vocabularies still needs that policy layer.
+Converted TEI uses the same source profiles, metadata, review, annotation and output gate as other documents. A manifest can add type-specific markup, schemas, images and model mapping. [Worked examples](worked-examples.md) connects these exchanges to concrete objects.
 
-## Span handoff
+## Model and authority services
 
-Cross-structure and discontinuous selections serialize in a TEI-level `standOff` as grouped local spans. Each segment points from one generated boundary anchor to another and may reference an entity through `ana` or record provenance through `resp`. Selected text remains unchanged.
+Project data supplies editorial prompts, mapping text, responsibility and provider-neutral context. Transport is trusted application code. Built-in providers and a custom OpenAI-compatible endpoint cover standard JSON protocols; `registerProviderAdapter` permits trusted bundled code to implement request construction and response extraction for another protocol. A manifest cannot load executable adapters.
 
-Downstream consumers should treat the `spanGrp` as the semantic annotation and its child spans as ordered segments. Relinking an entity changes all segments in the group. A consumer that flattens the group to independent mentions loses discontinuity semantics.
+Endpoint validation rejects embedded credentials. Keys remain in memory, and model requests omit ambient browser credentials. Explicit model actions transmit their supplied source context; generated TEI and proposals then enter structural checks, provenance and human review before schema-gated output. Model availability is optional for deterministic editing.
 
-Target formats must declare whether they can represent these spans. The inline-GND interchange cannot represent cross-structure, discontinuous, or overlapping annotations and therefore blocks the projection. A lossy flattening is never automatic.
+Image and authority requests use their declared external services. Wenzelsbibel ICONCLASS lookup sends user-entered terms or selected notations to the official service. It does not send the edition text. Service responses remain suggestions or resolved resources until the user applies a supported source mutation.
 
-The current span transaction is document-local. The Wenzelsbibel workspace resolves references against explicitly attached companions and edits the active file. The retained project collection can be delivered as one validated package. External source files still require separate native saves.
+## Browser files and deployment
 
-## Entry and witness handoff
+Local file input and schema-gated Blob download form the portable contract in Chromium and Firefox. Native File System Access can add save-in-place, project-folder access, image folders and local schema dependencies where supported. Detection occurs at the action boundary. When no writable handle is available, Save uses the download path and directory-dependent actions explain their unavailable capability.
 
-Entry forms require the scalar mappings described in [data](data.md#entry-and-witness-encodings). Multiple senses, paragraphs or mixed headings retain exact XML access. New records take their encoding and collection from an existing sibling, while an empty body requires an explicit choice. Duplication regenerates subtree IDs and updates supported local pointers, including encoded URI fragments. Unmapped attributes, compound reference syntax and an external XML base prevent the editor from assuming a safe rewrite.
+Native Save checks file identity and external modification before writing, then rechecks the captured source and authorization across asynchronous operations. XML and required image writes are separate browser file operations. Storage failures and superseded writes retain recovery; a requested download does not prove persistence on disk.
 
-Batch editing and entry deletion checks apply to the open XML file. An integration that distributes entries across several files must review external links separately. Display order is independent of source order, and no project-wide text replacement or ID relinking is implied by an entry batch.
+Working copy provides unfinished-state transport. Project package provides a validated collection ZIP. Both restore without native handles, and later outputs require current authorization. External facsimile-folder resources remain outside implicit native Save attachments. [Data](data.md#validated-project-package) defines archive validation and supported import layouts; [architecture](architecture.md#output-and-file-operations) defines currentness and cancellation.
 
-Witness definitions may use `listWit/witness` or referenced bibliographic descriptions. Direct `@wit` on `lem` and `rdg` states attestation, including defined witness groups. `rdgGrp` supplies grouping without inferred attribute inheritance. The reader preserves all alternatives and discloses absent or ambiguous attribution instead of inventing agreement. Newly assigned pointers require unique local definitions; external definitions and unsupported apparatus-location methods remain explicit XML concerns. Witness selection changes the reading view without changing the exchange document.
-
-## UFBAS contract
-
-The UFBAS Urfehde object enters as a complete TEI book without a required project manifest. Document evidence yields page and source structures, while repository TEI All supplies the default output schema. The generic header inventory exposes the real header without a corpus-specific form.
-
-The operational workflow uses portable file input and download, so it works in Chromium and Firefox. Review changes and schema authorization apply to the exact current source. Historical automated browser evidence includes the real local object and Axe in both engines. Current runs certify this path only when the local source is supplied, as recorded in the dated report. The object remains local because its redistribution status is separate from the editor's code licence.
-
-## Wenzelsbibel contract
-
-The Wenzelsbibel codex encodes word-level diplomatic text, `@orig` and `@norm`, page and line milestones, facsimile surfaces, image graphics, zones, and TEI-level stand-off apparatus. Project identifiers and source structure select the Wenzelsbibel profile for a bare file. IIIF resolution maps surface graphics to image services, and point geometry can supply zone bounds when rectangular coordinates are absent.
-
-The separate image-annotation document uses cross-file `corresp` links, including range expressions. The specialized workspace provides image forms, codex word and zone lookup, references from words back to related images, and a shared register document for persons, places and peoples. Attached companions retain their source, encoding and settings in a persistent project collection. Opening one for editing uses the existing session boundary, and recovery or Working copy restores that collection. Reattach a companion when its external source changes.
-
-Project package validates each collection member against its effective schemas and requests one ZIP only when every XML file passes. Working copy preserves unfinished or invalid collection state without validation. Native Save affects the current document, so the package does not imply an atomic write back to all original files.
-
-PAGE XML plus optional METS imports produce a separate TEI draft. ICONCLASS queries send only user-entered search terms or selected notations to the official service. The authored editorial schema and the chosen verse/register encodings are specified in [Wenzelsbibel](wenzelsbibel.md). An explicit project schema overrides the bundled default.
-
-The real codex supplies local engine and Source Profile evidence. The committed browser example uses a structural twin so that Chromium and Firefox can exercise representative interaction without redistributing the source. Claims about real browser performance must state that the local codex was present.
-
-## Jeanne Hersch and zbz-ocr-tei contract
-
-The Hersch exchange format stores person, organisation, and work references inline through GND-oriented attributes. teiCrafter's working projection uses the generic register model. `fromInlineGND` lifts existing mentions on load, and `toInlineGND` produces the target representation for Save or Download.
-
-A project manifest can declare `interchange: "inline-gnd"`. A bare Hersch file can select the same boundary through the exact `TEI@type="naegeli"` signature. An unchanged source remains a fixed point. New editor annotations appear in the target format after projection and schema authorization.
-
-Local facsimile graphics can be granted separately from the TEI. They remain external resources and are never copied implicitly by Save. Firefox retains the XML and download workflow even when directory access is unavailable.
-
-## Stefan Zweig Digital and szd-htr contract
-
-The SZD upstream lane combines catalogue TEI with Page-JSON from handwriting recognition. Page-JSON does not enter the editor directly. A deterministic converter produces minimal editable TEI while retaining its frozen byte-level contract in [converter-reference](converter-reference.md).
-
-The generated TEI then enters the same Source Profile, metadata, review, span, and schema paths as any other document. A project manifest can bind files to document types and provide type-specific markup, navigation policy, schemas, images, and model mapping. The converter remains a separate integration boundary so source extraction changes cannot silently rewrite editor semantics.
-
-## LLM provider handoff
-
-The manifest supplies editorial instructions, mapping text, responsibility, and provider-neutral source context. Provider transport remains application code. Built-in services and the custom OpenAI-compatible endpoint cover standard JSON protocols. `registerProviderAdapter` lets trusted bundled code add a nonstandard protocol through request construction and response extraction functions.
-
-This division keeps repository data auditable and prevents a project package from executing remote code. Keys remain memory-only, and requests omit ambient browser credentials. Generated TEI and proposals still pass structural gates, provenance insertion, human review, and output schema authorization.
-
-## Browser file handoff
-
-The portable contract is local file input plus schema-gated Blob download. Chromium and Firefox both implement that route. Native file and directory handles are optional capabilities that improve save-in-place, project-folder, image, and dependency workflows.
-
-An integration must provide a usable result when those handles are absent. Save falls back to Download, project-folder actions stay hidden or disabled with an explanation, and editing remains available. Native capability detection must occur at the action boundary rather than through browser-name assumptions.
-
-Recovery and Working copy are independent of native file handles. Checkpoints preserve canonical UTF-8 source, visible staged input, attached project documents, nested settings and loaded image bytes. Working copy version 2 carries the portable representation as JSON while retaining import support for version 1. Restoration must reacquire file and directory permissions. Attached external facsimile-folder resources remain external rather than becoming implicit native Save attachments.
-
-Project package supplies a separate validated ZIP handoff containing the XML collection and eligible loaded images. Import checks the package structure and restores source and per-file metadata. Any later output requires fresh authorization for the current state. Cancelled validation, a failed member or intervening edits prevent the package download; recovery remains available.
-
-Native Save rechecks file identity and external modifications before writing, then binds completion to the captured session and revision. A download request is not proof of disk persistence. Failed, partial or superseded writes retain recovery. The format details belong to [data](data.md), and the queue and output-controller boundaries to [architecture](architecture.md).
-
-## Integration checklist
-
-- The TEI opens independently and retains its namespace and prefix policy.
-- Real source structures support the intended navigation channels.
-- Manifest `uiProfile` policy selects only source-backed channels.
-- The ordered schema set and every dependency are available in the chosen browser workflow.
-- Header fields remain visible through direct or XML-only projection.
-- Review records are acceptable to the project's revision policy.
-- Stand-off span groups are supported by the downstream format, or the project blocks them explicitly.
-- Target-only interchange projection runs before schema authorization.
-- LLM responsibility pointers resolve to real `respStmt` declarations.
-- Chromium and Firefox retain a complete file input and download path.
-- Rights-local evidence is identified as local and has a redistributable structural twin where reproducibility requires one.
+GitHub Pages is configured to publish `main:/docs` as directly served modules. CI builds and verifies `dist/` and uploads that deployable artifact separately. Those deployment paths require their own runtime evidence. Public built-in examples are disabled through `FEATURES.examples`; local development hosts expose them. The public editor accepts user-supplied files. A missing local example or an HTML fallback response cannot be accepted as an XML edition.

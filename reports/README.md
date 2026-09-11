@@ -7,11 +7,12 @@ Use [knowledge/INDEX.md](../knowledge/INDEX.md) for current product and technica
 | Document | Role |
 | --- | --- |
 | [Editorial completion and evaluation](editorial-completion-2026-09-11.md) | Follow-up implementation of witnesses, entries, batch changes and persistent project packages; current evaluation boundary. |
+| [Knowledge consolidation](documentation-report-2026-09-11.md) | Complete knowledge-folder reconciliation, decision-journal compaction, process inbox and reproducible documentation checks. |
 | [Wenzelsbibel workflow](wenzelsbibel-workflow-2026-09-11.md) | Initial specialization, branch integration and real-source findings before the editorial-completion follow-up. |
-| [Session close and re-entry](session-close-2026-09-05.md) | Earlier development checkpoint; the Wenzelsbibel report supplies current evidence. |
+| [Session close and re-entry](session-close-2026-09-05.md) | Earlier development checkpoint; the editorial completion report supplies current implementation and verification evidence. |
 | [Input and persistence refactoring](refactoring-status-2026-09-05.md) | Earlier implementation and browser observations, including the validator latency that prompted the worker investigation. |
 | [Documentation audit](documentation-audit-2026-09-05.md) | Markdown inventory, resolved contradictions, preservation decisions and local link checks. |
-| [0.2.0 implementation plan](implementation-plan-0.2.0.md) | Work packages and release acceptance, including work still to implement. |
+| [0.2.0 implementation plan](implementation-plan-0.2.0.md) | Release requirements and acceptance catalogue; implementation status is recorded in the editorial completion report. |
 | [Workflows and adaptive interface](workflows-and-adaptive-ui-0.2.0.md) | User tasks, examples, genre distinctions and intended interface depth. |
 
 ## Earlier evidence

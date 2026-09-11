@@ -10,7 +10,7 @@ template:
   name: Vorlage Specification
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
-status: active
+status: complete
 created: 2026-09-11
 updated: 2026-09-11
 language: en
@@ -32,13 +32,13 @@ related: [project, specification, architecture, design, data, testing]
 
 ## Scope and status
 
-The Wenzelsbibel workspace specializes teiCrafter for transcription readings, commentary, Bible references, miniature descriptions, and shared registers. It uses the same complete XML source, editing transactions, undo history, recovery, facsimile viewer, and schema gate as the generic editor. A project manifest selects it with `workspace: "wenzelsbibel"`; the built-in Wenzelsbibel project profile supplies the corresponding configuration.
+The Wenzelsbibel workspace provides source-preserving authoring for transcription readings, commentary, Bible references, miniature descriptions and shared registers. Its project-specific field mappings operate through the generic editor's transactions, facsimile viewer and output gate. A manifest selects it with `workspace: "wenzelsbibel"`; the built-in project profile supplies that configuration.
 
 In the local development or build preview, the start page's Wenzelsbibel example opens this workspace with a synthetic codex when the local original is absent. The sample has no original page images. Examples remain hidden on the public deployment. For edition work in either environment, use **Load** to open the local codex and attach the corresponding image annotations and registers through **Linked project documents**.
 
-This document defines the implemented editorial model and its operating rules. The register and verse conventions, together with the local editorial Schematron, are teiCrafter-authored project decisions. Their implementation does not constitute scholarly acceptance of a particular annotation, artist attribution, normalization, or verse alignment. The edition team remains responsible for that review. Run-specific verification belongs in the repository's test reports.
+The register and verse conventions and the local editorial Schematron are implemented, teiCrafter-authored project decisions. The [editorial completion report](../reports/editorial-completion-2026-09-11.md) records technical verification against identified synthetic and local source data. Scholarly assessment of these conventions and user acceptance remain open. The edition team assesses individual readings, attributions and alignments against the cited sources.
 
-The implementation reads the existing codex and image-annotation topology without converting the edition to a new serialization. Unrelated attributes, namespaces, apparatus categories, multilingual notes, and unknown markup remain source data. A form changes only its represented fields. A semantic no-op preserves the original XML string. Ambiguous or mixed-content fields require the XML editor when a simple text form cannot preserve their structure.
+Existing codex and image-annotation topology remains intact. Forms change their represented fields and preserve unrelated attributes, namespaces, apparatus categories, multilingual notes and unknown markup. A semantic no-op preserves the original XML string. Ambiguous or mixed-content fields use exact XML when a text control lacks a lossless inverse. The [source and session requirements](specification.md#document-and-session-integrity) apply to every project form.
 
 ## Documents and ownership
 
@@ -51,17 +51,19 @@ The implementation reads the existing codex and image-annotation topology withou
 
 Exactly one document is editable at a time. **Linked project documents** attaches local XML files to a persistent project collection. **Open for editing** checkpoints the current file before activating its companion. Each file retains its own XML, UTF-8 BOM, dirty state, project and schema settings, selected witness and attached images. Failed recovery storage blocks the switch; unfinished input must be applied or cancelled first.
 
-Every Apply operation belongs to the active document. Native **Save** still writes that file. **Project package** validates each XML file against its own schema set and downloads one ZIP containing all files, loaded binary images and a project manifest. One invalid, unavailable, stale or cancelled decision prevents the entire package. **Load → Open project package...** restores this collection and requires fresh validation for subsequent output. The package is a single download; it does not atomically replace several filesystem files. A filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
+Every Apply operation changes the active document, and native **Save** writes that file. **Project package** authorizes each XML file under its own schema set before requesting one ZIP with the collection and eligible loaded images. **Load → Open project package...** restores the collection; later output requires current authorization. The [package contract](specification.md#project-and-schema-declarations) defines cancellation, invalidation and the active-file scope of native saves. A filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
 
 The Wenzelsbibel forms are available in **Reading text**. While **XML source** or **Metadata** is open, that left-hand editor owns unfinished input and the project panel shows a navigation hint. Return to **Reading text** to resume project forms. Changing views requires applying or cancelling the current input; **Working copy** can preserve it unfinished.
 
-Companions are snapshots rather than live filesystem subscriptions. If another application changes a file, attach its current version again. A reference check can establish consistency only for the attached documents. Deletion protection includes identifiers in the removed entry's complete subtree, but cannot discover references in files that have not been attached. Reassigning a companion role retains the former file without that role; colliding filenames are refused.
+Companions are snapshots of explicitly loaded files. Changes made by another application require loading the current file again. Reference checks cover the attached states. Register deletion checks every ID in the removed subtree, including URI-encoded fragments in companion pointers. References in unattached files remain outside that check. Reassigning a companion role retains the former file without that role; colliding filenames are refused.
 
 ## Transcription and commentary
 
 **Transcription** presents diplomatic and normalized readings for the current navigation unit. Each row identifies an existing TEI word. For a simple word, changing **Diplomatic reading** changes both its text and `w/@orig`; **Normalized reading** changes `w/@norm`. Words containing inline markup retain that markup, and their diplomatic text is edited through XML source. The normalization field remains available. Existing `choice`, abbreviation, correction, and other inline structures participate in the shared reading projection.
 
 Normalization is an editorial assertion entered by the user. The workspace supplies no lexical normalization rules and does not generate normalized readings during PAGE import. XML identifiers and facsimile links remain unchanged when a word reading changes.
+
+The generic **Witnesses** pane can select explicitly encoded witness readings and maintain their descriptions and attributions. Its [reading-evidence contract](specification.md#witness-reading-and-descriptions) applies equally to a codex. Missing attribution, ambiguity and fragment boundaries remain explicit; selecting a witness does not reconstruct an unencoded text from commentary apparatus.
 
 **Commentary** creates entries in a top-level `standOff/listApp`. A new entry inserts two unique boundary `anchor` elements around the selected source passage and records them in `app/@from` and `app/@to`. This follows TEI's double-end-point apparatus mechanism. The project offers `comment_edition` for editorial comments and `comment_understanding` for interpretative comments. Existing apparatus types remain available with their encoded values. Each note retains its own text, `xml:lang`, and `resp`. [TEI `app`](https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-app.html)
 
@@ -100,7 +102,7 @@ Verse mappings are independent entries in `standOff/spanGrp[@type='bible-verses'
 
 In **Bible verses**, create a mapping, select the word range, and enter a reference according to the Vulgate edition being cited. Record that edition in **Comment and reference edition**. Psalm and other edition-dependent numbering must follow the cited source. The interface accepts the supplied reference string and does not silently translate between numbering systems. Latin text is optional and must be supplied from the reference edition; the application neither retrieves nor invents it. The current form does not provide a controlled Bible-book vocabulary or an external verse concordance.
 
-A free reference remains in `span/@n` and the reference text. It does not automatically acquire `@cRef`: TEI associates that attribute with a header-declared canonical reference scheme. Existing `cRef` values survive unrelated edits unchanged. A supplied declaration remains an editorial contract; the editor does not certify the cited edition or evaluate arbitrary XPath replacement rules. [TEI canonical references](https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.cReferencing.html)
+A free reference remains in `span/@n` and the reference text. TEI associates `@cRef` with a header-declared canonical reference scheme, so the form requires an explicit declaration before adding or changing that attribute. It checks the presence and unambiguous selection of `refsDecl/cRefPattern`; it does not execute the pattern's regular-expression matching and URI replacement. Existing `cRef` values survive unrelated edits unchanged. The cited edition and the supplied reference's meaning require editorial assessment. [TEI canonical references](https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.cReferencing.html), [TEI `cRefPattern`](https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-cRefPattern.html)
 
 ## Image annotation contract
 
@@ -163,27 +165,33 @@ The default Wenzelsbibel schema set combines the application's pinned TEI All sc
 | Layer | Purpose | Effect |
 | --- | --- | --- |
 | XML and TEI All validation | Check XML structure and the selected TEI content model | Required for schema-authorized Save and Download |
-| Editorial `editing` phase | Require the Wenzelsbibel TEI root while allowing incomplete annotation records | Default project phase, paired with TEI All |
+| Editorial `editing` phase | Require a document-root `TEI` in the TEI namespace while allowing incomplete annotation records | Default project phase, paired with TEI All |
 | Editorial `review` phase | Check image-record completeness and local reference conventions | Explicit **Check editorial completeness** action in **Project checks** |
 | Companion checks | Resolve codex image zones/ranges, apparatus boundaries, and shared-register references | Findings apply to currently attached document snapshots |
 | Scholarly review | Assess readings, entities, verse alignment, descriptions, and attribution | Remains an editorial responsibility |
 
 The review phase checks nonempty title, short and full description, folio target, positive height, artist attribution resolving to header responsibility names, bilingual ICONCLASS labels with targets, and nonempty syntactically correct statistical ranges. It does not require a statistical range or an ICONCLASS entry where no such record exists. The profile does not judge the accuracy of their content. Cross-document resolution is performed by the companion checks because the Schematron does not load the codex.
 
-**Project checks** also identifies unresolved apparatus endpoints and register references. **Keep sole reading** is an explicit repair for an attribute-free `choice` containing a single supported branch: it removes that redundant choice wrapper while retaining the existing reading. The action invents no missing alternative. Other structures require inspection in XML source.
+**Project checks** also identifies unresolved apparatus endpoints and register references. **Keep sole reading** explicitly removes an attribute-free `choice` wrapper containing a single supported branch and retains that reading. The action creates no missing alternative. Other structures require inspection in XML source.
 
-Save and Download validate the exact proposed XML revision. RelaxNG and XSD compilation and validation run in a dedicated browser worker. A bounded in-memory cache reuses a successful decision only for the identical XML and complete schema dependency graph, identified by SHA-256. A changed source or schema requires validation. **Cancel validation** in the validation details and the project export's cancellation control terminate pending worker work and cannot authorize a download. Status distinguishes schema preparation, XML parsing, validation and exact-result reuse. The explicit editorial review action is separate from the editing-phase save gate.
+Save, Download and Project package follow the shared [output gate](specification.md#fail-closed-multi-schema-output-gate). An identical successful vocabulary-schema result may be reused; changed XML or schema dependencies require another decision. **Cancel validation** and the package cancellation control prevent output from the pending operation. The first full validation of a large changed codex remains expensive, particularly in Firefox; measured limits are recorded in the [completion report](../reports/editorial-completion-2026-09-11.md). The explicit completeness review remains separate from the editing-phase output gate.
 
 ## Applying, preserving, and reopening work
 
 Form changes remain staged until **Apply** succeeds. **Cancel** restores the represented source values. Changing records, sections, navigation units, or documents requires applying or cancelling unfinished input first. Applied changes enter the active document's undo history. A read-only session disables mutation controls.
 
-Recovery includes all attached project documents, their settings and images, and supported unfinished input in the active file. **Working copy** version 2 preserves this state even when TEI output cannot pass its schema; version 1 remains readable. Neither recovery nor a working copy carries an output authorization or filesystem permission. XML/SVG image attachments remain recoverable in Working copy; Project package refuses them because the image channel cannot provide their own XML schema decision.
+Recovery and **Working copy** retain attached project documents, their settings and images, and supported unfinished input in the active file. They carry no output authorization or filesystem permission. XML/SVG image attachments remain recoverable in Working copy; Project package refuses them because the image channel cannot provide their own XML schema decision. [Data](data.md#local-recovery-and-portable-working-copies) defines the portable representation and compatibility rules.
 
-For a complete editorial pass, export and reopen the project package; inspect transcription, comments, verse alignment, images and registers; and rerun project checks plus editorial completeness review. Use Working copy to preserve any unfinished or invalid state. Successful schema validation establishes formal validity for the selected rules and source revision; scholarly verification and user acceptance remain separate statements.
+An editorial pass can use these operating steps:
 
-## Implementation boundaries
+1. Open the codex and attach its image annotations and shared registers. Confirm filenames and project settings before creating relative references.
+2. Inspect transcription and commentary against their sources. Supply verse references and any Latin text from the identified comparison edition, and check image descriptions and attributions against the miniature.
+3. Run **Project checks** and **Check editorial completeness**. Resolve each finding through an explicit correction or record the editorial reason for retaining the source.
+4. Preserve unfinished or invalid state through **Working copy**. For a formally valid delivery, export **Project package**, reopen it and inspect the restored relationships and file settings.
+5. Record scholarly review against the identified source state and obtain user acceptance of the operating workflow.
 
-The workspace and form modules coordinate the existing editor. `wenzels-text-model.js`, `wenzels-image-model.js`, and `wenzels-register-model.js` operate on source ranges. `wenzels-project-checks.js` resolves relationships and supports explicit repairs. `page-xml-import.js` provides a reusable deterministic importer, while `page-xml-onramp.js` supplies its local file interface. The generic editor continues to own document sessions, raw XML, output authorization, and recovery.
+## Editorial acceptance
 
-The current model leaves edition-dependent judgments visible: authority identification, artist-vocabulary reconciliation, normalization policy, interpretation of existing apparatus types, reference-edition numbering, and whether a miniature has a statistical text relation. It supplies no automatic codex fusion, external Latin-text corpus, or live multi-document collaboration. These boundaries preserve explicit editorial control over assertions that cannot be inferred reliably from the available source files.
+Formal validity establishes conformity with the selected schemas for an identified output. The edition team still assesses authority identification, artist vocabulary, normalization policy, apparatus interpretation, verse numbering and the existence or scope of a miniature's text relation. An external Vulgata concordance, automatic codex fusion and concurrent-editor coordination are outside the implemented workflow. Technical test results do not settle those editorial judgments or establish user acceptance.
+
+[Architecture](architecture.md) maps the project models to the generic editor. [Testing](testing.md) distinguishes model checks, observed browser behaviour and scholarly review; the [completion report](../reports/editorial-completion-2026-09-11.md) identifies the recorded implementation and source states.

@@ -10,12 +10,12 @@ template:
   name: Vorlage Specification
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
-status: active
+status: complete
 created: 2026-02-05
 updated: 2026-09-11
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
-related: [project, data, architecture, testing]
+related: [project, data, architecture, design, testing, wenzelsbibel]
 ---
 
 # teiCrafter Specification
@@ -23,6 +23,8 @@ related: [project, data, architecture, testing]
 ## Normative outcome
 
 teiCrafter shall let an editor work on heterogeneous TEI through source-backed projections while preserving the complete XML document. Every TEI Save or Download shall be authorized against the exact output bytes for the current document revision. The explicitly unvalidated Working copy preserves session state through a separate JSON export. The interface shall explain its structural interpretation, scholarly provenance, review state, and any reason output is blocked.
+
+Normative requirements define the behaviour an implementation must satisfy. [Architecture](architecture.md) identifies the implementation, [Testing](testing.md) defines the verification method, and the [editorial completion report](../reports/editorial-completion-2026-09-11.md) records observed results. Scholarly validation and user acceptance require the responsible editors' assessment of identifiable source data and editorial outcomes.
 
 ## Document and session integrity
 
@@ -34,7 +36,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **D.6 Source scopes.** Page or unit XML, complete header XML, and complete-document XML shall commit through substitution into the canonical string. Well-formedness and validation shall evaluate the resulting complete document.
 - **D.7 Staged input.** Reading, XML, metadata and specialized workspace input shall share ownership of the session and source from which it was opened. Navigation, history, re-rendering and unrelated mutations shall not silently discard unfinished values. Apply shall reject stale ownership, reparse the full result before replacing canonical state, and retain input after failure. Context workspaces shall not replace the staged-input owner while XML or Metadata is active.
 - **D.8 Literal input.** Text and attribute editors shall treat input as literal Unicode, escape entity-looking text, reject XML-illegal characters, and preserve unchanged lexical spellings. An unresolved named entity shall require exact XML editing if its value would change.
-- **D.9 Recovery.** Independent document sessions shall retain canonical XML, unfinished input, schema/project configuration, attached project documents and image blobs in versioned checkpoints. Storage errors shall be visible. A portable Working copy shall preserve unfinished work without a schema gate and without claiming validated output. Reopening shall restore each attached document's source, encoding and settings without reusing native handles.
+- **D.9 Recovery.** Independent document sessions shall retain canonical XML, unfinished input, schema/project configuration, attached project documents and image blobs in versioned checkpoints. Storage errors shall be visible. A portable Working copy shall preserve unfinished work without a schema gate and without claiming validated output. Reopening shall restore each attached document's source, encoding and settings. Native handles and output authorizations shall require new acquisition. The first restored checkpoint shall use the intended recovery identity and include the complete restored state.
 - **D.10 Read only.** Read-only mode shall reject source-changing transactions and undo/redo while permitting navigation, inspection, search and copying. The interface shall refuse entry into that mode with unresolved visible edits.
 - **D.11 Safe targets.** A derived file shall choose an unused filename. Existing image content shall be reused only after exact comparison, and shall never be silently replaced. Recovery may be cleared after a complete native save or explicit discard; initiating a download is insufficient evidence.
 - **D.12 Asynchronous persistence.** Save and every TEI export shall resolve unfinished visible input and recheck authorization after asynchronous work. New input during a native write shall prevent a clean savepoint. Completion shall affect only the captured session and recovery identity. Checkpoints shall capture nested values before queueing; a storage failure shall remain visible and shall not disable subsequent attempts.
@@ -59,7 +61,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **P.4 Session override.** A session schema upload shall replace the complete project schema set for the active document session. Linked files retain independent overrides; a new file or draft starts with its own configured defaults. Restoration applies its recorded settings before creating a checkpoint. The interface shall identify the effective source.
 - **P.5 Default schema.** The vendored TEI P5 TEI All RelaxNG shall apply only when the project provides no schema set and no session override exists.
 - **P.6 Declarative boundary.** Manifests may configure data and policy. They shall not inject executable code, provider adapters, or arbitrary validation programs.
-- **P.7 Persistent document collection.** Switching among explicitly attached project documents shall retain their current source and per-file settings. Ambiguous document identities, filenames and assigned companion roles shall be rejected. Read-only mode shall remain effective across the switch.
+- **P.7 Persistent document collection.** Switching among explicitly attached project documents shall checkpoint their current source and per-file settings before activation. A storage error or intervening change shall preserve the current file and prevent the pending switch. Ambiguous document identities, filenames and assigned companion roles shall be rejected. Read-only mode shall remain effective across the switch.
 - **P.8 Validated package.** Project package shall authorize every XML document against its own effective ordered schema set and produce one ZIP only after all decisions pass. A failed, cancelled or stale operation shall produce no partial package. XML-like image attachments shall not bypass this gate.
 - **P.9 Native save scope.** In-place Save shall affect the active document. Unsaved companions shall retain project recovery. A package download shall not be presented as an atomic write across external files or as proof that the archive was saved to disk.
 
@@ -71,7 +73,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **H.4 Safe direct editing.** A text-only or empty paired element and an ordinary attribute may be edited directly when the change has an exact byte-safe inverse.
 - **H.5 XML-only content.** Mixed content, structured content, self-closing elements, the header container, and namespace declarations shall be marked XML-only.
 - **H.6 Minimal mutation.** Unchanged metadata values shall produce no mutation. Changed text and attributes shall be escaped and applied through descending exact splices while preserving quote style and surrounding whitespace.
-- **H.7 Structural changes.** Creation, deletion, and restructuring of header content shall use the complete exact XML surface.
+- **H.7 Structural changes.** The generic Metadata form shall route creation, deletion and restructuring to the complete exact XML surface. A specialized workspace may provide a bounded source-preserving operation, as defined for witness descriptions in T.3.
 
 ## Review Records
 
@@ -108,6 +110,9 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **V.8 Raw Schematron subset.** Browser execution shall accept the documented XPath 1.0 subset. Includes, abstract patterns, advanced match patterns, node-set lets, and XPath 2.0 or later shall yield unavailable unless the project supplies compiled XSLT.
 - **V.9 Compiled Schematron.** Compiled XSLT shall require browser `XSLTProcessor` support and a valid SVRL `schematron-output` result. Missing runtime support or invalid SVRL shall block output.
 - **V.10 Comparative harness.** Offline fidelity evaluation may report schema differences without gating. That comparative level shall remain distinct from browser output authorization.
+- **V.11 Exact-result reuse.** A successful vocabulary-schema decision may be reused only for identical XML and the identical complete schema dependency graph. Inputs shall be captured before asynchronous work. Reuse shall still produce authorization for the current output operation and shall not waive any other configured schema.
+- **V.12 Responsive execution.** RelaxNG and XSD compilation and validation shall run outside the main browser thread. Worker failure shall produce an unavailable result, and progress shall distinguish preparation, XML parsing, validation and successful-result reuse.
+- **V.13 Cancellation.** An explicit cancellation shall terminate pending worker work and prevent that operation from authorizing output. A subsequent validation request shall remain possible.
 
 ## LLM assistance and provenance
 
@@ -147,23 +152,23 @@ An explicit starter choice may create new transcription, correspondence, charter
 
 - **T.1 Source identity.** Witness selection shall resolve unique local definitions and explicit reading `@wit` pointers, including defined witness groups. Grouping through `rdgGrp` shall not imply inherited `@wit`.
 - **T.2 Reading evidence.** A selected witness shall expose an explicitly attested apparatus branch. Missing or ambiguous attribution shall remain visible without assuming agreement with the lemma. Empty readings and encoded fragment boundaries shall remain distinguishable. Text outside encoded apparatus shall remain base text.
-- **T.3 Description editing.** Witness creation and simple description edits shall preserve unrelated source. Structured witness descriptions shall use exact XML checked in full-document context. Referenced IDs and descendants shall be protected against deletion or renaming.
+- **T.3 Description editing.** Witness creation and simple description edits shall preserve unrelated source. Structured witness and referenced bibliographic descriptions shall use exact XML checked in full-document context, including definitions outside the header. Referenced IDs and descendants shall be protected against deletion or renaming.
 - **T.4 Attribution editing.** Editing a reading's `@wit` shall retain its text and other attributes. New pointers shall require unique local definitions with resolvable local scope; unsupported external references shall remain available in exact XML.
 - **T.5 View and session integrity.** Choosing a reading witness shall not mutate source or history. Witness forms and exact XML shall obey the shared staged-input, recovery, read-only and output contracts.
 
+## Wenzelsbibel authoring contract
+
+- **W.1 Specialized workspace.** An explicit Wenzelsbibel project identity or workspace declaration shall expose project forms through the shared session and preservation contracts.
+- **W.2 Source fidelity.** Editing a normalized reading shall change only that reading. A deliberate diplomatic correction may update text and `@orig` together; mixed content without a safe form inverse shall remain accessible through exact XML.
+- **W.3 Apparatus.** Existing comment types, languages, responsibility and boundary anchors shall retain their encoded values. New comments shall use explicit boundary anchors around the selected word range.
+- **W.4 Project relations.** Image zones, statistical word ranges and shared-register references shall be checked against explicitly attached companions. Register deletion shall protect every descendant ID referenced by those companions, including encoded URI fragments. Transaction and output scope shall follow P.7–P.9.
+- **W.5 Scholarly modelling.** Peoples shall use identified collective-agent records. Bible mappings shall retain the supplied edition's numbering and optional editor-supplied Latin text. Free reference labels shall acquire no implicit canonical scheme; new or changed `cRef` shall require an explicit, unambiguous header declaration. The [Wenzelsbibel contract](wenzelsbibel.md) defines field semantics and serialization.
+- **W.6 Validation.** Bundled TEI All and the authored editing profile shall govern output when the project provides no schemas. A separate review phase shall check editorial completeness. The local profile shall retain its own authorship and identity because the original `Bilderfassung.sch` is unavailable. Formal checks shall remain separate from scholarly acceptance.
+- **W.7 PAGE transport.** PAGE XML import shall create a separate draft, retain source text and usable geometry, respect declared order, and report unsupported or degenerate geometry. Import shall preserve image filenames and supply no inferred normalization, Latin text or codex fusion.
+
 ## Acceptance scenarios
 
-### Wenzelsbibel authoring contract
-
-- **W.1 Specialized workspace.** An explicit Wenzelsbibel project identity or workspace declaration exposes transcription, apparatus, image and register forms through the existing session and preservation contract.
-- **W.2 Source fidelity.** Editing a normalized reading changes only that reading. A deliberate diplomatic correction may update text and `@orig` together; mixed content without a safe form inverse remains accessible through exact XML.
-- **W.3 Apparatus.** Existing comment types, languages, responsibility and boundary anchors remain editable without normalization to a reduced vocabulary. New comments use explicit boundary anchors around the selected word range.
-- **W.4 Project relations.** Image zones, statistical text ranges and shared-register references are checked against explicitly attached companions. A mutation changes only the active document. Recovery and Working copy preserve the collection; Project package validates and delivers its files together. Native saves remain document-local.
-- **W.5 Scholarly modelling.** Peoples use collective-agent TEI records. Bible mappings retain the reference edition's numbering and editor-supplied Latin text. The field and serialization contracts are defined in [Wenzelsbibel](wenzelsbibel.md).
-- **W.6 Validation.** Bundled TEI All and the authored editing profile govern output when the project provides no schemas. The separate review phase checks editorial completeness. It shall not be presented as the unavailable original Bilderfassung.sch or as scholarly acceptance.
-- **W.7 PAGE transport.** PAGE XML imports create a separate draft, retain source text and usable geometry, respect declared order, and report unsupported or degenerate geometry without inventing coordinates.
-
-### Scenarios
+The scenarios define assessable outcomes. A recorded technical pass applies to its specified code, inputs and environment. The responsible editor evaluates whether the resulting readings, annotations and workflows satisfy the edition's scholarly purpose; user acceptance remains a separate recorded decision.
 
 | Scenario | Acceptance condition |
 | --- | --- |
@@ -174,9 +179,9 @@ An explicit starter choice may create new transcription, correspondence, charter
 | Review | Append targeted evidence, detect source changes, restore current status on exact Undo, and reopen without erasing history |
 | Cross-structure mention | Collect separated ranges, write one stand-off group, project every segment, and remove the group without text loss |
 | Schema set | Execute every ordered schema and block when any result is invalid or unavailable |
-| Stale validation | Change the document after a valid result and require a new gate before output |
+| Validation lifecycle | Reuse a result only for identical XML and schema dependencies, invalidate changed state, cancel pending work without output, and allow a fresh request |
 | Firefox fallback | Load through file input and obtain exact source bytes through Download and Save fallback after schema authorization |
-| UFBAS whole book | Exercise real navigation, header, review, schema-gated output, and accessibility in Chromium and Firefox |
+| Supplied UFBAS whole book | Exercise real navigation, header, review, schema-gated output and accessibility when the rights-local object is available |
 | Wenzelsbibel workspace | Exercise transcription, commentary, verses, images, shared registers, staged recovery and exact output with synthetic material; separately run supplied real codex and image files |
 | Entry collection | Exercise both encodings, exact edits, ID-safe duplication, protected deletion, explicit batch preview, one-step Undo and recovery |
 | Witness reading | Select explicit attestations, disclose absent/ambiguous/empty readings, edit descriptions and attribution, and preserve all source alternatives |
@@ -208,11 +213,11 @@ An explicit starter choice may create new transcription, correspondence, charter
 - Review fingerprints cover source ranges, excluding revision history. Separate metadata/register review and cross-document responsibility scopes remain open.
 - Entry batches and deletion-reference checks cover the active XML file. Project-wide batch edits, cross-file relinking and additional project-specific fields require their own explicit contracts.
 - Witness reading exposes encoded local attestations. External witness lookup, reconstruction outside encoded apparatus and arbitrary apparatus-location methods remain outside this contract.
-- Raw Schematron uses a bounded XPath 1.0 interpreter. Projects that rely on the complete ISO pipeline must provide compiled XSLT or validate outside the browser before teiCrafter can authorize output.
+- Raw Schematron uses a bounded XPath 1.0 interpreter. Rules outside that subset require compiled XSLT executable by the browser. An external validation result remains separate evidence and cannot authorize browser output.
 - Provider adapters are registered by trusted application code. Declarative plugin discovery and remotely supplied executable adapters are outside the current security boundary.
-- The real Wenzelsbibel codex is rights-local. Reproducible browser automation uses a synthetic structural twin, so real cross-browser facsimile acceptance requires a locally supplied object.
-- Very large documents still use whole-string parsing and reparsing. Segmented persistence would require a new canonical-state model and is outside this increment.
+- Rights-local objects supplement public synthetic fixtures when supplied for a recorded run. Real-object performance and facsimile claims shall identify the actual local source and accessible image service; see [Testing](testing.md) and the [editorial completion report](../reports/editorial-completion-2026-09-11.md).
+- Large documents use whole-string parsing and reparsing. Segmented persistence would require a different canonical-state contract.
 
 ## Related
 
-[Project](project.md) owns positioning and boundaries. [Data](data.md) owns the serialized forms. [Architecture](architecture.md) owns the module composition and data flow. [Testing](testing.md) owns the evidence method.
+[Project](project.md) defines the editorial purpose. [Data](data.md) specifies serialized forms, [Architecture](architecture.md) explains their implementation, and [Design](design.md) governs interaction. [Testing](testing.md) links requirements to evidence.

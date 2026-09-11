@@ -10,35 +10,36 @@ template:
   name: Vorlage Reference
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/reference
-status: active
+status: complete
 created: 2026-06-08
-updated: 2026-06-08
+updated: 2026-09-11
 language: en
 version: 0.6.1
 topics: ["[[Converter]]", "[[SZD]]", "[[Page-JSON]]", "[[TEI]]"]
-related: [data, architecture, specification, integration]
+related: [data, architecture, specification, integration, worked-examples, testing]
 ---
 
 # SZD Page-JSON v0.2 to TEI Converter Reference
 
-The deterministic contract for converting szd-htr Page-JSON v0.2 to teiCrafter-target
-TEI, implemented by `pipeline/export_tei.py` and verified against the teiCrafter
-engine. The conversion is fully **deterministic** (a rule, never an LLM); the
-transcription is already done (it sits in `pages[].text`), so there is nothing for a
-model to generate here.
+This document owns the frozen conversion contract from szd-htr Page-JSON v0.2 to
+teiCrafter-target TEI. The local [reference generator](../test/generators/szd-pagejson-to-tei.mjs)
+defines the output; the local [Python port](../pipeline/export_tei.py) implements the same mapping for SZD inputs.
+Conversion applies deterministic rules to the transcription in `pages[].text`.
 
-This contract is **frozen** (status `active`, M1.2 done). The mappings, the id scheme,
-and the geometry are fixed from the v0.2 schema, the reference prototype, and the demo
-handful. The open points named in section 9 were resolved against real data
-(the handful plus a 151-object deterministic spread across the ~2069-object
-corpus; `test/proofs/port_parity.mjs` and `pipeline/export_tei.py`).
+Contract version `0.6.1` preserves the mappings, identifiers, geometry and deliberate
+omissions established at the June 2026 freeze. The source observations in section 9
+explain that frozen scope. They are historical evidence, and the milestone labels in
+that section refer to the original conversion lane. The current editor workflow is in
+[worked-examples.md](worked-examples.md#stefan-zweig-digital-conversion-workflow);
+[testing.md](testing.md) and the [report index](../reports/README.md) own current
+execution evidence. Updating navigation in this document does not revise the converter contract.
 
 ## 0. Sources of truth for this document
 
 - The Page-JSON v0.2 schema: `szd-htr/schemas/page-json-v0.2.json`.
 - The reference prototype (spec-by-example, self-verifying):
   [test/generators/szd-pagejson-to-tei.mjs](../test/generators/szd-pagejson-to-tei.mjs). Every
-  rule below cites the prototype line that implements it.
+  mapping below points to the corresponding prototype function.
 - Two real objects read: `o_szd.100` (typescript, en, 3 images,
   creator present) and `o_szd.1079` (letter, de, 5 images, no creator). The demo
   target is **o_szd.1079**.
@@ -171,9 +172,8 @@ contribute no surface (and their `<pb>` carries no `@facs`). Prototype:
   `https://gams.uni-graz.at/o:szd.1079/IMG.1`. Fall back to `pages[].image` (a bare
   filename like `IMG_1.jpg`) only if `source.images[i]` is missing; a bare filename
   will not resolve in the browser, so prefer the GAMS URL.
-  teiCrafter reads this back in [readSurfaces tei-document.js:387-393](../docs/js/editor/tei-document.js#L387)
-  and renders it via the `surface.graphic` fallback in
-  [renderFacsimile editor-app.js:389](../docs/js/editor/editor-app.js#L389).
+  teiCrafter reads this back through `readSurfaces` in [tei-document.js](../docs/js/editor/tei-document.js)
+  and renders it through the facsimile path in [editor-app.js](../docs/js/editor/editor-app.js).
 - **Zones from regions.** Each `pages[].regions[]` entry becomes one `<zone>`:
   - id: `z_{page}_{region.id}` (e.g. `z_1_r1`).
   - `@type = region.type` when present (`paragraph` / `heading` / `list` / `table` /
@@ -261,11 +261,11 @@ from a non-empty register; everything else is hand-added in teiCrafter (M3.3).
 | zone | `z_{page}_{region.id}` | `z_1_r1` |
 
 `slug()` is NFKD, strip combining marks, lowercase, non-`[a-z0-9]` to `_`, trim `_`
-([szd-pagejson-to-tei.mjs:39-48](../test/generators/szd-pagejson-to-tei.mjs#L39)). It must
-agree with the editor's `slugify` for hand-added entities to stay NCName-safe and
-collision-free ([slugify standoff.js:61-73](../docs/js/editor/standoff.js#L61)).
-Hand-added entities in teiCrafter use the prefixes `plc_` (place), `org_`, `evt_`
-(event), `wrk_` (work), so converter ids and editor ids never collide.
+([reference generator](../test/generators/szd-pagejson-to-tei.mjs)). This converter rule
+is fixed independently of the editor's current `slugify` and identifier allocation
+in [standoff.js](../docs/js/editor/standoff.js). The editor checks existing IDs when
+adding entities. Entity-class prefixes distinguish persons, places, organisations,
+events and works; a prefix alone does not guarantee uniqueness within a class.
 
 ## 8. Editorial markers (v1: preserve verbatim)
 
@@ -276,10 +276,9 @@ inside the `<lb>` line, which is deterministic and lossless. They remain
 human-readable and round-trip byte-identically.
 
 Mapping markers to TEI editorial elements (`<unclear>`, `<gap>`, `<del>`, `<add>`,
-`<note>`) is teiCrafter goal M3.6 (full ambition, not demo-critical) and is added in a
-later revision of this contract **only after** real data confirms which markers
-actually occur and with what exact syntax. Encoding markers we have not observed would
-be guesswork; v1 stays literal on purpose.
+`<note>`) requires a separate converter-contract revision supported by observed source
+syntax. The frozen conversion retains literal markers. The editor's current annotation
+tools are defined independently in [specification.md](specification.md).
 
 ## 9. Resolved against real data (M1.2 freeze)
 
@@ -340,14 +339,15 @@ node test/generators/szd-pagejson-to-tei.mjs <in_page.json> <out.xml>
 
 It writes `<out.xml>` and self-verifies (round-trip + line-level) before exiting 0;
 on any contract violation it prints the failing summary and exits 1.
-`pipeline/export_tei.py` is a faithful port of this prototype's rules (Python instead
-of Node, same output), driven by object id, producing the handful with o_szd.1079
-first (M1.3).
+The local `pipeline/export_tei.py` ports the prototype's rules. The frozen
+contract requires byte-identical output and rejects ambiguous object identifiers;
+the parity proof compares the implementations on available SZD source inputs.
 
 teiCrafter's own per-feature proof for the engine side of this contract (graphic url,
 zones in pixels, place/work entities, authority idno, line-level model, byte-identical
 round-trip) is `node test/proofs/szd_demo_check.mjs`.
 
-Port parity (this port produces byte-identical output to the reference prototype over the
-handful, so the Python output round-trips through the engine exactly as the prototype's
-does) is `node test/proofs/port_parity.mjs` (5/5 byte-identical, the upstream-deduped o_szd.161/korrespondenzen skipped).
+Port parity is checked by `node test/proofs/port_parity.mjs`. It compares output from
+the Python port with the reference prototype over available local sources.
+Record the executed revision and missing inputs with the run result; the freeze's
+sample observations do not establish that an upstream source is available today.

@@ -80,7 +80,7 @@ The required gate runs Node proofs, the Python harness, JavaScript checking, Bio
 
 ## Documentation and project history
 
-Start at [knowledge/INDEX.md](knowledge/INDEX.md). Each knowledge document owns one question: product, formats, requirements, architecture, design, testing, integration or examples. [reports/README.md](reports/README.md) separates current plans and implementation evidence from historical snapshots. Run-specific outcomes belong in dated reports.
+Start at [knowledge/INDEX.md](knowledge/INDEX.md). Each knowledge document owns one question: product, formats, requirements, architecture, design, testing, integration or examples. The [journal](knowledge/journal.md) records decisions and their reasons; the [handoff inbox](knowledge/handoff.md) holds received deltas awaiting integration. [reports/README.md](reports/README.md) separates release requirements and implementation evidence from historical observations. Run-specific outcomes belong in dated reports.
 
 The original prototype was developed in 2023 and presented at FORGE using Hugo Schuchardt correspondence. Digital Humanities Craft maintains the current open-source tool for editorial projects using the Promptotyping method. Project manifests support configuration; the knowledge base supports deeper adaptations through ordinary development or a coding agent. See [project identity and history](knowledge/project.md).
 

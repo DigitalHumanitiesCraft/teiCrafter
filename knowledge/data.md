@@ -10,7 +10,7 @@ template:
   name: Vorlage Datengrundlage
   version: 0.1
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
-status: active
+status: complete
 created: 2026-05-27
 updated: 2026-09-11
 language: en
@@ -28,45 +28,30 @@ related: [project, specification, architecture, testing]
 
 # teiCrafter Data and Test Material
 
-## Canonical document state
+## Canonical XML contract
 
-The canonical state is the complete XML source string. The parser records exact raw offsets and a namespace-aware tree without serializing the document through a browser DOM. Every structured view is a projection over that string. A successful edit replaces the smallest representable range and reparses the result. A semantic no-op returns the original string.
+The complete XML source string is canonical. Untouched UTF-8 source retains whitespace, prefixes, quoting, entity spelling and byte-order-mark state. A semantic no-op returns the original source. Unsupported or conflicting encodings are rejected before editing.
 
-TEI identity is determined by the namespace URI `http://www.tei-c.org/ns/1.0`. The document may use a default namespace or any prefix. Elements in another namespace remain preserved source data and do not enter TEI inventories, review records, metadata projections, or annotation operations merely because they share a local name.
+TEI identity is the namespace URI `http://www.tei-c.org/ns/1.0`; a default namespace and an arbitrary bound prefix are equivalent for interpretation. Foreign elements with matching local names remain preserved source data and do not enter TEI operations. [Architecture](architecture.md) describes the offset parser, projections and mutation boundary.
 
 ## Inputs and outputs
 
-| Form | Ingest rule | Output rule |
-| --- | --- | --- |
-| TEI XML file | Decode UTF-8 with an optional BOM; reject unsupported or conflicting encodings, retain exact source, and derive a Source Profile | Encode the schema-authorized projected source for Save or Download |
-| Project folder | Read TEI, plaintext, manifest, mapping, and resolvable schema resources through a granted directory handle | Write to the granted file when supported; otherwise use a schema-gated download |
-| Plaintext or Markdown | Convert deterministically to minimal TEI using blank lines as paragraphs and `\|N\|` as a page milestone | Save or download the resulting TEI |
-| Model-generated TEI | Accept only a self-contained, well-formed TEI P5 document with the minimum header and text body | Persist document-level responsibility and require schema authorization for TEI output; human review remains separate evidence |
-| Model proposals | Map bounded JSON proposals to exact source operations and mark each construct with `@resp` | Confirm retains origin and records acceptance separately; reject reverses the proposed construct |
-
-Plaintext conventions transport structure that is present in the source text. Semantic pseudo-syntax is excluded because a typo would silently create a scholarly assertion outside the editor's review and validation surfaces.
-
-## Document inventory and Source Profile data
-
-The document inventory records observed TEI element names, attributes, values, reading-text nodes, `xml-model` references, facsimile pointers, and structural relationships. Source Profile rules convert that inventory into evidence-backed capabilities. The Navigation Model then materializes exact raw ranges for available channels such as corpus members, entries, speech turns, table rows, descriptive records, source documents, sections, surfaces, pages, and the whole document.
-
-A Source Profile contains the following durable categories.
-
-| Category | Meaning |
+| Form | Data contract |
 | --- | --- |
-| Capabilities | Structures or editorial functions supported by evidence in the document, schema, or project policy |
-| Primary navigation | The source-backed channel used by the pager and review scope |
-| Available navigation | Other channels retained as document context |
-| Reading projection | Local token or text-run cells and optional diplomatic or normalized readings |
-| Metadata and context panels | Header, correspondence, facsimile, apparatus, source document, table, or project panels |
-| Authoring scope | Vocabulary supplied by manifest policy, conservative schema evidence, or observed document structure |
-| Issues | Ambiguity, unsatisfied overrides, or incomplete evidence that the interface must disclose |
+| TEI XML | UTF-8 with optional BOM; Save and Download encode the exact schema-authorized target projection |
+| Plaintext or Markdown | Deterministic draft with blank lines as paragraphs and `\|N\|` as a page milestone; selected starter templates supply their declared encoding |
+| Project folder | TEI or text sources beside a declarative manifest, mapping text, schema resources and optional images |
+| PAGE XML and optional METS | Deterministic separate TEI draft with explicit page ordering and retained import diagnostics; details in [Wenzelsbibel](wenzelsbibel.md) |
+| Working copy | Portable JSON for canonical and unfinished editing state, including companions and images, without an output-validation requirement |
+| Project package | One validated ZIP containing the XML collection, eligible images and restoration metadata |
+| Model-generated TEI | Self-contained, well-formed TEI P5 with required header and text body, document responsibility and separate human-review evidence |
+| Model proposals | Bounded JSON proposals mapped to exact source operations, with persistent origin and independently recorded acceptance |
 
-Schema evidence is conservative. ODD can declare modules, included or excluded elements, and classes. RelaxNG provides negative allowances only when reachable definitions form a closed profile. `include`, `externalRef`, unresolved references, broad names, and TEI All make that evidence incomplete. XSD declarations provide positive approximate hints because imports and content models can distribute semantics across resources. Schematron contributes validation rules and supplies no structural authoring profile.
+Plaintext conventions transport explicit structure. They do not interpret ad hoc pseudo-syntax as scholarly assertions. Deterministic imports and model-generated drafts retain distinct provenance.
 
 ## Project manifest
 
-`teicrafter.project.json` is a declarative project contract. Schema order is significant and repeated schema kinds are permitted.
+`teicrafter.project.json` declares project policy. Its canonical schema declaration is an ordered `schema.schemas` array; repeated schema types are permitted.
 
 ```json
 {
@@ -93,68 +78,82 @@ Schema evidence is conservative. ODD can declare modules, included or excluded e
 }
 ```
 
-The canonical schema shape is an ordered `schema.schemas` array. Each entry contains `type`, `path`, and an optional human-readable `name`. Supported manifest types are `relaxng`, `xsd`, and `schematron`. Legacy singular schema forms normalize into the same runtime set for compatibility.
+Each schema entry has `type`, `path` and optional `name`. Manifest types are `relaxng`, `xsd` and `schematron`. Legacy singular declarations normalize to this runtime form on ingest.
 
-Project-level `uiProfile` provides defaults. A matching document type overrides `primaryNavigation` per field and contributes additional disabled capabilities. An unavailable requested channel produces an explicit issue and the resolver selects a source-backed fallback.
+Project `uiProfile` supplies defaults. A matching document type overrides the primary-navigation field and adds disabled capabilities. Requested channels require source anchors; unsatisfied policy produces an issue and a source-backed fallback. The derived inventory, Source Profile and Navigation Model are revision-specific projections described in [architecture](architecture.md#source-discovery-and-navigation).
 
-Other manifest data includes markup actions, TEI modules and elements, indices, reconciliation policy, image resolution, declared views, interchange format, and LLM prompt, mapping, and responsibility. `workspace: "wenzelsbibel"` selects the specialized project interface. A manifest contains data and cannot register executable LLM adapters.
+Other fields declare markup, TEI authoring scope, indices, reconciliation, image resolution, views, interchange, model mapping and responsibility. `workspace: "wenzelsbibel"` selects the specialized interface. The manifest contains data and cannot register executable provider adapters. [Integration](integration.md#project-folder-and-schema-handoff) defines project loading and dependency resolution.
 
 ## Schema set and validation result
 
-The effective schema set comes from one source.
+Effective schemas follow this precedence for each document.
 
-1. A session upload replaces the project choice for the current session.
-2. An ordered project schema set applies when configured.
-3. The vendored TEI P5 TEI All RelaxNG applies when no project schema exists.
+1. A document's uploaded schema override replaces its project set until reset.
+2. Its configured ordered project set applies when no override is active.
+3. Vendored TEI P5 TEI All RelaxNG applies when no project schema is configured.
 
-Each execution result records schema identity, type, source, validity, diagnostics, and availability. Output authorization additionally binds the aggregate result to the document session, document revision, exact projected bytes, and effective schema-set key. A nonempty result set authorizes output only when every result is valid.
+Recovery and the project collection preserve each document's own schema settings. Opening another companion or creating a new document does not transfer the outgoing override. A schema result records identity, type, validity, availability and diagnostics. Output authorization additionally binds the result to the session, revision, document object, exact projected source and ordered schema key. Every result in a nonempty set must be valid.
 
-RelaxNG `include` and `externalRef`, plus XSD `include`, `import`, and `redefine`, can resolve through served URLs. A granted project folder resolves nested relative dependencies inside its root with bounded traversal and cycle detection. Missing resources and paths outside the root remain unavailable. A standalone session upload has no implicit dependency bundle. No XML catalog fallback is provided.
+RelaxNG `include` and `externalRef`, and XSD `include`, `import` and `redefine`, resolve through served URLs or within a granted project folder. Nested folder resources remain inside the granted root. Unavailable resources block output. A standalone upload has no implicit local dependency bundle, and XML catalogs are outside the supported contract.
 
-Raw Schematron supports the ISO namespace, XPath 1.0 query bindings, namespaces, default phases, scalar lets, assertions, reports, diagnostics, and common child or attribute rule contexts. Includes, abstract patterns, advanced match patterns, node-set lets, and XPath 2.0 or later require precompiled XSLT. Compiled Schematron must produce a valid SVRL `schematron-output` document through the browser's XSLT processor. An unsupported construct or runtime blocks output as unavailable.
+Raw ISO Schematron supports XPath 1.0 bindings, namespaces, default phases, scalar lets, assertions, reports, diagnostics and common child or attribute contexts. Includes, abstract patterns, advanced match patterns, node-set lets and later XPath versions require precompiled XSLT. Compiled Schematron must yield a valid SVRL `schematron-output` through the browser's XSLT processor. Unsupported constructs or runtimes produce unavailable results.
 
-## Complete header projection
+## Header fields
 
-The header inventory traverses every TEI element and ordinary attribute below the document's legitimate `teiHeader` in source order. Common title, publication, source, profile, and revision fields receive familiar labels and grouping. Unrecognized fields remain present through generated labels and exact XML paths.
+The header inventory covers every TEI descendant and ordinary attribute under the legitimate `teiHeader`, in source order. Common fields receive familiar labels; other fields retain generated paths and exact XML access.
 
-Direct editing is limited to projections with a byte-safe inverse.
-
-| Header shape | Projection |
+| Shape | Editable representation |
 | --- | --- |
-| Text-only or empty paired element | Editable text value |
-| Ordinary attribute | Editable attribute value with original quoting and surrounding whitespace retained |
-| Mixed or structured element content | XML-only |
-| Self-closing element | XML-only |
-| Header container | XML-only |
-| Namespace declaration | XML-only |
+| Text-only or empty paired element | Scalar content value |
+| Ordinary attribute | Scalar value preserving original quoting and surrounding whitespace |
+| Mixed or structured content | Exact XML |
+| Self-closing element or header container | Exact XML |
+| Namespace declaration | Exact XML |
 
-Changed values are XML-escaped and applied as descending exact splices. Unchanged values produce no splice, which preserves entity spelling and all untouched bytes. Creation, deletion, and restructuring use the complete header XML surface.
+Unchanged field values preserve their lexical form. In the generic metadata interface, structural creation, deletion and rearrangement use the complete header XML surface. Specialized witness operations can also change their supported header structures. A project-specific header declaration remains visible even when no dedicated form exists.
 
 ## Local recovery and portable working copies
 
-IndexedDB database `teicrafter.recovery`, store `sessions`, holds version 1 checkpoints keyed by independent session UUIDs. Records contain canonical `raw`, document name/source, file encoding, original manifest text, local schema resources, schema settings, capture time, staged input, image blobs and an optional project document collection. Staged modes are `page`, `metadata`, `metadata-form`, `inline`, `wenzels`, `witness` and `entries`. Generic modes retain the applicable navigation unit, source text, field ID/value pairs or cell ID with core/normalized input. Wenzelsbibel forms retain their section, selected record and field values. Witness forms retain a selected record, creation flag and description, XML or attribution fields. Entry forms retain section, selected entry, encoding kind, explicit batch targets and field values. A restored batch requires a new preview before Apply.
+IndexedDB database `teicrafter.recovery`, store `sessions`, holds version 1 checkpoints keyed by independent session UUIDs. A checkpoint contains canonical `raw`, filename, source metadata, UTF-8/BOM state, dirty baseline, manifest text, schema resources and settings, capture time, staged input, image blobs and optional project documents. The [restoration boundary](architecture.md#staged-input-and-restoration) installs the full record before its first automatic checkpoint.
 
-Portable files use `.teicrafter.json` and `{ format: "teicrafter-working-copy", version: 2, record: ... }`; version 1 imports remain supported. Images use `{ name, type, base64 }` instead of Blob values. The format preserves editing state without schema authorization. Native handles, object URLs and the provider's memory-only API key fields are not serialized. Import assigns a fresh session identity and recreates image URLs. Legacy single-draft localStorage content is removed only after its IndexedDB migration commits.
+| Staged mode | Retained unfinished state |
+| --- | --- |
+| `page`, `metadata` | Source text and applicable navigation context |
+| `metadata-form` | Field IDs and values |
+| `inline` | Cell identity, core text and normalized input |
+| `wenzels` | Section, selected record and form fields |
+| `witness` | Selected record, creation state and description, XML or attribution fields |
+| `entries` | Section, selected entry, encoding kind, fields and explicit batch targets |
 
-The optional `projectDocuments` value has `{ version: 1, activeId, documents }`. Each document has a stable internal `id`, safe relative XML filename, source, UTF-8/BOM state, dirty state, project/schema settings, reading-witness preference and loaded images. The Wenzelsbibel roles `codex`, `images` and `registers` are unique when assigned; ordinary documents may have no role. The portable representation stores active raw XML and images once on the surrounding record, and restores them into the active collection member on import. Inconsistent active identities or source bytes and ambiguous filenames are rejected.
+A restored entry batch requires a new preview. Saved fields never carry continuing mutation authorization.
+
+Portable files use `.teicrafter.json` and `{ format: "teicrafter-working-copy", version: 2, record: ... }`. Import also accepts version 1. Images use `{ name, type, base64 }` in place of Blob values. Native handles, object URLs and memory-only provider keys are excluded. Import creates a fresh recovery identity and recreates image URLs. Restoring an existing recovery entry retains that entry's identity. Legacy single-draft localStorage data is removed only after its IndexedDB migration commits.
+
+`projectDocuments` has `{ version: 1, activeId, documents }`. Each member retains a stable internal `id`, safe relative XML filename, source, encoding, dirty state, project/schema settings, reading-witness preference and loaded images. Assigned Wenzelsbibel roles `codex`, `images` and `registers` are unique; additional documents can remain unassigned. The collection retains previously edited documents when another role becomes active.
+
+The portable representation stores active raw XML and images once on the surrounding record, then reconstructs that active member on import. Inconsistent active identities, conflicting source values and ambiguous filenames are rejected. Captured companions are retained copies; later filesystem edits do not update them automatically.
 
 ## Validated project package
 
-`teicrafter-project.zip` contains separately encoded XML files, eligible loaded image bytes and `teicrafter-bundle.json`. That metadata document uses `{ format: "teicrafter-project-bundle", version: 1, projectDocuments }`, with XML content stored in the named archive files. Image records refer to archive paths. The package codec checks safe paths, filename conflicts, CRC values and its supported single-volume ZIP layout. XML-like image attachments cannot bypass schema validation through the image channel; Working copy can retain them as unfinished project data.
+`teicrafter-project.zip` contains separately encoded XML files, eligible loaded images and `teicrafter-bundle.json`. The manifest has `{ format: "teicrafter-project-bundle", version: 1, projectDocuments }`; XML content and image bytes reside at the referenced archive paths. Metadata retains the active document identity and per-document encoding, project settings, schemas, dirty state and reading preference.
 
-Package creation requires a current authorization for every XML file, each using its effective ordered schema set and target projection. A failure or intervening source, staged-input or schema change prevents the complete package download. This is one delivery artifact; native File System Access Save still writes one active XML file and its required images.
+The codec accepts its own uncompressed, UTF-8, single-volume ZIP32 layout. The complete archive may contain at most 2,147,483,647 bytes and 65,534 file entries, including the manifest and images. These limits apply to both encoding and decoding. It checks path safety, case-insensitive normalized filename conflicts, checksums, lengths, offsets and complete archive coverage. Unsupported compressed or foreign ZIP layouts are rejected. XML-like image attachments cannot bypass schema validation through the image channel; Working copy can retain such unfinished attachments.
+
+Creation requires a current authorization for every XML member's exact target projection and effective schemas. Cancellation, invalid or unavailable validation, new staged input or a changed collection prevents delivery. Opening a package restores editing data and grants no continuing output authorization. Native Save retains its separate document-local contract in [integration](integration.md#browser-files-and-deployment).
 
 ## Entry and witness encodings
 
-Dictionary entry forms map the lemma through `entry/form[@type='lemma']/orth`, accepting an untyped form when no lemma form exists. A single `sense/def` supplies the definition. Encyclopedia articles use `div[@type='entry' or @type='article']/head` and a single direct `p`. Multiple candidates and mixed content require XML editing. Local `xml:lang` and `n` are separate scalar fields. Missing fields may be created when their container is unambiguous; an empty body needs an explicit dictionary/article choice.
+Dictionary forms map the lemma through `entry/form[@type='lemma']/orth`, accepting an untyped form when no lemma form exists. A single `sense/def` supplies the definition. Articles use `div[@type='entry' or @type='article']/head` and a single direct `p`. Multiple candidates or mixed content require XML editing. Local `xml:lang` and `n` remain separate scalar fields. Missing fields can be created in unambiguous containers; an empty body requires an explicit dictionary/article choice.
 
-Duplication allocates unused identifiers for the complete copied subtree and rewrites supported internal URI-fragment attributes. Unchanged attributes and external targets retain their original bytes. Ambiguous identifiers, duplicate attributes, compound internal pointers or unknown reference semantics prevent unsafe copying. Deletion checks references to every descendant ID within the active document. Batch plans contain an explicit target list, one supported field (`xml:lang` or `n`) and its replacement value, with before/after rows bound to the current document revision.
+Duplication assigns unused IDs throughout the copied subtree and rewrites supported internal URI-fragment pointers, including encoded fragments. Unchanged attributes and external targets retain their bytes. Duplicate IDs or attributes, compound internal pointers, unknown reference semantics and external XML base context prevent assumptions about safe rewriting. Deletion checks references to every descendant ID within the active document. Batch plans bind an explicit target list, `xml:lang` or `n`, and before/after values to the current document. Cross-file relinking is outside those operations.
 
-Witness definitions use `listWit/witness`; referenced `bibl`, `biblStruct` and `msDesc` descriptions remain inspectable through exact XML. Apparatus alternatives use `app/lem`, `app/rdg` and nested `rdgGrp` structures. Attestation comes from a reading's own `@wit` pointers to a unique local witness or witness group. A surrounding `rdgGrp` does not supply inherited `@wit`. Reading selection preserves every alternative and identifies missing or ambiguous attribution, explicit omissions and fragment-boundary markers. The working copy retains the selected reading witness as a view preference.
+Witness definitions use `listWit/witness`; referenced `bibl`, `biblStruct` and `msDesc` descriptions remain inspectable as exact XML. Alternatives use `app/lem`, `app/rdg` and nested `rdgGrp`. Attestation comes from each reading's own `@wit` pointers to unique local witnesses or groups. Grouping does not supply inherited `@wit`.
+
+Reading projection preserves every alternative and identifies absent or ambiguous attribution, explicit omissions and fragment-boundary markers. The selected witness is a retained view preference and does not change XML. Unsupported apparatus-location or external-definition semantics remain visible editorial limits.
 
 ## Review Record
 
-A review is represented in the relevant document or corpus-member header. The following historical form has no fingerprint and therefore does not establish current review by itself.
+A review resides in the relevant document or corpus-member header. This historical record lacks a scope fingerprint and therefore cannot establish current review on its own.
 
 ```xml
 <revisionDesc>
@@ -166,13 +165,13 @@ A review is represented in the relevant document or corpus-member header. The fo
 </revisionDesc>
 ```
 
-The target points to a stable `xml:id` on the primary navigation unit. New records add a `corresp` token consisting of `urn:teicrafter:review-scope:v1:sha256:` followed by the 64 lowercase hexadecimal digest characters. The digest covers the exact UTF-8 source range: a page runs from its pb to the next pb in its text owner, and a container covers its outer XML. Contained revisionDesc ranges are excluded. Changes outside this scope do not invalidate its review; whitespace changes inside it do. The latest record must be verified and its fingerprint must match for current review.
+`target` points to a unique `xml:id` on the primary navigation unit. New records add a `corresp` token beginning `urn:teicrafter:review-scope:v1:sha256:` followed by the 64 lowercase hexadecimal digest characters. The digest covers exact UTF-8 source. A page extends from its `pb` to the next `pb` in its text owner; a container covers its outer XML. Contained `revisionDesc` ranges are excluded. Whitespace changes inside that scope invalidate the fingerprint; changes outside it do not.
 
-The editor creates a unique identifier when the unit lacks one. Reopening appends a `subtype="reopened"` record; historical, shared and unmanaged revision content remains intact. Ambiguous revision structures, duplicate identifiers or a missing header cause review storage to fail closed. Legacy `@ana="#teicrafter-reviewed"` markers can be removed without removing unrelated tokens, but never count as current evidence.
+Current review requires the latest applicable record to be verified with a matching fingerprint. Reopening appends `subtype="reopened"`; existing revision history remains preserved. Duplicate identifiers, missing headers or incompatible revision structures block review storage. Legacy `@ana="#teicrafter-reviewed"` is historical evidence and can be removed without removing unrelated tokens.
 
 ## Cross-structure and discontinuous annotations
 
-Stand-off annotations preserve selected text and insert zero-width boundary anchors at exact raw offsets.
+Generic stand-off annotations retain selected text and insert boundary anchors at exact raw positions.
 
 ```xml
 <standOff>
@@ -183,13 +182,13 @@ Stand-off annotations preserve selected text and insert zero-width boundary anch
 </standOff>
 ```
 
-A continuous selection across XML boundaries uses one `span`. A discontinuous selection uses several ordered, non-overlapping spans in one group. Each span may carry `ana` and `resp`. Projection resolves every anchor pair back into exact reading ranges, so all segments participate in highlighting, relinking, and removal. Removing a group also removes boundary anchors that have no remaining reference.
+A continuous cross-structure selection uses one span. A discontinuous selection uses ordered, non-overlapping spans in one group. Each may carry `ana` and `resp`. Group identity connects highlighting, relinking and removal across segments. Cleanup removes boundary anchors only when no remaining reference needs them.
 
-The generic interactive collector creates entity annotations within one TEI document. The Wenzelsbibel workspace additionally authors image `corresp` and `#range(...)` expressions against attached companions, apparatus comments, Bible verse spans and shared-register links. [Wenzelsbibel](wenzelsbibel.md) owns those serialized forms and the PAGE XML transport contract. Companion source and settings persist in the project document collection described above. An external file change requires explicitly refreshing the corresponding attachment.
+The generic collector operates within one TEI document. [Wenzelsbibel](wenzelsbibel.md) owns apparatus comments, Bible-verse spans, shared-register links and image `corresp` or `#range(...)` forms against attached companions. Their domain-specific interpretation is separate from the generic span encoding.
 
-## Machine provenance and provider configuration
+## Machine provenance
 
-Generated whole-document TEI carries the configured responsibility on the TEI root and declares that responsibility in a matching `respStmt`.
+Whole-document generated TEI carries a configured responsibility pointer on the root and declares it in a matching `respStmt`.
 
 ```xml
 <TEI xmlns="http://www.tei-c.org/ns/1.0" resp="#ai">
@@ -203,27 +202,26 @@ Generated whole-document TEI carries the configured responsibility on the TEI ro
       <sourceDesc><p>Generated from supplied source text.</p></sourceDesc>
     </fileDesc>
   </teiHeader>
+  <text><body><p>Draft text.</p></body></text>
 </TEI>
 ```
 
-Reload detection requires both the root pointer and the declared responsibility. Per-construct proposals also use `@resp`. Project policy may replace `#ai` with another local responsibility pointer.
+Reload detection requires both pointer and declaration. Per-construct proposals also use `@resp`; project policy can replace the default local pointer.
 
-Acceptance retains the complete `resp` token list and adds `urn:teicrafter:proposal:accepted:` plus the URI-encoded responsibility token to `ana`. For example, accepting responsibility `#ai` adds `urn:teicrafter:proposal:accepted:%23ai`. Existing analysis tokens remain. Pending status and origin are independent: the matching acceptance marker resolves that responsibility's proposal, while its origin remains available after reload. An accepted gap retains these attributes when its reversible choice is collapsed.
+Acceptance preserves the complete `resp` token list and adds `urn:teicrafter:proposal:accepted:` plus the URI-encoded responsibility token to `ana`. Accepting `#ai` therefore adds `urn:teicrafter:proposal:accepted:%23ai` while retaining existing analysis tokens. Origin and pending status remain independent. An accepted gap retains this evidence when its reversible choice is collapsed. Provider transport and key handling belong to [integration](integration.md#model-and-authority-services).
 
-Provider configuration distinguishes data from executable behaviour. Built-in providers and the custom OpenAI-compatible endpoint use declarative endpoint, model, and authentication settings. A registered adapter supplies application-code functions for request construction and response extraction. Endpoint validation rejects embedded credentials. Keys remain memory-only.
+<a id="licence-boundary"></a>
 
-## Evidence material
+## Source material and rights
 
-| Material | Rights and storage | Evidence supplied |
-| --- | --- | --- |
-| UFBAS Urfehde TEI | Real object supplied locally | Historical whole-book browser evidence; current reproduction requires the local source, with availability recorded in the run report |
-| Wenzelsbibel Codex 2759 and image annotations | Real rights-local project material | Word tokens, dual readings, surfaces, zones, IIIF references, TEI-level apparatus, and the need for cross-document range support |
-| Jeanne Hersch TEI | Real rights-local project material plus committed synthetic twin | Inline-GND interchange, register projection, facsimile zones, and project-specific workflows |
-| Stefan Zweig Digital source material | Upstream project data plus generated TEI fixtures | Page-JSON conversion and catalogue-document integration |
-| Type-diverse synthetic fixtures | Committed and redistributable | Reproducible Source Profile, navigation, span, schema, and browser coverage |
+| Material | Storage and relevant properties |
+| --- | --- |
+| UFBAS Urfehde | Local real whole-book TEI for navigation, header, review and accessibility workflows |
+| Wenzelsbibel Codex 2759, image annotations and PAGE sources | Local real project material for word readings, surfaces, zones, apparatus and cross-document references |
+| Jeanne Hersch | Local real TEI and a committed structural twin for inline-GND interchange and facsimile workflows |
+| Stefan Zweig Digital | Upstream catalogue and Page-JSON material with generated TEI fixtures |
+| Type-diverse synthetic fixtures | Redistributable source structures for repeatable projection, mutation, schema and browser checks |
 
-## Licence boundary
+Availability and run outcomes belong to [dated reports](../reports/README.md). [Testing](testing.md#real-material-and-reproducibility) distinguishes synthetic coverage from opt-in real-source evidence.
 
-The committed [hsa-7711 transcription](../docs/data/editor/hsa-7711/README.md) and [SZD conversion](../docs/data/editor/szd/NOTICE.md) have their own source and licence declarations. TEI [schema](../docs/schemas/tei-p5-4.11.0/NOTICE.md) and [guidelines](../docs/data/tei/NOTICE.md) notices govern vendored reference material.
-
-Real third-party TEI is never committed when its licence does not permit redistribution. A structural twin captures only the encoding properties needed for reproducible tests. [Testing](testing.md) states which claims use real material and which use a twin.
+The committed [hsa-7711 transcription](../docs/data/editor/hsa-7711/README.md) and [SZD conversion](../docs/data/editor/szd/NOTICE.md) carry separate source and licence declarations. Notices for vendored [TEI schemas](../docs/schemas/tei-p5-4.11.0/NOTICE.md) and [guidelines](../docs/data/tei/NOTICE.md) govern reference material. Third-party originals whose rights do not permit redistribution remain outside the public repository. Structural twins retain only encoding properties needed for reproducible checks.
