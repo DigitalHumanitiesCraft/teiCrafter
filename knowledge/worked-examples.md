@@ -98,7 +98,7 @@ The Wenzelsbibel codex supplies a demanding TEI edition shape.
 
 The rights-local proof parses the complete codex, identifies the word and project profiles, preserves a no-op exactly, resolves IIIF image targets, and derives usable zone bounds from point geometry. Dual-reading edits update diplomatic text, an existing `@orig`, and `@norm` atomically. An empty normalized value removes `@norm`, while a missing `@orig` remains missing.
 
-This evidence applies to the local engine and profile path. It establishes that the complete real object can pass through the offset model and facsimile resolver. It does not establish a committed browser run because the codex cannot be redistributed.
+This evidence applies to the local engine and profile path. It establishes that the complete real object can pass through the offset model and facsimile resolver. Separate opt-in Chromium and Firefox workflows exercise the real source through `WB_CODEX` and `WB_IMAGES`; the source files remain local, and dated reports record which cases ran.
 
 ### Browser path through the structural twin
 

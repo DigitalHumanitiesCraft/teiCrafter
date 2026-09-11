@@ -132,7 +132,7 @@ Changed values are XML-escaped and applied as descending exact splices. Unchange
 
 ## Local recovery and portable working copies
 
-IndexedDB database `teicrafter.recovery`, store `sessions`, holds version 1 checkpoints keyed by independent session UUIDs. Records contain canonical `raw`, document name/source, file encoding, original manifest text, local schema resources, schema settings, capture time, staged input and image blobs. Staged modes are `page`, `metadata`, `metadata-form` and `inline`; each records its navigation unit and either source text, field ID/value pairs, or a cell ID with core/normalized input.
+IndexedDB database `teicrafter.recovery`, store `sessions`, holds version 1 checkpoints keyed by independent session UUIDs. Records contain canonical `raw`, document name/source, file encoding, original manifest text, local schema resources, schema settings, capture time, staged input and image blobs. Staged modes are `page`, `metadata`, `metadata-form`, `inline` and `wenzels`. Generic modes retain the applicable navigation unit, source text, field ID/value pairs or cell ID with core/normalized input. Wenzelsbibel forms retain their section, selected record and field values.
 
 Portable files use `.teicrafter.json` and `{ format: "teicrafter-working-copy", version: 1, record: ... }`. Images use `{ name, type, base64 }` instead of Blob values. The bundle is editing state, not validated TEI. Native handles, object URLs and the provider's memory-only API key fields are not serialized. Import assigns a fresh session identity and recreates image URLs. Legacy single-draft localStorage content is removed only after its IndexedDB migration commits.
 

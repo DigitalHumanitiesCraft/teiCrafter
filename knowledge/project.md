@@ -86,7 +86,7 @@ teiCrafter preserves arbitrary TEI through exact source views and targeted splic
 
 The browser inspects the effective repository, project, or session schema set after opening a document and after a session override changes. Multiple vocabulary schemas contribute conjunctive evidence. Schematron remains constraint evidence for validation. An unavailable or partially resolved vocabulary schema leaves the affected capabilities unknown, so profile inspection cannot block opening or suppress a structurally observed capability without sound negative evidence. This descriptive path remains separate from the fail-closed output gate.
 
-The stand-off span engine operates within one TEI document. Wenzelsbibel's separate image-annotation document uses cross-file pointers and range expressions, which require a project-level multi-document editing model. The present editor preserves such pointers in raw XML and treats interactive cross-document authoring as future integration work.
+The stand-off span engine operates within one TEI document. The Wenzelsbibel workspace edits its separate image annotations and shared registers through explicitly attached companion documents. Its forms create and resolve cross-file pointers and codex range expressions against those snapshots. One document is active at a time; each changed file is saved separately, and companions must be reattached after a reload. Atomic multi-file persistence and concurrent editing remain outside this contract.
 
 ## Project origin and comparisons
 
