@@ -28,6 +28,10 @@ Trigger: the user requested branch consolidation and a practical Wenzelsbibel an
 
 The real-source pass exposed expensive distinct-value collection and cold vocabulary-schema compilation. Decision: retain document-derived caches and execute schema compilation in a dedicated worker without relaxing output validity. The build now restricts runtime data copying to versioned files because locally available research material must remain outside public artifacts. [The dated workflow report](../reports/wenzelsbibel-workflow-2026-09-11.md) records the tested scope and remaining source findings.
 
+The final public-example check exposed an HTTP-success HTML response for a missing XML asset in Vite's single-page fallback. Decision: serve the application as multiple pages, treat HTML example responses as unavailable, and require a TEI root before replacing the current session. The synthetic Wenzelsbibel example now selects its workspace explicitly, without borrowing the real codex's image resolver. Browser acceptance includes the actual missing-asset path alongside controlled error responses.
+
+Activating the specialization in that example exposed competing input owners when the XML or metadata view opened beside the project panel. Decision: those views retain exclusive input ownership, while the project forms resume in the reading view. The shared working-copy and navigation checks now exercise this combination explicitly.
+
 ## 2026-09-05: secure the development checkpoint with explicit open acceptance
 
 Trigger: the user requested a controlled session close, current project documentation and an Obsidian Active Work update. Decision: preserve the completed increment with a [dated re-entry report](../reports/session-close-2026-09-05.md), while keeping Firefox output latency and real-material acceptance open. The vault routes to the repository for implementation evidence. Reason: securing the work must retain its known limitations so the next session starts from the observed failure rather than assuming release readiness.

@@ -506,6 +506,14 @@ export function createWenzelsWorkspace(ctx) {
     if (!element || !activeDoc()) return;
     host = element;
     if (stagedInput.hasChanges()) return;
+    if (app.sourceMode) {
+      importForm?.dispose(); importForm = null;
+      imageViewer?.destroy(); imageViewer = null;
+      clear(host); host.classList.add("ed-wb-workspace");
+      host.append(el("h2", { text: "Wenzelsbibel" }));
+      note("Use the editor on the left for XML source and metadata. Return to Reading text to use the Wenzelsbibel forms.");
+      return;
+    }
     stagedInput.clear();
     importForm?.dispose(); importForm = null;
     imageViewer?.destroy(); imageViewer = null;

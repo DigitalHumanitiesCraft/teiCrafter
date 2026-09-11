@@ -736,10 +736,19 @@ test("local OpenSeadragon and uploaded synthetic TEI work without CSP violations
   });
   const localRequests = [];
   page.on("response", (response) => {
-    if (/openseadragon|min\.js|editor-screenshot\.png/.test(response.url())) {
-      localRequests.push({ url: response.url(), status: response.status() });
+    if (/openseadragon|min\.js|editor-screenshot/.test(response.url())) {
+      localRequests.push({ url: response.url(), status: response.status(), contentType: response.headers()["content-type"] });
     }
   });
+  await page.goto("/index.html");
+  const screenshot = page.getByRole("img", { name: "teiCrafter editor: facsimile left, TEI text right, entity annotation panel open", exact: true });
+  const image = await screenshot.evaluate(async (element) => {
+    await element.decode();
+    return { url: element.currentSrc, width: element.naturalWidth, height: element.naturalHeight };
+  });
+  expect(image.width).toBeGreaterThan(0);
+  expect(image.height).toBeGreaterThan(0);
+  const fixture = readFileSync(fixturePath, "utf8").replace('url="assets/editor-screenshot.png"', `url="${image.url}"`);
   await page.goto("/editor.html");
   await page.locator("#btn-load").click();
   const chooserPromise = page.waitForEvent("filechooser");
@@ -748,13 +757,14 @@ test("local OpenSeadragon and uploaded synthetic TEI work without CSP violations
   await chooser.setFiles({
     name: "browser-smoke.xml",
     mimeType: "application/xml",
-    buffer: readFileSync(fixturePath),
+    buffer: Buffer.from(fixture),
   });
 
   await expect(page.locator("#ed-docstrip")).toContainText("browser-smoke.xml");
   await expect(page.locator("#ed-folio-label")).toContainText("page 1/1");
   await expect(page.locator("#ed-osd .openseadragon-container")).toBeVisible();
-  await expect.poll(() => localRequests.some((request) => request.url.endsWith("/assets/editor-screenshot.png") && request.status === 200)).toBe(true);
+  await expect.poll(() => localRequests.some((request) => request.url === image.url && request.status === 200 && request.contentType?.startsWith("image/png"))).toBe(true);
+  await expect(page.locator('#ed-osd .ed-osd-zone[data-zoneid="zone_1"]')).toHaveCount(1);
   expect(await page.evaluate(() => typeof window.OpenSeadragon)).toBe("function");
   expect(localRequests.some((request) => request.url.includes("/vendor/openseadragon/") && request.status === 200)).toBe(true);
 

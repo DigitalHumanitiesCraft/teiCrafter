@@ -629,9 +629,15 @@ async function load(raw, name, handle, project, opts) {
 
 function applyLoad(raw, name, handle, project, opts = {}) {
   const t0 = performance.now();
+  const openedState = parseEdition(raw);
+  if (opts.example) {
+    const roots = openedState.doc.root.children.filter((node) => node.type === "element");
+    if (roots.length !== 1 || !(isTeiElement(roots[0], "TEI") || isTeiElement(roots[0], "teiCorpus"))) {
+      throw new Error("The example response is not a TEI document. The current document was kept.");
+    }
+  }
   schemaProfileRequest++;
   activeSchemaProfile = null;
-  const openedState = parseEdition(raw);
   const resolvedProject = withWenzelsDefaults(project || detectProject(openedState.doc));
   const workingDoc = workingDocument(openedState.doc, resolvedProject);
   const importedInterchange = workingDoc !== openedState.doc;
@@ -854,6 +860,7 @@ const EXAMPLES = {
     done: "Loaded the real Wenzelsbibel codex (facsimile via IIIF).",
     fallback: {
       label: "synthetic Wenzelsbibel", url: DEMO_URL, file: "wenzelsbibel-synthetic-codex.xml",
+      project: { workspace: "wenzelsbibel", name: "Wenzelsbibel (synthetic example)" },
       done: "Loaded the synthetic Wenzelsbibel twin (the real codex is not present here).",
     },
   },
@@ -887,17 +894,19 @@ async function loadExample(key) {
   if (!replacement) return;
   setStatus(`Loading ${ex.label}...`);
   try {
+    const isHtml = (response) => /^(?:text\/html|application\/xhtml\+xml)(?:;|$)/i.test(response.headers.get("content-type") || "");
     let res = await fetch(ex.url, { cache: "no-store" });
-    if (!res.ok && ex.fallback) {
+    if ((!res.ok || isHtml(res)) && ex.fallback) {
       ex = ex.fallback;
       setStatus(`Loading ${ex.label}...`);
       res = await fetch(ex.url, { cache: "no-store" });
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (isHtml(res)) throw new Error("The server returned an HTML page instead of the example XML. The current document was kept.");
     // Project manifest next to the example's TEI: a 404 is the normal public
     // deployment (PID detection takes over); a malformed manifest is reported
     // but never blocks the load.
-    let project = null, manifestNote = "";
+    let project = ex.project || null, manifestNote = "";
     if (ex.manifest) {
       try {
         const mres = await fetch(ex.manifest, { cache: "no-store" });
@@ -925,6 +934,7 @@ async function loadExample(key) {
     const decoded = decodeXmlBytes(await res.arrayBuffer());
     const opened = await load(decoded.text, ex.file, null, project, {
       replacement,
+      example: true,
       fileEncoding: { encoding: decoded.encoding, bom: decoded.bom },
     });
     if (!opened) return;

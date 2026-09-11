@@ -32,6 +32,7 @@ export function copyRuntimeCollections(root = repositoryRoot) {
 
 export default defineConfig({
   root: docsRoot,
+  appType: "mpa",
   base: "./",
   publicDir: false,
   worker: { format: "es" },

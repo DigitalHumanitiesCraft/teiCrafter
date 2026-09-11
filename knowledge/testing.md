@@ -125,6 +125,8 @@ Axe runs within that real state in Chromium and Firefox. Historical runs complet
 
 The local example has a committed structural twin. The dedicated workspace suite also exercises apparatus, verse mappings, image records, shared registers, read-only behavior, staged recovery and exact downloaded output. These synthetic fixtures establish reproducible interaction without redistributing the edition. Opt-in real browser cases require `WB_CODEX` and `WB_IMAGES`; they edit only temporary browser copies, compare exact expected output and verify that the originals remain unchanged. Dated reports state which real cases ran.
 
+The public-example suite exercises the server's actual missing-codex response without intercepting it, alongside HTML responses with HTTP 200 and invalid fallback roots. It checks the synthetic project's workspace, exact source preservation, and unfinished XML recovery while that workspace is selected. The facsimile smoke test resolves the build's actual image URL, decodes its pixels, and waits for a zone overlay created after viewer opening. A container or HTTP 200 alone cannot establish that an image loaded.
+
 The worker scenario measures browser heartbeats during real vocabulary-schema compilation and requires an exact validated download followed by a correctly rejected invalid revision. Pure worker tests cover request correlation, resource-graph transport, failure and restart. Large-source investigations measure parsing and derived projections separately; runtime limits remain attached to the actual environment and fixture.
 
 ## Running the gates

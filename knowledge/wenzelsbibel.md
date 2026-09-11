@@ -34,6 +34,8 @@ related: [project, specification, architecture, design, data, testing]
 
 The Wenzelsbibel workspace specializes teiCrafter for transcription readings, commentary, Bible references, miniature descriptions, and shared registers. It uses the same complete XML source, editing transactions, undo history, recovery, facsimile viewer, and schema gate as the generic editor. A project manifest selects it with `workspace: "wenzelsbibel"`; the built-in Wenzelsbibel project profile supplies the corresponding configuration.
 
+The start page's Wenzelsbibel example opens this workspace with a synthetic codex when the local original is absent. The sample has no original page images. For edition work, open the local codex and attach the corresponding image annotations and registers through **Linked project documents**.
+
 This document defines the implemented editorial model and its operating rules. The register and verse conventions, together with the local editorial Schematron, are teiCrafter-authored project decisions. Their implementation does not constitute scholarly acceptance of a particular annotation, artist attribution, normalization, or verse alignment. The edition team remains responsible for that review. Run-specific verification belongs in the repository's test reports.
 
 The implementation reads the existing codex and image-annotation topology without converting the edition to a new serialization. Unrelated attributes, namespaces, apparatus categories, multilingual notes, and unknown markup remain source data. A form changes only its represented fields. A semantic no-op preserves the original XML string. Ambiguous or mixed-content fields require the XML editor when a simple text form cannot preserve their structure.
@@ -50,6 +52,8 @@ The implementation reads the existing codex and image-annotation topology withou
 Exactly one document is editable at a time. **Linked project documents** attaches local XML files as reference snapshots. **Open for editing** makes a companion the active document and retains the former active document as an in-memory companion. The normal unsaved-document and unfinished-input safeguards apply to this transition.
 
 Every Apply operation belongs to the active document. Saving that document does not save its companions, and there is no atomic transaction spanning the codex, image annotations, and registers. Save each changed file explicitly. After a browser reload, reattach companion files for lookup and cross-file checks. A saved filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
+
+The Wenzelsbibel forms are available in **Reading text**. While **XML source** or **Metadata** is open, that left-hand editor owns unfinished input and the project panel shows a navigation hint. Return to **Reading text** to resume project forms. Changing views requires applying or cancelling the current input; **Working copy** can preserve it unfinished.
 
 Companions are snapshots rather than live filesystem subscriptions. If another application changes a file, attach its current version again. A reference check can establish consistency only for the attached documents. Deletion protection for a register entry cannot discover references in files that have not been attached.
 
