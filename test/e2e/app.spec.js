@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { COLD_SCHEMA_OUTPUT_TIMEOUT_MS, SCHEMA_WORKFLOW_TIMEOUT_MS } from "./helpers/schema-output-timing.js";
 
 const fixturePath = fileURLToPath(new URL("./fixtures/browser-smoke.xml", import.meta.url));
 const sourceProfileFixtureUrl = new URL("../fixtures-synthetic/source-profiles/", import.meta.url);
@@ -374,7 +375,7 @@ for (const fixture of sourceProfileCases) {
 }
 
 test("Markup progress filters note-bearing units without changing document state", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   const expectRuntimeClean = await monitorRuntime(page);
   await page.addInitScript(() => {
     Object.defineProperty(window, "showOpenFilePicker", {
@@ -455,7 +456,7 @@ test("Markup progress filters note-bearing units without changing document state
   await expect(page.locator(".ed-docstrip-name")).not.toHaveClass(/dirty/);
   await expect(page.locator("#btn-undo")).toBeDisabled();
 
-  const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+  const downloadPromise = page.waitForEvent("download", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await page.locator("#btn-download").click();
   const downloaded = await downloadedBytes(await downloadPromise);
   expect(downloaded.equals(Buffer.from(markupProgressXml))).toBe(true);
@@ -547,7 +548,7 @@ test("Markup progress filters note-bearing units without changing document state
 });
 
 test("discontinuous range collector persists two segments as valid TEI stand-off", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   const expectRuntimeClean = await monitorRuntime(page);
   await loadSyntheticFile(page);
 
@@ -562,7 +563,7 @@ test("discontinuous range collector persists two segments as valid TEI stand-off
   await page.getByRole("button", { name: "new person", exact: true }).click();
   await expect(page.locator("#ed-status")).toContainText("Annotated");
 
-  const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+  const downloadPromise = page.waitForEvent("download", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await page.locator("#btn-download").click();
   const output = (await downloadedBytes(await downloadPromise)).toString("utf8");
   expect(output).toMatch(/<spanGrp\b[^>]*\btype="entity"/);
@@ -575,7 +576,7 @@ test("discontinuous range collector persists two segments as valid TEI stand-off
 });
 
 test("range collector stays cancellable after an overlapping second selection", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   const expectRuntimeClean = await monitorRuntime(page);
   await loadSyntheticFile(page);
 
@@ -600,14 +601,14 @@ test("range collector stays cancellable after an overlapping second selection", 
   await page.getByRole("button", { name: "add another segment", exact: true }).click();
   await page.keyboard.press("Escape");
   await expect(page.locator("#ed-status")).toHaveText("Collected segments cleared.");
-  const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+  const downloadPromise = page.waitForEvent("download", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await page.locator("#btn-download").click();
   expect((await downloadedBytes(await downloadPromise)).equals(readFileSync(fixturePath))).toBe(true);
   await expectRuntimeClean();
 });
 
 test("overlapping entity layers can be inspected, relinked and removed safely", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   const expectRuntimeClean = await monitorRuntime(page);
   await loadSyntheticFile(page);
 
@@ -636,7 +637,7 @@ test("overlapping entity layers can be inspected, relinked and removed safely", 
   await page.getByRole("button", { name: "remove annotation", exact: true }).click();
   await expect(page.locator("#ed-status")).toContainText("Removed stand-off annotation");
 
-  const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+  const downloadPromise = page.waitForEvent("download", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await page.locator("#btn-download").click();
   const output = (await downloadedBytes(await downloadPromise)).toString("utf8");
   expect(output).not.toContain("<spanGrp");
@@ -869,12 +870,12 @@ test("Firefox uses capability-gated file input and schema-gated download fallbac
   page,
 }) => {
   test.skip(browserName !== "firefox", "Firefox-specific fallback coverage.");
-  test.setTimeout(90_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   const expectRuntimeClean = await monitorRuntime(page);
   await loadSyntheticFile(page);
   expect(await page.evaluate(() => typeof window.showOpenFilePicker)).toBe("undefined");
 
-  const directDownloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+  const directDownloadPromise = page.waitForEvent("download", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await page.locator("#btn-download").click();
   const directDownload = await directDownloadPromise;
   expect(directDownload.suggestedFilename()).toBe("browser-smoke.xml");

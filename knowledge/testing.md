@@ -127,6 +127,8 @@ The local example has a committed structural twin. The dedicated workspace suite
 
 The public-example suite exercises the server's actual missing-codex response without intercepting it, alongside HTML responses with HTTP 200 and invalid fallback roots. It checks the synthetic project's workspace, exact source preservation, and unfinished XML recovery while that workspace is selected. The facsimile smoke test resolves the build's actual image URL, decodes its pixels, and waits for a zone overlay created after viewer opening. A container or HTTP 200 alone cannot establish that an image loaded.
 
+Cold schema compilation is included explicitly in output-test budgets. Tests that await an initial TEI All validation use the dedicated worker probe's budget, while ordinary UI steps and cached negative checks retain their shorter limits. The worker probe emits phase and completion timing in the CI log. The CI workflow retains browser reports and failure traces for seven days; the optional real-source traces generated locally remain outside those CI artifacts.
+
 The worker scenario measures browser heartbeats during real vocabulary-schema compilation and requires an exact validated download followed by a correctly rejected invalid revision. Pure worker tests cover request correlation, resource-graph transport, failure and restart. Large-source investigations measure parsing and derived projections separately; runtime limits remain attached to the actual environment and fixture.
 
 ## Running the gates

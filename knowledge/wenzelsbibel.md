@@ -34,7 +34,7 @@ related: [project, specification, architecture, design, data, testing]
 
 The Wenzelsbibel workspace specializes teiCrafter for transcription readings, commentary, Bible references, miniature descriptions, and shared registers. It uses the same complete XML source, editing transactions, undo history, recovery, facsimile viewer, and schema gate as the generic editor. A project manifest selects it with `workspace: "wenzelsbibel"`; the built-in Wenzelsbibel project profile supplies the corresponding configuration.
 
-The start page's Wenzelsbibel example opens this workspace with a synthetic codex when the local original is absent. The sample has no original page images. For edition work, open the local codex and attach the corresponding image annotations and registers through **Linked project documents**.
+In the local development or build preview, the start page's Wenzelsbibel example opens this workspace with a synthetic codex when the local original is absent. The sample has no original page images. Examples remain hidden on the public deployment. For edition work in either environment, use **Load** to open the local codex and attach the corresponding image annotations and registers through **Linked project documents**.
 
 This document defines the implemented editorial model and its operating rules. The register and verse conventions, together with the local editorial Schematron, are teiCrafter-authored project decisions. Their implementation does not constitute scholarly acceptance of a particular annotation, artist attribution, normalization, or verse alignment. The edition team remains responsible for that review. Run-specific verification belongs in the repository's test reports.
 

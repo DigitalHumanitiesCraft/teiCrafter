@@ -32,6 +32,8 @@ The final public-example check exposed an HTTP-success HTML response for a missi
 
 Activating the specialization in that example exposed competing input owners when the XML or metadata view opened beside the project panel. Decision: those views retain exclusive input ownership, while the project forms resume in the reading view. The shared working-copy and navigation checks now exercise this combination explicitly.
 
+The Linux browser run showed that successful cold schema workflows exceeded the output waits used by several older Firefox scenarios. Decision: align those waits with the dedicated cold-worker probe, preserve every content and rejection assertion, and retain direct timing plus failed-run artifacts. The output gate itself remains unchanged.
+
 ## 2026-09-05: secure the development checkpoint with explicit open acceptance
 
 Trigger: the user requested a controlled session close, current project documentation and an Obsidian Active Work update. Decision: preserve the completed increment with a [dated re-entry report](../reports/session-close-2026-09-05.md), while keeping Firefox output latency and real-material acceptance open. The vault routes to the repository for implementation evidence. Reason: securing the work must retain its known limitations so the next session starts from the observed failure rather than assuming release readiness.

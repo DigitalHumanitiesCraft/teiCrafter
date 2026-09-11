@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { COLD_SCHEMA_OUTPUT_TIMEOUT_MS, SCHEMA_WORKFLOW_TIMEOUT_MS } from "./helpers/schema-output-timing.js";
 
 const source = '<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Worker validation</title></titleStmt><publicationStmt><p>Unpublished</p></publicationStmt><sourceDesc><p>Synthetic</p></sourceDesc></fileDesc></teiHeader><text><body><p>Exact source.</p></body></text></TEI>';
 
@@ -12,16 +13,31 @@ async function load(page, raw, name) {
 }
 
 test("cold schema compilation keeps the editor responsive and cached validation rejects invalid XML", async ({ page }, testInfo) => {
-  test.setTimeout(130_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
+  const metric = (values) => console.log(JSON.stringify({ metric: "schema-worker", browser: testInfo.project.name, ...values }));
+  await page.exposeFunction("reportSchemaPhase", (values) => metric({ event: "phase", ...values }));
   await page.addInitScript(() => Object.defineProperty(window, "showOpenFilePicker", { configurable: true, value: undefined }));
   await page.goto("/editor.html");
   await load(page, source, "worker-valid.xml");
   await page.evaluate(() => {
     window.__schemaHeartbeat = 0;
     window.__schemaHeartbeatTimer = setInterval(() => { window.__schemaHeartbeat++; }, 50);
+    window.__schemaScenario = "cold";
+    window.__schemaPhaseStart = performance.now();
+    window.__schemaLastPhase = null;
+    const chip = document.getElementById("ed-val-chip");
+    window.__schemaPhaseObserver = new MutationObserver(() => {
+      if (!window.__schemaScenario) return;
+      const phase = chip.textContent;
+      if (phase === window.__schemaLastPhase) return;
+      window.__schemaLastPhase = phase;
+      void window.reportSchemaPhase({ scenario: window.__schemaScenario, phase,
+        elapsedMs: Math.round(performance.now() - window.__schemaPhaseStart) });
+    });
+    window.__schemaPhaseObserver.observe(chip, { childList: true, subtree: true, characterData: true });
   });
   const started = Date.now();
-  const downloaded = page.waitForEvent("download", { timeout: 120_000 });
+  const downloaded = page.waitForEvent("download", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await page.locator("#btn-download").click();
   await expect(page.locator("#ed-val-chip")).toHaveText("Preparing schema...", { timeout: 10_000 });
   const initial = await page.evaluate(() => window.__schemaHeartbeat);
@@ -29,11 +45,24 @@ test("cold schema compilation keeps the editor responsive and cached validation 
   await expect(page.locator("#ed-val-chip")).toHaveText("Preparing schema...");
   const download = await downloaded;
   expect(readFileSync(await download.path(), "utf8")).toBe(source);
-  testInfo.annotations.push({ type: "cold-schema-ms", description: String(Date.now() - started) });
+  const coldMs = Date.now() - started;
+  testInfo.annotations.push({ type: "cold-schema-ms", description: String(coldMs) });
+  metric({ event: "complete", scenario: "cold", result: "valid", elapsedMs: coldMs });
+  await page.evaluate(() => { window.__schemaScenario = null; });
 
   const invalid = source.replace("<body>", "<unknown>").replace("</body>", "</unknown>");
   await load(page, invalid, "worker-invalid.xml");
+  await page.evaluate(() => {
+    window.__schemaScenario = "cached-invalid";
+    window.__schemaPhaseStart = performance.now();
+    window.__schemaLastPhase = null;
+  });
+  const cachedStarted = Date.now();
   await page.locator("#btn-download").click();
   await expect(page.locator("#ed-val-chip")).toHaveText("output blocked by schema", { timeout: 10_000 });
-  await page.evaluate(() => clearInterval(window.__schemaHeartbeatTimer));
+  metric({ event: "complete", scenario: "cached-invalid", result: "invalid", elapsedMs: Date.now() - cachedStarted });
+  await page.evaluate(() => {
+    clearInterval(window.__schemaHeartbeatTimer);
+    window.__schemaPhaseObserver.disconnect();
+  });
 });

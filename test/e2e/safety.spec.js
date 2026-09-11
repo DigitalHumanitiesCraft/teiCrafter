@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { COLD_SCHEMA_OUTPUT_TIMEOUT_MS, SCHEMA_WORKFLOW_TIMEOUT_MS } from "./helpers/schema-output-timing.js";
 
 const source = '<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Test</title></titleStmt><publicationStmt><p>Unpublished</p></publicationStmt><sourceDesc><p>Synthetic</p></sourceDesc></fileDesc></teiHeader><text><body><p>un<hi>klar</hi>! <choice><orig>vnd</orig><reg>und</reg></choice></p></body></text></TEI>';
 
@@ -205,7 +206,7 @@ test("read-only switching leaves unfinished XML available for recovery", async (
 });
 
 test("project folders expose nested files and preserve the plaintext output directory", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   await page.addInitScript((xml) => {
     const store = new Map();
     const file = (name, text) => {
@@ -237,7 +238,7 @@ test("project folders expose nested files and preserve the plaintext output dire
   await expect(page.locator(".ed-proj-directory > summary")).toHaveText("letters");
   await page.getByRole("button", { name: "letters/transcript.txt", exact: true }).click();
   await page.locator("#btn-save").click();
-  await expect(page.locator("#ed-status")).toContainText("Saved in place", { timeout: 60_000 });
+  await expect(page.locator("#ed-status")).toContainText("Saved in place", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
   await expect(page.locator("#ed-docstrip")).toContainText("letters/transcript (1).xml");
   const output = await page.evaluate(() => window.projectOutput());
   expect(output.original).toBe("Occupied source");

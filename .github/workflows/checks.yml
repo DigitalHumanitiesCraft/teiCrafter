@@ -34,6 +34,16 @@ jobs:
         run: npx playwright install --with-deps chromium firefox
       - name: Run browser E2E and accessibility smoke tests
         run: npm run test:e2e
+      - name: Preserve browser verification reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-verification-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload deployable Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

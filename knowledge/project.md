@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: active
 created: 2026-02-05
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal, integration]
@@ -64,7 +64,9 @@ The offline Python fidelity harness has a different purpose. It compares text fi
 
 ## Browser and deployment model
 
-teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set. The browser suite covers the fallback path in Chromium and Firefox; the [current report](../reports/refactoring-status-2026-09-05.md) records execution failures and performance limits. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
+teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set. The browser suite covers the fallback path in Chromium and Firefox; the [current report](../reports/wenzelsbibel-workflow-2026-09-11.md) records execution evidence and performance limits. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
+
+GitHub Pages automatically publishes the versioned `docs/` source from main. The checks workflow independently builds, verifies and packages `dist/`. Built-in examples are available on local development hosts; the public editor opens the researcher's local files through Load. Both forms of delivery use the same local XML and schema-worker model.
 
 External LLM services are optional. Built-in providers and a configurable OpenAI-compatible endpoint share one catalogue. Application code can register adapters for other JSON protocols. API keys remain in memory, requests omit ambient credentials, and manifests cannot inject executable provider logic.
 
@@ -73,7 +75,7 @@ External LLM services are optional. Built-in providers and a configurable OpenAI
 | Material | Structural contribution | Evidential role |
 | --- | --- | --- |
 | UFBAS Urfehde book | Whole-book pagination, mixed header, page source, annotations, and download fallback | Historical real browser evidence; rerunning requires the local source and is reported separately from synthetic coverage |
-| Wenzelsbibel Codex 2759 | Word tokens, diplomatic and normalized readings, surfaces, zones, IIIF images, TEI-level apparatus, and cross-file image annotations | Rights-local engine and Source Profile evidence; a synthetic twin supplies committed cross-browser interaction evidence |
+| Wenzelsbibel Codex 2759 | Word tokens, diplomatic and normalized readings, surfaces, zones, IIIF images, TEI-level apparatus, and cross-file image annotations | Local real-object editing and exact-output evidence in both browsers; synthetic fixtures supply the reproducible workspace and recovery suite |
 | Jeanne Hersch corpus | Line-oriented text, inline GND interchange, facsimile zones, and project-specific reconciliation | Real project-boundary and round-trip evidence |
 | Stefan Zweig Digital material | Catalogue TEI plus upstream Page-JSON | Converter and project-manifest integration evidence |
 | Type-diverse synthetic TEI | Dictionary, drama, spoken corpus, correspondence, critical edition, facsimile, source document, and mixed structures | Reproducible Source Profile and navigation coverage |

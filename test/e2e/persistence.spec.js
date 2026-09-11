@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { COLD_SCHEMA_OUTPUT_TIMEOUT_MS, SCHEMA_WORKFLOW_TIMEOUT_MS } from "./helpers/schema-output-timing.js";
 
 const raw = '<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Persistence test</title></titleStmt><publicationStmt><p>Unpublished</p></publicationStmt><sourceDesc><p>Synthetic</p></sourceDesc></fileDesc></teiHeader><text><body><p>Original text</p></body></text></TEI>';
 
@@ -103,12 +104,12 @@ test("a disposed inline editor cannot clear a later metadata edit", async ({ pag
 });
 
 test("unfinished input during a native write aborts without claiming a save", async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   await open(page, true);
   await edit(page, "Revision being saved");
   await page.locator("#btn-save").click();
   await expect.poll(() => page.evaluate(() => ({ started: window.saveProbe.started,
-    status: document.getElementById("ed-status").textContent })), { timeout: 45_000 }).toMatchObject({ started: true });
+    status: document.getElementById("ed-status").textContent })), { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS }).toMatchObject({ started: true });
   await edit(page, "New unfinished input", false);
   await page.evaluate(() => window.saveProbe.release());
   await expect.poll(() => page.evaluate(() => window.saveProbe.aborted)).toBe(true);
