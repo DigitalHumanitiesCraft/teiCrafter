@@ -886,7 +886,7 @@ export const MILESTONE_LOCALS = new Set(["lb", "pb", "cb", "gb", "milestone"]);
 // Textual-critical wrappers handled by the editor (M3.6): unclear/del/add wrap
 // reading text; gap is the empty marker that stands in for omitted/illegible text.
 export const CRITICAL_LOCALS = new Set(["unclear", "del", "add", "gap"]);
-const NON_READING_LOCALS = new Set(["teiHeader", "facsimile", "standOff", "fsdecl", "sourceDoc"]);
+const NON_READING_LOCALS = new Set(["teiHeader", "facsimile", "standOff", "fsdecl", "sourceDoc", "listWit"]);
 
 /** A facsimile pointer value (without the leading '#') from @facs, or null.
  * @param {TeiNode} el The element.

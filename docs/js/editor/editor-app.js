@@ -52,7 +52,7 @@ import { FEATURES, llmEnabled } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { teiFromStarter, draftFilename } from "./starter-profiles.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
-import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, mappingFiles, llmForFile } from "./project-manifest.js";
+import { parseManifest, resolveMarkup, teiScopeForFile, typeForFile, uiProfileForFile, mappingFiles, llmForFile } from "./project-manifest.js";
 import { complete } from "../services/llm.js";
 import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
 import { applyProposals, createProposalScope } from "./proposal-apply.js";
@@ -81,6 +81,11 @@ import { downloadFile } from "./download-file.js";
 import { encodeWorkingCopy, decodeWorkingCopy } from "./working-copy.js";
 import { createReadingView } from "./reading-view.js";
 import { createWenzelsWorkspace } from "./wenzels-workspace.js";
+import { createWitnessWorkspace } from "./witness-workspace.js";
+import { createEntryWorkspace } from "./entry-workspace.js";
+import { canStartEntryCollection, hasEntryWorkspace, resolveEntry } from "./entry-model.js";
+import { captureProjectDocuments, restoreProjectDocuments, projectHasUnsavedDocuments } from "./project-documents.js";
+import { createProjectOutputController } from "./project-output-controller.js";
 import { editionFromDocument } from "./edition.js";
 import { isWenzelsProject, withWenzelsDefaults } from "./wenzels-profile.js";
 import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
@@ -118,9 +123,12 @@ const app = {
   panel: "facs",      // id of the active right-pane context panel (see PANELS)
   sourceMode: false,  // false | "page" | "metadata-form" | "metadata" for the left text surface
   readingVariant: "dipl", // F4: "dipl" | "norm", which reading the pane shows (only meaningful when state.hasDualReadings)
+  readingWitness: "",
+  entryWorkspaceEnabled: false,
   viewMode: "paged",  // reading view: "paged" (one folio, pager) | "continuous" (all folios stacked); persisted per document
   annotationProgressFilter: "all", // local popover filter: "all" | "notes"
   project: null,      // active project: manifest-parsed or PID-detected, or null
+  projectDocuments: null,
   projectFolder: null, // open project folder: { dir, name, files[], project }, or null (M2.9)
   markup: null,       // markup wrap list for the CURRENT document (per its type), or null (built-ins)
   saveTarget: null,   // { dir, name }: create this file in the project folder on first save (plaintext drafts)
@@ -629,6 +637,11 @@ async function load(raw, name, handle, project, opts) {
 
 function applyLoad(raw, name, handle, project, opts = {}) {
   const t0 = performance.now();
+  const projectDocuments = restoreProjectDocuments(opts.projectDocuments);
+  const projectDocument = projectDocuments?.documents.find((entry) => entry.id === projectDocuments.activeId);
+  if (projectDocument && (projectDocument.raw !== raw || projectDocument.name !== name)) {
+    throw new Error("The project snapshot does not match its active XML document.");
+  }
   const openedState = parseEdition(raw);
   if (opts.example) {
     const roots = openedState.doc.root.children.filter((node) => node.type === "element");
@@ -643,20 +656,21 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   const importedInterchange = workingDoc !== openedState.doc;
   const workingState = importedInterchange ? parseEdition(workingDoc.raw) : openedState;
   stagedInput.clear();
-  editorSession.load(profileEditionState(workingState, resolvedProject, name));
+  editorSession.load(profileEditionState(workingState, resolvedProject, name), { dirty: projectDocument?.dirty ?? opts.dirty ?? false });
   app.readOnly = editorSession.readOnly = !!opts.readOnly;
   syncDocumentMode();
   app.state = editorSession.state;
+  app.projectDocuments = projectDocuments;
   sessionSafety.replace(app.state.doc.raw);
   app.sessionId = editorSession.sessionId;
   app.revision = editorSession.revision;
   app.folio = 0;
-  app.recoveryId = crypto.randomUUID();
+  app.recoveryId = opts.recoveryId || crypto.randomUUID();
   app.annotationProgressFilter = "all";
   app.sourceMode = false;
   app.fileHandle = handle || null;
   app.documentDirectory = opts.directory || null;
-  app.fileEncoding = opts.fileEncoding || { encoding: "UTF-8", bom: false };
+  app.fileEncoding = projectDocument?.fileEncoding || opts.fileEncoding || { encoding: "UTF-8", bom: false };
   app.fileSnapshot = handle && opts.fileSnapshot ? opts.fileSnapshot : null;
   app.docName = name;
   app.noteByWord = standoff.noteIndex(app.state.doc);
@@ -674,6 +688,8 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // (pageImageStore.resolveFromFolder), so reopening a saved edition shows them.
   pageImageStore.revoke();
   if (opts.pageImages instanceof Map) app.pageImages = opts.pageImages;
+  else if (projectDocument?.images) app.pageImages = new Map(projectDocument.images.map((item) =>
+    [item.name, { blob: item.blob, type: item.type, url: URL.createObjectURL(item.blob), persisted: false }]));
   // Project: an explicit manifest (teicrafter.project.json, parsed by the
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
@@ -681,7 +697,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   applyLlmGate();
   // Load provenance for the draft badge in the document strip. Default: an opened
   // TEI file. The plaintext and example paths override this after load() returns.
-  app.source = { kind: "tei" };
+  app.source = projectDocument?.source || { kind: "tei" };
   app.markup = resolveMarkup(app.project, name, guidelinesNow());
   // The active AI responsibility id for this document: a project may set its own via
   // the llm block (type-aware), else the default "#ai". The provenance render reads
@@ -700,16 +716,18 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   };
   // Default context panel: the facsimile when the document has page images, the
   // entity Index otherwise.
-  app.panel = isWenzelsProject(app.project) ? "wenzels" : docHasImages() ? "facs" : "index";
+  app.panel = isWenzelsProject(app.project) ? "wenzels" : entriesAllowed() && hasEntryWorkspace(app.state.doc) ? "entries" : docHasImages() ? "facs" : "index";
+  app.entryWorkspaceEnabled = hasEntryWorkspace(app.state.doc);
   // F4: the reading variant resets to diplomatic per load; applyDocLayout then
   // restores the persisted value when this document had one.
   app.readingVariant = "dipl";
+  app.readingWitness = projectDocument?.readingWitness || opts.readingWitness || "";
   // Reading view defaults to paged; applyDocLayout restores a persisted choice.
   app.viewMode = "paged";
   enableControls(true);
   applyDocLayout();
   if (handle) { recents.rememberRecent(handle, name); }
-  setDirty(false);
+  setDirty(editorSession.dirty);
   // The recovery slot is NOT cleared here: loading another document must not
   // silently discard a stored draft. It clears only when the draft itself is
   // saved or the operator discards the offer; a new draft overwrites the slot.
@@ -883,8 +901,10 @@ const EXAMPLES = {
 /** Guard before any in-app document replacement (open, example, drop, recent). */
 function confirmDiscard() {
   const staged = !!stagedSnapshot();
-  return (!app.dirty && !staged)
-    || window.confirm(`Discard unsaved changes in ${app.docName}?`);
+  return (!projectHasUnsavedDocuments(app) && !staged)
+    || window.confirm(app.projectDocuments
+      ? "Leave unsaved work in this project? Local recovery is retained."
+      : `Discard unsaved changes in ${app.docName}?`);
 }
 
 async function loadExample(key) {
@@ -1958,6 +1978,10 @@ function imageUrlForFolio(i) {
   return app.imageBase + "p" + String(i + 1).padStart(3, "0") + ".png";
 }
 
+function entriesAllowed() {
+  return !uiProfileForFile(app.project, app.docName)?.disableCapabilities?.includes("entries");
+}
+
 /** True when the loaded document can show any page image (image base or <graphic url>). */
 function docHasImages() {
   if (!app.state) return false;
@@ -1974,6 +1998,16 @@ function docHasImages() {
 // without a static host element in editor.html gets one created on demand.
 
 const PANELS = [
+  {
+    id: "entries", label: "Entries", title: "Create and edit entries, inspect references and preview batch changes",
+    available: () => !!app.state && entriesAllowed() && (app.entryWorkspaceEnabled || hasEntryWorkspace(app.state.doc) || canStartEntryCollection(app.state.doc)),
+    render: () => entryWorkspace.render(panelHost({ id: "entries" })),
+  },
+  {
+    id: "witnesses", label: "Witnesses", title: "Inspect witness readings and manage their source descriptions",
+    available: () => !!app.state,
+    render: () => witnessWorkspace.render(panelHost({ id: "witnesses" })),
+  },
   {
     id: "facs", label: "Facsimile", host: "ed-panel-facs",
     title: "Page image with TEI zones; hovering a zone highlights the linked text and vice versa",
@@ -2565,6 +2599,16 @@ const documentFacts = createDocumentFacts({
   schemaSnapshot: () => validationView.recoverySettings(),
   restoreSchema: (settings) => validationView.restoreSettings(settings),
   restoreStaged: (staged) => {
+    if (staged.mode === "witness" || staged.mode === "entries") {
+      app.sourceMode = false;
+      app.panel = staged.mode === "witness" ? "witnesses" : "entries";
+      app.folio = Math.max(0, Math.min(staged.folio, app.state.folios.length - 1));
+      const workspace = staged.mode === "witness" ? witnessWorkspace : entryWorkspace;
+      workspace.prepareRestore(staged.value);
+      render();
+      stagedInput.restore(staged.value);
+      return;
+    }
     if (staged.mode === "wenzels") {
       app.sourceMode = false;
       app.panel = "wenzels";
@@ -2587,7 +2631,7 @@ const documentFacts = createDocumentFacts({
     } else stagedInput.restore(staged.value);
   },
 });
-const wenzelsWorkspace = createWenzelsWorkspace({
+const workspaceContext = {
   app, stagedInput, setStatus,
   persist: () => documentFacts.persistDraftIfNeeded(),
   applyDocument: (doc, label) => {
@@ -2595,9 +2639,40 @@ const wenzelsWorkspace = createWenzelsWorkspace({
     if (doc !== app.state.doc) replaceSessionState(editionFromDocument(doc), label);
     render();
   },
-  loadDocument: async (raw, name, project, draft = false, encoding = null) => {
-    await documentFacts.persistDraftIfNeeded();
-    const loaded = await load(raw, name, null, project, { ...(encoding ? { fileEncoding: { encoding: "UTF-8", bom: !!encoding.bom } } : {}) });
+  setSourceMode,
+};
+const witnessWorkspace = createWitnessWorkspace({
+  ...workspaceContext,
+  selectWitness: (id) => {
+    if (!stagedInput.allowChange("changing witness readings")) return;
+    app.readingWitness = id || "";
+    window.getSelection()?.removeAllRanges();
+    projectionCache.clear();
+    render();
+    void documentFacts.persistDraftIfNeeded();
+  },
+});
+const entryWorkspace = createEntryWorkspace({
+  ...workspaceContext,
+  selectEntry: (key) => {
+    const entry = resolveEntry(app.state.doc, key);
+    const index = app.state.folios.findIndex((folio) => folio.lines.some((line) => line.cells.some((cell) =>
+      cell.node?.start >= entry.node.outerStart && cell.node?.start < entry.node.outerEnd)));
+    if (index >= 0 && index !== app.folio) gotoFolio(index);
+  },
+});
+const wenzelsWorkspace = createWenzelsWorkspace({
+  ...workspaceContext,
+  schemaSnapshot: () => validationView.recoverySettings(),
+  restoreSchema: (settings) => validationView.restoreSettings(settings),
+  loadDocument: async (raw, name, project, draft = false, encoding = null, projectDocuments = null) => {
+    if (!stagedInput.allowChange("changing project documents")) return false;
+    const replacement = sessionSafety.snapshot({ kind: "project-document-switch" });
+    const recoveryId = app.recoveryId;
+    if (!await documentFacts.persistDraftIfNeeded()) return false;
+    const loaded = await load(raw, name, null, project, { projectDocuments, dirty: draft, replacement,
+      ...(projectDocuments ? { recoveryId } : {}),
+      ...(encoding ? { fileEncoding: { encoding: "UTF-8", bom: !!encoding.bom } } : {}) });
     if (loaded && draft) {
       app.source = { kind: "draft", draftKind: "project" };
       setDirty(true); void documentFacts.persistDraftIfNeeded();
@@ -2605,6 +2680,40 @@ const wenzelsWorkspace = createWenzelsWorkspace({
     return loaded;
   },
 });
+const projectOutput = createProjectOutputController({
+  capture: () => {
+    if (!app.state) return null;
+    const snapshot = captureProjectDocuments(app, validationView.recoverySettings());
+    app.projectDocuments = snapshot;
+    const sessionId = app.sessionId, revision = app.revision, raw = app.state.doc.raw;
+    const docName = app.docName, project = app.project;
+    const encoding = JSON.stringify(app.fileEncoding);
+    const schemas = schemaSetKey(validationView.activeSchemaSources());
+    const images = [...app.pageImages];
+    return { snapshot, isCurrent: () => app.projectDocuments === snapshot
+      && app.sessionId === sessionId && app.revision === revision && app.state?.doc.raw === raw
+      && app.docName === docName && app.project === project && JSON.stringify(app.fileEncoding) === encoding
+      && !stagedInput.hasChanges() && schemas === schemaSetKey(validationView.activeSchemaSources())
+      && images.length === app.pageImages.size && images.every(([name, item]) => app.pageImages.get(name) === item) };
+  },
+  resolveStaged: () => resolveStagedOutput("Project export"),
+  persist: () => documentFacts.persistDraftIfNeeded(),
+  status: setStatus,
+  busy: (busy) => {
+    $("btn-project-package").disabled = busy;
+    $("btn-cancel-project-package").hidden = !busy;
+  },
+  download: downloadFile,
+  restore: (record) => documentFacts.restoreDraft(record),
+});
+
+function openProjectPackage() {
+  const input = el("input", { type: "file", accept: ".zip,application/zip" });
+  input.addEventListener("change", () => {
+    if (input.files?.[0]) void projectOutput.open(input.files[0]);
+  }, { once: true });
+  input.click();
+}
 // Page-image store: resolves a surface <graphic url> to a displayable URL and
 // writes attached images next to the TEI on save (used by applyLoad, the
 // facsimile render, save, and the text+image on-ramp).
@@ -2637,7 +2746,8 @@ const outputController = createOutputController({
   markSaved: () => setDirty(false),
   markDirty: () => setDirty(true),
   persistRecovery: () => documentFacts.persistDraftIfNeeded(),
-  clearRecovery: (id) => documentFacts.clearDraftRecovery(id),
+  clearRecovery: (id) => app.projectDocuments?.documents.length > 1
+    ? documentFacts.persistDraftIfNeeded() : documentFacts.clearDraftRecovery(id),
   download: downloadFile,
   status: setStatus,
 });
@@ -2927,6 +3037,9 @@ $("btn-save").addEventListener("click", save);
 $("btn-download").addEventListener("click", () => download());
 $("btn-working-copy").addEventListener("click", () => downloadWorkingCopy());
 $("btn-open-working-copy").addEventListener("click", openWorkingCopy);
+$("btn-project-package").addEventListener("click", () => projectOutput.download());
+$("btn-cancel-project-package").addEventListener("click", () => projectOutput.cancel());
+$("menu-project-package").addEventListener("click", () => { closeLoadMenu(); openProjectPackage(); });
 $("btn-undo").addEventListener("click", () => applyHistory("undo"));
 $("btn-redo").addEventListener("click", () => applyHistory("redo"));
 document.addEventListener("keydown", (event) => {
@@ -2958,23 +3071,19 @@ applyZoom(currentZoom());
 $("ed-val-chip").addEventListener("click", (e) => {
   e.stopPropagation();
   const pop = $("ed-val-pop");
-  if (pop.hidden) {
-    const r = e.currentTarget.getBoundingClientRect();
-    pop.style.top = `${r.bottom + 8}px`;
-    pop.style.right = `${Math.max(8, window.innerWidth - r.right)}px`;
-  }
-  pop.hidden = !pop.hidden;
+  if (pop.hidden) validationView.showDetails();
+  else pop.hidden = true;
 });
 document.addEventListener("click", (e) => {
   const pop = $("ed-val-pop");
-  if (!pop.hidden && !(e.target instanceof Element && e.target.closest("#ed-val-pop"))) pop.hidden = true;
+  if (!pop.hidden && !e.composedPath().includes(pop)) pop.hidden = true;
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !$("ed-val-pop").hidden) $("ed-val-pop").hidden = true;
 });
 
 window.addEventListener("beforeunload", (e) => {
-  if (app.dirty || stagedSnapshot()) { e.preventDefault(); e.returnValue = ""; }
+  if (projectHasUnsavedDocuments(app) || stagedSnapshot()) { e.preventDefault(); e.returnValue = ""; }
 });
 document.addEventListener("input", (event) => {
   if (event.target instanceof Element && event.target.closest(".ed-src-wrap, .ed-meta-form")) {
@@ -2982,7 +3091,7 @@ document.addEventListener("input", (event) => {
   }
 });
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden && (app.dirty || stagedInput.hasChanges())) void documentFacts.persistDraftIfNeeded();
+  if (document.hidden && (projectHasUnsavedDocuments(app) || stagedInput.hasChanges())) void documentFacts.persistDraftIfNeeded();
 });
 
 render(); // start state: the empty editor (no document) with its load prompt

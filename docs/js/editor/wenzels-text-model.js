@@ -200,6 +200,27 @@ function verseReference(value) {
   return reference;
 }
 
+/** New canonical references require the source's explicit header declaration. */
+function canonicalVerseReference(doc, value, ref = null) {
+  const canonical = String(value || "").trim();
+  if (!canonical) return "";
+  const roots = children(doc.root, "TEI");
+  const headers = roots.length === 1 ? children(roots[0], "teiHeader") : [];
+  const declarations = headers.length === 1 ? children(headers[0], "encodingDesc").flatMap((encoding) => children(encoding, "refsDecl")) : [];
+  let selected = declarations;
+  for (let context = ref; context; context = context.parent) {
+    const ids = attr(context, "decls").trim().split(/\s+/);
+    const explicit = declarations.filter((declaration) => getXmlId(declaration) && ids.includes(`#${getXmlId(declaration)}`));
+    if (explicit.length) { selected = explicit; break; }
+  }
+  const patterns = selected.length === 1 ? children(selected[0], "cRefPattern") : [];
+  if (!patterns.length || patterns.some((pattern) => !attr(pattern, "matchPattern").trim() || !attr(pattern, "replacementPattern").trim())) {
+    throw new Error("A canonical reference requires one unambiguous refsDecl with cRefPattern in the TEI header. Leave this field empty for a free edition reference; existing canonical references are preserved.");
+  }
+  if (ref && attr(ref, "target")) throw new Error("This reference already has a URI target. Use XML to choose its referencing scheme.");
+  return canonical;
+}
+
 export function addBibleVerseMapping(doc, selection, options = {}) {
   const range = wenzelsWordRange(doc, selection);
   const reference = verseReference(options.reference);
@@ -207,7 +228,9 @@ export function addBibleVerseMapping(doc, selection, options = {}) {
   const responsibility = options.resp ? ` resp="${escapeAttr(options.resp)}"` : "";
   const quote = options.quote ? verseQuoteXml(options.quote) : "";
   const note = options.note ? noteXml({ text: options.note }) : "";
-  const fragment = `<span xml:id="${escapeAttr(id)}" from="${escapeAttr(range.from)}" to="${escapeAttr(range.to)}" n="${escapeAttr(reference)}"${responsibility}><ref type="vulgate" cRef="${escapeAttr(options.cRef || reference)}">${escapeText(reference)}</ref>${quote}${note}</span>`;
+  const canonical = canonicalVerseReference(doc, options.cRef);
+  const referenceAttribute = canonical ? ` cRef="${escapeAttr(canonical)}"` : "";
+  const fragment = `<span xml:id="${escapeAttr(id)}" from="${escapeAttr(range.from)}" to="${escapeAttr(range.to)}" n="${escapeAttr(reference)}"${responsibility}><ref type="vulgate"${referenceAttribute}>${escapeText(reference)}</ref>${quote}${note}</span>`;
   const edits = [];
   appendWenzelsStandOff(doc, "spanGrp", "bible-verses", fragment, edits);
   return applyEdits(doc, edits);
@@ -227,11 +250,13 @@ export function updateBibleVerseMapping(doc, recordOrId, patch = {}) {
     patchAttribute(doc, record.node, "n", reference, edits);
     if (ref) patchText(doc, ref, reference, edits);
   }
-  if ((has(patch, "cRef") && patch.cRef !== record.cRef)
-    || (!ref && has(patch, "reference") && patch.reference !== record.reference)) {
-    const canonical = verseReference(patch.cRef || patch.reference || record.reference);
-    if (ref) patchAttribute(doc, ref, "cRef", canonical, edits);
-    else appendChild(doc, record.node, `<ref type="vulgate" cRef="${escapeAttr(canonical)}">${escapeText(patch.reference || record.reference)}</ref>`, edits);
+  if (has(patch, "cRef") && patch.cRef !== record.cRef) {
+    const canonical = canonicalVerseReference(doc, patch.cRef, ref);
+    if (ref) patchAttribute(doc, ref, "cRef", canonical || null, edits);
+    else if (canonical || patch.reference || record.reference) appendChild(doc, record.node,
+      `<ref type="vulgate"${canonical ? ` cRef="${escapeAttr(canonical)}"` : ""}>${escapeText(patch.reference || record.reference)}</ref>`, edits);
+  } else if (!ref && has(patch, "reference") && patch.reference !== record.reference) {
+    appendChild(doc, record.node, `<ref type="vulgate">${escapeText(verseReference(patch.reference))}</ref>`, edits);
   }
   if (has(patch, "resp")) patchAttribute(doc, record.node, "resp", patch.resp || null, edits);
   if (has(patch, "quote")) {

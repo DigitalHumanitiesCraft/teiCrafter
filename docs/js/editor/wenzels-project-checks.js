@@ -57,13 +57,29 @@ export function checkWenzelsRegisters({ registers, codex = null, images = null, 
   return issues;
 }
 
-export function referencesRegisterId(doc, id, filename) {
+function referencesRegisterIds(doc, ids, filename) {
   let found = false;
   walk(doc.root, (node) => {
     if (found || node.type !== "element") return;
-    found = (node.attrs || []).some((attr) => attr.value.split(/\s+/).some((value) => value === `#${id}` || value === `${filename}#${id}`));
+    found = (node.attrs || []).some((attr) => attr.value.split(/\s+/).some((value) => {
+      const separator = value.indexOf("#");
+      if (separator < 0 || separator > 0 && value.slice(0, separator) !== filename) return false;
+      let fragment = value.slice(separator + 1);
+      try { fragment = decodeURIComponent(fragment); } catch { /* Retain malformed pointer evidence. */ }
+      return ids.has(fragment);
+    }));
   });
   return found;
+}
+
+export function referencesRegisterId(doc, id, filename) {
+  return referencesRegisterIds(doc, new Set([id]), filename);
+}
+
+export function referencesRegisterSubtree(doc, entry, filename) {
+  const ids = new Set();
+  walk(entry, (node) => { if (node.type === "element" && getXmlId(node)) ids.add(getXmlId(node)); });
+  return ids.size > 0 && referencesRegisterIds(doc, ids, filename);
 }
 
 export function singleBranchChoices(doc) {

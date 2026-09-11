@@ -9,9 +9,10 @@ import { mountIconclassLookup } from "./iconclass-lookup.js";
 import { mountPageXmlImport } from "./page-xml-onramp.js";
 import { validateWithSchemas } from "./schema-validation.js";
 import { WENZELS_EDITORIAL_SCHEMA_URL } from "./wenzels-profile.js";
-import { checkWenzelsRegisters, referencesRegisterId, singleBranchChoices, keepSingleChoiceBranch, choiceLabel } from "./wenzels-project-checks.js";
+import { checkWenzelsRegisters, referencesRegisterSubtree, singleBranchChoices, keepSingleChoiceBranch, choiceLabel } from "./wenzels-project-checks.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import { projectTileSource } from "./project-profiles.js";
+import { captureProjectDocuments, snapshotProjectDocument, projectForSnapshot, projectPathKey } from "./project-documents.js";
 
 const SECTIONS = [
   ["diplomatic", "Transcription"], ["commentary", "Commentary"],
@@ -33,6 +34,7 @@ export function createWenzelsWorkspace(ctx) {
   let importForm = null;
   let imageViewer = null;
   const attachments = new Map();
+  const parsedAttachments = new Map();
   let cache = new WeakMap();
   const memo = (doc, key, build) => {
     if (!doc) return null;
@@ -88,15 +90,43 @@ export function createWenzelsWorkspace(ctx) {
     });
   }
   function rememberActive() {
-    const current = { doc: activeDoc(), name: app.docName, encoding: app.fileEncoding };
-    const role = hasImages(current.doc) ? "images" : words(current.doc).length ? "codex" : "registers";
-    attachments.set(role, current);
+    app.projectDocuments = captureProjectDocuments(app, ctx.schemaSnapshot?.() || null);
+    const current = app.projectDocuments.documents.find((entry) => entry.id === app.projectDocuments.activeId);
+    if (!current.role) {
+      const role = hasImages(activeDoc()) ? "images" : words(activeDoc()).length ? "codex"
+        : getAttr(teiElementsByLocal(activeDoc().root, "TEI")[0], "type") === "wenzelsbibel-registers" ? "registers" : null;
+      if (role && !app.projectDocuments.documents.some((entry) => entry.role === role)) current.role = role;
+    }
+    refreshAttachments();
+    return app.projectDocuments;
+  }
+  function refreshAttachments() {
+    attachments.clear();
+    const ids = new Set();
+    for (const entry of app.projectDocuments?.documents || []) {
+      ids.add(entry.id);
+      if (entry.id === app.projectDocuments.activeId) continue;
+      let parsed = parsedAttachments.get(entry.id);
+      if (!parsed || parsed.doc.raw !== entry.raw) parsed = { doc: parseDocument(entry.raw) };
+      parsed = { ...parsed, ...entry, encoding: entry.fileEncoding };
+      parsedAttachments.set(entry.id, parsed);
+      if (entry.role) attachments.set(entry.role, parsed);
+    }
+    for (const id of parsedAttachments.keys()) if (!ids.has(id)) parsedAttachments.delete(id);
   }
   async function openCompanion(entry, targetSection = null, id = "") {
     if (!stagedInput.allowChange("opening a linked document")) return;
-    rememberActive();
-    await loadDocument(entry.doc.raw, entry.name, app.project, false, entry.encoding);
-    if (targetSection && activeDoc()?.raw === entry.doc.raw) navigate(targetSection, id);
+    const collection = rememberActive();
+    if (!await persist()) return;
+    const target = collection.documents.find((item) => item.id === entry.id);
+    if (!target) { setStatus("This linked document is no longer available."); return; }
+    const loaded = await loadDocument(target.raw, target.name, projectForSnapshot(target), false, target.fileEncoding,
+      { ...collection, activeId: target.id });
+    if (loaded && activeDoc()?.raw === target.raw) {
+      ctx.restoreSchema?.(target.schemaSettings);
+      if (targetSection) navigate(targetSection, id);
+      await persist();
+    }
   }
   async function attach(role, file) {
     if (!file || !stagedInput.allowChange("attaching a reference document")) return;
@@ -109,30 +139,53 @@ export function createWenzelsWorkspace(ctx) {
       if (owner !== app.sessionId) return;
       if (role === "codex" && !words(doc).length) throw new Error("The attached codex has no TEI words.");
       if (role === "images" && !hasImages(doc)) throw new Error("The attached document has no image-annotation items.");
-      attachments.set(role, { doc, name: file.name, encoding: decoded });
+      const collection = rememberActive();
+      const key = projectPathKey(file.name);
+      if (collection.documents.some((entry) => projectPathKey(entry.name) === key)) {
+        throw new Error("This filename is already linked. Open its retained document instead of replacing its snapshot.");
+      }
+      const entry = snapshotProjectDocument({ ...app, state: { doc }, docName: file.name,
+        fileEncoding: decoded, dirty: false, readingWitness: "", source: { kind: "tei" }, pageImages: new Map() }, null);
+      entry.role = role;
+      app.projectDocuments = { ...collection, documents: [...collection.documents.map((item) => item.role === role ? { ...item, role: null } : item), entry] };
+      refreshAttachments();
       referenceOffset = 0;
       if (app.panel === "wenzels") render(host);
-      setStatus(`${file.name} attached for reference lookup. Its source remains unchanged.`);
+      if (await persist()) setStatus(`${file.name} attached for reference lookup and retained in local recovery. Working copy includes all linked documents.`);
     } catch (error) { setStatus(`Reference document could not be attached: ${error.message}`); }
   }
   function attachmentControls() {
     const details = el("details", { class: "ed-wb-resources" });
     details.append(el("summary", { text: "Linked project documents" }));
-    details.append(el("p", { text: "Attach local companions for cross-file lookup. Edit and save each file in the main editor. Reattach reference files after a reload." }));
+    details.append(el("p", { text: "Linked XML snapshots and their changes are retained in Recovery and Working copy. Open one document for editing; Project package exports all linked XML files together after schema validation." }));
     for (const [role, label] of [["codex", "Codex"], ["images", "Image annotations"], ["registers", "Registers"]]) {
       const input = el("input", { type: "file", accept: ".xml", "aria-label": `Attach ${label}` });
       input.addEventListener("change", () => { void attach(role, input.files[0]); });
       details.append(el("label", { class: "ed-wb-field" }, [el("span", { text: `Attach ${label}` }), input]));
       const entry = attachments.get(role);
       if (entry) details.append(el("div", { class: "ed-wb-resource" }, [
-        el("span", { text: entry.name }), action("Open for editing", () => openCompanion(entry)),
+        el("span", { text: entry.name + (entry.dirty ? " (unsaved changes)" : "") }), action("Open for editing", () => openCompanion(entry)),
       ]));
     }
+    for (const entry of app.projectDocuments?.documents || []) {
+      if (entry.role || entry.id === app.projectDocuments.activeId) continue;
+      details.append(el("div", { class: "ed-wb-resource" }, [el("span", { text: entry.name + (entry.dirty ? " (unsaved changes)" : "") }),
+        action("Open for editing", () => openCompanion(entry))]));
+    }
     details.append(action("New shared registers", async () => {
+      if (app.readOnly) { setStatus("Read-only mode blocks creating shared registers."); return; }
       if (!stagedInput.allowChange("creating shared registers")) return;
-      rememberActive();
+      const collection = rememberActive();
+      if (collection.documents.some((entry) => projectPathKey(entry.name) === "registers.xml")) {
+        setStatus("registers.xml is already linked. Open that retained document to edit its registers."); return;
+      }
+      if (!await persist()) return;
       const doc = createWenzelsRegistersDocument();
-      await loadDocument(doc.raw, "registers.xml", app.project, true);
+      const entry = snapshotProjectDocument({ ...app, state: { doc }, docName: "registers.xml", dirty: true,
+        fileEncoding: { encoding: "UTF-8", bom: false }, readingWitness: "", source: { kind: "draft", draftKind: "project" }, pageImages: new Map() }, null);
+      entry.role = "registers";
+      await loadDocument(doc.raw, entry.name, app.project, true, entry.fileEncoding,
+        { ...collection, activeId: entry.id, documents: [...collection.documents.map((item) => item.role === "registers" ? { ...item, role: null } : item), entry] });
     }, { disabled: app.readOnly }));
     host.append(details);
   }
@@ -281,7 +334,7 @@ export function createWenzelsWorkspace(ctx) {
     const f = form(record ? "Edit verse mapping" : "New verse mapping", [
       field("reference", "Book, chapter and verse", { required: true, placeholder: "Gen 1:1", help: "Use the reference system of the cited Vulgate edition. Psalm numbering must follow that edition." }),
       field("from", "First word ID", { required: true }), field("to", "Last word ID", { required: true }),
-      field("cRef", "Canonical Vulgate reference", { placeholder: "Gen 1:1" }),
+      field("cRef", "Canonical Vulgate reference", { placeholder: "Optional", help: "Use this only with an explicit refsDecl/cRefPattern in the TEI header. Leave it empty for a free edition reference. Existing canonical references are preserved; their format follows the declared scheme." }),
       field("quote", "Latin text", { multiline: true, help: "Enter the text from the reference edition. This field is never generated automatically." }),
       field("note", "Comment and reference edition", { multiline: true }), field("resp", "Editor responsibility", { placeholder: "#editor" }),
     ], record || {}, (v) => {
@@ -411,7 +464,7 @@ export function createWenzelsWorkspace(ctx) {
       }, record ? () => {
         for (const role of ["codex", "images"]) {
           const linked = attachments.get(role);
-          if (linked && referencesRegisterId(linked.doc, record.id, app.docName)) throw new Error(`${linked.name} still references this register entry.`);
+          if (linked && referencesRegisterSubtree(linked.doc, record.node, app.docName)) throw new Error(`${linked.name} still references this register entry or its contents.`);
         }
         selected = ""; mutate(removeWenzelsRegisterEntry(doc, record), "Remove shared register entry");
       } : null);
@@ -505,6 +558,7 @@ export function createWenzelsWorkspace(ctx) {
   function render(element) {
     if (!element || !activeDoc()) return;
     host = element;
+    if (!app.projectDocuments) rememberActive(); else refreshAttachments();
     if (stagedInput.hasChanges()) return;
     if (app.sourceMode) {
       importForm?.dispose(); importForm = null;
@@ -549,8 +603,15 @@ export function createWenzelsWorkspace(ctx) {
           importForm = mountPageXmlImport(host, { status: setStatus, readOnly: () => app.readOnly,
             onImport: async ({ raw, name, pages, warnings, order }) => {
               if (owner !== app.sessionId) throw new Error("The active document changed. Open the import again.");
-              rememberActive();
-              const loaded = await loadDocument(raw, name, app.project, true);
+              const collection = rememberActive();
+              if (collection.documents.some((entry) => projectPathKey(entry.name) === projectPathKey(name))) {
+                throw new Error("The imported draft filename is already linked. Choose a different draft title.");
+              }
+              if (!await persist()) return false;
+              const draft = snapshotProjectDocument({ ...app, state: { doc: parseDocument(raw) }, docName: name, dirty: true,
+                fileEncoding: { encoding: "UTF-8", bom: false }, readingWitness: "", source: { kind: "draft", draftKind: "project" }, pageImages: new Map() }, null);
+              const loaded = await loadDocument(raw, name, app.project, true, draft.fileEncoding,
+                { ...collection, activeId: draft.id, documents: [...collection.documents, draft] });
               if (loaded && activeDoc()?.raw === raw) {
                 app.source = { ...app.source, importSummary: { format: "page-xml", pages: pages.length, warnings, order } };
                 render(host);

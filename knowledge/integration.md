@@ -53,7 +53,7 @@ Project-level `uiProfile` can request an available primary navigation channel an
 
 ## Source Profile handoff
 
-Upstream systems should encode real document structure in TEI. Pages use page milestones or facsimile surfaces. Dictionary entries use `entry`. Speech turns use source elements such as `u` or `sp`. Tables, records, source documents, apparatus, correspondence metadata, and logical sections retain their TEI structures. teiCrafter inventories those features and exposes all supported capabilities.
+Upstream systems should encode real document structure in TEI. Pages use page milestones or facsimile surfaces. Dictionary entries use `entry`; encyclopedia articles can use `div` with `type='entry'` or `type='article'`. Speech turns use source elements such as `u` or `sp`. Tables, records, source documents, apparatus, correspondence metadata, and logical sections retain their TEI structures. teiCrafter inventories those features and exposes supported capabilities within explicit project policy.
 
 A project should use `uiProfile` only when editorial policy must choose among real channels or suppress a misleading affordance. An unavailable request is reported and falls back. The manifest must not fabricate a navigation unit that has no source anchor.
 
@@ -93,7 +93,15 @@ Downstream consumers should treat the `spanGrp` as the semantic annotation and i
 
 Target formats must declare whether they can represent these spans. The inline-GND interchange cannot represent cross-structure, discontinuous, or overlapping annotations and therefore blocks the projection. A lossy flattening is never automatic.
 
-The current span transaction is document-local. The Wenzelsbibel workspace resolves references against explicitly attached companions and edits the active file. Changes to several files require separate saves; no atomic cross-file update is implied.
+The current span transaction is document-local. The Wenzelsbibel workspace resolves references against explicitly attached companions and edits the active file. The retained project collection can be delivered as one validated package. External source files still require separate native saves.
+
+## Entry and witness handoff
+
+Entry forms require the scalar mappings described in [data](data.md#entry-and-witness-encodings). Multiple senses, paragraphs or mixed headings retain exact XML access. New records take their encoding and collection from an existing sibling, while an empty body requires an explicit choice. Duplication regenerates subtree IDs and updates supported local pointers, including encoded URI fragments. Unmapped attributes, compound reference syntax and an external XML base prevent the editor from assuming a safe rewrite.
+
+Batch editing and entry deletion checks apply to the open XML file. An integration that distributes entries across several files must review external links separately. Display order is independent of source order, and no project-wide text replacement or ID relinking is implied by an entry batch.
+
+Witness definitions may use `listWit/witness` or referenced bibliographic descriptions. Direct `@wit` on `lem` and `rdg` states attestation, including defined witness groups. `rdgGrp` supplies grouping without inferred attribute inheritance. The reader preserves all alternatives and discloses absent or ambiguous attribution instead of inventing agreement. Newly assigned pointers require unique local definitions; external definitions and unsupported apparatus-location methods remain explicit XML concerns. Witness selection changes the reading view without changing the exchange document.
 
 ## UFBAS contract
 
@@ -105,7 +113,9 @@ The operational workflow uses portable file input and download, so it works in C
 
 The Wenzelsbibel codex encodes word-level diplomatic text, `@orig` and `@norm`, page and line milestones, facsimile surfaces, image graphics, zones, and TEI-level stand-off apparatus. Project identifiers and source structure select the Wenzelsbibel profile for a bare file. IIIF resolution maps surface graphics to image services, and point geometry can supply zone bounds when rectangular coordinates are absent.
 
-The separate image-annotation document uses cross-file `corresp` links, including range expressions. The specialized workspace provides image forms, codex word and zone lookup, references from words back to related images, and a shared register document for persons, places and peoples. Every attached companion is a local reference snapshot. Opening one for editing uses the existing session boundary; its own Save or Download validates its exact output. Reattach updated companions after a reload or an external edit.
+The separate image-annotation document uses cross-file `corresp` links, including range expressions. The specialized workspace provides image forms, codex word and zone lookup, references from words back to related images, and a shared register document for persons, places and peoples. Attached companions retain their source, encoding and settings in a persistent project collection. Opening one for editing uses the existing session boundary, and recovery or Working copy restores that collection. Reattach a companion when its external source changes.
+
+Project package validates each collection member against its effective schemas and requests one ZIP only when every XML file passes. Working copy preserves unfinished or invalid collection state without validation. Native Save affects the current document, so the package does not imply an atomic write back to all original files.
 
 PAGE XML plus optional METS imports produce a separate TEI draft. ICONCLASS queries send only user-entered search terms or selected notations to the official service. The authored editorial schema and the chosen verse/register encodings are specified in [Wenzelsbibel](wenzelsbibel.md). An explicit project schema overrides the bundled default.
 
@@ -137,7 +147,9 @@ The portable contract is local file input plus schema-gated Blob download. Chrom
 
 An integration must provide a usable result when those handles are absent. Save falls back to Download, project-folder actions stay hidden or disabled with an explanation, and editing remains available. Native capability detection must occur at the action boundary rather than through browser-name assumptions.
 
-Recovery and Working copy are independent of native file handles. Checkpoints preserve canonical UTF-8 source, visible staged input, nested settings and loaded image bytes. Working copy carries the portable representation as JSON; restoration must reacquire file and directory permissions. Attached external facsimile-folder resources remain external rather than becoming implicit native Save attachments.
+Recovery and Working copy are independent of native file handles. Checkpoints preserve canonical UTF-8 source, visible staged input, attached project documents, nested settings and loaded image bytes. Working copy version 2 carries the portable representation as JSON while retaining import support for version 1. Restoration must reacquire file and directory permissions. Attached external facsimile-folder resources remain external rather than becoming implicit native Save attachments.
+
+Project package supplies a separate validated ZIP handoff containing the XML collection and eligible loaded images. Import checks the package structure and restores source and per-file metadata. Any later output requires fresh authorization for the current state. Cancelled validation, a failed member or intervening edits prevent the package download; recovery remains available.
 
 Native Save rechecks file identity and external modifications before writing, then binds completion to the captured session and revision. A download request is not proof of disk persistence. Failed, partial or superseded writes retain recovery. The format details belong to [data](data.md), and the queue and output-controller boundaries to [architecture](architecture.md).
 

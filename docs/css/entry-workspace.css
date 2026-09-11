@@ -1,0 +1,26 @@
+.ed-entry-workspace { min-width: 0; }
+.ed-entry-workspace .ed-entry-table-scroll {
+  max-height: 18rem;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-block: var(--space-md);
+}
+.ed-entry-workspace table { width: 100%; border-collapse: collapse; font-size: .8125rem; }
+.ed-entry-workspace th,
+.ed-entry-workspace td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+.ed-entry-workspace th {
+  position: sticky;
+  top: 0;
+  background: var(--color-panel);
+  z-index: 1;
+}
+.ed-entry-workspace td button { white-space: normal; text-align: left; }
+.ed-entry-workspace :focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+.ed-entry-workspace [aria-pressed="true"] { border-color: var(--color-gold); }

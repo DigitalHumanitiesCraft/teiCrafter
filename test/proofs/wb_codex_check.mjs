@@ -20,12 +20,13 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseEdition, serialize } from "../../docs/js/editor/edition.js";
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
 import { detectProject, projectTileSource, readPid } from "../../docs/js/editor/project-profiles.js";
 
 const CODEX = process.env.WB_CODEX
-  || "C:/Users/Chrisi/Documents/GitHub/Wenzelsbibel/data/codex-2759.xml";
+  || fileURLToPath(new URL("../../../../Wenzelsbibel/data/codex-2759.xml", import.meta.url));
 
 let failures = 0;
 let n = 0;

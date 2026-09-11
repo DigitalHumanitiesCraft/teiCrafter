@@ -53,7 +53,7 @@ Document identity sits below the toolbar and reports the loaded name, provenance
 
 The toolbar groups file actions. Save is the primary gold action because it commits the current scholarly state to the chosen target. Download creates a copy and uses neutral styling. View and context switching remain in their pane headers. A document replacement asks before discarding unsaved work.
 
-Working copy names a portable preservation action for unfinished XML, staged fields and attached images. It does not imply schema validation. Separate recovery offers identify earlier sessions, with Restore and explicit Discard. Read only protects document mutations across views; Edit document deliberately restores editing. Unfinished visible edits must be resolved before entering read-only mode.
+Working copy names a portable preservation action for unfinished XML, staged fields, attached project documents and loaded images. It does not imply schema validation. Project package identifies the separate delivery action that validates every XML document before requesting one ZIP download. Native Save retains its active-file scope. Separate recovery offers identify earlier sessions, with Restore and explicit Discard. Read only protects document mutations across views; Edit document deliberately restores editing. Unfinished visible edits must be resolved before entering read-only mode.
 
 Unfinished reading, XML and metadata controls retain their values and caret during background refresh. A blocked navigation or history action directs the editor to Apply or to the surface's cancel/reset action. Download feedback says that a download was requested and that local recovery remains; it does not claim a durable save. Input begun during a pending native write blocks completion and remains available to the editor.
 
@@ -75,7 +75,7 @@ A plain click positions the cursor. Double-click opens exact text or dual-readin
 
 Local cell structure controls the available edit. Tokens expose token text and encoded reading attributes. Other nodes expose exact text runs. The interface does not apply a document-wide word or line label when both forms coexist.
 
-The displayed reading follows source adjacency and the selected choice branch. Diplomatic prefers orig/sic/abbr; Normalized prefers reg/corr/expan. Apparatus currently shows the lemma, or first reading if no lemma exists. XML retains all alternatives. Keyboard arrows traverse cells and F2 or Enter enters a supported editor; composition input does not trigger a premature commit.
+The displayed reading follows source adjacency and the selected choice branch. Diplomatic prefers orig/sic/abbr; Normalized prefers reg/corr/expan. Apparatus base text shows the lemma, or first reading if no lemma exists. Choosing a witness selects explicit attestations and reports missing or ambiguous readings, omissions and fragment boundaries. Text outside encoded apparatus stays base text, which the witness pane explains. XML retains all alternatives. Keyboard arrows traverse cells and F2 or Enter enters a supported editor; composition input does not trigger a premature commit.
 
 Annotation visibility comes from actual projected layers. Entity types use muted categorical colours. Nested or overlapping layers receive a stacked underline and an inspector that lists every layer. Missing pointers and model provenance use explicit text in tooltips and status messages.
 
@@ -115,11 +115,19 @@ Save and Download can start validation. While it runs, the output action announc
 
 RelaxNG and XSD dependency limits and raw Schematron subset limits appear beside the affected set. A missing include or unsupported Schematron construct is described as unavailable. The user receives a concrete next action, such as supplying a resolvable dependency or compiled XSLT.
 
+## Entry and witness interaction
+
+The Entries pane combines a searchable collection list with source-bound details. Display sorting is independent of source order, and the completeness filter identifies absent identity, heading or text. Selecting an entry or following its local reference opens the corresponding source unit. Tables have bounded scroll regions with keyboard access. The detail form labels structured or ambiguous content as XML-only; an empty document body requires an explicit encoding choice before its first entry can be created.
+
+Duplication retains the source entry and selects the new copy. Deletion exposes the complete subtree scope and blocking references before confirmation. Batch editing starts from explicit checkboxes or the current matching set, names the active-file scope and shows concrete before/after values. Changing a field invalidates its preview. Apply creates one Undo step, and restored unfinished batch input requires another preview.
+
+The Witnesses pane separates reading selection from source mutation. Editors can inspect every apparatus alternative and its direct attribution while selecting a locally defined witness. Unresolved external definitions remain visible. Description forms, exact witness XML and reading-attribution controls share Apply, Cancel and staged recovery. Read-only mode preserves inspection while disabling mutation controls. Opening XML or Metadata leaves staged-input ownership with that editor, so a context form cannot silently displace unfinished source.
+
 ## Wenzelsbibel interaction
 
 The Wenzelsbibel context pane offers task-specific forms beside the ordinary reading, exact XML and metadata surfaces. The transcription form pairs diplomatic and normalized readings; a bounded word table keeps the editor controls visible. Existing apparatus entries retain all encoded types and separate language and responsibility fields. Image forms expose descriptive, attribution, ICONCLASS and text-relation fields; a linked miniature can open in the facsimile viewer with its zone in focus.
 
-Companion files are explicitly attached under Linked project documents. Word-range selection uses source IDs and preserves the active form. Selecting a related image from a word opens its source record through the normal session boundary. Apply, Cancel, read-only mode and recovery have the same meaning as in the generic editor. ICONCLASS lookup runs only after a user action and requires selecting a returned concept before form Apply.
+Companion files are explicitly attached under Linked project documents. Their current source and settings remain in the project collection when another document becomes active and when work is restored. Word-range selection uses source IDs and preserves the active form. Selecting a related image from a word opens its source record through the normal session boundary. Apply, Cancel, read-only mode and recovery have the same meaning as in the generic editor. ICONCLASS lookup runs only after a user action and requires selecting a returned concept before form Apply.
 
 Project checks distinguish cross-file reference failures, structural problems and editorial completeness. The normal output gate retains its own status. During vocabulary-schema compilation, the validation indicator reports Preparing schema while the rest of the interface remains responsive.
 

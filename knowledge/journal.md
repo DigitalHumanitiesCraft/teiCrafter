@@ -22,6 +22,14 @@ related: [project, specification, architecture, testing]
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (dated reports record them; [testing](testing.md) owns the method), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
 
+## 2026-09-11: Persistent editorial collections and reproducible evaluation
+
+Trigger: the user requested implementation of the remaining witness, entry, batch and multi-document work and asked for stable evidence that it functions. Decision: add focused authoring surfaces over the shared source-preserving session, retain linked documents and their independent schema settings in recovery, and authorize one complete project ZIP only after every file validates. Reference-bearing identifiers and stale previews require explicit protection because formal TEI validity alone does not establish referential integrity.
+
+Independent model review exposed an undeclared canonical-reference assumption, image ranges that accepted non-word endpoints, and deletion checks that missed referenced descendants. The corrected contracts preserve existing source and refuse or diagnose those cases. A bounded cache reuses only successful validation of identical XML and the complete schema graph; cancellation terminates worker validation. The first validation of a changed large codex still requires full schema work.
+
+Evaluation now records the exact code and input fingerprints, toolchain, browser versions, explicit skips and timing. CI runs the same strict command without retries. Deterministic expected XML, independent lxml checks, adverse storage/cancellation cases and browser round trips supply distinct evidence; the resulting report does not claim user or scholarly acceptance.
+
 ## 2026-09-11: Wenzelsbibel as a complete project workflow
 
 Trigger: the user requested branch consolidation and a practical Wenzelsbibel annotation pass, authorizing the design of the missing people-register, verse and image-validation contracts. Decision: integrate the Notes pilot into main and build the specialized workspace on the existing source-preserving session. Companion files provide explicit cross-file lookup while each edit remains independently recoverable and saveable. TEI collective-agent records and independent verse mappings express the selected scholarly model; the authored image schema separates editing from completeness review. The original absent schema is not claimed as recovered, and editorial acceptance remains distinct from implementation evidence.

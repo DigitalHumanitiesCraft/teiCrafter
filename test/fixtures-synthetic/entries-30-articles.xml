@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Thirty fictional editorial entries</title></titleStmt><publicationStmt><p>Original synthetic test material.</p></publicationStmt><sourceDesc><p>Fictional descriptions for software tests; no historical claims.</p></sourceDesc></fileDesc></teiHeader><text><body>
+<div type='entry' xml:id='term_01' xml:lang='de'><head>Abgabe</head><p xml:id='detail_01'>Fictional description 1.<ref target='#detail_01 #term_02'>See the internal detail and entry 2.</ref></p><note><!-- retained --><egXML xmlns='http://www.tei-c.org/ns/Examples'><x:data xmlns:x='urn:example:opaque' x:flag='retained'>Opaque &amp; literal</x:data></egXML></note></div>
+<div type='entry' xml:id='term_02' xml:lang='de'><head>Bann</head><p>Fictional description 2.<ref target='#term_01'>See entry 1.</ref></p></div>
+<div type='entry' xml:id='term_03'><head>Bede</head><p>Fictional description 3.</p></div>
+<div type='entry' xml:id='term_04'><head>Burgrecht</head><p>Fictional description 4.</p></div>
+<div type='entry' xml:id='term_05'><head>Dienst</head><p>Fictional <hi rend='italic'>structured</hi> description 5.</p></div>
+<div type='entry' xml:id='term_06'><head>Erbe</head><p>Fictional description 6.</p></div>
+<div type='entry' xml:id='term_07'><head>Fähre</head><p>Fictional description 7.</p></div>
+<div type='entry' xml:id='term_08'><head>Fron</head><p>Fictional description 8.</p></div>
+<div type='entry' xml:id='term_09'><head>Geleit</head><p>Fictional description 9.</p></div>
+<div type='entry' xml:id='term_10'><head>Hufe</head><p></p></div>
+<div type='entry' xml:id='term_11'><head>Immunität</head><p>Fictional description 11.</p></div>
+<div type='entry' xml:id='term_12'><head>Jahrmarkt</head><p>Fictional description 12.</p></div>
+<div type='entry' xml:id='term_13'><head>Kämmerer</head><p>Fictional description 13.</p></div>
+<div type='entry' xml:id='term_14'><head>Lehen</head><p>Fictional description 14.</p></div>
+<div type='entry' xml:id='term_15'><head>Mark</head><p>Fictional description 15.</p></div>
+<div type='entry' xml:id='term_16'><head>Mühle</head><p>Fictional description 16.</p></div>
+<div type='entry' xml:id='term_17'><head>Nutzrecht</head><p>Fictional description 17.</p></div>
+<div type='entry' xml:id='term_18'><head>Pfand</head><p>Fictional description 18.</p></div>
+<div type='entry' xml:id='term_19'><head>Quartier</head><p>Fictional description 19.</p></div>
+<div type='entry' xml:id='term_20'><head>Rente</head><p></p></div>
+<div type='entry' xml:id='term_21'><head>Satzung</head><p>Fictional description 21.</p></div>
+<div type='entry' xml:id='term_22'><head>Schöffe</head><p>Fictional description 22.</p></div>
+<div type='entry' xml:id='term_23'><head>Straße</head><p>Fictional description 23.</p></div>
+<div type='entry' xml:id='term_24'><head>Tausch</head><p>Fictional description 24.</p></div>
+<div type='entry' xml:id='term_25'><head>Ufer</head><p>Fictional description 25.</p></div>
+<div type='entry' xml:id='term_26'><head>Vogt</head><p>Fictional description 26.</p></div>
+<div type='entry' xml:id='term_27'><head>Weide</head><p>Fictional description 27.</p></div>
+<div type='entry' xml:id='term_28'><head>Zehnt</head><p>Fictional description 28.</p></div>
+<div type='entry' xml:id='term_29'><head>Zoll</head><p>Fictional description 29.</p></div>
+<div type='entry' xml:id='term_30'><head>Zunft</head><p></p></div>
+</body></text></TEI>
+

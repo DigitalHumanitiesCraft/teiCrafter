@@ -32,12 +32,34 @@ These recipes use invented sample content unless a named local source is explici
 | --- | --- | --- |
 | Turn a transcription into a letter | Load... > New document; choose the letter starter, paste the transcription, enter available metadata, create, correct and request TEI Download | No inferred sender, date or place; the starter is deterministic and not AI-marked |
 | Edit an existing charter | Open its TEI; inspect Source, navigate its real sections/pages, edit simple metadata or use complete header XML, inspect registers, validate output | Preserve unrecognized diplomatic structures; dedicated charter forms are still planned |
-| Create thirty lexicon articles | Choose the encyclopedia-article starter and provide separated source blocks; inspect generated sections and IDs | Dictionary entries have a separate starter and TEI shape; creation/duplication and batch editing inside an existing edition are still planned |
-| Read an unfamiliar TEI | Open it and enable read-only mode; navigate, inspect metadata/source and change reading views | Editing shortcuts, annotation, review and source Apply cannot mutate the document |
+| Manage a lexicon collection | Choose the dictionary or encyclopedia starter, or open its existing TEI; use Entries to search, create, duplicate and preview bounded batch changes | The encodings remain distinct; mixed fields use XML, and batch/deletion-reference scope is the active file |
+| Read an unfamiliar TEI | Open it and enable read-only mode; navigate, inspect metadata/source and select explicit witness readings where encoded | Editing controls cannot mutate the document; missing witness attribution does not imply agreement with the base text |
 | Edit a legal source's metadata and indices | Inspect every header field, apply supported scalar edits, use XML for structured fields, edit existing entities and follow occurrences | An entity index is not a complete project-wide legal vocabulary or cross-document reference manager |
-| Preserve interrupted work | Leave an inline, XML or metadata edit unfinished; reload and restore its checkpoint, or export/reopen Working copy | Invalid staged XML survives as staged input; it does not become validated canonical TEI |
+| Preserve interrupted work | Leave an inline, XML, metadata or specialized form edit unfinished; reload and restore its checkpoint, or export/reopen Working copy | Invalid staged XML survives as staged input; attached project documents retain their source and settings |
+| Deliver an attached project | Choose Project package after editing attached documents and resolving visible input | Every XML file must pass its own schemas before one ZIP is requested; native Save remains scoped to the active file |
 
 Actual menu labels and fixture assertions are exercised by the browser suite. [Dated reports](../reports/README.md) state which runs passed and which material was available.
+
+## Entry collection workflow
+
+The original synthetic fixtures [dictionary entries](../test/fixtures-synthetic/entries-30-dictionary.xml) and [encyclopedia articles](../test/fixtures-synthetic/entries-30-articles.xml) contain varying completeness, internal and cross-entry references, mixed content and foreign example markup. Their descriptions are software-test material and make no historical claims. The collection size follows the acceptance scenario in [specification](specification.md#deterministic-creation).
+
+1. Open either file and inspect Entries. Search by headword, text or XML ID; use Incomplete entries only to locate absent definitions. Display sorting leaves the source order unchanged.
+2. Select an entry and edit an unambiguous heading or definition. Structured fields remain disabled in the scalar form and accessible through Edit entry XML. Apply a no-op to verify that the original source is retained.
+3. Duplicate an entry with an internal detail ID and a cross-entry reference. The copy receives unused IDs, its internal pointer follows its copied detail, and the reference to the other entry retains that target. Preview deletion of a referenced original to inspect the blocking source attributes.
+4. Select entries and open Batch edit selected. Choose local language or number, enter a value and inspect each before/after row. Changing the value invalidates the preview. Apply creates one Undo step for the complete selected batch.
+5. Leave creation or batch values unfinished and preserve a Working copy. Restore the values and scope, request a fresh batch preview, then continue. A malformed identity or duplicate attribute is refused while the unfinished correction remains recoverable.
+6. Request TEI Download to validate the resulting XML. After deleting the last entry, reopening the empty file leaves Entries available through explicit panel selection; creating its first new entry requires choosing the encoding.
+
+These paths establish source and interaction behavior for the declared entry structures. Batch scope and deletion-reference protection stop at the active XML file. A project that keeps entries in several files needs a separate cross-file reference review.
+
+## Witness description and reading workflow
+
+Open a critical edition with local witness definitions and `app` alternatives. In Witnesses, select the reading witness and inspect the alternatives and their own `@wit` values. The reading surface changes only for explicit, unambiguous attestations. Missing attribution, multiple matches, omissions and fragment markers remain distinguishable, and text outside the apparatus remains base text.
+
+Use New witness to supply an identifier and description. Edit a scalar description directly or use exact witness XML for a structured or bibliographic record. Referenced identifiers and descendants cannot be removed or renamed through those operations. Edit witness attribution selects local witnesses or groups for one reading while preserving its content and other attributes. Read-only mode keeps reading selection and inspection available; unfinished source edits retain their ownership when the context pane refreshes.
+
+The focused witness fixtures exercise these declared local semantics. External witness resolution and arbitrary apparatus-location schemes require separate project contracts. [Testing](testing.md) and the dated reports distinguish those focused checks from the full browser suite and scholarly acceptance.
 
 ## Compositional Source Profile examples
 
@@ -112,7 +134,9 @@ Open the codex and use Wenzelsbibel > Transcription to change a selected word's 
 
 Open Bildannotationen.xml and attach the codex under Linked project documents. Select an existing image record, edit its description or attribution, select an ICONCLASS concept, and inspect its image zone or text range. Project checks resolves those pointers against the attached source. A codex word can also lead back to an attached image whose statistical range contains it.
 
-New shared registers creates a separate TEI document for persons, places and peoples. Open companions for editing to move between files; each file retains its own recovery and output boundary. An external file change or page reload requires renewed attachment. [The Wenzelsbibel contract](wenzelsbibel.md) supplies the detailed encodings and walkthrough. There is no atomic save spanning several files.
+New shared registers creates a separate TEI document for persons, places and peoples. Open companions for editing to move between files; the project retains each edited source, encoding and schema settings. A restored checkpoint or reopened Working copy recreates the attached collection. Refresh an attachment explicitly after an external file change.
+
+Choose Project package to validate each XML document and request one ZIP containing the collection and eligible loaded images. An invalid member, cancellation or a changed captured state blocks the whole package. Working copy remains the preservation route for unfinished data, and native Save still affects one active file. [The Wenzelsbibel contract](wenzelsbibel.md) supplies the detailed encodings and walkthrough.
 
 ## Jeanne Hersch inline-GND workflow
 

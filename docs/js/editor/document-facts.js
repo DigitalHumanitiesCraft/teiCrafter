@@ -24,11 +24,12 @@
  */
 
 import { el, clear } from "./dom.js";
-import { typeForFile, parseManifest } from "./project-manifest.js";
+import { typeForFile } from "./project-manifest.js";
 import { captureCheckpoint, createRecoveryStore, migrateLegacyDraft } from "./session-recovery.js";
 import { createRecoveryCoordinator } from "./recovery-coordinator.js";
 import { requireCtx } from "./ctx.js";
 import { unitTerms } from "./unit-labels.js";
+import { projectForSnapshot, restoreProjectDocuments } from "./project-documents.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -201,22 +202,29 @@ export function createDocumentFacts(ctx) {
   async function restoreDraft(record) {
     // Load the stored raw with no handle, then re-mark it as a handle-less draft
     // so Save falls back to a download and the strip wording matches a draft.
-    const project = record.projectManifest ? parseManifest(record.projectManifest) : null;
-    if (project && record.localSchemas) project.localSchemas = record.localSchemas;
-    if (project && record.schemaBaseUrl) project.schemaBaseUrl = record.schemaBaseUrl;
-    const opened = await load(record.raw, record.docName || "draft.xml", null, project, { projectFolder: null });
-    if (!opened) return;
+    const project = projectForSnapshot(record);
+    const projectDocuments = restoreProjectDocuments(record.projectDocuments);
+    const opened = await load(record.raw, record.docName || "draft.xml", null, project, {
+      projectFolder: null, projectDocuments, dirty: record.dirty ?? true,
+      fileEncoding: record.fileEncoding, readingWitness: record.readingWitness,
+    });
+    if (!opened) return false;
     ctx.restoreSchema?.(record.schemaSettings);
     app.recoveryId = record.id;
     app.source = record.source || { kind: "draft", txtName: record.sourceName || null };
     app.fileEncoding = record.fileEncoding || { encoding: "UTF-8", bom: false };
-    app.pageImages = new Map((record.images || []).filter((item) => item.blob instanceof Blob)
-      .map((item) => [item.name, { blob: item.blob, type: item.type, url: URL.createObjectURL(item.blob), persisted: false }]));
+    if (!projectDocuments) {
+      for (const item of app.pageImages.values()) if (item.url?.startsWith("blob:")) URL.revokeObjectURL(item.url);
+      app.pageImages = new Map((record.images || []).filter((item) => item.blob instanceof Blob)
+        .map((item) => [item.name, { blob: item.blob, type: item.type, url: URL.createObjectURL(item.blob), persisted: false }]));
+    }
     if (record.staged) ctx.restoreStaged?.(record.staged);
     updateDocStrip();
     renderActivePanel();
-    setDirty(true); // unsaved by definition; this also re-persists the slot
-    setStatus("Restored local work and attached images. Reopen the project folder to save files there; reconnect any unavailable schema resources before validated export.");
+    setDirty(record.dirty ?? true);
+    void persistDraftIfNeeded();
+    setStatus("Restored local work, linked project documents and attached images. File permissions must be granted again for native Save. Project export validates the current contents again.");
+    return true;
   }
 
   return {

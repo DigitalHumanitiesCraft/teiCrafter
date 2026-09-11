@@ -38,8 +38,8 @@ Common editorial work remains direct. The editor supports reading-text correctio
 | --- | --- | --- |
 | Transcribed letter to TEI | Deterministic letter starter, metadata, reading text and exact XML | Project-specific correspondence forms |
 | Existing charter or legal source | Source-derived navigation, full header inventory, entity registers, exact XML | Dedicated diplomatic and legal-source forms |
-| A set of lexicon entries | Separate dictionary-entry and encyclopedia-article starters; navigation in existing entries | Safe insertion, duplication and previewed batch changes in an existing edition |
-| Reading without editing | Explicit read-only mode with navigation and source inspection | Broader apparatus and witness reading controls |
+| A set of lexicon entries | Separate starters, filterable entry details, creation, safe duplication, reference-protected deletion and previewed document-local batches | Project-specific fields and operations across several entry files |
+| Reading without editing | Explicit read-only mode, witness selection, disclosed attestations, source inspection and exact witness XML | External witness resolution and reconstruction of unencoded witness text |
 | Facsimile correction and review | Text/image alignment, annotations, proposals and fingerprinted review records | Cross-document transactions and a real editorial pilot |
 
 The interface adapts to actual TEI structure, schema evidence, project policy and the selected task. A starter supplies initial XML; it does not make every document of that genre compatible with a specialized form. The [implementation plan](../reports/implementation-plan-0.2.0.md) owns the remaining release scope.
@@ -58,13 +58,13 @@ Save and Download are authorization points. The editor validates the exact proje
 
 A project manifest supplies the project schema set. A session upload replaces that set for the current session. TEI P5 TEI All is the repository default when the project supplies no schema. RelaxNG and XSD run locally through the browser validator. Raw and compiled Schematron use bounded browser runtimes whose unsupported constructs produce an unavailable result and therefore block output.
 
-A separately labelled Working copy exports unfinished session state without schema authorization. Local recovery checkpoints also preserve staged edits. A requested XML download retains recovery because the browser cannot establish that the user saved the file; only a complete native Save of the same current revision can clear its checkpoint.
+A separately labelled Working copy exports unfinished session state and attached project documents without schema authorization. Local recovery checkpoints preserve the same document collection and staged edits. Project package validates each XML document against its effective schemas before requesting one ZIP download. A requested download retains recovery because the browser cannot establish that the user saved the file. Native Save establishes a savepoint for the active file; unsaved companion documents continue to require preservation.
 
 The offline Python fidelity harness has a different purpose. It compares text fidelity, structural invariants, and schema diagnostics before and after edits. Its comparative schema level remains evidence rather than an output authorization. The browser gate governs actual Save and Download operations.
 
 ## Browser and deployment model
 
-teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set. The browser suite covers the fallback path in Chromium and Firefox; the [current report](../reports/wenzelsbibel-workflow-2026-09-11.md) records execution evidence and performance limits. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
+teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set. The browser suite covers the fallback path in Chromium and Firefox; the [current report](../reports/editorial-completion-2026-09-11.md) records execution evidence and performance limits. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
 
 GitHub Pages automatically publishes the versioned `docs/` source from main. The checks workflow independently builds, verifies and packages `dist/`. Built-in examples are available on local development hosts; the public editor opens the researcher's local files through Load. Both forms of delivery use the same local XML and schema-worker model.
 
@@ -86,7 +86,9 @@ teiCrafter preserves arbitrary TEI through exact source views and targeted splic
 
 The browser inspects the effective repository, project, or session schema set after opening a document and after a session override changes. Multiple vocabulary schemas contribute conjunctive evidence. Schematron remains constraint evidence for validation. An unavailable or partially resolved vocabulary schema leaves the affected capabilities unknown, so profile inspection cannot block opening or suppress a structurally observed capability without sound negative evidence. This descriptive path remains separate from the fail-closed output gate.
 
-The stand-off span engine operates within one TEI document. The Wenzelsbibel workspace edits its separate image annotations and shared registers through explicitly attached companion documents. Its forms create and resolve cross-file pointers and codex range expressions against those snapshots. One document is active at a time; each changed file is saved separately, and companions must be reattached after a reload. Atomic multi-file persistence and concurrent editing remain outside this contract.
+The stand-off span engine operates within one TEI document. The Wenzelsbibel workspace edits separate image annotations and shared registers through an explicitly attached document collection. Its forms create and resolve cross-file pointers and codex range expressions against the retained sources. Recovery and Working copy preserve that collection across reopening, while Project package provides a single validated delivery artifact. Native writes remain file-scoped. Concurrent editing and an atomic transaction across several external files remain outside this contract.
+
+Entry management likewise changes the active XML document. Its deletion protection covers references to the selected subtree within that file, and its batch fields are limited to local language and number attributes. Witness reading requires explicit attestation; absent or ambiguous attribution never establishes agreement with the base text. Unsupported compound pointer semantics and structured field inverses remain visible through exact XML.
 
 ## Project origin and comparisons
 

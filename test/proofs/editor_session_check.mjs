@@ -48,4 +48,12 @@ check("undoing a saved edit marks the prior state dirty", session.dirty);
 session.replace(parseEdition(base.replace("alpha", "ALPHA")), "Branch edit");
 check("a branch edit discards redo history", !session.canRedo());
 
+session.load(parseEdition(base), { dirty: true });
+check("restored unsaved source starts dirty without invented history", session.dirty && !session.canUndo());
+session.replace(parseEdition(changed), "Edit restored source");
+session.undo();
+check("undo after recovery retains unsaved source status", session.dirty && session.state.doc.raw === base);
+session.markSaved();
+check("a native save can establish the restored source as clean", !session.dirty);
+
 finish("editor_session_check passed");

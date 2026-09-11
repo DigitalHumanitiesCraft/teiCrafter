@@ -4,7 +4,7 @@ A browser editor for creating, reading and editing TEI XML with exact source pre
 
 [Open the published editor](https://digitalhumanitiescraft.github.io/teiCrafter/) | [Start with the workflows](knowledge/worked-examples.md) | [Project knowledge](knowledge/INDEX.md)
 
-**Research preview.** The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [Wenzelsbibel workflow report](reports/wenzelsbibel-workflow-2026-09-11.md) records the current implementation and verification boundary. The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader product target.
+**Research preview.** The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [editorial workspace report](reports/editorial-completion-2026-09-11.md) records the current implementation and verification boundary, extending the [Wenzelsbibel workflow report](reports/wenzelsbibel-workflow-2026-09-11.md). The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader product target.
 
 ## What editors can do
 
@@ -12,11 +12,12 @@ A browser editor for creating, reading and editing TEI XML with exact source pre
 | --- | --- |
 | Turn a transcription into TEI | Load... > New document...; choose a transcription, letter, charter, legal-source, dictionary-entry or encyclopedia-article starter and supply the known facts. |
 | Edit an existing TEI document | Open or drop a UTF-8 XML file. Use Reading text, XML source and Metadata; the source remains canonical. |
-| Create thirty lexicon entries | Use the dictionary or encyclopedia starter. Each blank-line-separated block becomes one unit; its first line is the headword or heading. Entry management and batch editing in existing documents remain planned. |
-| Read and inspect TEI | Choose Read only. Navigation, source inspection and copying remain available while source mutations are blocked. |
+| Manage lexicon entries | Use the dictionary or encyclopedia starter, or open existing entries. Entries supports search, completeness checks, creation, safe duplication and reference-protected deletion. Preview language or number changes across an explicit selection before applying one undoable batch. |
+| Read and inspect TEI | Choose Read only. Navigation, source inspection and copying remain available. Witnesses exposes encoded attestations, reading alternatives and witness descriptions. |
 | Work on historical-source metadata and indices | Inspect the complete header, edit safe fields, open structured content as exact XML, and manage supported register entities and their references. |
 | Compare text with a facsimile | Open encoded image references or attach a local image folder where the browser provides that capability. |
-| Preserve unfinished work | Download a Working copy containing XML, unfinished fields, schema/project settings and attached images, or restore a local browser checkpoint. |
+| Preserve unfinished work | Download a Working copy containing the active XML, unfinished fields, attached project documents, their settings and loaded images, or restore a local browser checkpoint. |
+| Deliver attached project documents | Project package validates every XML file against its own schema set before requesting one ZIP download. Native Save writes the active document. |
 
 The interface derives its navigation and editing capabilities from actual TEI structure. Entries, pages, speech turns and sections can coexist. A project manifest can refine that choice and supply schemas, vocabulary, indices, images and interchange settings. Genre-specific starters provide an initial encoding; existing documents are not converted into templates to fit a form.
 
@@ -34,7 +35,9 @@ Open project folder and in-place Save use the browser's optional File System Acc
 
 Open the codex or Bildannotationen.xml. Its project identifier selects the Wenzelsbibel workspace; project manifests can explicitly declare `"workspace": "wenzelsbibel"`. The specialized pane supports paired word readings, multilingual apparatus comments, Vulgate verse references, image descriptions, artist attributions, ICONCLASS concepts and shared persons, places and peoples registers.
 
-Attach the companion codex, image annotations or registers under **Linked project documents** for word-range selection, image-zone lookup and reference checks. **Project checks** reports cross-file problems and editorial completeness. **Import PAGE XML** converts selected Transkribus PAGE files, with optional METS ordering, into a separate TEI draft. Each document uses ordinary Apply, Undo, recovery and schema-gated output. Reattach companions after reloading.
+Attach the companion codex, image annotations or registers under **Linked project documents** for word-range selection, image-zone lookup and reference checks. **Project checks** reports cross-file problems and editorial completeness. **Import PAGE XML** converts selected Transkribus PAGE files, with optional METS ordering, into a separate TEI draft. Switching documents retains their edited source and settings in recovery and Working copy. Reattach a companion when its external source file changes.
+
+Use **Project package** for one ZIP containing the attached XML documents and eligible loaded images. Every XML file must pass its configured schemas before any package is downloaded. **Working copy** remains available for unfinished or invalid material. In-place Save affects the active document and does not write all companions to disk.
 
 The bundled image Schematron is an explicitly authored editorial profile. Its editing phase permits unfinished records; its review phase checks completeness. The original Bilderfassung.sch was unavailable. The [Wenzelsbibel contract and walkthrough](knowledge/wenzelsbibel.md) explains the encodings, sources and practical boundaries.
 
@@ -42,7 +45,9 @@ The bundled image Schematron is an explicitly authored editorial profile. Its ed
 
 The raw XML string is canonical. The editor applies exact offset splices instead of serializing the whole document tree. With the supported UTF-8 file boundary, including an optional BOM, an unchanged ordinary TEI file round-trips identically; intentional edits preserve unrelated source bytes. Explicit project interchange formats can apply a target projection before output validation.
 
-Source preservation, readable projection and guided editing are separate capabilities. Exact XML remains available for structures without a safe interactive inverse. The current reader selects one branch of a choice or apparatus; a complete apparatus/witness workspace is still planned. UTF-16 and conflicting encoding declarations are refused rather than silently converted.
+Source preservation, readable projection and guided editing are separate capabilities. Exact XML remains available for structures without a safe interactive inverse. Witness reading selects explicitly attributed alternatives and identifies missing or ambiguous attestations, omissions and fragment markers. Text outside apparatus entries remains the edition's base text. Witness descriptions and reading attribution can be edited through their forms or exact XML. UTF-16 and conflicting encoding declarations are refused before editing.
+
+Entry forms support TEI dictionary entries and article divisions with the declared entry/article shape. Mixed or ambiguous fields remain available through XML. Batch changes and entry deletion checks cover the active XML document; references in other files require separate review.
 
 Review records retain their history and identify the reviewed source scope. A later change can make that review stale. Schema validation, human review and annotation coverage answer different questions; none establishes scholarly correctness by itself.
 

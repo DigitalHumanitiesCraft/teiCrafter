@@ -7,7 +7,10 @@ export function createSchemaWorkerClient(createWorker) {
   function stop(message) {
     if (worker) worker.terminate();
     worker = null;
-    for (const request of pending.values()) request.reject(new Error(message));
+    for (const request of pending.values()) {
+      request.cleanup();
+      request.reject(new Error(message));
+    }
     pending.clear();
   }
   function ensureWorker() {
@@ -21,6 +24,7 @@ export function createSchemaWorkerClient(createWorker) {
       if (!request) return;
       if (data.kind === "progress") { request.onProgress(data.phase); return; }
       pending.delete(data.id);
+      request.cleanup();
       if (data.kind === "error") request.reject(new Error(data.message || "Schema validation worker failed."));
       else if (data.kind === "result" && ["valid", "invalid"].includes(data.result?.status)
         && data.result.name === request.name && data.result.type === request.type
@@ -36,14 +40,18 @@ export function createSchemaWorkerClient(createWorker) {
     return current;
   }
   return {
-    validate(raw, source, graph, onProgress = () => {}) {
+    validate(raw, source, graph, onProgress = () => {}, signal = null) {
       return new Promise((resolve, reject) => {
         const id = ++serial;
+        const abort = () => stop("Schema validation was cancelled before output authorization.");
+        const cleanup = () => signal?.removeEventListener("abort", abort);
         try {
+          signal?.throwIfAborted();
           const current = ensureWorker();
-          pending.set(id, { resolve, reject, onProgress, name: source.name, type: source.type });
+          pending.set(id, { resolve, reject, onProgress, cleanup, name: source.name, type: source.type });
+          signal?.addEventListener("abort", abort, { once: true });
           current.postMessage({ id, raw, source: { name: source.name, type: source.type }, graph });
-        } catch (error) { pending.delete(id); reject(error); }
+        } catch (error) { cleanup(); pending.delete(id); reject(error); }
       });
     },
     dispose: () => stop("Schema validation worker was closed before its result was available."),

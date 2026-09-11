@@ -16,10 +16,11 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit -p jsconfig.json",
-    "check:biome": "biome check --files-ignore-unknown=true docs/js test/e2e test/verify.mjs vite.config.js playwright.config.js",
+    "check:biome": "biome check --files-ignore-unknown=true docs/js test/e2e test/verify.mjs test/evaluate-editorial.mjs test/evaluation-results.mjs test/evaluation-inputs.mjs vite.config.js playwright.config.js",
     "verify": "node test/verify.mjs",
     "verify:full-corpus": "npm run verify && node test/run_all.mjs szd_loadability_sweep && node test/run_all.mjs port_parity",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "evaluate:editorial": "node test/evaluate-editorial.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

@@ -28,19 +28,17 @@ jobs:
         run: uv pip install --system "lxml==5.4.0"
       - name: Install pinned Node dependencies
         run: npm ci
-      - name: Verify proofs, harness, types, lint, and build
-        run: npm run verify
-      - name: Install Playwright Chromium
+      - name: Install Playwright Chromium and Firefox
         run: npx playwright install --with-deps chromium firefox
-      - name: Run browser E2E and accessibility smoke tests
-        run: npm run test:e2e
+      - name: Evaluate proofs, harness, types, build and browser workflows without retries
+        run: npm run evaluate:editorial
       - name: Preserve browser verification reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: browser-verification-${{ github.run_attempt }}
           path: |
-            playwright-report/
+            node_modules/.tmp/evaluation/
             test-results/
           if-no-files-found: ignore
           retention-days: 7

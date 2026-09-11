@@ -158,7 +158,7 @@ function teiQName(doc, localName, context = null) {
 
 /**
  * The authority identifiers carried by an entity as <idno type="...">value</idno>
- * children. Returns [{ type, value }] in document order; type "" when @type absent.
+ * children. Returns [{ type, value }] in document order; an absent type is "".
  */
 function readAuthorities(doc, el) {
   return elementsByLocal(el, "idno").map((idno) => ({
@@ -364,8 +364,10 @@ function ensureList(doc, type) {
  * Add an entity of the given type using the shared shape. The id is slugified and
  * uniquified (NCName-safe); the name is escaped. When ai is true the entity is
  * marked resp="#ai" (AI-proposed, unverified). Returns a NEW doc.
+ * @param {{id?: string, name?: string, ai?: boolean}} [options]
  */
-export function addEntity(doc, type, { id, name, ai = false } = {}) {
+export function addEntity(doc, type, options = {}) {
+  const { id, name, ai = false } = options;
   const desc = TYPE_MAP[type];
   if (!desc) throw new Error("Unknown entity type: " + type);
 
@@ -420,8 +422,10 @@ function findEntityElement(doc, id) {
  * Replace the persName/orgName/label text of the entity with xml:id === id.
  * If the name element exists, splice its content; otherwise insert one just inside
  * the entity. Returns a NEW doc (or the SAME doc if nothing matches or no change).
+ * @param {{name?: string}} [options]
  */
-export function updateEntity(doc, id, { name } = {}) {
+export function updateEntity(doc, id, options = {}) {
+  const { name } = options;
   const el = findEntityElement(doc, id);
   if (!el) return doc;
   const type = ENTITY_TO_TYPE[el.localName];

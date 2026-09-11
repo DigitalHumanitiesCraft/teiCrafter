@@ -49,13 +49,13 @@ The implementation reads the existing codex and image-annotation topology withou
 | `registers.xml` | Persons, places, peoples, and authority identifiers | Attached codex and image files for reference checks |
 | Imported PAGE transcription | A new, independent TEI draft containing selected source pages | Source image filenames and preserved PAGE provenance |
 
-Exactly one document is editable at a time. **Linked project documents** attaches local XML files as reference snapshots. **Open for editing** makes a companion the active document and retains the former active document as an in-memory companion. The normal unsaved-document and unfinished-input safeguards apply to this transition.
+Exactly one document is editable at a time. **Linked project documents** attaches local XML files to a persistent project collection. **Open for editing** checkpoints the current file before activating its companion. Each file retains its own XML, UTF-8 BOM, dirty state, project and schema settings, selected witness and attached images. Failed recovery storage blocks the switch; unfinished input must be applied or cancelled first.
 
-Every Apply operation belongs to the active document. Saving that document does not save its companions, and there is no atomic transaction spanning the codex, image annotations, and registers. Save each changed file explicitly. After a browser reload, reattach companion files for lookup and cross-file checks. A saved filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
+Every Apply operation belongs to the active document. Native **Save** still writes that file. **Project package** validates each XML file against its own schema set and downloads one ZIP containing all files, loaded binary images and a project manifest. One invalid, unavailable, stale or cancelled decision prevents the entire package. **Load → Open project package...** restores this collection and requires fresh validation for subsequent output. The package is a single download; it does not atomically replace several filesystem files. A filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
 
 The Wenzelsbibel forms are available in **Reading text**. While **XML source** or **Metadata** is open, that left-hand editor owns unfinished input and the project panel shows a navigation hint. Return to **Reading text** to resume project forms. Changing views requires applying or cancelling the current input; **Working copy** can preserve it unfinished.
 
-Companions are snapshots rather than live filesystem subscriptions. If another application changes a file, attach its current version again. A reference check can establish consistency only for the attached documents. Deletion protection for a register entry cannot discover references in files that have not been attached.
+Companions are snapshots rather than live filesystem subscriptions. If another application changes a file, attach its current version again. A reference check can establish consistency only for the attached documents. Deletion protection includes identifiers in the removed entry's complete subtree, but cannot discover references in files that have not been attached. Reassigning a companion role retains the former file without that role; colliding filenames are refused.
 
 ## Transcription and commentary
 
@@ -93,12 +93,14 @@ Verse mappings are independent entries in `standOff/spanGrp[@type='bible-verses'
 | --- | --- |
 | First and last transcription words | `span/@from` and `span/@to`, inclusive word references |
 | Displayed book, chapter, and verse | `span/@n` and text of `ref[@type='vulgate']` |
-| Canonical reference string | `ref[@type='vulgate']/@cRef` |
+| Declared canonical reference string | Optional `ref[@type='vulgate']/@cRef`; new or changed values require an explicit, unambiguous header `refsDecl/cRefPattern` contract |
 | Supplied Latin passage | `note[@type='vulgate']/quote[@xml:lang='la']` |
 | Reference edition and editorial comment | A separate `note` |
 | Responsibility | `span/@resp` |
 
 In **Bible verses**, create a mapping, select the word range, and enter a reference according to the Vulgate edition being cited. Record that edition in **Comment and reference edition**. Psalm and other edition-dependent numbering must follow the cited source. The interface accepts the supplied reference string and does not silently translate between numbering systems. Latin text is optional and must be supplied from the reference edition; the application neither retrieves nor invents it. The current form does not provide a controlled Bible-book vocabulary or an external verse concordance.
+
+A free reference remains in `span/@n` and the reference text. It does not automatically acquire `@cRef`: TEI associates that attribute with a header-declared canonical reference scheme. Existing `cRef` values survive unrelated edits unchanged. A supplied declaration remains an editorial contract; the editor does not certify the cited edition or evaluate arbitrary XPath replacement rules. [TEI canonical references](https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-att.cReferencing.html)
 
 ## Image annotation contract
 
@@ -127,7 +129,7 @@ Open the image file and attach its codex under **Linked project documents**. In 
 
 Artist choices come from identified names in the image document's header. Multiple artists can be selected. Existing unknown references remain visible so that an editor can correct them against the header. Related person and place references are entered as whitespace-separated pointers. Structured list entries with additional content cannot be silently discarded by reducing a form list.
 
-For the statistical range, use **First image-related word** and **Last image-related word**, or the attached-codex word picker, then press **Set text range** and Apply. The project checks that endpoints resolve uniquely and occur in source order. In the codex's **Transcription** section, **Images referring to this word** lists attached image records whose resolved range includes the selected word. Opening one makes the image document editable at that record.
+For the statistical range, use **First image-related word** and **Last image-related word**, or the attached-codex word picker, then press **Set text range** and Apply. The project checks that endpoints resolve uniquely to TEI words and occur in source order. In the codex's **Transcription** section, **Images referring to this word** lists attached image records whose resolved range includes the selected word. Opening one makes the image document editable at that record.
 
 **Show miniature facsimile** uses the attached codex's surface and zone to focus the shared viewer on the image region. It requires a resolvable graphic URL or a project image resolver. An available zone reference alone does not guarantee that the image service or local image file can be loaded.
 
@@ -170,15 +172,15 @@ The review phase checks nonempty title, short and full description, folio target
 
 **Project checks** also identifies unresolved apparatus endpoints and register references. **Keep sole reading** is an explicit repair for an attribute-free `choice` containing a single supported branch: it removes that redundant choice wrapper while retaining the existing reading. The action invents no missing alternative. Other structures require inspection in XML source.
 
-Save and Download validate the exact proposed XML revision. RelaxNG and XSD compilation and validation run in a dedicated browser worker, which keeps the interface responsive during initial schema preparation and retains compiled schemas for reuse. The status distinguishes **Preparing schema**, **Parsing XML**, and **Validating XML**. An unavailable validator or a failed schema result prevents authorized TEI output. The explicit editorial review action is separate from the editing-phase save gate.
+Save and Download validate the exact proposed XML revision. RelaxNG and XSD compilation and validation run in a dedicated browser worker. A bounded in-memory cache reuses a successful decision only for the identical XML and complete schema dependency graph, identified by SHA-256. A changed source or schema requires validation. **Cancel validation** in the validation details and the project export's cancellation control terminate pending worker work and cannot authorize a download. Status distinguishes schema preparation, XML parsing, validation and exact-result reuse. The explicit editorial review action is separate from the editing-phase save gate.
 
 ## Applying, preserving, and reopening work
 
 Form changes remain staged until **Apply** succeeds. **Cancel** restores the represented source values. Changing records, sections, navigation units, or documents requires applying or cancelling unfinished input first. Applied changes enter the active document's undo history. A read-only session disables mutation controls.
 
-Recovery includes the active source and supported unfinished Wenzelsbibel form input. **Working copy** preserves a recoverable editing state even when TEI output cannot yet pass its schema. This recovery artifact has a different purpose from a validated XML export. Restoring the active document does not restore file permissions, remote service availability, or attached companion snapshots.
+Recovery includes all attached project documents, their settings and images, and supported unfinished input in the active file. **Working copy** version 2 preserves this state even when TEI output cannot pass its schema; version 1 remains readable. Neither recovery nor a working copy carries an output authorization or filesystem permission. XML/SVG image attachments remain recoverable in Working copy; Project package refuses them because the image channel cannot provide their own XML schema decision.
 
-For a complete editorial pass, save the codex, image annotations, and registers separately; reopen the saved XML files; reattach the current companions; inspect the relevant transcription, comment, verse, image, and register records; and rerun project checks plus editorial completeness review. Preserve unresolved findings as editorial work. Successful schema validation establishes formal validity for the selected rules and source revision; scholarly verification and user acceptance remain separate statements.
+For a complete editorial pass, export and reopen the project package; inspect transcription, comments, verse alignment, images and registers; and rerun project checks plus editorial completeness review. Use Working copy to preserve any unfinished or invalid state. Successful schema validation establishes formal validity for the selected rules and source revision; scholarly verification and user acceptance remain separate statements.
 
 ## Implementation boundaries
 

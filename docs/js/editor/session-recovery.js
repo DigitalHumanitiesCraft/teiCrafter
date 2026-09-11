@@ -1,5 +1,6 @@
 /** Versioned local checkpoints. Completion means an IndexedDB transaction committed. */
 import { loadDraft, clearDraft } from "./draft-recovery.js";
+import { captureProjectDocuments } from "./project-documents.js";
 
 const DATABASE = "teicrafter.recovery";
 const STORE = "sessions";
@@ -59,10 +60,14 @@ export function captureCheckpoint(app, staged = null, schemaSettings = null) {
     docName: app.docName,
     source: app.source,
     fileEncoding: app.fileEncoding,
+    dirty: !!app.dirty,
+    readingWitness: app.readingWitness || null,
+    project: app.project ? JSON.parse(JSON.stringify(app.project)) : null,
     projectManifest: app.project?.manifestSource || null,
     localSchemas: app.project?.localSchemas || null,
     schemaBaseUrl: app.project?.schemaBaseUrl || null,
     schemaSettings,
+    projectDocuments: app.projectDocuments ? captureProjectDocuments(app, schemaSettings) : null,
     savedAt: new Date().toISOString(),
     staged,
     images: [...(app.pageImages || [])].map(([name, item]) => ({ name, blob: item.blob, type: item.type })),

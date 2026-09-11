@@ -84,6 +84,7 @@ const index = indexWenzelsCodex(codex);
 assert.deepEqual(validateImageAnnotationPointers(item, index), []);
 assert.equal(validateImageAnnotationPointers({ ...item, range: "#range(,)" }, index)[0].code, "invalid-range");
 assert.equal(validateImageAnnotationPointers({ ...item, zone: "#line_test" }, index)[0].code, "not-image-zone");
+assert.ok(validateImageAnnotationPointers({ ...item, range: "#range(line_test, line_test)" }, index).some((issue) => issue.code === "not-word-target"));
 assert.equal(validateImageAnnotationPointers({ ...item, range: "#range(word_2, word_1)" }, index)[0].code, "reversed-range");
 assert.equal(validateImageAnnotationPointers({ ...item, zone: "#missing" }, index)[0].code, "missing-target");
 assert.equal(validateImageAnnotationPointers(item, null)[0].code, "missing-codex");

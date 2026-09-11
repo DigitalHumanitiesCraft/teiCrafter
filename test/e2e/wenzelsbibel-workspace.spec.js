@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { decodeProjectBundle } from "../../docs/js/editor/project-bundle.js";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
@@ -133,7 +135,11 @@ test("Wenzelsbibel image edits preserve the source and resolve an attached codex
   });
   await page.locator(".ed-wb-resource").filter({ hasText: "synthetic-codex.xml" }).getByRole("button", { name: "Open for editing", exact: true }).click();
   await expect(page.locator("#ed-docstrip")).toContainText("synthetic-codex.xml");
-  expect(replacementPrompt).toContain("Discard unsaved changes in synthetic-images.xml?");
+  expect(replacementPrompt).toBe("");
+  const linkedCopy = await workingCopy(page);
+  expect(linkedCopy.projectDocuments.documents.find((entry) => entry.name === "synthetic-images.xml")).toMatchObject({
+    raw: images.replace("Initial A", "Changed initial"), dirty: true,
+  });
   expect(Buffer.from(await download(page))).toEqual(codexBytes);
   await workspace(page, "diplomatic");
   await expect(page.getByRole("heading", { name: "Images referring to this word", exact: true })).toBeVisible();
@@ -224,6 +230,23 @@ test("real Wenzelsbibel codex preserves readings and validates an explicitly rep
   expect(await download(page, 360_000)).toBe(original.replace(loneChoices[0][0], loneChoices[0][1]));
   console.log(`${testInfo.project.name}: real codex validated and downloaded in ${Math.round(performance.now() - validationStarted)} ms`);
   console.log(`${testInfo.project.name}: real codex schema phases ${JSON.stringify(await page.evaluate(() => window.__realCodexSchemaPhases))}`);
+  if (realImages && existsSync(realImages)) {
+    const details = page.locator("details.ed-wb-resources");
+    if (!await details.evaluate((node) => node.open)) await details.locator("summary").click();
+    await page.getByLabel("Attach Image annotations", { exact: true }).setInputFiles(realImages);
+    await expect(page.locator("#ed-status")).toContainText("attached for reference lookup", { timeout: 90_000 });
+    const packageStarted = performance.now();
+    const packageDownload = page.waitForEvent("download", { timeout: 90_000 });
+    await page.locator("#btn-project-package").click();
+    const packed = decodeProjectBundle(readFileSync(await (await packageDownload).path()));
+    const digest = (text) => createHash("sha256").update(text).digest("hex");
+    expect(packed.documents).toHaveLength(2);
+    expect(digest(packed.documents.find((entry) => entry.role === "codex").raw)).toBe(digest(original.replace(loneChoices[0][0], loneChoices[0][1])));
+    expect(digest(packed.documents.find((entry) => entry.role === "images").raw)).toBe(digest(readFileSync(realImages, "utf8")));
+    const packageMs = Math.round(performance.now() - packageStarted);
+    console.log(`${testInfo.project.name}: real codex and image project package after identical validation in ${packageMs} ms`);
+    testInfo.annotations.push({ type: "real-project-package-ms", description: String(packageMs) });
+  }
   expect(readFileSync(realCodex, "utf8")).toBe(original);
   testInfo.annotations.push({ type: "real-codex-workflow-ms", description: String(Math.round(performance.now() - started)) });
 });

@@ -128,17 +128,24 @@ export function applyEdits(doc, edits) {
 }
 
 export function assertUnreferenced(doc, node) {
-  const id = getXmlId(node);
-  if (!id) return;
-  let referenced = false;
+  assertCurrent(doc, node);
+  const ids = new Set();
+  walk(node, (child) => { const id = child.type === "element" && getXmlId(child); if (id) ids.add(id); });
+  if (!ids.size) return;
+  let referenced = "";
   walk(doc.root, (candidate) => {
-    if (candidate.type !== "element") return;
+    if (referenced || candidate.type !== "element") return;
     let parent = candidate;
     while (parent && parent !== node) parent = parent.parent;
     if (parent === node) return;
-    if ((candidate.attrs || []).some((value) => value.value.split(/\s+/).includes(`#${id}`))) referenced = true;
+    for (const attribute of candidate.attrs || []) for (const value of attribute.value.split(/\s+/)) {
+      if (!value.includes("#")) continue;
+      let fragment = value.slice(value.lastIndexOf("#") + 1);
+      try { fragment = decodeURIComponent(fragment); } catch { /* Preserve malformed reference evidence. */ }
+      if (ids.has(fragment)) referenced = fragment;
+    }
   });
-  if (referenced) throw new Error(`The identifier ${id} is referenced elsewhere in this document.`);
+  if (referenced) throw new Error(`The identifier ${referenced} is referenced elsewhere in this document.`);
 }
 
 export function removeRecord(doc, record) {

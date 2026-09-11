@@ -82,7 +82,9 @@ check("mixed choice readings disclose one branch per variant", choiceWords[0].di
 check("explicit empty reading attributes remain empty", choiceWords[1].dipl === "" && choiceWords[1].norm === "");
 
 section("Bible mapping and multilingual notes");
-const verseDoc = addBibleVerseMapping(doc, selection, { reference: "Gen 1:1", cRef: "Gen.1.1", quote: "In principio", note: "Check verse boundary", resp: "#editor" });
+const declaration = '<encodingDesc><refsDecl xml:id="vulgate-scheme"><cRefPattern matchPattern="([A-Za-z]+)\\.([0-9]+)\\.([0-9]+)" replacementPattern="https://example.test/declared-edition/$1/$2/$3"/></refsDecl></encodingDesc>';
+const declaredDoc = parseDocument(raw.replace('</teiHeader>', `${declaration}</teiHeader>`));
+const verseDoc = addBibleVerseMapping(declaredDoc, selection, { reference: "Gen 1:1", cRef: "Gen.1.1", quote: "In principio", note: "Check verse boundary", resp: "#editor" });
 const verse = readBibleVerseMappings(verseDoc)[0];
 check("Bible mappings use the original word identifiers and explicit canonical reference",
   verse.from === "#w1" && verse.to === "#w2" && verse.cRef === "Gen.1.1" && verse.reference === "Gen 1:1"
@@ -97,6 +99,19 @@ check("verse endpoints and content can change together without changing source w
 check("removing a verse retains unrelated apparatus", removeBibleVerseMapping(verseDoc, verse).raw.includes(originalApp));
 const noLatin = addBibleVerseMapping(doc, selection, { reference: "Gen 1:1" });
 check("no Latin text is manufactured", !noLatin.raw.includes("<quote"));
+check("free edition references do not invent an undeclared canonical scheme", !noLatin.raw.includes('cRef=')
+  && noLatin.raw.includes('<ref type="vulgate">Gen 1:1</ref>'));
+check("new canonical references require an explicit header contract", refuses(() => addBibleVerseMapping(doc, selection, { reference: "Gen 1:1", cRef: "Gen.1.1" })));
+const incompleteDeclaration = parseDocument(raw.replace('</teiHeader>', '<encodingDesc><refsDecl><p>A vague reference note.</p></refsDecl></encodingDesc></teiHeader>'));
+check("a prose note is not treated as a machine-readable canonical reference contract", refuses(() => addBibleVerseMapping(incompleteDeclaration, selection, { reference: "Gen 1:1", cRef: "Gen.1.1" })));
+const ambiguousDeclaration = parseDocument(declaredDoc.raw.replace('</encodingDesc>', '<refsDecl><cRefPattern matchPattern="(.+)" replacementPattern="other.xml#$1"/></refsDecl></encodingDesc>'));
+check("several unselected canonical schemes are rejected", refuses(() => addBibleVerseMapping(ambiguousDeclaration, selection, { reference: "Gen 1:1", cRef: "Gen.1.1" })));
+const legacyVerseDoc = parseDocument(verseDoc.raw.replace(declaration, ''));
+const legacyVerse = readBibleVerseMappings(legacyVerseDoc)[0];
+check("existing undeclared cRef survives an exact form no-op", updateBibleVerseMapping(legacyVerseDoc, legacyVerse, { reference: legacyVerse.reference, cRef: legacyVerse.cRef }) === legacyVerseDoc);
+check("a different field does not rewrite existing undeclared cRef", updateBibleVerseMapping(legacyVerseDoc, legacyVerse, { note: 'Edition inspected' }).raw.includes('cRef="Gen.1.1"'));
+check("changing legacy cRef requires its explicit contract", refuses(() => updateBibleVerseMapping(legacyVerseDoc, legacyVerse, { cRef: 'Gen.1.2' })));
+check("an explicit clear removes cRef without inventing a fallback", !updateBibleVerseMapping(legacyVerseDoc, legacyVerse, { cRef: '' }).raw.includes('cRef='));
 const sparseVerse = readBibleVerseMappings(noLatin)[0];
 check("empty optional verse form values do not create new XML", updateBibleVerseMapping(noLatin, sparseVerse, {
   reference: sparseVerse.reference, cRef: sparseVerse.cRef, quote: "", note: "", resp: "",
@@ -132,6 +147,11 @@ for (const target of ["https://example.org/registers.xml#Gott", "../registers.xm
   check(`unsafe external pointer is refused: ${target}`, refuses(() => parseWenzelsRegisterTarget(target)));
 }
 check("register removal keeps other register types", readWenzelsRegisters(removeWenzelsRegisterEntry(registers, "Gott")).length === 2);
+const namedTarget = parseDocument(registers.raw.replace('<orgName>Völker</orgName>', '<orgName xml:id="people-name">Völker</orgName>')
+  .replace('<p/>', '<p><ref target="#people-name">A reference to the register name.</ref></p>'));
+check("register deletion protects referenced descendant identifiers", refuses(() => removeWenzelsRegisterEntry(namedTarget, "Völker")));
+const encodedTarget = parseDocument(namedTarget.raw.replace('target="#people-name"', 'target="registers.xml#people%2Dname"'));
+check("descendant protection recognizes URI fragments and percent encoding", refuses(() => removeWenzelsRegisterEntry(encodedTarget, "Völker")));
 
 section("Namespace and output schema contracts");
 const prefixRaw = raw.replace(/<(\/?)([A-Za-z][\w.-]*)/g, "<$1t:$2").replace('xmlns="http://www.tei-c.org/ns/1.0"', 'xmlns:t="http://www.tei-c.org/ns/1.0"');
@@ -140,13 +160,14 @@ check("new TEI preserves the document namespace prefix", prefixed.raw.includes("
 const simple = parseDocument(`<TEI xmlns="http://www.tei-c.org/ns/1.0">${header}${body}</TEI>`);
 const validComment = createWenzelsComment(simple, selection, { notes: [{ text: "Comment", lang: "en" }] });
 const validVerse = addBibleVerseMapping(simple, selection, { reference: "Gen 1:1", quote: "In principio", note: "Comparison" });
+const declaredVerse = addBibleVerseMapping(parseDocument(simple.raw.replace('</teiHeader>', `${declaration}</teiHeader>`)), selection, { reference: "Gen 1:1", cRef: "Gen.1.1" });
 const validLink = addWenzelsRegisterLink(simple, selection, { target: "registers.xml#Gott" });
 const removedLastComment = removeWenzelsComment(validComment, readWenzelsComments(validComment)[0]);
 let emptiedRegisters = registers;
 for (const id of ["Gott", "Paradiesgarten", "Völker"]) emptiedRegisters = removeWenzelsRegisterEntry(emptiedRegisters, id);
 check("removing the last register entries removes empty required lists", !emptiedRegisters.raw.includes("<standOff"));
 const schema = readFileSync("docs/schemas/tei-p5-4.11.0/tei_all.rng", "utf8");
-for (const [name, candidate] of [["comment", validComment], ["Bible mapping", validVerse], ["registers", registers], ["register link", validLink], ["last comment removal", removedLastComment], ["last register removal", emptiedRegisters]]) {
+for (const [name, candidate] of [["comment", validComment], ["Bible mapping", validVerse], ["declared Bible mapping", declaredVerse], ["registers", registers], ["register link", validLink], ["last comment removal", removedLastComment], ["last register removal", emptiedRegisters]]) {
   const results = await validateWithSchemas(candidate.raw, [{ name: "tei_all.rng", type: "relaxng", text: schema }]);
   check(`${name} output is accepted by TEI All`, results.every((result) => result.status === "valid"), JSON.stringify(results));
 }

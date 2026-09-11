@@ -1,15 +1,24 @@
 import { getUnqualifiedAttr, isTeiElement, walk } from "./tei-document.js";
+import { apparatusReadings } from "./witness-model.js";
 
 const whitespaceCache = new WeakMap();
 
 /** Each alternative is retained in source; the reading shows one branch per container. */
-export function readingCellVisible(cell, variant = "dipl") {
+export function readingCellVisible(cell, variant = "dipl", witnessPolicy = null) {
   let child = cell.node;
   for (let parent = child?.parent; parent; child = parent, parent = parent.parent) {
     if (!isTeiElement(parent) || !["choice", "app"].includes(parent.localName)) continue;
     const branches = (parent.children || []).filter((node) => isTeiElement(node));
-    const priority = parent.localName === "app" ? ["lem", "rdg"]
-      : variant === "norm" ? ["reg", "corr", "expan", "orig", "sic", "abbr"]
+    if (parent.localName === "app") {
+      const readings = apparatusReadings(parent);
+      const selected = witnessPolicy?.selections.get(parent)?.branch
+        ?? (witnessPolicy ? null : readings.find((node) => node.localName === "lem") || readings[0] || branches[0]);
+      let inside = false;
+      for (let node = cell.node; node && node !== parent; node = node.parent) if (node === selected) inside = true;
+      if (!inside) return false;
+      continue;
+    }
+    const priority = variant === "norm" ? ["reg", "corr", "expan", "orig", "sic", "abbr"]
         : ["orig", "sic", "abbr", "reg", "corr", "expan"];
     const selected = priority.map((name) => branches.find((node) => node.localName === name)).find(Boolean) || branches[0];
     if (child !== selected) return false;
@@ -25,7 +34,7 @@ function token(cell) {
 }
 
 /** Prose keeps source adjacency. Encoded word tokens supply implicit word boundaries. */
-export function readingSeparator(doc, previous, cell, variant = "dipl") {
+export function readingSeparator(doc, previous, cell, variant = "dipl", witnessPolicy = null) {
   if (!previous || /\s$/.test(previous.text) || /^\s/.test(cell.text)) return "";
   if (!whitespaceCache.has(doc)) {
     const nodes = [];
@@ -42,7 +51,7 @@ export function readingSeparator(doc, previous, cell, variant = "dipl") {
     else high = mid;
   }
   for (let index = low; index < nodes.length && nodes[index].end <= cell.start; index++) {
-    if (readingCellVisible({ node: nodes[index] }, variant)) return " ";
+    if (readingCellVisible({ node: nodes[index] }, variant, witnessPolicy)) return " ";
   }
   const left = token(previous), right = token(cell);
   if (!left || !right || left === right || right.localName === "pc") return "";

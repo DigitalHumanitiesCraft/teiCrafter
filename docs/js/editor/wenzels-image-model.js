@@ -306,6 +306,9 @@ export function validateImageAnnotationPointers(item, index) {
     else {
       const start = resolve(range[1], "range");
       const end = resolve(range[2], "range");
+      if (start && !isTeiElement(start, "w") || end && !isTeiElement(end, "w")) {
+        issue("range", "not-word-target", "Statistical text range endpoints must identify TEI words in the codex.");
+      }
       if (start && end && start.outerStart > end.outerStart) issue("range", "reversed-range", "The range end precedes its start in the codex.");
     }
   }

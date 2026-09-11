@@ -3,6 +3,8 @@ import { el } from "./dom.js";
 import { attrTargetForCell } from "./edition.js";
 import { CRITICAL_KINDS } from "./criticism.js";
 import { readingCellVisible, readingSeparator } from "./reading-policy.js";
+import { witnessInventory, witnessReadingPolicy } from "./witness-model.js";
+import { folioSourceSlice } from "./edition.js";
 import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 
 const STRUCTURE_WRAPS = new Set(["w", "l", "lb"]);
@@ -37,6 +39,19 @@ export function createReadingView(ctx) {
   /** Render one folio's lines into host. folioIndex tags each row and cell so the
    *  line<->facsimile link resolves the right page in the continuous view. */
   function renderFolioInto(host, folio, folioIndex, mentions) {
+    const policy = app.readingWitness ? witnessReadingPolicy(app.state.doc, app.readingWitness) : null;
+    if (policy) {
+      const range = folioSourceSlice(app.state, folioIndex);
+      const issues = witnessInventory(app.state.doc).apparatus.filter((item) => item.inline
+        && item.node.outerStart >= range.start && item.node.outerStart < range.end
+        && readingCellVisible({ node: item.node }, app.readingVariant, policy))
+        .map((item) => ({ item, result: policy.selections.get(item.node) }))
+        .filter(({ result }) => result.status !== "selected" || result.markers.length);
+      if (issues.length) host.append(el("p", {
+        class: "ed-hint ed-witness-status", role: "status",
+        text: issues.map(({ item, result }) => `${item.id || "Apparatus"}: ${result.message}`).join(" "),
+      }));
+    }
     // The gutter shows the document's own line label (@n). When this folio numbers
     // no line (e.g. a plaintext draft emits bare <lb/>), fall back to a display-only
     // 1-based position so the gutter still aids navigation; it is rendered faint and
@@ -51,9 +66,9 @@ export function createReadingView(ctx) {
       const label = docN ? line.n : (hasDocN ? "" : String(lineIndex + 1));
       row.appendChild(el("span", { class: "ed-line-n" + (!docN && !hasDocN ? " pos" : ""), text: label }));
       const body = el("span", { class: "ed-line-body" });
-      const visibleCells = line.cells.filter((cell) => readingCellVisible(cell, app.readingVariant));
+      const visibleCells = line.cells.filter((cell) => readingCellVisible(cell, app.readingVariant, policy));
       visibleCells.forEach((cell, k) => {
-        if (k > 0) body.appendChild(document.createTextNode(readingSeparator(app.state.doc, visibleCells[k - 1], cell, app.readingVariant)));
+        if (k > 0) body.appendChild(document.createTextNode(readingSeparator(app.state.doc, visibleCells[k - 1], cell, app.readingVariant, policy)));
         const noteKey = app.noteByWord.has(cell.id) ? cell.id : cell.facs;
         const noteTexts = noteKey ? (app.noteByWord.get(noteKey) || []) : [];
         const noteDetails = noteKey ? (app.noteDetails.get(noteKey) || []) : [];

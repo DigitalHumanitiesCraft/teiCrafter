@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/editor.css?v=20260824-ui4">
     <link rel="stylesheet" href="css/wenzels-workspace.css">
+    <link rel="stylesheet" href="css/entry-workspace.css">
     <script src="vendor/openseadragon/openseadragon.min.js"></script>
 </head>
 <body class="ed-body">
@@ -36,6 +37,8 @@
                             title="Open a TEI edition or a plaintext file; a .txt or .md opens as a line-level draft">Open TEI or text...</button>
                     <button class="ed-dd-item" id="menu-open-project" role="menuitem"
                             title="Open a folder with TEI and plaintext files plus an optional teicrafter.project.json">Open project folder...</button>
+                    <button class="ed-dd-item" id="menu-project-package" role="menuitem"
+                            title="Restore all documents and attached images from a teiCrafter project ZIP">Open project package...</button>
                     <button class="ed-dd-item" id="menu-new-project" role="menuitem"
                             title="Write a teicrafter.project.json into a folder and open it as a project">New project...</button>
                     <span class="ed-dd-sep" role="separator"></span>
@@ -67,6 +70,8 @@
             <button class="ed-btn ed-btn-primary" id="btn-save" disabled title="Save in place (File System Access) or download">Save</button>
             <button class="ed-btn" id="btn-download" disabled title="Download a copy of the current TEI">Download</button>
             <button class="ed-btn" id="btn-working-copy" disabled title="Keep unfinished XML, staged edits and attached images without a schema gate">Working copy</button>
+            <button class="ed-btn" id="btn-project-package" title="Validate every project document and download one ZIP with XML and attached images">Project package</button>
+            <button class="ed-btn" id="btn-cancel-project-package" hidden title="Cancel project validation and prevent package output">Cancel project export</button>
             <button class="ed-btn" id="btn-export-inline" hidden title="Export the inline-GND interchange copy (authority inline at each mention, no register) for the ZBZ pipeline">Export inline-GND</button>
             <button class="ed-btn" id="btn-attach-facsimiles" hidden
                     title="Choose a local folder that contains the bare image filenames referenced by this TEI">Attach facsimile folder</button>

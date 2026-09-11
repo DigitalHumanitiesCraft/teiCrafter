@@ -110,17 +110,17 @@ export async function customSchemaFromFile(file) {
   return { name, type, text, url: virtualSchemaUrl(name, SESSION_SCHEMA_BASE) };
 }
 
-async function fetchedText(url) {
-  const response = await fetch(url, { credentials: "omit" });
+async function fetchedText(url, signal = null) {
+  const response = await fetch(url, { credentials: "omit", signal });
   if (!response.ok) throw new Error(`Schema request failed (${response.status}) for ${url}.`);
   return response.text();
 }
 
-async function sourceText(source) {
+async function sourceText(source, signal = null) {
   if (source.unavailable) throw new Error(source.unavailable);
   if (typeof source.text === "string") return source.text;
   if (!source.url) throw new Error(`No schema content is available for ${source.name}.`);
-  return fetchedText(source.url);
+  return fetchedText(source.url, signal);
 }
 
 /** Read one schema source without compiling it. Vocabulary inspection uses this
@@ -150,8 +150,8 @@ function normalizedResources(resources) {
   return resources instanceof Map ? new Map(resources) : new Map(Object.entries(resources));
 }
 
-export async function schemaResourceGraph(source) {
-  const mainText = await sourceText(source);
+export async function schemaResourceGraph(source, signal = null) {
+  const mainText = await sourceText(source, signal);
   const resources = normalizedResources(source.resources);
   const resolved = new Map();
   const visited = new Set();
@@ -164,7 +164,7 @@ export async function schemaResourceGraph(source) {
     if (url.startsWith("https://teicrafter.invalid/")) {
       throw new Error(`Schema dependency ${url} was not loaded inside the granted project root. Session uploads contain only the selected file.`);
     }
-    return fetchedText(url);
+    return fetchedText(url, signal);
   }
 
   async function visit(text, url) {
@@ -191,13 +191,14 @@ export async function schemaResourceGraph(source) {
   return { mainText, mainUrl, resources: resolved };
 }
 
-async function validateXmlSchema(raw, source, onProgress) {
-  const graph = await schemaResourceGraph(source);
+async function validateXmlSchema(raw, source, onProgress, signal) {
+  const graph = await schemaResourceGraph(source, signal);
+  signal?.throwIfAborted();
   if (typeof document !== "undefined") {
     if (typeof Worker !== "function") throw new Error("This browser cannot run schema validation in a worker.");
     if (!schemaWorkerClient) schemaWorkerClient = createSchemaWorkerClient(() =>
       new Worker(new URL("./schema-validation-worker.js", import.meta.url), { type: "module" }));
-    return schemaWorkerClient.validate(raw, source, graph, onProgress);
+    return schemaWorkerClient.validate(raw, source, graph, onProgress, signal);
   }
   return validateXmlSchemaDirect(raw, source, graph, onProgress);
 }
@@ -211,7 +212,7 @@ function parseXmlInBrowser(text, label) {
   return parsed;
 }
 
-async function validateSchematronXsl(raw, source) {
+async function validateSchematronXsl(raw, source, signal = null) {
   if (typeof DOMParser === "undefined" || typeof XSLTProcessor === "undefined") {
     return {
       name: source.name,
@@ -221,7 +222,7 @@ async function validateSchematronXsl(raw, source) {
     };
   }
   const xml = parseXmlInBrowser(raw, "The current document");
-  const stylesheet = parseXmlInBrowser(await sourceText(source), source.name);
+  const stylesheet = parseXmlInBrowser(await sourceText(source, signal), source.name);
   const processor = new XSLTProcessor();
   processor.importStylesheet(stylesheet);
   const report = processor.transformToDocument(xml);
@@ -427,7 +428,7 @@ function activeSchematronPatterns(root) {
   return patterns.filter((pattern) => active.has(pattern.getAttribute("id")));
 }
 
-async function validateRawSchematron(raw, source) {
+async function validateRawSchematron(raw, source, signal = null) {
   if (typeof DOMParser === "undefined" || typeof XPathResult === "undefined") {
     return {
       name: source.name,
@@ -437,7 +438,7 @@ async function validateRawSchematron(raw, source) {
     };
   }
   const xml = parseXmlInBrowser(raw, "The current document");
-  const schema = parseXmlInBrowser(await sourceText(source), source.name);
+  const schema = parseXmlInBrowser(await sourceText(source, signal), source.name);
   const root = schema.documentElement;
   if (root.namespaceURI !== SCHEMATRON_NAMESPACE || root.localName !== "schema") {
     throw new Error(`${source.name} is not an ISO Schematron schema.`);
@@ -532,7 +533,9 @@ async function validateRawSchematron(raw, source) {
   };
 }
 
-export async function validateWithSchemas(raw, sources, { onProgress = () => {} } = {}) {
+/** @param {{onProgress?: (phase: string) => void, signal?: AbortSignal|null}} [options] */
+export async function validateWithSchemas(raw, sources, options = {}) {
+  const { onProgress = () => {}, signal = null } = options;
   const activeSources = sourceArray(sources);
   if (!activeSources.length) {
     return [{
@@ -545,17 +548,19 @@ export async function validateWithSchemas(raw, sources, { onProgress = () => {} 
   const results = [];
   for (const source of activeSources) {
     try {
+      signal?.throwIfAborted();
       if (source.unavailable) throw new Error(source.unavailable);
       if (source.type === "relaxng" || source.type === "xsd") {
-        results.push(await validateXmlSchema(raw, source, onProgress));
+        results.push(await validateXmlSchema(raw, source, onProgress, signal));
       } else if (source.type === "schematron-xsl") {
-        results.push(await validateSchematronXsl(raw, source));
+        results.push(await validateSchematronXsl(raw, source, signal));
       } else if (source.type === "schematron") {
-        results.push(await validateRawSchematron(raw, source));
+        results.push(await validateRawSchematron(raw, source, signal));
       } else {
         throw new Error(`Schema type "${source.type || "unknown"}" is not supported by the browser runtime.`);
       }
     } catch (error) {
+      if (signal?.aborted) throw error;
       results.push({
         name: source.name || "schema",
         type: source.type,
@@ -564,6 +569,7 @@ export async function validateWithSchemas(raw, sources, { onProgress = () => {} 
       });
     }
   }
+  signal?.throwIfAborted();
   return results;
 }
 

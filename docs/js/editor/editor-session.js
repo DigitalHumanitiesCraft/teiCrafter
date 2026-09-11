@@ -55,7 +55,7 @@ export class EditorSession {
     this.readOnly = false;
   }
 
-  load(state) {
+  load(state, { dirty = false } = {}) {
     rawOf(state);
     this.sessionId++;
     this.revision = 0;
@@ -64,7 +64,7 @@ export class EditorSession {
     this.cursor = 0;
     this.historyChars = 0;
     this.currentToken = 0;
-    this.savedToken = 0;
+    this.savedToken = dirty ? -1 : 0;
     return state;
   }
 

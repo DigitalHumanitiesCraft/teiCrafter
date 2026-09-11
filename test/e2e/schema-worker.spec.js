@@ -4,6 +4,27 @@ import { COLD_SCHEMA_OUTPUT_TIMEOUT_MS, SCHEMA_WORKFLOW_TIMEOUT_MS } from "./hel
 
 const source = '<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Worker validation</title></titleStmt><publicationStmt><p>Unpublished</p></publicationStmt><sourceDesc><p>Synthetic</p></sourceDesc></fileDesc></teiHeader><text><body><p>Exact source.</p></body></text></TEI>';
 
+test("cancelling a single-document output stops validation without a download or page error", async ({ page }) => {
+  const downloads = [], errors = [];
+  page.on("download", (item) => downloads.push(item));
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => Object.defineProperty(window, "showOpenFilePicker", { configurable: true, value: undefined }));
+  await page.goto("/editor.html");
+  await load(page, source, "cancel-validation.xml");
+  await page.locator("#btn-download").click();
+  await expect(page.locator("#ed-val-chip")).toHaveText("Preparing schema...", { timeout: 10_000 });
+  await page.locator("#ed-val-chip").click();
+  const popover = await page.locator("#ed-val-pop").boundingBox();
+  expect(popover.x).toBeGreaterThanOrEqual(8);
+  expect(popover.x + popover.width).toBeLessThanOrEqual(page.viewportSize().width - 8);
+  await page.getByRole("button", { name: "Cancel validation", exact: true }).click();
+  await expect(page.locator("#ed-status")).toContainText("cancelled");
+  if (!await page.locator("#ed-val-pop").isVisible()) await page.locator("#ed-val-chip").click();
+  await expect(page.getByRole("button", { name: "Validate schema set", exact: true })).toBeEnabled();
+  expect(downloads).toHaveLength(0);
+  expect(errors).toEqual([]);
+});
+
 async function load(page, raw, name) {
   await page.locator("#btn-load").click();
   const chooser = page.waitForEvent("filechooser");

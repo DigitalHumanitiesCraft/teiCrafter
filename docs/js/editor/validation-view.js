@@ -220,6 +220,11 @@ export function createValidationView(ctx) {
     });
     chooseButton.addEventListener("click", chooseCustomSchema);
     actions.append(runButton, chooseButton);
+    if (inFlight) {
+      const cancelButton = el("button", { class: "ed-btn", type: "button", text: "Cancel validation" });
+      cancelButton.addEventListener("click", () => inFlight?.controller.abort());
+      actions.appendChild(cancelButton);
+    }
     if (customSchema) {
       const resetButton = el("button", { class: "ed-btn", type: "button", text: "Use configured default" });
       resetButton.addEventListener("click", () => {
@@ -249,7 +254,9 @@ export function createValidationView(ctx) {
   async function validateSnapshot(target) {
     if (schemaRecord && sameSnapshot(schemaRecord, target)) return schemaRecord;
     if (inFlight && sameSnapshot(inFlight, target)) return inFlight.promise;
+    const controller = new AbortController();
     const promise = validateWithSchemas(target.raw, target.sources, {
+      signal: controller.signal,
       onProgress: (phase) => {
         if (inFlight && sameSnapshot(inFlight, target) && sameSnapshot(target, snapshot())) {
           inFlight.phase = phase;
@@ -264,7 +271,7 @@ export function createValidationView(ctx) {
       if (inFlight && sameSnapshot(inFlight, target)) inFlight = null;
       renderValidation();
     });
-    inFlight = { ...target, promise };
+    inFlight = { ...target, promise, controller };
     renderValidation();
     return promise;
   }
@@ -344,9 +351,11 @@ export function createValidationView(ctx) {
     const pop = $("ed-val-pop");
     if (!chip || !pop) return;
     const bounds = chip.getBoundingClientRect();
-    pop.style.top = `${bounds.bottom + 8}px`;
-    pop.style.right = `${Math.max(8, window.innerWidth - bounds.right)}px`;
     pop.hidden = false;
+    pop.style.right = "auto";
+    const box = pop.getBoundingClientRect();
+    pop.style.left = `${Math.max(8, Math.min(bounds.left, window.innerWidth - box.width - 8))}px`;
+    pop.style.top = `${Math.max(8, Math.min(bounds.bottom + 8, window.innerHeight - box.height - 8))}px`;
     const heading = pop.querySelector("h4");
     if (heading) heading.setAttribute("tabindex", "-1");
   }

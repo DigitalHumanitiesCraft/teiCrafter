@@ -1,4 +1,6 @@
 const validatorCache = new Map();
+const successfulDocuments = new Map();
+const RESULT_CACHE_LIMIT = 24;
 let runtimePromise = null;
 
 function diagnostics(error) {
@@ -32,7 +34,7 @@ async function fingerprint(parts) {
 
 async function libxmlValidator(source, graph, onProgress) {
   const resourceParts = [...graph.resources.entries()].sort(([a], [b]) => a.localeCompare(b)).flat();
-  const cacheKey = await fingerprint([source.type, graph.mainUrl, ...resourceParts]);
+  const cacheKey = await fingerprint([source.type, graph.mainUrl, graph.mainText, ...resourceParts]);
   if (validatorCache.has(cacheKey)) return validatorCache.get(cacheKey);
   onProgress("Preparing schema");
   const runtime = await libxmlRuntime();
@@ -41,7 +43,7 @@ async function libxmlValidator(source, graph, onProgress) {
   try {
     const validator = source.type === "xsd"
       ? runtime.XsdValidator.fromDoc(schemaDocument) : runtime.RelaxNGValidator.fromDoc(schemaDocument);
-    const entry = { validator, XmlDocument: runtime.XmlDocument, schemaDocument };
+    const entry = { validator, XmlDocument: runtime.XmlDocument, schemaDocument, cacheKey };
     validatorCache.set(cacheKey, entry);
     return entry;
   } catch (error) { schemaDocument.dispose(); throw error; }
@@ -52,13 +54,33 @@ async function libxmlValidator(source, graph, onProgress) {
  * @param {(phase: string) => void} [onProgress]
  */
 export async function validateXmlSchemaDirect(raw, source, graph, onProgress = () => {}) {
+  if (typeof raw !== "string" || typeof source?.name !== "string" || !["relaxng", "xsd"].includes(source?.type)
+    || typeof graph?.mainText !== "string" || typeof graph?.mainUrl !== "string") {
+    throw new Error("Schema validation requires immutable XML and schema strings.");
+  }
+  source = { name: source.name, type: source.type };
+  graph = { mainText: graph.mainText, mainUrl: graph.mainUrl, resources: new Map(graph.resources) };
+  if ([...graph.resources].some(([url, text]) => typeof url !== "string" || typeof text !== "string")) {
+    throw new Error("Every schema dependency must have an immutable URL and source string.");
+  }
   const entry = await libxmlValidator(source, graph, onProgress);
+  const documentKey = globalThis.crypto?.subtle ? await fingerprint([entry.cacheKey, raw]) : null;
+  if (successfulDocuments.has(documentKey)) {
+    successfulDocuments.delete(documentKey);
+    successfulDocuments.set(documentKey, true);
+    onProgress("Reusing identical XML and schema validation");
+    return { name: source.name, type: source.type, status: "valid", diagnostics: [] };
+  }
   onProgress("Parsing XML");
   let document;
   try {
     document = entry.XmlDocument.fromString(raw);
     onProgress("Validating XML");
     entry.validator.validate(document);
+    if (documentKey) {
+      successfulDocuments.set(documentKey, true);
+      if (successfulDocuments.size > RESULT_CACHE_LIMIT) successfulDocuments.delete(successfulDocuments.keys().next().value);
+    }
     return { name: source.name, type: source.type, status: "valid", diagnostics: [] };
   } catch (error) {
     return { name: source.name, type: source.type, status: "invalid", diagnostics: diagnostics(error) };

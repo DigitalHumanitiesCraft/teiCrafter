@@ -21,7 +21,7 @@ related: [project, data, specification, architecture, design, journal, testing, 
 
 # teiCrafter Knowledge Base
 
-teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Save and TEI Download require every configured schema to pass for the exact projected bytes. A separately labelled Working copy preserves unfinished work without claiming validated TEI output.
+teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Save and TEI Download require every configured schema to pass for the exact projected bytes. Working copy preserves unfinished work and attached documents. Project package validates each XML document before producing one delivery archive.
 
 ## Documentation maintenance
 
@@ -73,7 +73,11 @@ Current facts belong to their owning knowledge document. Reports retain historic
 
 **Staged input** is a visible inline, XML, metadata or Wenzelsbibel form edit that has not yet entered canonical XML. Apply may fail without losing the entered value; navigation and unrelated mutations must preserve it.
 
-**Recovery checkpoint** stores a document session and its staged input locally. A **Working copy** exports that unfinished state as portable JSON. Neither is a successful native Save nor a validated TEI download.
+**Recovery checkpoint** stores the active session, staged input and attached project documents locally. A **Working copy** exports that unfinished state as portable JSON without schema authorization. A **Project package** is a ZIP delivery artifact whose XML files have each passed their effective schema set. Downloading either artifact retains recovery.
+
+**Entry workspace** manages source-backed dictionary entries or encyclopedia articles within the active document. Batch changes require an explicit target selection and a current preview.
+
+**Witness reading** chooses an explicitly attributed apparatus branch for a selected local witness. Missing or ambiguous attestation is disclosed. Text outside the apparatus remains base text.
 
 **Accepted AI provenance** retains the origin pointer while recording human acceptance separately. Acceptance is not a schema result or a fingerprinted review of the surrounding navigation unit.
 

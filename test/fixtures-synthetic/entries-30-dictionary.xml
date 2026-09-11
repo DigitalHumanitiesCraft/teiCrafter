@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>Thirty fictional editorial entries</title></titleStmt><publicationStmt><p>Original synthetic test material.</p></publicationStmt><sourceDesc><p>Fictional descriptions for software tests; no historical claims.</p></sourceDesc></fileDesc></teiHeader><text><body>
+<entry xml:id='term_01' xml:lang='de'><form type='lemma'><orth>Abgabe</orth></form><sense xml:id='detail_01'><def>Fictional description 1.</def><xr><ref target='#detail_01 #term_02'>See the internal detail and entry 2.</ref></xr></sense><note><!-- retained --><egXML xmlns='http://www.tei-c.org/ns/Examples'><x:data xmlns:x='urn:example:opaque' x:flag='retained'>Opaque &amp; literal</x:data></egXML></note></entry>
+<entry xml:id='term_02' xml:lang='de'><form type='lemma'><orth>Bann</orth></form><sense><def>Fictional description 2.</def><xr><ref target='#term_01'>See entry 1.</ref></xr></sense></entry>
+<entry xml:id='term_03'><form type='lemma'><orth>Bede</orth></form><sense><def>Fictional description 3.</def></sense></entry>
+<entry xml:id='term_04'><form type='lemma'><orth>Burgrecht</orth></form><sense><def>Fictional description 4.</def></sense></entry>
+<entry xml:id='term_05'><form type='lemma'><orth>Dienst</orth></form><sense><def>Fictional <hi rend='italic'>structured</hi> description 5.</def></sense></entry>
+<entry xml:id='term_06'><form type='lemma'><orth>Erbe</orth></form><sense><def>Fictional description 6.</def></sense></entry>
+<entry xml:id='term_07'><form type='lemma'><orth>Fähre</orth></form><sense><def>Fictional description 7.</def></sense></entry>
+<entry xml:id='term_08'><form type='lemma'><orth>Fron</orth></form><sense><def>Fictional description 8.</def></sense></entry>
+<entry xml:id='term_09'><form type='lemma'><orth>Geleit</orth></form><sense><def>Fictional description 9.</def></sense></entry>
+<entry xml:id='term_10'><form type='lemma'><orth>Hufe</orth></form></entry>
+<entry xml:id='term_11'><form type='lemma'><orth>Immunität</orth></form><sense><def>Fictional description 11.</def></sense></entry>
+<entry xml:id='term_12'><form type='lemma'><orth>Jahrmarkt</orth></form><sense><def>Fictional description 12.</def></sense></entry>
+<entry xml:id='term_13'><form type='lemma'><orth>Kämmerer</orth></form><sense><def>Fictional description 13.</def></sense></entry>
+<entry xml:id='term_14'><form type='lemma'><orth>Lehen</orth></form><sense><def>Fictional description 14.</def></sense></entry>
+<entry xml:id='term_15'><form type='lemma'><orth>Mark</orth></form><sense><def>Fictional description 15.</def></sense></entry>
+<entry xml:id='term_16'><form type='lemma'><orth>Mühle</orth></form><sense><def>Fictional description 16.</def></sense></entry>
+<entry xml:id='term_17'><form type='lemma'><orth>Nutzrecht</orth></form><sense><def>Fictional description 17.</def></sense></entry>
+<entry xml:id='term_18'><form type='lemma'><orth>Pfand</orth></form><sense><def>Fictional description 18.</def></sense></entry>
+<entry xml:id='term_19'><form type='lemma'><orth>Quartier</orth></form><sense><def>Fictional description 19.</def></sense></entry>
+<entry xml:id='term_20'><form type='lemma'><orth>Rente</orth></form></entry>
+<entry xml:id='term_21'><form type='lemma'><orth>Satzung</orth></form><sense><def>Fictional description 21.</def></sense></entry>
+<entry xml:id='term_22'><form type='lemma'><orth>Schöffe</orth></form><sense><def>Fictional description 22.</def></sense></entry>
+<entry xml:id='term_23'><form type='lemma'><orth>Straße</orth></form><sense><def>Fictional description 23.</def></sense></entry>
+<entry xml:id='term_24'><form type='lemma'><orth>Tausch</orth></form><sense><def>Fictional description 24.</def></sense></entry>
+<entry xml:id='term_25'><form type='lemma'><orth>Ufer</orth></form><sense><def>Fictional description 25.</def></sense></entry>
+<entry xml:id='term_26'><form type='lemma'><orth>Vogt</orth></form><sense><def>Fictional description 26.</def></sense></entry>
+<entry xml:id='term_27'><form type='lemma'><orth>Weide</orth></form><sense><def>Fictional description 27.</def></sense></entry>
+<entry xml:id='term_28'><form type='lemma'><orth>Zehnt</orth></form><sense><def>Fictional description 28.</def></sense></entry>
+<entry xml:id='term_29'><form type='lemma'><orth>Zoll</orth></form><sense><def>Fictional description 29.</def></sense></entry>
+<entry xml:id='term_30'><form type='lemma'><orth>Zunft</orth></form></entry>
+</body></text></TEI>
+

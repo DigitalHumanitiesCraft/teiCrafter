@@ -6,7 +6,8 @@ Use [knowledge/INDEX.md](../knowledge/INDEX.md) for current product and technica
 
 | Document | Role |
 | --- | --- |
-| [Wenzelsbibel workflow](wenzelsbibel-workflow-2026-09-11.md) | Current specialization, branch integration, real-source findings and verification boundary. |
+| [Editorial completion and evaluation](editorial-completion-2026-09-11.md) | Follow-up implementation of witnesses, entries, batch changes and persistent project packages; current evaluation boundary. |
+| [Wenzelsbibel workflow](wenzelsbibel-workflow-2026-09-11.md) | Initial specialization, branch integration and real-source findings before the editorial-completion follow-up. |
 | [Session close and re-entry](session-close-2026-09-05.md) | Earlier development checkpoint; the Wenzelsbibel report supplies current evidence. |
 | [Input and persistence refactoring](refactoring-status-2026-09-05.md) | Earlier implementation and browser observations, including the validator latency that prompted the worker investigation. |
 | [Documentation audit](documentation-audit-2026-09-05.md) | Markdown inventory, resolved contradictions, preservation decisions and local link checks. |
