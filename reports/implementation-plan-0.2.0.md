@@ -1,8 +1,8 @@
 # teiCrafter 0.2.0 implementation plan
 
-Scope and acceptance plan. Implemented progress and current verification are recorded in the [refactoring report](refactoring-status-2026-09-05.md); the work-package descriptions below are requirements, not a claim that every item remains untouched or is complete.
+Scope and acceptance plan. Implemented progress and current verification are recorded in the [editorial completion report](editorial-completion-2026-09-11.md); the work-package descriptions below are requirements, not a claim that every item remains untouched or is complete. The [September 5 refactoring report](refactoring-status-2026-09-05.md) retains its historical scope.
 
-Status: implementation in progress, not a release announcement. See the [current implementation status](./implementation-status-2026-09-05.md).
+Status: release scope and acceptance requirements, not a release announcement. See the [current implementation evidence and acceptance boundaries](./editorial-completion-2026-09-11.md).
 Created: 2026-09-05.
 Starting application version: 0.1.0 (`package.json`).
 Assessment baseline: `0a45ed3`, [project assessment](./project-assessment-2026-09-05.md).

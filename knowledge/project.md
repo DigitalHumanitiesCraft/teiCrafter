@@ -42,7 +42,7 @@ Common editorial work remains direct. The editor supports reading-text correctio
 | Reading without editing | Explicit read-only mode, witness selection, disclosed attestations, source inspection and exact witness XML | External witness resolution and reconstruction of unencoded witness text |
 | Facsimile correction and review | Text/image alignment, annotations, proposals and fingerprinted review records | Cross-document transactions and a real editorial pilot |
 
-The interface adapts to actual TEI structure, schema evidence, project policy and the selected task. A starter supplies initial XML; it does not make every document of that genre compatible with a specialized form. The [implementation plan](../reports/implementation-plan-0.2.0.md) owns the remaining release scope.
+The interface adapts to actual TEI structure, schema evidence, project policy and the selected task. A starter supplies initial XML; it does not make every document of that genre compatible with a specialized form. The [implementation plan](../reports/implementation-plan-0.2.0.md) owns the release scope and acceptance criteria.
 
 ## Scholarly control
 
