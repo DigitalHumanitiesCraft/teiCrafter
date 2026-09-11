@@ -206,11 +206,11 @@ export function createDocumentFacts(ctx) {
     const projectDocuments = restoreProjectDocuments(record.projectDocuments);
     const opened = await load(record.raw, record.docName || "draft.xml", null, project, {
       projectFolder: null, projectDocuments, dirty: record.dirty ?? true,
+      recoveryId: record.id, deferRecovery: true,
       fileEncoding: record.fileEncoding, readingWitness: record.readingWitness,
       schemaSettings: record.schemaSettings,
     });
     if (!opened) return false;
-    app.recoveryId = record.id;
     app.source = record.source || { kind: "draft", txtName: record.sourceName || null };
     app.fileEncoding = record.fileEncoding || { encoding: "UTF-8", bom: false };
     if (!projectDocuments) {

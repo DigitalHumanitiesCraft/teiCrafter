@@ -307,3 +307,117 @@ test("accepted register origin remains visible and read-only indices expose no e
   expect(saved.record.raw).toContain('resp="#ai #human"');
   expect(saved.record.raw).toContain("urn:teicrafter:proposal:accepted:%23ai");
 });
+
+test("restoring a working copy writes only complete recovery checkpoints from the first transaction", async ({ page, context }) => {
+  const name = "complete-checkpoint.xml";
+  const schemaText = '<schema xmlns="http://purl.oclc.org/dsdl/schematron"><pattern id="checkpoint"><rule context="*"><assert test="true()">Synthetic checkpoint</assert></rule></pattern></schema>';
+  const expected = {
+    raw: source,
+    docName: name,
+    dirty: true,
+    fileEncoding: { encoding: "UTF-8", bom: true },
+    source: { kind: "draft", txtName: "Original source ſ.txt" },
+    schemaSettings: { customSchema: { name: "checkpoint.sch", type: "schematron", text: schemaText,
+      url: "https://teicrafter.invalid/session/checkpoint.sch" } },
+    staged: { mode: "page", folio: 0, value: "<unfinished &amp; 𐍈" },
+    images: [{ name: "page.png", type: "image/png", base64: "AH//" }],
+  };
+  const input = Buffer.from(JSON.stringify({ format: "teicrafter-working-copy", version: 1, record: expected }));
+
+  async function instrument(target) {
+    await target.addInitScript((docName) => {
+      window.recoveryFirstCheckpointProbe = { records: [], pending: 0, failures: [] };
+      const put = IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put = function (...args) {
+        const request = Reflect.apply(put, this, args);
+        if (this.name === "sessions" && args[0]?.docName === docName) {
+          const probe = window.recoveryFirstCheckpointProbe;
+          probe.records.push(structuredClone(args[0]));
+          probe.pending++;
+          this.transaction.addEventListener("complete", () => probe.pending--, { once: true });
+          this.transaction.addEventListener("abort", () => {
+            probe.pending--;
+            probe.failures.push("Recovery transaction aborted");
+          }, { once: true });
+        }
+        return request;
+      };
+    }, name);
+  }
+
+  async function importCopy(target, bytes) {
+    const chooser = target.waitForEvent("filechooser");
+    await target.locator("#btn-open-working-copy").click();
+    await (await chooser).setFiles({ name: "complete.teicrafter.json", mimeType: "application/json", buffer: bytes });
+    await expect(target.locator("#ed-docstrip")).toContainText(name);
+    await expect(target.locator(".ed-src-ta")).toHaveValue(expected.staged.value);
+    await target.locator("#ed-val-chip").click();
+    await expect(target.locator("#ed-val-pop")).toContainText("checkpoint.sch");
+    await target.locator("#ed-val-chip").click();
+  }
+
+  async function assertWrites(target) {
+    await expect.poll(() => target.evaluate(() => {
+      const probe = window.recoveryFirstCheckpointProbe;
+      return { started: probe.records.length > 0, pending: probe.pending, failures: probe.failures };
+    })).toEqual({ started: true, pending: 0, failures: [] });
+    const writes = await target.evaluate(async () => Promise.all(window.recoveryFirstCheckpointProbe.records.map(async (record) => ({
+      ...record,
+      images: await Promise.all((record.images || []).map(async (image) => ({
+        name: image.name, type: image.type,
+        base64: btoa(String.fromCharCode(...new Uint8Array(await image.blob.arrayBuffer()))),
+      }))),
+    }))));
+    expect(writes.length).toBeGreaterThan(0);
+    const ids = [...new Set(writes.map((record) => record.id))];
+    expect(ids).toHaveLength(1);
+    expect(typeof ids[0]).toBe("string");
+    expect(ids[0].length).toBeGreaterThan(0);
+    for (const record of writes) {
+      expect(record).toMatchObject(expected);
+      expect(record.images).toEqual(expected.images);
+    }
+    const storedIds = await target.evaluate(async (docName) => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open("teicrafter.recovery");
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      return new Promise((resolve, reject) => {
+        const request = db.transaction("sessions").objectStore("sessions").getAll();
+        request.onsuccess = () => {
+          db.close();
+          resolve(request.result.filter((record) => record.docName === docName).map((record) => record.id));
+        };
+        request.onerror = () => { db.close(); reject(request.error); };
+      });
+    }, name);
+    expect(storedIds).toContain(ids[0]);
+    return ids[0];
+  }
+
+  async function downloadedCopy(target) {
+    const requested = target.waitForEvent("download");
+    await target.locator("#btn-working-copy").click();
+    const bytes = readFileSync(await (await requested).path());
+    const saved = JSON.parse(bytes.toString("utf8"));
+    expect(saved.record).toMatchObject(expected);
+    expect(saved.record.images).toEqual(expected.images);
+    return bytes;
+  }
+
+  await instrument(page);
+  await page.goto("/editor.html");
+  await importCopy(page, input);
+  const firstId = await assertWrites(page);
+  const saved = await downloadedCopy(page);
+  const reopened = await context.newPage();
+  try {
+    await instrument(reopened);
+    await reopened.goto("/editor.html");
+    await importCopy(reopened, saved);
+    const secondId = await assertWrites(reopened);
+    expect(secondId).not.toBe(firstId);
+    await downloadedCopy(reopened);
+  } finally { await reopened.close(); }
+});

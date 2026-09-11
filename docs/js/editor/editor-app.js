@@ -260,7 +260,7 @@ function setStatus(msg) {
   if (wrap) wrap.hidden = !msg;
 }
 
-function setDirty(d) {
+function setDirty(d, { persist = true } = {}) {
   if (app.state) {
     sessionSafety.sync(app.state.doc.raw);
     app.sessionId = editorSession.sessionId;
@@ -271,7 +271,10 @@ function setDirty(d) {
   const dot = $("ed-status-dot");
   dot.classList.toggle("dirty", d);
   $("btn-save").disabled = !app.state;
-  if (d) { setStatus("Unsaved changes"); documentFacts.persistDraftIfNeeded(); }
+  if (d) {
+    setStatus("Unsaved changes");
+    if (persist) documentFacts.persistDraftIfNeeded();
+  }
   if (app.state) documentFacts.updateDocStrip();
   updateHistoryControls();
 }
@@ -728,7 +731,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   enableControls(true);
   applyDocLayout();
   if (handle) { recents.rememberRecent(handle, name); }
-  setDirty(editorSession.dirty);
+  setDirty(editorSession.dirty, { persist: !opts.deferRecovery });
   // The recovery slot is NOT cleared here: loading another document must not
   // silently discard a stored draft. It clears only when the draft itself is
   // saved or the operator discards the offer; a new draft overwrites the slot.

@@ -41,6 +41,7 @@ jobs:
             node_modules/.tmp/evaluation/
             test-results/
           if-no-files-found: ignore
+          include-hidden-files: true
           retention-days: 7
       - name: Upload deployable Pages artifact
         uses: actions/upload-pages-artifact@v3

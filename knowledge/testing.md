@@ -139,6 +139,8 @@ The worker scenario measures browser heartbeats during real vocabulary-schema co
 
 The local JSON report records the Git revision and content hash, pinned tools and browser versions, input hashes, executed cases, timings and explicit skips. Inputs and repository contents are checked again after the run. Reports and traces stay under the ignored `node_modules/.tmp/evaluation/` and `test-results/` directories. Local real-source traces are not publication artifacts. CI retains its synthetic evaluation evidence for seven days.
 
+The artifact upload explicitly includes hidden paths within those two selected report directories so that `.tmp/evaluation` is retained. This follows the [upload-artifact hidden-file contract](https://github.com/actions/upload-artifact/blob/main/README.md#uploading-hidden-files); the upload does not include the rest of `node_modules` or local research source directories.
+
 For a Wenzelsbibel real-material evaluation, set `WB_CODEX`, `WB_IMAGES` and `WB_PAGE_ROOT`, then run `npm run evaluate:editorial -- --real`. Missing required sources fail immediately. `UFBAS_TEI` independently enables the Urfehde case. The codex browser workflow validates an explicitly repaired working copy, then packages that identical codex together with the original image file and compares both decoded payloads. The original files remain unchanged.
 
 `--editorial-only` selects the editorial browser subset while retaining all required offline gates; its report identifies that narrower browser scope. `--repeat=2` repeats every selected browser case twice. These options support focused reproduction and cannot establish an unexecuted full-repository run.
