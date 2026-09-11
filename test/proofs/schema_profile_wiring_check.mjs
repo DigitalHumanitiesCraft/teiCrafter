@@ -15,7 +15,8 @@ check("session schema upload and reset both notify the profile controller",
   validation.includes("ctx.onSchemaSourcesChanged(activeSources())")
     && app.includes("onSchemaSourcesChanged: handleSchemaSourcesChanged"));
 check("profile inspection is separated from the fail-closed output gate",
-  app.includes("void refreshSchemaProfile()")
+  app.includes("void refreshSchemaProfile(sources)")
+    && validation.includes("ctx.onSchemaSourcesChanged?.()")
     && validation.includes("requireValidForOutput"));
 
 finish("schema_profile_wiring_check passed");
