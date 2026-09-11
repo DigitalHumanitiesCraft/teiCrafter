@@ -117,13 +117,11 @@ export function createWenzelsWorkspace(ctx) {
   async function openCompanion(entry, targetSection = null, id = "") {
     if (!stagedInput.allowChange("opening a linked document")) return;
     const collection = rememberActive();
-    if (!await persist()) return;
     const target = collection.documents.find((item) => item.id === entry.id);
     if (!target) { setStatus("This linked document is no longer available."); return; }
     const loaded = await loadDocument(target.raw, target.name, projectForSnapshot(target), false, target.fileEncoding,
       { ...collection, activeId: target.id });
     if (loaded && activeDoc()?.raw === target.raw) {
-      ctx.restoreSchema?.(target.schemaSettings);
       if (targetSection) navigate(targetSection, id);
       await persist();
     }
@@ -179,7 +177,6 @@ export function createWenzelsWorkspace(ctx) {
       if (collection.documents.some((entry) => projectPathKey(entry.name) === "registers.xml")) {
         setStatus("registers.xml is already linked. Open that retained document to edit its registers."); return;
       }
-      if (!await persist()) return;
       const doc = createWenzelsRegistersDocument();
       const entry = snapshotProjectDocument({ ...app, state: { doc }, docName: "registers.xml", dirty: true,
         fileEncoding: { encoding: "UTF-8", bom: false }, readingWitness: "", source: { kind: "draft", draftKind: "project" }, pageImages: new Map() }, null);
@@ -607,7 +604,6 @@ export function createWenzelsWorkspace(ctx) {
               if (collection.documents.some((entry) => projectPathKey(entry.name) === projectPathKey(name))) {
                 throw new Error("The imported draft filename is already linked. Choose a different draft title.");
               }
-              if (!await persist()) return false;
               const draft = snapshotProjectDocument({ ...app, state: { doc: parseDocument(raw) }, docName: name, dirty: true,
                 fileEncoding: { encoding: "UTF-8", bom: false }, readingWitness: "", source: { kind: "draft", draftKind: "project" }, pageImages: new Map() }, null);
               const loaded = await loadDocument(raw, name, app.project, true, draft.fileEncoding,

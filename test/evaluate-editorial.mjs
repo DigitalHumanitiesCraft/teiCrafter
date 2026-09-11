@@ -78,7 +78,7 @@ try {
   if (proofSkips.some((name) => !optionalProofs.has(name))) throw new Error(`Unexpected skipped proof: ${proofSkips.join(", ")}`);
   report.optionalProofSkips = proofSkips;
   const playwrightArgs = ["node_modules/@playwright/test/cli.js", "test", "--workers=1", "--retries=0", "--forbid-only", `--repeat-each=${repeat}`, "--reporter=line,json,html"];
-  if (editorialOnly) playwrightArgs.push("entries.spec.js", "witnesses.spec.js", "wenzelsbibel-", "schema-worker.spec.js");
+  if (editorialOnly) playwrightArgs.push("entries.spec.js", "witnesses.spec.js", "wenzelsbibel-", "project-transition-safety.spec.js", "schema-worker.spec.js");
   let browserError;
   try {
     await command(process.execPath, playwrightArgs, "browsers", { env: { ...process.env,

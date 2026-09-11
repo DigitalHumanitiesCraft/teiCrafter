@@ -25,6 +25,7 @@ export function createValidationView(ctx) {
   let customSchema = null;
   let schemaRecord = null;
   let inFlight = null;
+  let schemaSelection = 0;
 
   function isWellFormed(raw) {
     const doc = new DOMParser().parseFromString(raw, "application/xml");
@@ -228,6 +229,9 @@ export function createValidationView(ctx) {
     if (customSchema) {
       const resetButton = el("button", { class: "ed-btn", type: "button", text: "Use configured default" });
       resetButton.addEventListener("click", () => {
+        schemaSelection++;
+        inFlight?.controller.abort();
+        inFlight = null;
         customSchema = null;
         schemaRecord = null;
         if (typeof ctx.onSchemaSourcesChanged === "function") {
@@ -265,10 +269,10 @@ export function createValidationView(ctx) {
       },
     }).then((results) => {
       const completed = { ...target, results };
-      schemaRecord = completed;
+      if (inFlight?.controller === controller && sameSnapshot(target, snapshot())) schemaRecord = completed;
       return completed;
     }).finally(() => {
-      if (inFlight && sameSnapshot(inFlight, target)) inFlight = null;
+      if (inFlight?.controller === controller) inFlight = null;
       renderValidation();
     });
     inFlight = { ...target, promise, controller };
@@ -278,11 +282,15 @@ export function createValidationView(ctx) {
 
   async function runSchemaValidation() {
     if (!app.state || inFlight) return;
+    const target = snapshot();
+    const selection = schemaSelection;
+    schemaRecord = null;
     try {
-      await validateSnapshot(snapshot());
+      await validateSnapshot(target);
     } catch (error) {
+      if (selection !== schemaSelection || !sameSnapshot(target, snapshot())) return;
       schemaRecord = {
-        ...snapshot(),
+        ...target,
         results: [{
           name: "Schema set",
           status: "unavailable",
@@ -320,23 +328,30 @@ export function createValidationView(ctx) {
   }
 
   function chooseCustomSchema() {
+    const selection = ++schemaSelection;
+    const sessionId = app.sessionId;
+    const current = () => selection === schemaSelection && sessionId === app.sessionId;
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".rng,.xsd,.sch,.xsl,.xslt,application/xml,text/xml";
     input.addEventListener("change", async () => {
       const file = input.files && input.files[0];
-      if (!file) return;
+      if (!file || !current()) return;
+      let selected;
       try {
-        customSchema = await customSchemaFromFile(file);
-        schemaRecord = null;
+        selected = await customSchemaFromFile(file);
       } catch (error) {
-        customSchema = {
+        selected = {
           name: file.name,
           type: "configuration",
           unavailable: error.message,
         };
-        schemaRecord = null;
       }
+      if (!current()) return;
+      inFlight?.controller.abort();
+      inFlight = null;
+      customSchema = selected;
+      schemaRecord = null;
       if (typeof ctx.onSchemaSourcesChanged === "function") {
         ctx.onSchemaSourcesChanged(activeSources());
       }
@@ -398,6 +413,9 @@ export function createValidationView(ctx) {
     activeSchemaSources: activeSources,
     recoverySettings: () => ({ customSchema }),
     restoreSettings: (settings) => {
+      schemaSelection++;
+      inFlight?.controller.abort();
+      inFlight = null;
       customSchema = settings?.customSchema || null;
       schemaRecord = null;
       valCache = null;

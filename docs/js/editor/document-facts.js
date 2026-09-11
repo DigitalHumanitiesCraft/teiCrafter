@@ -207,9 +207,9 @@ export function createDocumentFacts(ctx) {
     const opened = await load(record.raw, record.docName || "draft.xml", null, project, {
       projectFolder: null, projectDocuments, dirty: record.dirty ?? true,
       fileEncoding: record.fileEncoding, readingWitness: record.readingWitness,
+      schemaSettings: record.schemaSettings,
     });
     if (!opened) return false;
-    ctx.restoreSchema?.(record.schemaSettings);
     app.recoveryId = record.id;
     app.source = record.source || { kind: "draft", txtName: record.sourceName || null };
     app.fileEncoding = record.fileEncoding || { encoding: "UTF-8", bom: false };

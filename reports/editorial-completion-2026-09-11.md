@@ -15,6 +15,8 @@ Dieser Bericht ergänzt den [ersten Wenzelsbibel-Durchlauf](wenzelsbibel-workflo
 
 Die unabhängige Modellprüfung korrigierte freie Bibelstellen mit unbegründetem `cRef`, statistische Bildbereiche mit Nicht-Wort-Endpunkten und Löschschutz, der untergeordnete IDs oder kodierte URI-Fragmente übersehen hatte. Eine weitere Gegenprobe korrigierte den Umgang mit doppelten XML-Attributen. Die Schema-Zwischenspeicherung kopiert ihre Eingaben vor dem ersten asynchronen Schritt; ein gezielter Mutationstest belegt diesen Vertrag.
 
+Die Integrationsprüfung ergänzte dateieigene Schemaeinstellungen bereits vor dem ersten Wiederherstellungspunkt. Änderungen und neue Anhänge während eines wartenden Dokumentwechsels verhindern den Wechsel und bleiben erhalten. Eine manuell abgebrochene Validierung kann erneut gestartet werden. Die zugehörigen Browserfälle verzögern echte Speichervorgänge und prüfen anschließend Arbeitskopie, Projektdateien und exakten XML-Download.
+
 ## Nachweise
 
 Die gezielten Browserprüfungen umfassen Zeugenverwaltung, drei verknüpfte Dateien, beide Eintragskodierungen mit jeweils 30 Datensätzen, Vulgata-Referenzen sowie ergänzende Fehlerfälle. Sie vergleichen vollständige erwartete XML-Ausgaben, Wiederherstellung, Undo und die erhaltenen Verweise. Automatisierte Zugänglichkeitsprüfungen betreffen die tatsächlich geöffneten Ansichten. Der abschließende Bericht wird die gemeinsame gebaute Anwendung, die vollständigen Fallzahlen und den realen Codex-Durchlauf gesondert ausweisen.

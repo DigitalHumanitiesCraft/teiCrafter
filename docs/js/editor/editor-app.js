@@ -603,7 +603,7 @@ async function load(raw, name, handle, project, opts) {
   const options = opts || {};
   const suppliedAuthorization = Object.prototype.hasOwnProperty.call(options, "replacement");
   const replacement = suppliedAuthorization ? options.replacement : authorizeDocumentReplacement();
-  if (!replacement || !sessionSafety.isSnapshotCurrent(replacement, currentRaw())) {
+  if (!replacement || !sessionSafety.isSnapshotCurrent(replacement, currentRaw()) || options.replacementCurrent?.() === false) {
     if (!suppliedAuthorization) setStatus("The current document was kept.");
     return false;
   }
@@ -622,7 +622,7 @@ async function load(raw, name, handle, project, opts) {
   showLoading(name);
   await nextPaint();
   try {
-    if (!sessionSafety.isSnapshotCurrent(replacement, currentRaw())) {
+    if (!sessionSafety.isSnapshotCurrent(replacement, currentRaw()) || options.replacementCurrent?.() === false) {
       if (folderContext) folderContext.rollback();
       return false;
     }
@@ -724,6 +724,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   app.readingWitness = projectDocument?.readingWitness || opts.readingWitness || "";
   // Reading view defaults to paged; applyDocLayout restores a persisted choice.
   app.viewMode = "paged";
+  validationView.restoreSettings(projectDocument ? projectDocument.schemaSettings : opts.schemaSettings || null);
   enableControls(true);
   applyDocLayout();
   if (handle) { recents.rememberRecent(handle, name); }
@@ -738,7 +739,6 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // over an opened .xml.
   documentFacts.hideDraftBanner();
   refreshAfterStandoffEdit();
-  void refreshSchemaProfile();
   // A folder-opened edition resolves its page-image filenames against the folder
   // (async, best-effort); the on-ramp's in-memory images are already resolved.
   pageImageStore.resolveFromFolder();
@@ -2597,7 +2597,6 @@ const documentFacts = createDocumentFacts({
   app, setStatus, setDirty, load, render, renderActivePanel,
   stagedSnapshot,
   schemaSnapshot: () => validationView.recoverySettings(),
-  restoreSchema: (settings) => validationView.restoreSettings(settings),
   restoreStaged: (staged) => {
     if (staged.mode === "witness" || staged.mode === "entries") {
       app.sourceMode = false;
@@ -2661,16 +2660,39 @@ const entryWorkspace = createEntryWorkspace({
     if (index >= 0 && index !== app.folio) gotoFolio(index);
   },
 });
+function projectContextCurrent() {
+  const collection = app.projectDocuments, sessionId = app.sessionId, revision = app.revision, raw = app.state?.doc.raw;
+  const name = app.docName, project = app.project, source = app.source, dirty = app.dirty, witness = app.readingWitness, readOnly = app.readOnly;
+  const encoding = JSON.stringify(app.fileEncoding), schemas = schemaSetKey(validationView.activeSchemaSources());
+  const images = [...app.pageImages];
+  return () => app.projectDocuments === collection && app.sessionId === sessionId && app.revision === revision
+    && app.state?.doc.raw === raw && app.docName === name && app.project === project && app.source === source
+    && app.dirty === dirty && app.readingWitness === witness && app.readOnly === readOnly && JSON.stringify(app.fileEncoding) === encoding
+    && !stagedInput.hasChanges() && schemas === schemaSetKey(validationView.activeSchemaSources())
+    && images.length === app.pageImages.size && images.every(([key, item]) => app.pageImages.get(key) === item);
+}
+
 const wenzelsWorkspace = createWenzelsWorkspace({
   ...workspaceContext,
   schemaSnapshot: () => validationView.recoverySettings(),
-  restoreSchema: (settings) => validationView.restoreSettings(settings),
   loadDocument: async (raw, name, project, draft = false, encoding = null, projectDocuments = null) => {
     if (!stagedInput.allowChange("changing project documents")) return false;
     const replacement = sessionSafety.snapshot({ kind: "project-document-switch" });
+    const replacementCurrent = projectContextCurrent();
+    if (projectDocuments && app.projectDocuments) {
+      const outgoing = projectDocuments.documents.find((entry) => entry.id === app.projectDocuments.activeId);
+      if (!outgoing || outgoing.raw !== currentRaw() || outgoing.name !== app.docName) {
+        setStatus("Project document switch cancelled: the project changed. Open the linked document again.");
+        return false;
+      }
+    }
     const recoveryId = app.recoveryId;
     if (!await documentFacts.persistDraftIfNeeded()) return false;
-    const loaded = await load(raw, name, null, project, { projectDocuments, dirty: draft, replacement,
+    if (!replacementCurrent()) {
+      setStatus("Project document switch cancelled: the project changed. Open the linked document again.");
+      return false;
+    }
+    const loaded = await load(raw, name, null, project, { projectDocuments, dirty: draft, replacement, replacementCurrent,
       ...(projectDocuments ? { recoveryId } : {}),
       ...(encoding ? { fileEncoding: { encoding: "UTF-8", bom: !!encoding.bom } } : {}) });
     if (loaded && draft) {
@@ -2685,16 +2707,7 @@ const projectOutput = createProjectOutputController({
     if (!app.state) return null;
     const snapshot = captureProjectDocuments(app, validationView.recoverySettings());
     app.projectDocuments = snapshot;
-    const sessionId = app.sessionId, revision = app.revision, raw = app.state.doc.raw;
-    const docName = app.docName, project = app.project;
-    const encoding = JSON.stringify(app.fileEncoding);
-    const schemas = schemaSetKey(validationView.activeSchemaSources());
-    const images = [...app.pageImages];
-    return { snapshot, isCurrent: () => app.projectDocuments === snapshot
-      && app.sessionId === sessionId && app.revision === revision && app.state?.doc.raw === raw
-      && app.docName === docName && app.project === project && JSON.stringify(app.fileEncoding) === encoding
-      && !stagedInput.hasChanges() && schemas === schemaSetKey(validationView.activeSchemaSources())
-      && images.length === app.pageImages.size && images.every(([name, item]) => app.pageImages.get(name) === item) };
+    return { snapshot, isCurrent: projectContextCurrent() };
   },
   resolveStaged: () => resolveStagedOutput("Project export"),
   persist: () => documentFacts.persistDraftIfNeeded(),

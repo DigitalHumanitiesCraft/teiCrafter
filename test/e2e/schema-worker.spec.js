@@ -33,6 +33,27 @@ async function load(page, raw, name) {
   await expect(page.locator("#ed-docstrip")).toContainText(name);
 }
 
+test("manual validation can restart after cancellation and authorize the unchanged XML", async ({ page }) => {
+  test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.addInitScript(() => Object.defineProperty(window, "showOpenFilePicker", { configurable: true, value: undefined }));
+  await page.goto("/editor.html");
+  await load(page, source, "retry-validation.xml");
+  await page.locator("#ed-val-chip").click();
+  await page.getByRole("button", { name: "Validate schema set", exact: true }).click();
+  await expect(page.locator("#ed-val-chip")).toHaveText("Preparing schema...", { timeout: 10_000 });
+  await page.getByRole("button", { name: "Cancel validation", exact: true }).click();
+  await expect(page.locator("#ed-val-pop")).toContainText("cancelled");
+  await page.getByRole("button", { name: "Validate schema set", exact: true }).click();
+  await expect(page.locator("#ed-val-chip")).toHaveText("schema and structural checks passed", { timeout: COLD_SCHEMA_OUTPUT_TIMEOUT_MS });
+  await page.locator("#ed-val-chip").click();
+  const requested = page.waitForEvent("download");
+  await page.locator("#btn-download").click();
+  expect(readFileSync(await (await requested).path(), "utf8")).toBe(source);
+  expect(errors).toEqual([]);
+});
+
 test("cold schema compilation keeps the editor responsive and cached validation rejects invalid XML", async ({ page }, testInfo) => {
   test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   const metric = (values) => console.log(JSON.stringify({ metric: "schema-worker", browser: testInfo.project.name, ...values }));
