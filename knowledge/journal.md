@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Development Journal]]", "[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, testing]
@@ -21,6 +21,12 @@ related: [project, specification, architecture, testing]
 # teiCrafter Development Journal
 
 Chronological log, most recent first: how each decision came about. An entry records the trigger, the decision and the reason, in a few sentences; bullets only when one session produced several independent decisions. What an entry does not carry: proof numbers and test counts (dated reports record them; [testing](testing.md) owns the method), implementation detail ([architecture](architecture.md)), commits (Git history). Lessons worth keeping are part of the reason.
+
+## 2026-09-11: Wenzelsbibel as a complete project workflow
+
+Trigger: the user requested branch consolidation and a practical Wenzelsbibel annotation pass, authorizing the design of the missing people-register, verse and image-validation contracts. Decision: integrate the Notes pilot into main and build the specialized workspace on the existing source-preserving session. Companion files provide explicit cross-file lookup while each edit remains independently recoverable and saveable. TEI collective-agent records and independent verse mappings express the selected scholarly model; the authored image schema separates editing from completeness review. The original absent schema is not claimed as recovered, and editorial acceptance remains distinct from implementation evidence.
+
+The real-source pass exposed expensive distinct-value collection and cold vocabulary-schema compilation. Decision: retain document-derived caches and execute schema compilation in a dedicated worker without relaxing output validity. The build now restricts runtime data copying to versioned files because locally available research material must remain outside public artifacts. [The dated workflow report](../reports/wenzelsbibel-workflow-2026-09-11.md) records the tested scope and remaining source findings.
 
 ## 2026-09-05: secure the development checkpoint with explicit open acceptance
 

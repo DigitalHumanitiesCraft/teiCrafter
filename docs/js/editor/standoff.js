@@ -31,6 +31,7 @@ import {
   teiElementsByLocal as elementsByLocal,
   firstTeiByLocal as firstByLocal,
   isTeiElement,
+  isReadingContext,
   textNodes,
   textOf,
   spliceDocument,
@@ -779,7 +780,8 @@ export function addNoteForNode(doc, textNode, fallbackFacs, text, opts = {}) {
  * TEI-level <standOff>, splits each @target on
  * whitespace, strips the leading '#', and reads the body as the note's decoded
  * text nodes (child markup contributes its text, tags fall away). Notes without
- * @target are skipped.
+ * @target are skipped unless a containing apparatus entry defines an exact
+ * anchor-delimited transcription range.
  */
 export function noteIndex(doc) {
   const details = noteDetailIndex(doc);
@@ -788,26 +790,75 @@ export function noteIndex(doc) {
 
 /**
  * Index notes by target id with the proposal metadata the review UI needs.
- * Values are arrays of { text, resp, el }; the elements belong to this parsed
- * document and are refreshed after every mutation. Source order is preserved.
+ * Values retain the actual note element, language and responsibility. Ranged
+ * apparatus notes also retain their containing app. Source order is preserved.
  */
 export function noteDetailIndex(doc) {
   const map = new Map();
   const standOff = topLevelStandOff(doc);
   if (!standOff) return map;
+  const detailFor = (note, app = null) => ({
+    text: textNodes(note).map((text) => textOf(doc, text)).join("").trim(),
+    resp: getAttr(note, "resp"),
+    lang: getAttrObjInNamespace(note, "http://www.w3.org/XML/1998/namespace", "lang")?.value || null,
+    el: note,
+    app,
+    type: app ? getAttr(app, "type") : null,
+  });
+  const append = (id, detail) => {
+    const values = map.get(id) || [];
+    if (!values.some((existing) => existing.el === detail.el)) values.push(detail);
+    map.set(id, values);
+  };
   for (const note of elementsByLocal(standOff, "note")) {
     const target = getAttr(note, "target");
     if (!target) continue;
-    const text = textNodes(note).map((t) => textOf(doc, t)).join("").trim();
-    const detail = { text, resp: getAttr(note, "resp"), el: note };
+    const detail = detailFor(note, isTeiElement(note.parent, "app") ? note.parent : null);
     for (const t of target.split(/\s+/)) {
       const id = t.replace(/^#/, "");
       if (!id) continue;
-      const values = map.get(id) || [];
-      values.push(detail);
-      map.set(id, values);
+      append(id, detail);
     }
   }
+
+  const apps = directChildren(standOff, "listApp").flatMap((list) => directChildren(list, "app"));
+  if (!apps.length) return map;
+  const ids = new Map();
+  const words = [];
+  walk(doc.root, (node) => {
+    if (node.type !== "element") return;
+    const id = getXmlId(node);
+    if (id) ids.set(id, ids.has(id) ? null : node);
+    if (id && isTeiElement(node, "w") && isReadingContext(node)) words.push(node);
+  });
+  const anchorFor = (value) => {
+    const match = /^#([^#\s]+)$/.exec(value || "");
+    const node = match ? ids.get(match[1]) : null;
+    return isTeiElement(node, "anchor") && isReadingContext(node) ? node : null;
+  };
+  const ranges = [];
+  for (const app of apps) {
+    const from = anchorFor(getAttr(app, "from"));
+    const to = anchorFor(getAttr(app, "to"));
+    if (!from || !to || from.outerEnd >= to.outerStart) continue;
+    const details = directChildren(app, "note").map((note) => detailFor(note, app));
+    if (details.length) ranges.push({ start: from.outerEnd, end: to.outerStart, details });
+  }
+  ranges.sort((a, b) => a.start - b.start || a.end - b.end);
+  words.sort((a, b) => a.outerStart - b.outerStart);
+  let next = 0;
+  let active = [];
+  // The sweep visits active intervals only; cost follows the materialized links.
+  for (const word of words) {
+    if (ids.get(getXmlId(word)) !== word) continue;
+    while (next < ranges.length && ranges[next].start < word.outerEnd) active.push(ranges[next++]);
+    active = active.filter((range) => range.end > word.outerStart);
+    for (const range of active) {
+      if (range.start >= word.outerEnd) continue;
+      for (const detail of range.details) append(getXmlId(word), detail);
+    }
+  }
+  for (const values of map.values()) values.sort((a, b) => a.el.outerStart - b.el.outerStart);
   return map;
 }
 

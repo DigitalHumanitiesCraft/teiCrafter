@@ -4,7 +4,7 @@ A browser editor for creating, reading and editing TEI XML with exact source pre
 
 [Open the published editor](https://digitalhumanitiescraft.github.io/teiCrafter/) | [Start with the workflows](knowledge/worked-examples.md) | [Project knowledge](knowledge/INDEX.md)
 
-**Research preview.** The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [current implementation and verification report](reports/refactoring-status-2026-09-05.md) records completed work and remaining acceptance. The [session checkpoint](reports/session-close-2026-09-05.md) provides the next task and re-entry commands. The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader target.
+**Research preview.** The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [Wenzelsbibel workflow report](reports/wenzelsbibel-workflow-2026-09-11.md) records the current implementation and verification boundary. The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader product target.
 
 ## What editors can do
 
@@ -29,6 +29,14 @@ The interface derives its navigation and editing capabilities from actual TEI st
 5. Use Working copy whenever unfinished input, unavailable schemas or attached images need preservation. A requested download does not establish a durable savepoint or remove recovery.
 
 Open project folder and in-place Save use the browser's optional File System Access capability. The portable file-input and download workflow is exercised in Chromium and Firefox. Local recovery is independent of native file handles. Reopening a working copy recreates image URLs and requires renewed permission for project files.
+
+## Work with the Wenzelsbibel
+
+Open the codex or Bildannotationen.xml. Its project identifier selects the Wenzelsbibel workspace; project manifests can explicitly declare `"workspace": "wenzelsbibel"`. The specialized pane supports paired word readings, multilingual apparatus comments, Vulgate verse references, image descriptions, artist attributions, ICONCLASS concepts and shared persons, places and peoples registers.
+
+Attach the companion codex, image annotations or registers under **Linked project documents** for word-range selection, image-zone lookup and reference checks. **Project checks** reports cross-file problems and editorial completeness. **Import PAGE XML** converts selected Transkribus PAGE files, with optional METS ordering, into a separate TEI draft. Each document uses ordinary Apply, Undo, recovery and schema-gated output. Reattach companions after reloading.
+
+The bundled image Schematron is an explicitly authored editorial profile. Its editing phase permits unfinished records; its review phase checks completeness. The original Bilderfassung.sch was unavailable. The [Wenzelsbibel contract and walkthrough](knowledge/wenzelsbibel.md) explains the encodings, sources and practical boundaries.
 
 ## Preservation and support boundaries
 

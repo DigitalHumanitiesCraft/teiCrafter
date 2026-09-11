@@ -23,7 +23,7 @@
  */
 
 import { el, clear } from "./dom.js";
-import { parseManifest, typeForFile, mappingFiles, MANIFEST_FILENAME } from "./project-manifest.js";
+import { parseManifest, typeForFile, mappingFiles, llmForFile, MANIFEST_FILENAME } from "./project-manifest.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { parseEdition } from "./edition.js";
 import { annotationPageSummary } from "./annotation-progress.js";
@@ -48,7 +48,8 @@ export function createProjectFolder(ctx) {
   // draft banner and record the Source provenance. Absent in headless callers.
   const onPlaintextDraft = ctx.onPlaintextDraft || (() => {});
 
-  const summaryForState = (state) => annotationPageSummary(state, noteIndex(state.doc));
+  const summaryForState = (state, fileName = app.docName) => annotationPageSummary(state, noteIndex(state.doc),
+    llmForFile(app.projectFolder?.project || app.project, fileName)?.responsibility || "#ai");
 
   function annotationStatus(file) {
     if (file.kind !== "tei") return null;
@@ -69,7 +70,7 @@ export function createProjectFolder(ctx) {
       try {
         const source = await file.handle.getFile();
         const decoded = decodeXmlBytes(await source.arrayBuffer());
-        file.annotationStatus = { state: "done", summary: summaryForState(parseEdition(decoded.text)) };
+        file.annotationStatus = { state: "done", summary: summaryForState(parseEdition(decoded.text), file.name) };
       } catch (err) {
         file.annotationStatus = { state: "error", message: err.message };
       }

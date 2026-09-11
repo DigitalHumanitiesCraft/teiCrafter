@@ -20,7 +20,7 @@
  * Run: node test/proofs/inline_gnd_reopen_check.mjs   (exit 0 = pass, 1 = fail)
  */
 
-import { parseDocument } from "../../docs/js/editor/tei-document.js";
+import { parseDocument, getAttr, teiElementsByLocal, isReadingContext } from "../../docs/js/editor/tei-document.js";
 import { parseEdition } from "../../docs/js/editor/edition.js";
 import { readEntities } from "../../docs/js/editor/standoff.js";
 import { toInlineGND, fromInlineGND } from "../../docs/js/editor/inline-gnd.js";
@@ -115,5 +115,16 @@ if (!isFixedPoint) {
 }
 check("re-import is idempotent: fromInlineGND on a register doc returns the SAME doc",
   fromInlineGND(reopened) === reopened);
+
+for (const [label, source] of [["present", REG], ["absent", REG.replace(' cert="high"', "")]]) {
+  const original = parseDocument(source);
+  const interchange = toInlineGND(original);
+  const working = fromInlineGND(interchange);
+  const originalMentions = teiElementsByLocal(original.root, "name").filter(isReadingContext);
+  const workingMentions = teiElementsByLocal(working.root, "name").filter(isReadingContext);
+  check(`source, responsibility and ${label} certainty are preserved exactly`, originalMentions.length === workingMentions.length
+    && originalMentions.every((mention, index) => ["source", "resp", "cert"].every((name) => getAttr(mention, name) === getAttr(workingMentions[index], name))));
+  check(`a source with ${label} certainty retains exact interchange bytes`, toInlineGND(working).raw === interchange.raw);
+}
 
 finish("PASS: fromInlineGND lifts inline-GND back into the register; the interchange file is a fixed point.");

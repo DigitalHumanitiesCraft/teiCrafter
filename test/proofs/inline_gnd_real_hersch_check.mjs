@@ -62,18 +62,18 @@ for (const source of SOURCES.filter((candidate) => existsSync(candidate.path))) 
   const inlineMentions = readingMentions(inline, new Set(["persName", "orgName", "bibl"]));
 
   check("source carries inline entity mentions", inlineMentions.length > 0);
-  check("every inline mention carries ref, source, cert and resp",
+  check("every inline mention carries ref, source and resp",
     inlineMentions.every((node) =>
-      ["ref", "source", "cert", "resp"].every((name) => getAttr(node, name))));
+      ["ref", "source", "resp"].every((name) => getAttr(node, name))));
 
   const reopened = fromInlineGND(inline);
   check("import lifts the inline document into a new register model", reopened !== inline);
   check("reading text is byte-identical after import", readingText(reopened.raw) === readingText(raw));
 
   const workingMentions = readingMentions(reopened, new Set(["name"]));
-  check("every working mention keeps source, cert and resp",
-    workingMentions.every((node) =>
-      ["source", "cert", "resp"].every((name) => getAttr(node, name))));
+  check("every working mention preserves source, resp and the presence or absence of cert",
+    workingMentions.length === inlineMentions.length && workingMentions.every((node, index) =>
+      ["source", "cert", "resp"].every((name) => getAttr(node, name) === getAttr(inlineMentions[index], name))));
   check("every working mention points to the local register",
     workingMentions.every((node) => (getAttr(node, "ref") || "").startsWith("#")));
 

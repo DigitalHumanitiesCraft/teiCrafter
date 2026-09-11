@@ -6,8 +6,9 @@ Use [knowledge/INDEX.md](../knowledge/INDEX.md) for current product and technica
 
 | Document | Role |
 | --- | --- |
-| [Session close and re-entry](session-close-2026-09-05.md) | Development checkpoint, verification boundary and the next bounded task. |
-| [Input and persistence refactoring](refactoring-status-2026-09-05.md) | Latest implementation boundaries, pinned verification, browser results and remaining 0.2.0 work. |
+| [Wenzelsbibel workflow](wenzelsbibel-workflow-2026-09-11.md) | Current specialization, branch integration, real-source findings and verification boundary. |
+| [Session close and re-entry](session-close-2026-09-05.md) | Earlier development checkpoint; the Wenzelsbibel report supplies current evidence. |
+| [Input and persistence refactoring](refactoring-status-2026-09-05.md) | Earlier implementation and browser observations, including the validator latency that prompted the worker investigation. |
 | [Documentation audit](documentation-audit-2026-09-05.md) | Markdown inventory, resolved contradictions, preservation decisions and local link checks. |
 | [0.2.0 implementation plan](implementation-plan-0.2.0.md) | Work packages and release acceptance, including work still to implement. |
 | [Workflows and adaptive interface](workflows-and-adaptive-ui-0.2.0.md) | User tasks, examples, genre distinctions and intended interface depth. |

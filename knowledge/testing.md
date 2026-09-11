@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: active
 created: 2026-05-30
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
@@ -123,7 +123,9 @@ Axe runs within that real state in Chromium and Firefox. Historical runs complet
 
 `WB_CODEX` points the local engine proof at Codex 2759. The proof parses the complete source, confirms the word and project profiles, serializes a no-op identically, resolves IIIF image targets, and derives usable zone bounds from point geometry. Dual-reading proofs pin atomic diplomatic, `@orig`, and `@norm` edits.
 
-The Wenzelsbibel browser example deliberately falls back to a committed structural twin when the rights-local real source is unavailable. Cross-browser interaction therefore establishes the UI path for representative structure. It does not establish real-object browser performance or interactive editing of the separate image-annotation document.
+The local example has a committed structural twin. The dedicated workspace suite also exercises apparatus, verse mappings, image records, shared registers, read-only behavior, staged recovery and exact downloaded output. These synthetic fixtures establish reproducible interaction without redistributing the edition. Opt-in real browser cases require `WB_CODEX` and `WB_IMAGES`; they edit only temporary browser copies, compare exact expected output and verify that the originals remain unchanged. Dated reports state which real cases ran.
+
+The worker scenario measures browser heartbeats during real vocabulary-schema compilation and requires an exact validated download followed by a correctly rejected invalid revision. Pure worker tests cover request correlation, resource-graph transport, failure and restart. Large-source investigations measure parsing and derived projections separately; runtime limits remain attached to the actual environment and fixture.
 
 ## Running the gates
 
@@ -149,6 +151,14 @@ Run the real Wenzelsbibel engine evidence through its local path.
 ```powershell
 $env:WB_CODEX = 'C:\path\to\codex-2759.xml'
 node test/proofs/wb_codex_check.mjs
+```
+
+To run the dedicated real browser workflow, set both paths and run the workspace suite:
+
+```powershell
+$env:WB_CODEX = 'C:\path\to\codex-2759.xml'
+$env:WB_IMAGES = 'C:\path\to\Bildannotationen.xml'
+npx playwright test test/e2e/wenzelsbibel-workspace.spec.js --workers=1
 ```
 
 An absent rights-local object produces a declared skip for that object-specific proof. Synthetic regression evidence still runs. A complete evidence claim must state whether the real object was present.

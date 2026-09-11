@@ -33,16 +33,19 @@ export function folioIsReviewed(folio, doc = null) {
 }
 
 export function reviewPageSummary(state) {
-  const pages = (state && state.folios || []).map((folio, index) => ({
-    index,
-    label: folio.n != null ? String(folio.n) : String(index + 1),
-    reviewed: folioIsReviewed(folio, state.doc),
-    status: reviewAnchor(folio) ? reviewStateForAnchor(state.doc, reviewAnchor(folio)).status : "unreviewed",
-    record: reviewAnchor(folio) ? reviewStateForAnchor(state.doc, reviewAnchor(folio)).record : null,
-    markable: Boolean(reviewAnchor(folio) && (
-      folioIsReviewed(folio, state.doc) || canStoreReviewRecord(state.doc, reviewAnchor(folio)).ok
-    )),
-  }));
+  const pages = (state && state.folios || []).map((folio, index) => {
+    const anchor = reviewAnchor(folio);
+    const review = anchor ? reviewStateForAnchor(state.doc, anchor) : { status: "unreviewed", record: null };
+    const reviewed = review.status === "reviewed";
+    return {
+      index,
+      label: folio.n != null ? String(folio.n) : String(index + 1),
+      reviewed,
+      status: review.status,
+      record: review.record,
+      markable: Boolean(anchor && (reviewed || canStoreReviewRecord(state.doc, anchor).ok)),
+    };
+  });
   return {
     totalPages: pages.length,
     reviewedPages: pages.filter((page) => page.reviewed).length,

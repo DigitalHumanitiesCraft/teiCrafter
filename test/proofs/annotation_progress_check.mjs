@@ -47,6 +47,13 @@ assert.equal(namespaceSummary.pages[1].count, 2,
 assert.deepEqual([...namespaceSummary.pages[1].kinds].sort(), ["entities", "markup"]);
 assert.equal(namespaceSummary.pages[1].ai, true);
 
+const humanSummary = annotationPageSummary(parseEdition(namespaceRaw.replace('resp="#ai">Ada', 'resp="#editor #ai-helper">Ada')));
+assert.equal(humanSummary.pages[1].ai, false, "human responsibility and similar IDs do not imply machine origin");
+const customState = parseEdition(namespaceRaw.replace('resp="#ai">Ada', 'resp="#editor #model">Ada'));
+assert.equal(annotationPageSummary(customState, new Map(), "#model").pages[1].ai, true,
+  "the configured machine responsibility matches one complete pointer token");
+assert.equal(annotationPageSummary(customState).pages[1].ai, false);
+
 const spanBase = parseEdition(`<TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc><titleStmt><title>S</title></titleStmt><publicationStmt><p>P</p></publicationStmt><sourceDesc><p>S</p></sourceDesc></fileDesc></teiHeader><text><body><pb n="1"/><p>Alpha</p><pb n="2"/><p>Beta</p></body></text></TEI>`);
 const alpha = spanBase.cells.find((cell) => cell.text === "Alpha");
 const beta = spanBase.cells.find((cell) => cell.text === "Beta");

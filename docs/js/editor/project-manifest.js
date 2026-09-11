@@ -323,6 +323,7 @@ export function parseManifest(input) {
   if (!m || typeof m !== "object" || Array.isArray(m)) fail("not a JSON object");
   if (m.teicrafter !== MANIFEST_VERSION) fail(`"teicrafter" must be ${MANIFEST_VERSION} (got ${JSON.stringify(m.teicrafter)})`);
   if (typeof m.name !== "string" || !m.name.trim()) fail('"name" is missing');
+  if (m.workspace !== undefined && m.workspace !== "wenzelsbibel") fail('"workspace" must name a supported built-in workspace');
 
   let iiifImageTemplate = null;
   let iiifPresentationManifest = null;
@@ -392,6 +393,7 @@ export function parseManifest(input) {
     source: "manifest",
     manifestSource: typeof input === "string" ? input : JSON.stringify(input),
     name: m.name.trim(),
+    workspace: m.workspace || null,
     schema: schemaDef(m.schema),
     iiifImageTemplate,
     iiifPresentationManifest,

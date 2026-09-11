@@ -8,6 +8,8 @@ import {
   walk,
 } from "./tei-document.js";
 
+const inventories = new WeakMap();
+
 function addCount(target, key) {
   target[key] = (target[key] || 0) + 1;
 }
@@ -33,9 +35,11 @@ function xmlModelReference(raw) {
 
 /** Inspect what the current TEI actually contains without changing its bytes. */
 export function inventoryDocument(doc) {
+  if (inventories.has(doc)) return inventories.get(doc);
   const elements = {};
   const attributes = {};
   const attributeValues = {};
+  const seenValues = new Map();
   const schemaRefs = [];
   const facsimileRefs = { internal: 0, external: 0 };
   let readingTextNodes = 0;
@@ -64,8 +68,9 @@ export function inventoryDocument(doc) {
       if (attr.namespaceURI != null) continue;
       addCount(attributes, attr.localName);
       const key = `${node.localName}@${attr.localName}`;
-      if (!attributeValues[key]) attributeValues[key] = [];
-      if (!attributeValues[key].includes(attr.value)) attributeValues[key].push(attr.value);
+      if (!seenValues.has(key)) { seenValues.set(key, new Set()); attributeValues[key] = []; }
+      const seen = seenValues.get(key);
+      if (!seen.has(attr.value)) { seen.add(attr.value); attributeValues[key].push(attr.value); }
       if (attr.localName === "facs") {
         const kinds = pointerKind(attr.value);
         facsimileRefs.internal += kinds.internal;
@@ -76,7 +81,7 @@ export function inventoryDocument(doc) {
 
   const root = (doc.root.children || []).find((node) =>
     isTeiElement(node, "teiCorpus") || isTeiElement(node, "TEI")) || null;
-  return {
+  const inventory = {
     version: 1,
     root: root ? root.localName : null,
     elements,
@@ -90,4 +95,6 @@ export function inventoryDocument(doc) {
     values(element, attribute) { return attributeValues[`${element}@${attribute}`] || []; },
     rootType: root ? getUnqualifiedAttr(root, "type") : null,
   };
+  inventories.set(doc, inventory);
+  return inventory;
 }

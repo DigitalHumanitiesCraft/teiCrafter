@@ -163,7 +163,7 @@ export function createFacsimile(hostEl, opts = {}) {
 
   // ---- public: show a page -------------------------------------------------
 
-  function showPage({ imageUrl, surface, onZoneEnter, onZoneLeave, onZoneClick } = {}) {
+  function showPage({ imageUrl, surface, onZoneEnter, onZoneLeave, onZoneClick, focusZoneId = null } = {}) {
     if (!hasOSD) {
       if (!warned) {
         console.warn("facsimile.js: window.OpenSeadragon is undefined; cannot show page.");
@@ -183,7 +183,16 @@ export function createFacsimile(hostEl, opts = {}) {
     detachOpenHandler();
 
     const handlers = { onZoneEnter, onZoneLeave, onZoneClick };
-    openHandler = () => addZoneOverlays(surface, handlers);
+    openHandler = () => {
+      addZoneOverlays(surface, handlers);
+      const zone = focusZoneId && surface.zones.find((item) => item.id === focusZoneId);
+      if (zone && [zone.ulx, zone.uly, zone.lrx, zone.lry].every(Number.isFinite)) {
+        const box = viewer.viewport.imageToViewportRectangle(zone.ulx * coordScale, zone.uly * coordScale,
+          (zone.lrx - zone.ulx) * coordScale, (zone.lry - zone.uly) * coordScale);
+        if (box.width > 0 && box.height > 0) viewer.viewport.fitBounds(box, true);
+        highlightZone(focusZoneId);
+      }
+    };
     viewer.addHandler("open", openHandler);
 
     // open() swaps the tile source on the existing instance; the 'open' handler

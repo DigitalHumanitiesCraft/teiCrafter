@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: active
 created: 2026-02-05
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, testing]
@@ -133,6 +133,18 @@ An explicit starter choice may create new transcription, correspondence, charter
 
 ## Acceptance scenarios
 
+### Wenzelsbibel authoring contract
+
+- **W.1 Specialized workspace.** An explicit Wenzelsbibel project identity or workspace declaration exposes transcription, apparatus, image and register forms through the existing session and preservation contract.
+- **W.2 Source fidelity.** Editing a normalized reading changes only that reading. A deliberate diplomatic correction may update text and `@orig` together; mixed content without a safe form inverse remains accessible through exact XML.
+- **W.3 Apparatus.** Existing comment types, languages, responsibility and boundary anchors remain editable without normalization to a reduced vocabulary. New comments use explicit boundary anchors around the selected word range.
+- **W.4 Project relations.** Image zones, statistical text ranges and shared-register references are checked against explicitly attached companions. A mutation changes only the active document. Cross-file updates are separate save operations.
+- **W.5 Scholarly modelling.** Peoples use collective-agent TEI records. Bible mappings retain the reference edition's numbering and editor-supplied Latin text. The field and serialization contracts are defined in [Wenzelsbibel](wenzelsbibel.md).
+- **W.6 Validation.** Bundled TEI All and the authored editing profile govern output when the project provides no schemas. The separate review phase checks editorial completeness. It shall not be presented as the unavailable original Bilderfassung.sch or as scholarly acceptance.
+- **W.7 PAGE transport.** PAGE XML imports create a separate draft, retain source text and usable geometry, respect declared order, and report unsupported or degenerate geometry without inventing coordinates.
+
+### Scenarios
+
 | Scenario | Acceptance condition |
 | --- | --- |
 | No-op round trip | Open and serialize a representative TEI without changing any source byte |
@@ -145,9 +157,13 @@ An explicit starter choice may create new transcription, correspondence, charter
 | Stale validation | Change the document after a valid result and require a new gate before output |
 | Firefox fallback | Load through file input and obtain exact source bytes through Download and Save fallback after schema authorization |
 | UFBAS whole book | Exercise real navigation, header, review, schema-gated output, and accessibility in Chromium and Firefox |
-| Wenzelsbibel codex | Exercise real word, dual-reading, facsimile, zone, and no-op engine behaviour; use the synthetic twin for committed browser interaction |
+| Wenzelsbibel workspace | Exercise transcription, commentary, verses, images, shared registers, staged recovery and exact output with synthetic material; separately run supplied real codex and image files |
 
 ## Key decisions
+
+- **Project specialization, 2026-09-11.** The Wenzelsbibel workflow is a project workspace over the existing canonical document, session and schema gate. Its shared registers and verse model are editorial design decisions authorized for implementation; project editors retain scholarly acceptance.
+- **Editing and completeness, 2026-09-11.** The authored Schematron distinguishes saveable unfinished work from editorial completeness. Existing source anomalies remain visible and need deliberate correction.
+- **Responsive validation, 2026-09-11.** Expensive vocabulary-schema compilation runs in a worker and retains a compiled cache. A responsive interface does not weaken the requirement that the exact output bytes pass every configured schema.
 
 - **Preservation before validated delivery, 2026-09-05.** A schema failure must not prevent preserving unfinished work. Independent local checkpoints and an explicitly unvalidated portable Working copy complement schema-gated TEI output.
 - **Review and origin are separate evidence, 2026-09-05.** Review binds to source content and retains history. Proposal acceptance records a human decision while preserving machine and human responsibility pointers.
@@ -165,7 +181,7 @@ An explicit starter choice may create new transcription, correspondence, charter
 ## Explicit seams
 
 - The span engine supports generic annotation types, while the interactive multi-segment collector currently exposes entity linking. Additional scholarly types need UI contracts for their required attributes and review semantics.
-- Stand-off spans resolve within one TEI document. Cross-file Wenzelsbibel `corresp` and `#range(...)` editing needs a project document graph and target-document transaction model.
+- Wenzelsbibel companions support cross-file lookup and reference checks. Saves remain document-local; atomic multi-file transactions, persistent companion bundles and concurrent-editor coordination are outside this contract.
 - Review fingerprints cover source ranges, excluding revision history. Separate metadata/register review and cross-document responsibility scopes remain open.
 - Entry starters provide creation and navigation; safe duplication, reference-aware batch operations and a complete entry-management workspace remain open.
 - Apparatus reading currently selects lemma or first reading; witness selection and a complete disclosure of unsupported editorial semantics remain open.

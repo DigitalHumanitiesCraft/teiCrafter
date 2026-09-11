@@ -19,9 +19,11 @@ export function decodeWorkingCopy(text) {
     throw new Error("This is not a supported teiCrafter working copy.");
   }
   const record = data.record;
-  if (record.staged && (!['page', 'metadata', 'metadata-form', 'inline'].includes(record.staged.mode)
+  if (record.staged && (!['page', 'metadata', 'metadata-form', 'inline', 'wenzels'].includes(record.staged.mode)
     || !Number.isInteger(record.staged.folio)
-    || (record.staged.mode === 'metadata-form' ? !Array.isArray(record.staged.value)
+    || (record.staged.mode === 'wenzels' ? typeof record.staged.value?.section !== 'string'
+      || !record.staged.value?.fields || typeof record.staged.value.fields !== 'object' || Array.isArray(record.staged.value.fields)
+      : record.staged.mode === 'metadata-form' ? !Array.isArray(record.staged.value)
       : record.staged.mode === 'inline' ? typeof record.staged.value?.core !== 'string' || typeof record.staged.cellId !== 'string'
         : typeof record.staged.value !== 'string'))) {
     throw new Error("The staged input in this working copy is invalid.");

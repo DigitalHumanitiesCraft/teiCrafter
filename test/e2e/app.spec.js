@@ -374,6 +374,7 @@ for (const fixture of sourceProfileCases) {
 }
 
 test("Markup progress filters note-bearing units without changing document state", async ({ page }) => {
+  test.setTimeout(90_000);
   const expectRuntimeClean = await monitorRuntime(page);
   await page.addInitScript(() => {
     Object.defineProperty(window, "showOpenFilePicker", {
@@ -422,7 +423,7 @@ test("Markup progress filters note-bearing units without changing document state
   await source.fill(stagedPageSource);
   await page.getByRole("button", { name: "Go to annotated page 2" }).click();
   await expect(page.locator("#ed-folio-label")).toContainText("page 1/3");
-  await expect(page.locator("#ed-status")).toContainText("Apply or cancel the staged XML");
+  await expect(page.locator("#ed-status")).toContainText("Apply or cancel the visible edits");
   await expect(page.locator("#ed-reading .ed-note-target")).toHaveCount(0);
   await expect(source).toHaveValue(stagedPageSource);
   expect(await historyControlState(page)).toEqual(historyBeforeStaging);

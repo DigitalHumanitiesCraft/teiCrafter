@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: active
 created: 2026-05-27
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
@@ -97,7 +97,7 @@ The canonical schema shape is an ordered `schema.schemas` array. Each entry cont
 
 Project-level `uiProfile` provides defaults. A matching document type overrides `primaryNavigation` per field and contributes additional disabled capabilities. An unavailable requested channel produces an explicit issue and the resolver selects a source-backed fallback.
 
-Other manifest data includes markup actions, TEI modules and elements, indices, reconciliation policy, image resolution, declared views, interchange format, and LLM prompt, mapping, and responsibility. A manifest contains data and cannot register executable LLM adapters.
+Other manifest data includes markup actions, TEI modules and elements, indices, reconciliation policy, image resolution, declared views, interchange format, and LLM prompt, mapping, and responsibility. `workspace: "wenzelsbibel"` selects the specialized project interface. A manifest contains data and cannot register executable LLM adapters.
 
 ## Schema set and validation result
 
@@ -169,7 +169,7 @@ Stand-off annotations preserve selected text and insert zero-width boundary anch
 
 A continuous selection across XML boundaries uses one `span`. A discontinuous selection uses several ordered, non-overlapping spans in one group. Each span may carry `ana` and `resp`. Projection resolves every anchor pair back into exact reading ranges, so all segments participate in highlighting, relinking, and removal. Removing a group also removes boundary anchors that have no remaining reference.
 
-The current interactive collector creates entity annotations within one TEI document. The underlying representation can carry other annotation types. Cross-document pointers such as the Wenzelsbibel image-annotation `corresp` and `#range(...)` expressions are preserved as XML and require a separate project-level document graph for interactive editing.
+The generic interactive collector creates entity annotations within one TEI document. The Wenzelsbibel workspace additionally authors image `corresp` and `#range(...)` expressions against attached companions, apparatus comments, Bible verse spans and shared-register links. [Wenzelsbibel](wenzelsbibel.md) owns those serialized forms and the PAGE XML transport contract. Companion documents are in-memory reference snapshots; they must be reattached after reopening a session. Staged Wenzelsbibel forms use working-copy mode `wenzels` with section, selected record and field values.
 
 ## Machine provenance and provider configuration
 

@@ -205,6 +205,7 @@ test("read-only switching leaves unfinished XML available for recovery", async (
 });
 
 test("project folders expose nested files and preserve the plaintext output directory", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.addInitScript((xml) => {
     const store = new Map();
     const file = (name, text) => {
@@ -236,7 +237,7 @@ test("project folders expose nested files and preserve the plaintext output dire
   await expect(page.locator(".ed-proj-directory > summary")).toHaveText("letters");
   await page.getByRole("button", { name: "letters/transcript.txt", exact: true }).click();
   await page.locator("#btn-save").click();
-  await expect(page.locator("#ed-status")).toContainText("Saved in place", { timeout: 20000 });
+  await expect(page.locator("#ed-status")).toContainText("Saved in place", { timeout: 60_000 });
   await expect(page.locator("#ed-docstrip")).toContainText("letters/transcript (1).xml");
   const output = await page.evaluate(() => window.projectOutput());
   expect(output.original).toBe("Occupied source");

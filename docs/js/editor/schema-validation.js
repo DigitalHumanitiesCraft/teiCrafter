@@ -1,4 +1,6 @@
 import { normalizeSchemaSet, schemaDependencyRefs, schemaPathExtension } from "./schema-set.js";
+import { createSchemaWorkerClient } from "./schema-validation-worker-client.js";
+import { validateXmlSchemaDirect } from "./xml-schema-runtime.js";
 
 const DEFAULT_RELAXNG_URL = new URL(
   "../../schemas/tei-p5-4.11.0/tei_all.rng",
@@ -9,8 +11,7 @@ const SESSION_SCHEMA_BASE = "https://teicrafter.invalid/session/";
 const SCHEMATRON_NAMESPACE = "http://purl.oclc.org/dsdl/schematron";
 const SVRL_NAMESPACE = "http://purl.oclc.org/dsdl/svrl";
 
-const validatorCache = new Map();
-let libxmlRuntimePromise = null;
+let schemaWorkerClient = null;
 
 export const DEFAULT_SCHEMA = Object.freeze({
   name: "TEI P5 4.11.0 (TEI All)",
@@ -64,6 +65,7 @@ export function schemaSources(projectSchema, customSchema = null, baseUrl = null
   const normalized = normalizeSchemaSet(projectSchema);
   if (!normalized.declared) return [DEFAULT_SCHEMA];
 
+  /** @type {Array<{ name: string, type: string, unavailable?: string, url?: string, documentUrl?: string, resources?: object, text?: string }>} */
   const sources = normalized.issues.map((message, index) => ({
     name: `Project schema configuration${normalized.issues.length > 1 ? ` ${index + 1}` : ""}`,
     type: "configuration",
@@ -189,65 +191,15 @@ export async function schemaResourceGraph(source) {
   return { mainText, mainUrl, resources: resolved };
 }
 
-async function libxmlRuntime() {
-  if (!libxmlRuntimePromise) {
-    libxmlRuntimePromise = import("../../vendor/libxml2-wasm/lib/index.mjs").then((runtime) => {
-      const provider = new runtime.XmlBufferInputProvider({});
-      if (!runtime.xmlRegisterInputProvider(provider)) {
-        throw new Error("The browser XML runtime could not register its in-memory schema resolver.");
-      }
-      return { ...runtime, provider, encoder: new TextEncoder() };
-    });
-  }
-  return libxmlRuntimePromise;
-}
-
-async function fingerprint(parts) {
-  const body = parts.map((part) => `${String(part).length}:${String(part)}`).join("|");
-  if (globalThis.crypto && globalThis.crypto.subtle) {
-    const bytes = new TextEncoder().encode(body);
-    const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
-    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-  }
-  return body;
-}
-
-async function libxmlValidator(source, graph) {
-  const runtime = await libxmlRuntime();
-  const resourceParts = [...graph.resources.entries()].sort(([a], [b]) => a.localeCompare(b)).flat();
-  const cacheKey = await fingerprint([source.type, graph.mainUrl, ...resourceParts]);
-  if (validatorCache.has(cacheKey)) return validatorCache.get(cacheKey);
-
-  for (const [url, text] of graph.resources) {
-    runtime.provider.addBuffer(url, runtime.encoder.encode(text));
-  }
-  const schemaDocument = runtime.XmlDocument.fromString(graph.mainText, { url: graph.mainUrl });
-  try {
-    const validator = source.type === "xsd"
-      ? runtime.XsdValidator.fromDoc(schemaDocument)
-      : runtime.RelaxNGValidator.fromDoc(schemaDocument);
-    const entry = { validator, XmlDocument: runtime.XmlDocument, schemaDocument };
-    validatorCache.set(cacheKey, entry);
-    return entry;
-  } catch (error) {
-    schemaDocument.dispose();
-    throw error;
-  }
-}
-
-async function validateXmlSchema(raw, source) {
+async function validateXmlSchema(raw, source, onProgress) {
   const graph = await schemaResourceGraph(source);
-  const entry = await libxmlValidator(source, graph);
-  let document;
-  try {
-    document = entry.XmlDocument.fromString(raw);
-    entry.validator.validate(document);
-    return { name: source.name, type: source.type, status: "valid", diagnostics: [] };
-  } catch (error) {
-    return { name: source.name, type: source.type, status: "invalid", diagnostics: diagnostics(error) };
-  } finally {
-    if (document) document.dispose();
+  if (typeof document !== "undefined") {
+    if (typeof Worker !== "function") throw new Error("This browser cannot run schema validation in a worker.");
+    if (!schemaWorkerClient) schemaWorkerClient = createSchemaWorkerClient(() =>
+      new Worker(new URL("./schema-validation-worker.js", import.meta.url), { type: "module" }));
+    return schemaWorkerClient.validate(raw, source, graph, onProgress);
   }
+  return validateXmlSchemaDirect(raw, source, graph, onProgress);
 }
 
 function parseXmlInBrowser(text, label) {
@@ -580,7 +532,7 @@ async function validateRawSchematron(raw, source) {
   };
 }
 
-export async function validateWithSchemas(raw, sources) {
+export async function validateWithSchemas(raw, sources, { onProgress = () => {} } = {}) {
   const activeSources = sourceArray(sources);
   if (!activeSources.length) {
     return [{
@@ -595,7 +547,7 @@ export async function validateWithSchemas(raw, sources) {
     try {
       if (source.unavailable) throw new Error(source.unavailable);
       if (source.type === "relaxng" || source.type === "xsd") {
-        results.push(await validateXmlSchema(raw, source));
+        results.push(await validateXmlSchema(raw, source, onProgress));
       } else if (source.type === "schematron-xsl") {
         results.push(await validateSchematronXsl(raw, source));
       } else if (source.type === "schematron") {

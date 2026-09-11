@@ -529,6 +529,11 @@ export function parseEdition(raw) {
   return buildState(parseDocument(raw));
 }
 
+/** Reuse a mutation's already parsed canonical document. */
+export function editionFromDocument(doc) {
+  return buildState(doc);
+}
+
 /** Find a rendered cell's folio, line, and position within that line. */
 function cellLocation(state, cellId) {
   for (let folioIndex = 0; folioIndex < state.folios.length; folioIndex++) {

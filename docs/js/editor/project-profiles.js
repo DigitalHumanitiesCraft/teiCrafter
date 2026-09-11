@@ -29,6 +29,7 @@ const PROFILES = [
   },
   {
     id: "wenzelsbibel",
+    teiTypes: ["wenzelsbibel-registers", "wenzelsbibel-transcription"],
     name: "Wenzelsbibel (Codex 2759)",
     pidPattern: /^o:wen\./,
     // {stem} is the graphic filename without its extension. OpenSeadragon
@@ -54,7 +55,7 @@ export function readPid(doc) {
 export function detectProject(doc) {
   const tei = firstByLocal(doc.root, "TEI");
   const rootType = getAttr(tei, "type");
-  const rootProfile = PROFILES.find((p) => p.teiType && p.teiType === rootType);
+  const rootProfile = PROFILES.find((p) => (p.teiType && p.teiType === rootType) || p.teiTypes?.includes(rootType));
   if (rootProfile) return rootProfile;
   const pid = readPid(doc);
   if (!pid) return null;

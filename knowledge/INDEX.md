@@ -12,11 +12,11 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: active
 created: 2026-05-27
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 version: "0.22"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples]
+related: [project, data, specification, architecture, design, journal, testing, integration, converter-reference, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Knowledge Base
@@ -41,6 +41,7 @@ Each document's `updated` date records its latest substantive change. Removing a
 | [Testing](testing.md) | Which evidence supports each technical and editorial claim? |
 | [Integration](integration.md) | Which contracts connect teiCrafter to project repositories, schemas, images, and model services? |
 | [Worked examples](worked-examples.md) | How do representative editorial workflows exercise those contracts? |
+| [Wenzelsbibel](wenzelsbibel.md) | Which editorial models, project forms and cross-file conventions support the Wenzelsbibel workflow? |
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
 | [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
 
@@ -70,7 +71,7 @@ Current facts belong to their owning knowledge document. Reports retain historic
 
 **Stand-off span group** represents a continuous cross-structure selection or a discontinuous selection as one TEI `spanGrp` containing one or more `span` elements. Exact boundary anchors preserve the source text and support round-trip projection.
 
-**Staged input** is a visible inline, XML or metadata edit that has not yet entered canonical XML. Apply may fail without losing the entered value; navigation and unrelated mutations must preserve it.
+**Staged input** is a visible inline, XML, metadata or Wenzelsbibel form edit that has not yet entered canonical XML. Apply may fail without losing the entered value; navigation and unrelated mutations must preserve it.
 
 **Recovery checkpoint** stores a document session and its staged input locally. A **Working copy** exports that unfinished state as portable JSON. Neither is a successful native Save nor a validated TEI download.
 
@@ -80,4 +81,4 @@ Current facts belong to their owning knowledge document. Reports retain historic
 
 ## Evidence boundary
 
-Committed synthetic fixtures exercise type-diverse Source Profiles and browser interaction in Chromium and Firefox. Historical real UFBAS runs exercised navigation, metadata, review, schema-gated output, fallback download, and automated accessibility checks in both browsers. The current run report states whether the rights-local source was present; a skipped scenario is not current real-object evidence. The rights-local Wenzelsbibel codex exercises the large word-level, dual-reading, facsimile, zone, and no-op engine path. Its committed browser example uses a synthetic structural twin, so real cross-document Wenzelsbibel interaction remains an integration seam.
+Committed synthetic fixtures exercise type-diverse Source Profiles and browser interaction in Chromium and Firefox. Historical real UFBAS runs exercised navigation, metadata, review, schema-gated output, fallback download, and automated accessibility checks in both browsers. The current run report states whether a rights-local source was present; a skipped scenario is not current real-object evidence. Wenzelsbibel engine proofs and opt-in browser workflows separately exercise the codex and image annotations. Its committed examples and mandatory browser scenarios use synthetic material. [Dated evidence](../reports/README.md) records performance, source anomalies and the actual verification boundary.

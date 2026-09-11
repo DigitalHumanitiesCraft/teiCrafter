@@ -20,6 +20,23 @@ export const DEFAULT_REVIEWER = "urn:teicrafter:local-reviewer";
 export const DEFAULT_REVIEW_RATIONALE = "Editorial verification completed in teiCrafter.";
 
 const XML_ID = /^[\p{L}_][\p{L}\p{N}\p{M}._-]*$/u;
+const documentIndexes = new WeakMap();
+const recordCache = new WeakMap();
+
+function documentIndex(doc) {
+  if (doc && documentIndexes.has(doc)) return documentIndexes.get(doc);
+  const roots = [], members = new WeakSet(), byId = new Map();
+  walk(doc?.root, (node) => {
+    if (node.type !== "element") return;
+    members.add(node);
+    const id = getXmlId(node);
+    if (id) byId.set(id, byId.has(id) ? null : node);
+    if (isTeiElement(node) && ["TEI", "teiCorpus"].includes(node.localName)) roots.push(node);
+  });
+  const index = { roots, members, byId };
+  if (doc) documentIndexes.set(doc, index);
+  return index;
+}
 
 function own(object, key) {
   return Object.prototype.hasOwnProperty.call(object || {}, key);
@@ -41,11 +58,7 @@ function documentElementForAnchor(anchor) {
 }
 
 function documentElements(doc) {
-  const elements = [];
-  walk(doc?.root, (node) => {
-    if (isTeiElement(node) && ["TEI", "teiCorpus"].includes(node.localName)) elements.push(node);
-  });
-  return elements;
+  return documentIndex(doc).roots;
 }
 
 function headerElement(anchor) {
@@ -145,35 +158,32 @@ function recordFromElement(doc, element) {
 
 /** Read every TEI review record under the document's revisionDesc. */
 export function readReviewRecords(doc, { status = null } = {}) {
-  const records = [];
-  for (const revision of revisionElements(doc)) {
-    walk(revision, (node) => {
-      if (!isTeiElement(node, "change")) return;
-      const record = recordFromElement(doc, node);
-      if (record.type === REVIEW_TYPE && (status == null || record.status === status)) {
-        records.push(record);
-      }
-    });
+  if (!doc?.root) return [];
+  if (!recordCache.has(doc)) {
+    const records = [];
+    for (const revision of revisionElements(doc)) {
+      walk(revision, (node) => {
+        if (!isTeiElement(node, "change")) return;
+        const record = recordFromElement(doc, node);
+        if (record.type === REVIEW_TYPE) {
+          for (const key of ["targets", "targetIds", "whoTokens"]) Object.freeze(record[key]);
+          records.push(Object.freeze(record));
+        }
+      });
+    }
+    recordCache.set(doc, records);
   }
-  return records;
+  return recordCache.get(doc).filter((record) => status == null || record.status === status);
 }
 
 /** Find an element by a unique xml:id. Ambiguous ids resolve to null. */
 export function findElementByXmlId(doc, id) {
   if (!id) return null;
-  const matches = [];
-  walk(doc?.root, (node) => {
-    if (node.type === "element" && getXmlId(node) === id) matches.push(node);
-  });
-  return matches.length === 1 ? matches[0] : null;
+  return documentIndex(doc).byId.get(id) || null;
 }
 
 function attached(doc, element) {
-  let found = false;
-  walk(doc?.root, (node) => {
-    if (node === element) found = true;
-  });
-  return found;
+  return documentIndex(doc).members.has(element);
 }
 
 function ordinalForAnchor(doc, anchor) {

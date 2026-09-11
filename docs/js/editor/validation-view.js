@@ -147,7 +147,7 @@ export function createValidationView(ctx) {
     chip.textContent = schemaBlocked
       ? "output blocked by schema"
       : inFlight
-        ? "validating schemas..."
+        ? `${inFlight.phase || "Validating schemas"}...`
         : liveErrors
           ? "checks failing"
           : record
@@ -249,7 +249,14 @@ export function createValidationView(ctx) {
   async function validateSnapshot(target) {
     if (schemaRecord && sameSnapshot(schemaRecord, target)) return schemaRecord;
     if (inFlight && sameSnapshot(inFlight, target)) return inFlight.promise;
-    const promise = validateWithSchemas(target.raw, target.sources).then((results) => {
+    const promise = validateWithSchemas(target.raw, target.sources, {
+      onProgress: (phase) => {
+        if (inFlight && sameSnapshot(inFlight, target) && sameSnapshot(target, snapshot())) {
+          inFlight.phase = phase;
+          renderValidation();
+        }
+      },
+    }).then((results) => {
       const completed = { ...target, results };
       schemaRecord = completed;
       return completed;

@@ -1,6 +1,7 @@
 {
   "teicrafter": 1,
   "name": "Wenzelsbibel (Codex 2759)",
+  "workspace": "wenzelsbibel",
   "imageResolver": {
     "type": "iiif-image-template",
     "template": "https://iiif.onb.ac.at/images/REPO/8977428/{stem}.jp2/info.json"

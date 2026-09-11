@@ -22,13 +22,14 @@ from the browser to external services.
 | Authority lookup | The search term and register-specific options, including the GeoNames username when used | Wikidata, lobid/GND, or GeoNames | User runs a lookup; a project manifest can enable automatic querying when the lookup interface opens |
 | Facsimile display | Image or IIIF requests and normal HTTP request metadata | The image host or IIIF service referenced by the document or project | The facsimile viewer loads a remote image source |
 | Schema loading | Requested schema/dependency URLs and normal HTTP request metadata | Schema hosts configured by the project or session | Source-profile inspection or output validation resolves a remote schema resource |
+| ICONCLASS lookup | The manually entered search term or selected notation | iconclass.org | User submits a search or requests a concept in the Wenzelsbibel image form |
 
 The application code, fonts and OpenSeadragon viewer are served from the same
 origin as teiCrafter. A Content Security Policy prevents third-party scripts
 from running in the editor context. Remote connections remain available for
 the explicit LLM, authority and facsimile actions listed above.
 
-LLM and authority requests use `credentials: 'omit'`, so browser cookies are
+LLM, authority and ICONCLASS requests use `credentials: 'omit'`, so browser cookies are
 not attached to those requests. Data sent to an external provider is governed
 by that provider's terms and data-handling policy.
 
@@ -48,6 +49,10 @@ Browser storage is local to the browser profile and origin. Other people or
 software with access to that profile may be able to inspect it. Clear the
 recovery entry from the empty editor and clear site data in the browser when
 working on a shared device.
+
+Wenzelsbibel companion XML files stay in page memory as reference snapshots and are not included in recovery or a Working copy of the active document. Reattach them after reopening. PAGE XML conversion runs locally. Vocabulary-schema validation sends the source to a same-origin worker, with no edition upload to an external validator.
+
+The production build copies only versioned runtime data, schemas and vendor files. Ignored local corpora and working extracts are excluded from the publication artifact.
 
 ## Machine-generated content
 

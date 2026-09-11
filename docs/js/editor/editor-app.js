@@ -80,6 +80,9 @@ import { createOutputController } from "./output-controller.js";
 import { downloadFile } from "./download-file.js";
 import { encodeWorkingCopy, decodeWorkingCopy } from "./working-copy.js";
 import { createReadingView } from "./reading-view.js";
+import { createWenzelsWorkspace } from "./wenzels-workspace.js";
+import { editionFromDocument } from "./edition.js";
+import { isWenzelsProject, withWenzelsDefaults } from "./wenzels-profile.js";
 import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 import {
   parseGuidelines, elementsForScope, elementByName,
@@ -629,7 +632,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   schemaProfileRequest++;
   activeSchemaProfile = null;
   const openedState = parseEdition(raw);
-  const resolvedProject = project || detectProject(openedState.doc);
+  const resolvedProject = withWenzelsDefaults(project || detectProject(openedState.doc));
   const workingDoc = workingDocument(openedState.doc, resolvedProject);
   const importedInterchange = workingDoc !== openedState.doc;
   const workingState = importedInterchange ? parseEdition(workingDoc.raw) : openedState;
@@ -669,6 +672,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   // caller) wins; PID detection stays the fallback for bare files. The markup
   // wrap list binds to the document's TYPE within the project, not the project.
   app.project = resolvedProject;
+  applyLlmGate();
   // Load provenance for the draft badge in the document strip. Default: an opened
   // TEI file. The plaintext and example paths override this after load() returns.
   app.source = { kind: "tei" };
@@ -690,7 +694,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   };
   // Default context panel: the facsimile when the document has page images, the
   // entity Index otherwise.
-  app.panel = docHasImages() ? "facs" : "index";
+  app.panel = isWenzelsProject(app.project) ? "wenzels" : docHasImages() ? "facs" : "index";
   // F4: the reading variant resets to diplomatic per load; applyDocLayout then
   // restores the persisted value when this document had one.
   app.readingVariant = "dipl";
@@ -1147,7 +1151,7 @@ function updateAnnotationProgress() {
   if (!app.state || metadata) { closeAnnotationProgress(); return; }
 
   const summary = projectionCache.get(app, "annotation-pages",
-    () => annotationPageSummary(app.state, app.noteByWord));
+    () => annotationPageSummary(app.state, app.noteByWord, app.aiResp));
   const current = summary.pages[app.folio];
   const terms = unitTerms(app.state.sourceProfile);
   const notesOnly = app.annotationProgressFilter === "notes";
@@ -1990,7 +1994,11 @@ const PANELS = [
 
 function activePanels() {
   const extra = app.project && Array.isArray(app.project.panels) ? app.project.panels : [];
-  return PANELS.concat(extra);
+  const projectPanels = isWenzelsProject(app.project) ? [{
+    id: "wenzels", label: "Wenzelsbibel", title: "Transcription, apparatus, Bible verses, image annotations and shared registers",
+    render: () => wenzelsWorkspace.render(panelHost({ id: "wenzels" })),
+  }] : [];
+  return projectPanels.concat(PANELS, extra);
 }
 
 function panelHost(p) {
@@ -2021,6 +2029,7 @@ function updatePanels() {
     }
   }
   clear(tabsHost);
+  for (const host of document.querySelectorAll(".ed-panel-body > .ed-panel")) host.hidden = true;
   for (const p of panels) {
     // Panels need a loaded document, except the project panel: an adopted folder
     // (with or without an openable file) enables its tab so the empty-project
@@ -2048,6 +2057,7 @@ function updatePanels() {
 }
 
 function showPanel(id) {
+  if (!stagedInput.allowChange("changing context panels")) return;
   app.panel = id;
   saveDocLayout({ panel: id });
   updatePanels();
@@ -2545,6 +2555,14 @@ const documentFacts = createDocumentFacts({
   schemaSnapshot: () => validationView.recoverySettings(),
   restoreSchema: (settings) => validationView.restoreSettings(settings),
   restoreStaged: (staged) => {
+    if (staged.mode === "wenzels") {
+      app.sourceMode = false;
+      app.panel = "wenzels";
+      app.folio = Math.max(0, Math.min(staged.folio, app.state.folios.length - 1));
+      render();
+      wenzelsWorkspace.restore(staged.value, panelHost({ id: "wenzels" }));
+      return;
+    }
     app.sourceMode = staged.mode === "inline" ? false : staged.mode;
     app.folio = Math.max(0, Math.min(staged.folio, app.state.folios.length - 1));
     render();
@@ -2557,6 +2575,24 @@ const documentFacts = createDocumentFacts({
         stagedInput.restore(staged.value);
       }
     } else stagedInput.restore(staged.value);
+  },
+});
+const wenzelsWorkspace = createWenzelsWorkspace({
+  app, stagedInput, setStatus,
+  persist: () => documentFacts.persistDraftIfNeeded(),
+  applyDocument: (doc, label) => {
+    if (app.readOnly) throw new Error("The document is read only.");
+    if (doc !== app.state.doc) replaceSessionState(editionFromDocument(doc), label);
+    render();
+  },
+  loadDocument: async (raw, name, project, draft = false, encoding = null) => {
+    await documentFacts.persistDraftIfNeeded();
+    const loaded = await load(raw, name, null, project, { ...(encoding ? { fileEncoding: { encoding: "UTF-8", bom: !!encoding.bom } } : {}) });
+    if (loaded && draft) {
+      app.source = { kind: "draft", draftKind: "project" };
+      setDirty(true); void documentFacts.persistDraftIfNeeded();
+    }
+    return loaded;
   },
 });
 // Page-image store: resolves a surface <graphic url> to a displayable URL and
@@ -2604,7 +2640,7 @@ const genModal = setupGenModal({
   authorizeDocumentReplacement, beginAiJob, aiJobCurrent, finishAiJob, abortAiJob,
 });
 function applyLlmGate() {
-  const on = llmEnabled();
+  const on = llmEnabled() && !isWenzelsProject(app.project);
   $("btn-generate").hidden = !on;
   const propose = $("btn-propose");
   if (propose) propose.hidden = !on || app.readOnly;
@@ -2616,6 +2652,7 @@ function applyLlmGate() {
 // on-ramp set (in memory); without a key the call fails with a clear hint.
 async function proposeOnFolio() {
   if (app.readOnly) return;
+  if (isWenzelsProject(app.project)) return;
   if (!app.state || !llmEnabled()) return;
   if (app.sourceMode) {
     setStatus("Return to Reading text before requesting annotation proposals.");

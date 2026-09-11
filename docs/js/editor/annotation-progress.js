@@ -59,7 +59,7 @@ function pageForOffset(ranges, offset) {
  * Summarize annotation-bearing pages without changing the edition state.
  * `noteIndex` is the existing target-id map from standoff.noteIndex().
  */
-export function annotationPageSummary(state, noteIndex = new Map()) {
+export function annotationPageSummary(state, noteIndex = new Map(), responsibility = "#ai") {
   const folios = state && Array.isArray(state.folios) ? state.folios : [];
   const ranges = folios.map((_, index) => folioSourceSlice(state, index));
   const pages = folios.map((folio, index) => ({
@@ -81,7 +81,8 @@ export function annotationPageSummary(state, noteIndex = new Map()) {
       page.count += 1;
       page.kinds.add(kind);
       if ((node.attrs || []).some(
-        (attr) => attr.namespaceURI == null && attr.localName === "resp",
+        (attr) => attr.namespaceURI == null && attr.localName === "resp"
+          && String(attr.value || "").split(/\s+/).includes(responsibility),
       )) page.ai = true;
     });
 
@@ -90,7 +91,7 @@ export function annotationPageSummary(state, noteIndex = new Map()) {
       const covered = new Set();
       let ai = false;
       for (const range of group.ranges) {
-        if (range.resp) ai = true;
+        if (String(range.resp || "").split(/\s+/).includes(responsibility)) ai = true;
         ranges.forEach((pageRange, pageIndex) => {
           if (range.start < pageRange.end && range.end > pageRange.start) covered.add(pageIndex);
         });

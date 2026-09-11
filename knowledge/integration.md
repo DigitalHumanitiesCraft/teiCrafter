@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: active
 created: 2026-06-07
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
@@ -93,7 +93,7 @@ Downstream consumers should treat the `spanGrp` as the semantic annotation and i
 
 Target formats must declare whether they can represent these spans. The inline-GND interchange cannot represent cross-structure, discontinuous, or overlapping annotations and therefore blocks the projection. A lossy flattening is never automatic.
 
-The current span transaction is document-local. Cross-file pointers need a project document graph, stable document identities, and an atomic update policy across files. Wenzelsbibel image annotations make this requirement concrete through `corresp` pointers and range expressions.
+The current span transaction is document-local. The Wenzelsbibel workspace resolves references against explicitly attached companions and edits the active file. Changes to several files require separate saves; no atomic cross-file update is implied.
 
 ## UFBAS contract
 
@@ -105,7 +105,9 @@ The operational workflow uses portable file input and download, so it works in C
 
 The Wenzelsbibel codex encodes word-level diplomatic text, `@orig` and `@norm`, page and line milestones, facsimile surfaces, image graphics, zones, and TEI-level stand-off apparatus. Project identifiers and source structure select the Wenzelsbibel profile for a bare file. IIIF resolution maps surface graphics to image services, and point geometry can supply zone bounds when rectangular coordinates are absent.
 
-The separate image-annotation document uses cross-file `corresp` links, including range expressions. teiCrafter preserves those values in XML but has no multi-document graph transaction for interactive authoring. Integrating that document requires target-document loading, pointer validation across document identities, and coordinated schema authorization for every changed file.
+The separate image-annotation document uses cross-file `corresp` links, including range expressions. The specialized workspace provides image forms, codex word and zone lookup, references from words back to related images, and a shared register document for persons, places and peoples. Every attached companion is a local reference snapshot. Opening one for editing uses the existing session boundary; its own Save or Download validates its exact output. Reattach updated companions after a reload or an external edit.
+
+PAGE XML plus optional METS imports produce a separate TEI draft. ICONCLASS queries send only user-entered search terms or selected notations to the official service. The authored editorial schema and the chosen verse/register encodings are specified in [Wenzelsbibel](wenzelsbibel.md). An explicit project schema overrides the bundled default.
 
 The real codex supplies local engine and Source Profile evidence. The committed browser example uses a structural twin so that Chromium and Firefox can exercise representative interaction without redistributing the source. Claims about real browser performance must state that the local codex was present.
 

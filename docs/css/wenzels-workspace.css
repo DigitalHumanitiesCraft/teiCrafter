@@ -1,0 +1,50 @@
+.ed-wb-workspace {
+  padding: var(--space-md);
+  color: var(--color-text-body);
+  overflow-wrap: anywhere;
+}
+.ed-wb-workspace h2 { font-size: 1.2rem; margin: 0 0 var(--space-md); }
+.ed-wb-workspace h3 { font-size: 1rem; margin: var(--space-md) 0; }
+.ed-wb-workspace select,
+.ed-wb-field input,
+.ed-wb-field textarea,
+.ed-wb-reference > input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font: inherit;
+}
+.ed-wb-field input:disabled,
+.ed-wb-field textarea:disabled { background: var(--color-surface-sunken); }
+.ed-wb-field { display: grid; gap: var(--space-xs); margin-block: var(--space-md); }
+.ed-wb-field > span { font-size: .875rem; font-weight: 600; }
+.ed-wb-field small,
+.ed-wb-note,
+.ed-wb-resources p { font-size: .8125rem; line-height: 1.5; color: var(--color-text-secondary); }
+.ed-wb-field textarea { resize: vertical; line-height: 1.5; }
+.ed-wb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-block: var(--space-md); }
+.ed-wb-actions > span { font-size: .75rem; }
+.ed-wb-resources,
+.ed-wb-reference { margin-block: var(--space-md); padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.ed-wb-resources summary,
+.ed-wb-reference summary { cursor: pointer; font-weight: 600; font-size: .875rem; }
+.ed-wb-resource { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; font-size: .8rem; }
+.ed-wb-readings { border-collapse: collapse; width: 100%; font-size: .875rem; }
+.ed-wb-readings-scroll { max-height: 10rem; overflow: auto; border: 1px solid var(--color-border); }
+.ed-wb-readings thead { position: sticky; top: 0; background: var(--color-panel); }
+.ed-wb-readings th { text-align: left; }
+.ed-wb-readings th,
+.ed-wb-readings td { border-bottom: 1px solid var(--color-border); padding: var(--space-xs) var(--space-sm); }
+.ed-wb-readings td { width: 50%; }
+.ed-wb-readings .ed-btn { white-space: normal; text-align: left; }
+.ed-wb-word-picker { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-sm); }
+.ed-wb-word-picker .ed-btn { white-space: normal; }
+.ed-wb-feedback { font-size: .875rem; color: var(--color-problem); }
+.ed-wb-issues { padding-inline-start: var(--space-md); font-size: .8125rem; line-height: 1.5; }
+.ed-wb-issues li { margin-bottom: var(--space-sm); }
+.ed-wb-facsimile { position: relative; height: 20rem; margin-top: var(--space-sm); background: var(--color-surface-sunken); }

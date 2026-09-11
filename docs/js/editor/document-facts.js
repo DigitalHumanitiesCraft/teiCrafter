@@ -86,7 +86,9 @@ export function createDocumentFacts(ctx) {
       strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
       const badge = el("span", { class: "ed-docstrip-fact",
         text: draftBadgeText(),
-        title: "A draft built from a plaintext file: each line became an editable "
+        title: app.source?.draftKind === "project"
+          ? "A new project document. Save or download its validated TEI to keep a standalone XML file."
+          : "A draft built from a plaintext file: each line became an editable "
           + "line and the text was carried over verbatim, no model involved. Your "
           + "source file is untouched; saving produces the TEI file. Not yet saved." });
       strip.appendChild(badge);
@@ -109,6 +111,7 @@ export function createDocumentFacts(ctx) {
 
   /** The draft badge wording, naming the plaintext source when it is known. */
   function draftBadgeText() {
+    if (app.source?.draftKind === "project") return "Project draft (unsaved)";
     const src = app.source && app.source.txtName ? app.source.txtName : null;
     return src ? `Draft from ${src} (unsaved)` : "Draft from text (unsaved)";
   }

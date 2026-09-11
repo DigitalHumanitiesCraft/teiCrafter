@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/worked-example
 status: active
 created: 2026-06-08
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Source Profiles]]", "[[Digital Scholarly Editing]]"]
 related: [project, specification, testing, integration]
@@ -106,11 +106,13 @@ The local example registry first attempts the real source and falls back to a co
 
 The twin supplies structural interaction evidence. Performance and vocabulary conclusions about the real codex require a local run.
 
-### Cross-document seam
+### Specialized annotation workflow
 
-The current stand-off span engine creates grouped ranges inside one TEI document. It can express a continuous range across XML structures or several discontinuous ranges by inserting local anchors. The separate Wenzelsbibel image-annotation file requires a wider transaction.
+Open the codex and use Wenzelsbibel > Transcription to change a selected word's normalized reading without changing its diplomatic representation. Commentary edits the existing multilingual `listApp/app` records; a new comment creates boundary anchors around the selected words. Bible verses creates independent mappings whose reference edition and Latin quotation are supplied by the editor.
 
-A complete cross-file workflow must load both documents, resolve document identities, validate local and range pointers across the pair, update each affected source atomically, and authorize every changed output through its schema set. teiCrafter presently preserves these pointers in raw XML and does not offer interactive cross-document authoring.
+Open Bildannotationen.xml and attach the codex under Linked project documents. Select an existing image record, edit its description or attribution, select an ICONCLASS concept, and inspect its image zone or text range. Project checks resolves those pointers against the attached source. A codex word can also lead back to an attached image whose statistical range contains it.
+
+New shared registers creates a separate TEI document for persons, places and peoples. Open companions for editing to move between files; each file retains its own recovery and output boundary. An external file change or page reload requires renewed attachment. [The Wenzelsbibel contract](wenzelsbibel.md) supplies the detailed encodings and walkthrough. There is no atomic save spanning several files.
 
 ## Jeanne Hersch inline-GND workflow
 

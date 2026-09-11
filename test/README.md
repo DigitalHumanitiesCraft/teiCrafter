@@ -29,7 +29,9 @@ npm run verify:full-corpus
 
 `node test/run_all.mjs` without a filter also includes optional corpus proofs. The SZD sweep needs the sibling Page-JSON corpus; an absent source directory can fail that broad local run. `npm run verify` explicitly excludes the SZD full sweep and port-parity gate. Do not describe a skipped or unavailable corpus as tested.
 
-The real UFBAS browser case requires `UFBAS_TEI`; the Wenzelsbibel engine proof accepts `WB_CODEX`. Shell-specific examples are in [knowledge/testing.md](../knowledge/testing.md#running-the-gates).
+The real UFBAS browser case requires `UFBAS_TEI`; the Wenzelsbibel engine proof accepts `WB_CODEX`. The Wenzelsbibel workspace browser suite also accepts `WB_IMAGES` for the separate image-annotation file. These opt-in cases verify temporary changes and leave original files unchanged. Shell-specific examples are in [knowledge/testing.md](../knowledge/testing.md#running-the-gates).
+
+The image model proof uses `WB_IMAGES` for its optional real-source extension. The PAGE import proof uses `WB_PAGE_ROOT` for the local Exodus_4 export folder containing `mets.xml` and `page/0001_00000145.xml`. Both proofs always run their committed synthetic assertions; supplying a real path also requires that source to exist.
 
 ## Fidelity harness
 

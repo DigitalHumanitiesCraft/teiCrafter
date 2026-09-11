@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: active
 created: 2026-02-05
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
@@ -55,6 +55,10 @@ The editor session adds identity and time to that immutable document value. Sess
 ## Source discovery and navigation
 
 Source interpretation is a pipeline of small pure modules.
+
+Inventories belong to immutable parsed documents and are cached by document identity. Distinct attribute values use sets while preserving their first-occurrence order in the public arrays. A new source revision receives a new inventory. `editionFromDocument` projects an already parsed mutation without parsing the same XML again.
+
+Review projections likewise index document membership, unique IDs, TEI roots and review records once per immutable document. Page summaries calculate one review state per unit. This prevents page-count-dependent full-document traversal while retaining duplicate-ID rejection and revision-specific review evidence.
 
 | Module | Responsibility |
 | --- | --- |
@@ -105,6 +109,12 @@ Mutation modules preserve semantic no-ops and refuse operations without a safe i
 
 `starter-profiles.js` builds new deterministic TEI from an explicitly selected transcription, letter, charter, legal-source, dictionary-entry or encyclopedia-article template. `image-onramp.js` exposes the compact intake and only shows correspondence fields for the letter template. Existing XML is never rebuilt from a starter. Entry input separates records by blank lines and uses the first line as headword or heading; the two lexicon encodings remain distinct. All templates use the ordinary load, recovery and schema-gated output paths.
 
+## Wenzelsbibel workspace
+
+`wenzels-workspace.js` composes the project interface over the ordinary editor session. `wenzels-text-model.js`, `wenzels-image-model.js` and `wenzels-register-model.js` provide source-preserving projections and mutations; `wenzels-xml.js` supplies their shared structural helpers. `wenzels-form.js` connects each form to staged-input ownership, recovery, Working copy and read-only mode. Companions are explicit read-only document snapshots; opening one for editing uses the normal session transition and retains the former document as a companion. Every mutation and output transaction affects one file.
+
+`wenzels-project-checks.js` checks attached register references and exposes a narrow, explicit repair for a choice containing only one alternative. `wenzels-profile.js` supplies bundled schemas only when no project schema set is declared. `iconclass-lookup.js` sends user-triggered queries and guards stale results. `page-xml-import.js` converts PAGE documents and optional METS ordering; `page-xml-onramp.js` hands the resulting separate draft to the existing load boundary. [Wenzelsbibel](wenzelsbibel.md) owns the editorial encodings and workflow.
+
 ## Complete header architecture
 
 `metadata-view.js` identifies the legitimate TEI header and inventories every descendant TEI element and ordinary attribute in source order. Common-field definitions provide labels and groups. They no longer limit coverage.
@@ -151,7 +161,7 @@ current session and revision
   -> write native file or trigger download
 ```
 
-`schema-validation.js` owns schema source normalization and execution. RelaxNG and XSD run through local libxml2-WASM. Raw Schematron is compiled through the documented browser XPath subset. Precompiled Schematron runs through `XSLTProcessor` and must return valid SVRL. Every runtime limit becomes an unavailable result instead of an implicit pass.
+`schema-validation.js` owns schema source normalization and resource resolution. RelaxNG and XSD run through local libxml2-WASM in a dedicated module worker. The client correlates exact requests, the worker serializes execution, and `xml-schema-runtime.js` caches compiled validators by a fingerprint of the complete resource graph. Worker errors reject pending validation and cannot authorize output. Progress distinguishes schema preparation from XML validation. Node proofs use the same runtime directly. Raw Schematron uses the documented browser XPath subset; precompiled Schematron requires `XSLTProcessor` and valid SVRL. Every runtime limit becomes an unavailable result instead of an implicit pass.
 
 `validation-view.js` owns the revision-bound authorization snapshot and explanatory UI. It compares the exact document object and projected source in addition to scalar revision identifiers. `editor-app.js` supplies the validation adapter to `output-controller.js`, which resolves staged input, awaits authorization and rechecks its binding across file-output operations. External file-version conflicts use the same fail-closed principle.
 

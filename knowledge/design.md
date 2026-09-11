@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: active
 created: 2026-05-27
-updated: 2026-09-05
+updated: 2026-09-11
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture]
@@ -114,6 +114,14 @@ The validation popover contains a section named `Output schema gate`. It identif
 Save and Download can start validation. While it runs, the output action announces progress. Invalid, unavailable, empty, or stale results use the problem family and state that output is blocked. A changed revision invalidates the success state immediately. The interface never presents an earlier green result as authority for later bytes.
 
 RelaxNG and XSD dependency limits and raw Schematron subset limits appear beside the affected set. A missing include or unsupported Schematron construct is described as unavailable. The user receives a concrete next action, such as supplying a resolvable dependency or compiled XSLT.
+
+## Wenzelsbibel interaction
+
+The Wenzelsbibel context pane offers task-specific forms beside the ordinary reading, exact XML and metadata surfaces. The transcription form pairs diplomatic and normalized readings; a bounded word table keeps the editor controls visible. Existing apparatus entries retain all encoded types and separate language and responsibility fields. Image forms expose descriptive, attribution, ICONCLASS and text-relation fields; a linked miniature can open in the facsimile viewer with its zone in focus.
+
+Companion files are explicitly attached under Linked project documents. Word-range selection uses source IDs and preserves the active form. Selecting a related image from a word opens its source record through the normal session boundary. Apply, Cancel, read-only mode and recovery have the same meaning as in the generic editor. ICONCLASS lookup runs only after a user action and requires selecting a returned concept before form Apply.
+
+Project checks distinguish cross-file reference failures, structural problems and editorial completeness. The normal output gate retains its own status. During vocabulary-schema compilation, the validation indicator reports Preparing schema while the rest of the interface remains responsive.
 
 ## Model assistance
 
