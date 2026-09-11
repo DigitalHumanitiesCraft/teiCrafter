@@ -75,6 +75,8 @@ The offline MVP acceptance requires well-formed XML, text fidelity, and structur
 
 ## Source Profile fixtures
 
+The Markup Notes-filter scenario exercises local filtering, keyboard activation, paged and continuous navigation, document replacement, and staged-source refusal. Its state checks compare canonical source and session history before and after read-only interaction. These checks separate the filter's UI behavior from the existing annotation projection proofs. A run against directly served source establishes source-browser behavior only; the normal built-output browser gate remains a separate acceptance requirement.
+
 Committed fixtures cover paginated dictionary, paginated drama, spoken corpus, correspondence, critical edition, facsimile-only TEI, `sourceDoc`, and a document with several simultaneous capabilities. Each fixture asserts detected structures, available navigation, primary navigation, local reading-cell behaviour, and terminology. The unscoped Playwright matrix executes the same profile disclosure in Chromium and Firefox.
 
 The fixture set tests composition rather than genre classification. Adding pages to a dictionary must retain entry navigation. Adding apparatus to a paginated edition must retain both capabilities. A manifest can choose among channels that have real anchors and receives an explicit issue for an unavailable choice.

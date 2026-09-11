@@ -103,7 +103,13 @@
                                     aria-expanded="false" aria-controls="ed-ann-popover"
                                     title="Show the pages that contain semantic markup">Markup -/-</button>
                             <span class="ed-ann-popover" id="ed-ann-popover" role="dialog"
-                                  aria-label="Annotated pages" hidden>
+                                  aria-label="Markup progress" hidden>
+                                <span class="ed-ann-filters" role="group" aria-label="Filter markup progress">
+                                    <button class="ed-ann-filter" id="ed-ann-filter-all" type="button"
+                                            aria-pressed="true">All</button>
+                                    <button class="ed-ann-filter" id="ed-ann-filter-notes" type="button"
+                                            aria-pressed="false">Notes</button>
+                                </span>
                                 <span class="ed-ann-caption" id="ed-ann-caption"></span>
                                 <span class="ed-ann-pages" id="ed-ann-pages"></span>
                             </span>

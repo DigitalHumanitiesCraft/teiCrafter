@@ -307,12 +307,24 @@
 .ed-ann-summary.current::before { content: ""; display: inline-block; width: .55em; height: .55em;
   margin-right: var(--space-xs); border-radius: 50%; background: var(--color-blue); }
 .ed-ann-popover:not([hidden]) {
-  position: absolute; top: calc(100% + var(--space-xs)); right: 0; z-index: 45;
-  width: min(360px, 70vw); max-height: 320px; overflow: auto;
+  position: fixed; z-index: 45; box-sizing: border-box;
+  width: min(360px, calc(100vw - 16px)); max-height: 320px; overflow: auto;
   display: flex; flex-direction: column; gap: var(--space-sm);
   padding: var(--space-sm); border: 1px solid var(--color-border);
   border-radius: var(--radius-sm); background: var(--color-panel); box-shadow: var(--shadow-pop);
 }
+.ed-ann-filters { display: inline-flex; align-self: flex-start; gap: var(--space-xs); }
+.ed-ann-filter {
+  padding: 2px var(--space-sm); border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm); background: var(--color-panel); color: var(--color-text-secondary);
+  cursor: pointer; font-family: var(--font-ui); font-size: var(--font-size-xs);
+}
+.ed-ann-filter:hover { border-color: var(--color-blue); color: var(--color-text); }
+.ed-ann-filter[aria-pressed="true"] {
+  border-color: var(--color-blue); background: var(--color-blue-light); color: var(--color-text);
+  font-weight: 600;
+}
+.ed-ann-filter:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
 .ed-ann-caption { font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-secondary);
   white-space: normal; }
 .ed-ann-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.2em, 1fr)); gap: var(--space-xs); }
@@ -323,7 +335,7 @@
 }
 .ed-ann-page:hover, .ed-ann-page.active { border-color: var(--color-gold); background: var(--color-gold-light); }
 .ed-ann-page:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
-.ed-ann-empty { grid-column: 1 / -1; font-size: var(--font-size-xs); color: var(--color-text-muted); }
+.ed-ann-empty { grid-column: 1 / -1; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
 
 /* View controls at the right edge of the text-pane header: text zoom and the
    context-pane collapse toggle (the collapse button sits last, the edge). */
@@ -454,6 +466,7 @@
   text-underline-offset: 2px;
 }
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
+.ed-w.ed-note-target:focus { outline: 2px solid var(--color-gold); outline-offset: 2px; }
 .ed-w.linked { background: var(--color-gold-light); }
 
 /* Textual-critical markup: editorial (not AI), so it uses the human

@@ -125,6 +125,7 @@ teiCrafter shall let an editor work on heterogeneous TEI through source-backed p
 - **B.4 Save fallback.** A Save request without a writable native handle shall use the schema-gated download path and retain exact bytes.
 - **B.5 Accessible state.** Keyboard access, focus, labels, status announcements, contrast, and validation errors shall remain perceivable in both browser engines.
 - **B.6 Facsimile degradation.** A missing image resolver or unsupported directory picker shall leave XML and reading-text editing available and explain the reduced capability.
+- **B.7 Note navigation.** The Markup navigator shall filter source-backed primary units by detected notes, expose an accessible filter state and explain empty results. Filtering and navigation shall preserve canonical XML, document revision, dirty state, and history. A successful document replacement shall reset the filter; staged-source navigation restrictions shall continue to apply.
 
 ## Deterministic creation
 

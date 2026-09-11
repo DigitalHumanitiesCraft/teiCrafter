@@ -44,6 +44,10 @@ Decision: read-only mode is enforced at the mutation boundary, nested projects r
 
 Trigger: a focused frontend pilot caused version edits in knowledge documents whose content was unaffected. Decision: the index owns the shared documentation schema version; other documents inherit it, including the journal. Git records content revisions, document dates track substantive changes, and the frozen converter contract keeps its independent version. Reason: a correction should require maintaining only the documents it affects.
 
+## 2026-09-05: note navigation reused the existing annotation projection
+
+Readers needed a way to locate units containing notes within the existing Markup navigator. The implementation adds a local All/Notes filter over the existing annotation summary and retains the ordinary navigation guard. This keeps a reading convenience outside the document mutation boundary and makes unchanged source and history explicit acceptance conditions. A separate pilot report records the agent workflow and the limits of the available execution environment.
+
 ## 2026-08-24: session closure became clean-checkout and pane-width portable
 
 Trigger: the complete local gate passed while the first clean Linux checkout lacked a synthetic browser fixture and could not import the Python harness through Windows-specific package resolution. After those repository assumptions were removed, the cross-browser run exposed a pane header whose pager could overlap the Metadata tab under different font metrics. Decision: every synthetic browser dependency is tracked outside the rights-local ignore boundary, the harness self-test loads its target directly by repository path, and pane-header controls wrap as a complete row when their pane is too narrow. Reason: a green working directory does not establish a reproducible release state; the tracked checkout and the rendered pane geometry are the relevant boundaries.
