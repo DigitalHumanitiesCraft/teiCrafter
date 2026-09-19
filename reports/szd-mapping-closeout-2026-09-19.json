@@ -1,0 +1,155 @@
+{
+  "date": "2026-09-19",
+  "baseRevision": "b2d293e",
+  "runtime": {
+    "node": "v24.13.0",
+    "npm": "11.6.2",
+    "platform": "win32"
+  },
+  "commands": [
+    {
+      "command": "npm run verify",
+      "exitCode": 0,
+      "log": "node_modules/.tmp/szd-mapping-verify.log",
+      "logSha256": "eda2f322d655a8464fd5e44f3f66b223ffc272d84b1172b5a7d609de636dfff7",
+      "mappingTests": {
+        "passed": 14,
+        "skipped": 0,
+        "failed": 0
+      },
+      "proofs": {
+        "passed": 107,
+        "skipped": 1,
+        "failed": 0,
+        "skip": "szd_research_refactor_check.mjs (external complete-object exports not supplied)"
+      },
+      "harness": {
+        "negativeSelfTest": "passed",
+        "syntheticTiers": 4
+      },
+      "typecheck": "passed",
+      "biome": "passed",
+      "build": "passed"
+    }
+  ],
+  "files": [
+    {
+      "path": "docs/szd-mapping.html",
+      "sha256": "9183859e95dd916784c269731490db93eee745674e1638dce74e60938085c3a0"
+    },
+    {
+      "path": "docs/css/szd-mapping.css",
+      "sha256": "cbc090aadaf87df40cd038b0dad46134815628234563cb3f1046a4947f3288df"
+    },
+    {
+      "path": "docs/js/szd-mapping.js",
+      "sha256": "61acb13fbec763548e4807b6bca2a8cd8944ecee9042d9cad0ebd2e69f75e4b0"
+    },
+    {
+      "path": "docs/js/szd-mapping-state.js",
+      "sha256": "b06ab912c0af2b2148adb44e8a3a85b5576a174a77ee1d57618c66355fbb6194"
+    },
+    {
+      "path": "docs/js/szd-mapping-export.js",
+      "sha256": "6420f922cbed69e317a702717ea313469588769ee6e3d87137e1a6b2eb05c713"
+    },
+    {
+      "path": "docs/js/editor/editor-app.js",
+      "sha256": "918f1a1847cefbb5e682f2e69e954f3daac624a567d93d915b613dcf259e6af7"
+    },
+    {
+      "path": "docs/js/editor/document-facts.js",
+      "sha256": "30bd93b84e1de3741366350c05400ef5c1dab14d8796a90caa414adfacfce056"
+    },
+    {
+      "path": "test/szd-mapping-export.test.mjs",
+      "sha256": "e415e55cd13bc1fbf182056a1bf40e83130a1bac87bb822a92c7ce969ba4f536"
+    },
+    {
+      "path": "test/szd-mapping-state.test.mjs",
+      "sha256": "ef77883dd93880ef9a2599ad7863ae2400d65b15d490afb7b8336a5322292671"
+    },
+    {
+      "path": "test/tools/make_szd_mapping_fixture.mjs",
+      "sha256": "6832046955a7bbc7ae032f534aff5dd6b72ee7a3a525880ceb54a869ce4c8441"
+    },
+    {
+      "path": "test/verify.mjs",
+      "sha256": "370c9f790a5d5848632c107042d2779d215a9ff1dda2cb85cfd301b6a474ab81"
+    },
+    {
+      "path": "jsconfig.json",
+      "sha256": "8d4f6479567c6162f87df1bf0ac04b9c9da82c4e60e7126cdbb168b8845691fa"
+    },
+    {
+      "path": "package.json",
+      "sha256": "ef70a0f1362748bdafba10667f6b20c7c9142eaea25d064e420057f943c5daae"
+    },
+    {
+      "path": "test/evaluation-inputs.mjs",
+      "sha256": "8fcbfe953ca2e85bbe0b8a34eb7b99595c8b861f9675e9f3140c30c259ba5c18"
+    },
+    {
+      "path": "test/evaluation-results.mjs",
+      "sha256": "da7fa83848fe49669a1e5e7def99c5481c71e33b4383c7b66cf5f8bba4322ad7"
+    },
+    {
+      "path": "test/evaluate-editorial.mjs",
+      "sha256": "80290fadf996b8cfc619201832481e50f9f70cd572a69d425de4c7281894aa90"
+    },
+    {
+      "path": "test/proofs/evaluation_inputs_check.mjs",
+      "sha256": "a4d9dd1c8f1beb572eb92035048e6439ae97f907311035ac48a291f5a36bbc9e"
+    },
+    {
+      "path": "test/proofs/evaluation_results_check.mjs",
+      "sha256": "a78703ef513bf5e534dd767c8137b778244011161ff19e8b12ecd29f6ebfbf5d"
+    },
+    {
+      "path": "test/e2e/szd-research-refactor.spec.js",
+      "sha256": "6b13f980d0e503aecdd4f8d27c3967894ea4cb79e46a8cc3469ba6412e32a525"
+    },
+    {
+      "path": "test/proofs/szd_research_refactor_check.mjs",
+      "sha256": "548a7b8cdc94995492eb9dd84f4b2ef9b360b0cefec437df9d711c897ae47a55"
+    }
+  ],
+  "browser": {
+    "environment": "Codex in-app browser, local development server",
+    "checks": [
+      "exact text selection and manual assignment",
+      "confirmation and undo",
+      "wrong-source restore rejected",
+      "matching restore and undo",
+      "editor handoff with draft badge and scan"
+    ],
+    "productionMatrixRerun": false
+  },
+  "humanReferenceApproval": false,
+  "followupChecks": {
+    "reason": "Align previously pending optional SZD source tests with strict evaluation; keep browser outputs outside inputs.",
+    "commands": [
+      "node test/proofs/evaluation_inputs_check.mjs",
+      "node test/proofs/evaluation_results_check.mjs",
+      "node --check test/e2e/szd-research-refactor.spec.js",
+      "Biome check changed source/evaluation files"
+    ],
+    "exitCodes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "fullBrowserMatrixRerun": false
+  },
+  "documentation": {
+    "localFileTargetsChecked": 207,
+    "missing": []
+  },
+  "frozenExperimentVerification": {
+    "command": "python -m evaluation.blind_szd verify --output results/szd-blind-2026-09-19",
+    "workingDirectory": "external typesafe-lab",
+    "exitCode": 0,
+    "apiCalls": 0
+  }
+}

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: complete
 created: 2026-05-27
-updated: 2026-09-11
+updated: 2026-09-19
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture, data, testing, wenzelsbibel]
@@ -164,6 +164,14 @@ File input and Download provide the portable Chromium and Firefox workflow. A na
 - Provenance, validation, review and annotations use text or pattern alongside colour.
 - Body copy uses the darker body-text token; contrast and automated accessibility checks apply to the actual rendered views.
 - Decorative motion respects `prefers-reduced-motion`.
+
+## Local SZD mapping interaction
+
+The local mapping view places the facsimile beside the immutable OCR transcription and the active role decision. Editors select an exact text range, adopt a recorded rule or Jev proposal, or mark a role absent or uncertain. Confirmation belongs to the individual decision and can be removed. Jev provenance keeps the AI colour treatment after confirmation; manual assignments carry their own origin. The page-function classification is read-only context.
+
+The role list exposes confirmation state, and Undo reverses mapping changes. Browser persistence, portable decision files and the TEI preview remain distinct actions. Opening the draft continues in the existing editor with its facsimile and ordinary validation controls. The [mapping contract](specification.md#local-szd-mapping-contract) limits the scholarly claims of this view; [architecture](architecture.md#local-szd-source-mapping) owns the storage and transfer mechanisms.
+
+Imported confirmations are labelled as confirmations in the working copy. The interface does not attribute them to the current user. The editor identifies an imported mapping as an unsaved SZD mapping draft, retaining the distinction from deterministic plaintext conversion.
 
 ## Label discipline
 

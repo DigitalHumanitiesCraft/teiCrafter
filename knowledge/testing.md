@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: complete
 created: 2026-05-30
-updated: 2026-09-11
+updated: 2026-09-19
 language: en
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
@@ -127,3 +127,15 @@ The pinned repository compiler is the only typecheck entry. Missing required too
 ## Editorial acceptance boundary
 
 Automated evidence establishes the exercised byte, schema, state and interaction contracts. Entity identification, normalization, witness interpretation, review rationale, project-schema adequacy and model proposals require scholarly assessment. A release or project-specific user acceptance must identify that additional evidence and cannot be inferred from a technical run.
+
+## Complete SZD research drafts
+
+`test/e2e/szd-research-refactor.spec.js` accepts the external `SZD_REFACTOR_TEI` directory. The directory must contain the complete ten-object development export and retain the adjacent local image source layout. Each case opens one full document, loads its local facsimile through an intercepted source URL, changes a page number, downloads the edited TEI and compares every byte against that single declared mutation. It also undoes the change, checks the original download, reopens the edited output and downloads it again. Both saved states retain the source payload, text, image references and annotations outside that explicit mutation. The pipeline separately executes its project Schematron, source-fingerprint and assertion-grounding checks. The test does not accept semantic proposals or claim scholarly correctness; source-profile adequacy remains an external project judgment. Missing external data are explicit and must not be reported as executed evidence.
+
+The optional `szd_research_refactor_check.mjs` proof reads the same external exports and verifies that native span resolution recovers every evidence quote and preserves proposal status. A small generated Unicode and cross-line fixture extends those boundaries beyond the natural candidate spans.
+
+## Local SZD mapping checks
+
+`npm run test:szd-mapping` exercises the page draft and working-copy contracts; the regular `npm run verify` gate invokes the same suites. Synthetic cases check exact source preservation, overlapping roles, contradictory absence, Unicode and line-ending boundaries, source-bound restoration, storage failures and stale-tab writes. The serializer is checked against the bundled TEI All schema. When the local dataset is present, every displayed page and both recorded proposal sources are included in the schema and source-preservation checks. A missing local dataset is reported as a skipped real-source test; synthetic coverage remains required.
+
+The [dated closeout report](../reports/szd-mapping-closeout-2026-09-19.md) records the actual browser checks and their scope, including selection, confirmation, Undo, valid and rejected restoration, and handoff to the existing editor. This development view is outside the production browser matrix. The checked draft has page-level anchored roles and an image reference. It does not certify complete correspondence encoding, correct OCR, calibrated model scores or scholarly acceptance.

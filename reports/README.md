@@ -6,6 +6,7 @@ Use [knowledge/INDEX.md](../knowledge/INDEX.md) for current product and technica
 
 | Document | Role |
 | --- | --- |
+| [Local SZD mapping closeout](szd-mapping-closeout-2026-09-19.md) | Recorded proposals, exact source mapping, page-level TEI drafts and local editor handoff; bounded technical checks and remaining scholarly review. |
 | [Editorial completion and evaluation](editorial-completion-2026-09-11.md) | Follow-up implementation of witnesses, entries, batch changes and persistent project packages; current evaluation boundary. |
 | [Knowledge consolidation](documentation-report-2026-09-11.md) | Complete knowledge-folder reconciliation, decision-journal compaction, process inbox and reproducible documentation checks. |
 | [Wenzelsbibel workflow](wenzelsbibel-workflow-2026-09-11.md) | Initial specialization, branch integration and real-source findings before the editorial-completion follow-up. |

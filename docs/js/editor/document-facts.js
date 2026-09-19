@@ -80,15 +80,15 @@ export function createDocumentFacts(ctx) {
     if (app.dirty) name.title = "Unsaved changes";
     strip.appendChild(name);
 
-    // Draft badge: a plaintext-derived, machine-transport, unsaved draft. Neutral
-    // by construction (the strip-fact tone, --color-text-secondary), never the
-    // violet --color-ai: a deterministic line-by-line transport is not AI output.
+    // The badge identifies the draft workflow; individual proposals retain their origin.
     if (isUnsavedDraft()) {
       strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
       const badge = el("span", { class: "ed-docstrip-fact",
         text: draftBadgeText(),
         title: app.source?.draftKind === "project"
           ? "A new project document. Save or download its validated TEI to keep a standalone XML file."
+          : app.source?.draftKind === "szd-mapping"
+          ? "A page-level draft with recorded role proposals and local decisions. Scholarly review is still required."
           : "A draft built from a plaintext file: each line became an editable "
           + "line and the text was carried over verbatim, no model involved. Your "
           + "source file is untouched; saving produces the TEI file. Not yet saved." });
@@ -113,6 +113,7 @@ export function createDocumentFacts(ctx) {
   /** The draft badge wording, naming the plaintext source when it is known. */
   function draftBadgeText() {
     if (app.source?.draftKind === "project") return "Project draft (unsaved)";
+    if (app.source?.draftKind === "szd-mapping") return "SZD mapping draft (unsaved)";
     const src = app.source && app.source.txtName ? app.source.txtName : null;
     return src ? `Draft from ${src} (unsaved)` : "Draft from text (unsaved)";
   }

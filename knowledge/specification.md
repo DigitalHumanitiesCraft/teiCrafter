@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: complete
 created: 2026-02-05
-updated: 2026-09-11
+updated: 2026-09-19
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, design, testing, wenzelsbibel]
@@ -217,6 +217,14 @@ The scenarios define assessable outcomes. A recorded technical pass applies to i
 - Provider adapters are registered by trusted application code. Declarative plugin discovery and remotely supplied executable adapters are outside the current security boundary.
 - Rights-local objects supplement public synthetic fixtures when supplied for a recorded run. Real-object performance and facsimile claims shall identify the actual local source and accessible image service; see [Testing](testing.md) and the [editorial completion report](../reports/editorial-completion-2026-09-11.md).
 - Large documents use whole-string parsing and reparsing. Segmented persistence would require a different canonical-state contract.
+
+## Local SZD mapping contract
+
+The development-only source-mapping view shall expose eight page-level roles, comprising dateline, opening salutation, closing formula, signature, sender, recipient, date and writing place. Present values shall match exact spans of the unchanged source transcription. Absent and uncertain states shall remain explicit. Individual confirmation shall preserve proposal origin and shall not imply approval of the complete transcription or TEI document.
+
+Saved decisions shall bind to the page identifier, source hash and experiment, and incompatible imports shall be refused. Browser storage failures and stale-tab conflicts shall remain visible and decisions shall remain recoverable during page changes. Confirmation shall be attributed to the working copy without inventing reviewer identity. The TEI draft shall retain the complete source text, overlapping role annotations, decision provenance and the facsimile link. Loading it into the editor shall retain draft status and require the ordinary output validation boundary. Subsequent editor changes do not synchronize back into mapping decisions; the two working states retain separate responsibilities.
+
+This view consumes frozen recorded proposals without live inference or reference labels. The external experiment remains unchanged. Full correspondence reconstruction, OCR correction and scholarly approval of the reference annotations are outside its scope. [Architecture](architecture.md#local-szd-source-mapping) owns implementation and regeneration; [design](design.md#local-szd-mapping-interaction) owns the review interaction.
 
 ## Related
 

@@ -22,6 +22,8 @@ Set `WB_CODEX`, `WB_IMAGES` and `WB_PAGE_ROOT` to the permitted local sources, t
 
 ## Focused and optional runs
 
+Use `npm run test:szd-mapping` for the source-span, working-copy and page-draft contracts. These tests also run in `npm run verify`. The local real-source case requires the generated [SZD fixture](../docs/data/editor/szd-mapping-local/README.md); its absence is an explicit skip. Synthetic cases require no external source collection.
+
 ```bash
 node test/run_all.mjs staged_input_check
 node test/run_all.mjs persistence_coordinator_check

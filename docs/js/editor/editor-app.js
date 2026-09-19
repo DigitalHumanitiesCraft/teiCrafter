@@ -3116,3 +3116,26 @@ render(); // start state: the empty editor (no document) with its load prompt
 // Gated like the menu entries: inert on the public deployment.
 const exampleLink = location.hash.match(/^#example=([a-z]+)$/);
 if (exampleLink && FEATURES.examples) loadExample(exampleLink[1]);
+
+const szdImportLink = location.hash.match(/^#szd-import=([a-f0-9-]{36})$/i);
+if (szdImportLink && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+  void (async () => {
+    try {
+      const key = `teicrafter-szd-import:${szdImportLink[1]}`;
+      const payload = JSON.parse(sessionStorage.getItem(key) || "null");
+      if (!payload || typeof payload.raw !== "string" || !payload.raw.trim()
+        || typeof payload.name !== "string" || !payload.name.trim()) {
+        throw new Error("The local SZD draft is missing or malformed.");
+      }
+      if (await load(payload.raw, payload.name, null, null, { example: true, dirty: true })) {
+        app.source = { kind: "draft", draftKind: "szd-mapping" };
+        documentFacts.updateDocStrip();
+        void documentFacts.persistDraftIfNeeded();
+        sessionStorage.removeItem(key);
+        setStatus("Loaded the local SZD mapping draft. Editorial review is still required.");
+      }
+    } catch (err) {
+      setStatus(`Could not load the local SZD mapping draft: ${err.message}`);
+    }
+  })();
+}

@@ -102,6 +102,7 @@ function checkBuildOutput() {
 }
 
 checkToolchain();
+run(process.execPath, ["--test", "test/szd-mapping-export.test.mjs", "test/szd-mapping-state.test.mjs"], "SZD mapping source and working-copy contracts");
 runRequiredProofs();
 run(process.execPath, ["test/harness/selftest.mjs"], "Harness negative self-test");
 run(process.execPath, ["test/harness/run.mjs"], "Harness synthetic tiers");

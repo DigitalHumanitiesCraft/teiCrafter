@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: complete
 created: 2026-06-07
-updated: 2026-09-11
+updated: 2026-09-19
 language: en
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
@@ -114,3 +114,7 @@ Native Save checks file identity and external modification before writing, then 
 Working copy provides unfinished-state transport. Project package provides a validated collection ZIP. Both restore without native handles, and later outputs require current authorization. External facsimile-folder resources remain outside implicit native Save attachments. [Data](data.md#validated-project-package) defines archive validation and supported import layouts; [architecture](architecture.md#output-and-file-operations) defines currentness and cancellation.
 
 GitHub Pages is configured to publish `main:/docs` as directly served modules. CI builds and verifies `dist/` and uploads that deployable artifact separately. Those deployment paths require their own runtime evidence. Public built-in examples are disabled through `FEATURES.examples`; local development hosts expose them. The public editor accepts user-supplied files. A missing local example or an HTML fallback response cannot be accepted as an XML edition.
+
+## Research-document draft exchange
+
+An external research pipeline can encode complete source pages with zero-width anchors and native `spanGrp` evidence. Proposed, accepted and rejected assertions retain separate status. Only recorded human acceptance may produce accepted correspondence metadata. Original source variants and fingerprints may remain in a TEI note payload owned by that pipeline. teiCrafter preserves that payload as source XML; it does not reconcile a changed reading with an external source fingerprint. The upstream importer must verify the complete projection and either reconcile deliberate changes explicitly or refuse a stale payload. Generic editor schema success alone does not establish that upstream invariant.

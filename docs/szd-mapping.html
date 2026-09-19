@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>SZD correspondence · teiCrafter</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/szd-mapping.css">
+  <script type="module" src="js/szd-mapping.js"></script>
+</head>
+<body class="mapping-body">
+  <header class="mapping-header">
+    <a href="index.html" class="mapping-brand">&lt;teiCrafter&gt;</a>
+    <h1>SZD correspondence</h1>
+    <a href="editor.html">Editor</a>
+  </header>
+  <main>
+    <div class="mapping-toolbar">
+      <label>Source page <select id="page-picker" disabled></select></label>
+      <button id="undo" type="button" disabled>Undo</button>
+      <button id="save-work" type="button" disabled>Save decisions</button>
+      <button id="restore-work" type="button" disabled>Restore decisions</button>
+      <input id="restore-file" type="file" accept="application/json,.json" hidden>
+      <button id="open-editor" class="mapping-primary" type="button" disabled>Open draft in teiCrafter</button>
+    </div>
+    <p id="status" class="mapping-status" role="status">Loading source pages…</p>
+    <div class="mapping-workspace" id="workspace" hidden>
+      <section class="mapping-panel mapping-facsimile" aria-labelledby="scan-title">
+        <div class="panel-heading"><h2 id="scan-title">Facsimile</h2><a id="full-image" target="_blank" rel="noopener">Open full image</a></div>
+        <div class="scan-scroll"><img id="scan" alt=""></div>
+      </section>
+      <section class="mapping-panel" aria-labelledby="text-title">
+        <div class="panel-heading"><h2 id="text-title">Transcription</h2><span id="page-kind"></span></div>
+        <label class="selection-hint" for="source-text">Select the exact text for a role.</label>
+        <textarea id="source-text" readonly spellcheck="false" aria-label="Source transcription, select text to assign a role"></textarea>
+        <p class="mapping-note">OCR transcription. Check uncertain readings against the scan.</p>
+      </section>
+      <section class="mapping-panel mapping-decisions" aria-labelledby="mapping-title">
+        <div class="panel-heading"><h2 id="mapping-title">Assign roles</h2><span id="review-count"></span></div>
+        <label for="role-picker">Role</label><select id="role-picker"></select>
+        <div id="current-decision" class="current-decision"></div>
+        <div class="candidate-pair">
+          <button id="use-rules" type="button"><strong>Rules</strong><span></span></button>
+          <button id="use-jev" class="jev-choice" type="button"><strong>Jev</strong><span></span></button>
+        </div>
+        <p id="selected-text" class="selection-preview">No text selected.</p>
+        <button id="use-selection" type="button" disabled>Use selected text</button>
+        <div class="decision-actions">
+          <button id="mark-absent" type="button">Not present</button>
+          <button id="mark-unresolved" type="button">Uncertain</button>
+        </div>
+        <button id="confirm-role" class="mapping-primary" type="button">Confirm this role</button>
+        <div id="role-list" class="role-list" aria-label="Current role assignments"></div>
+      </section>
+    </div>
+    <details class="mapping-preview" id="preview-panel" hidden>
+      <summary>TEI draft preview</summary>
+      <p>Page-level draft with anchored role annotations. Scholarly review and schema validation remain separate.</p>
+      <pre id="xml-preview" tabindex="0" aria-label="TEI draft source"></pre>
+    </details>
+  </main>
+</body>
+</html>

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: complete
 created: 2026-02-05
-updated: 2026-09-11
+updated: 2026-09-19
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
@@ -128,6 +128,14 @@ The output transaction resolves staged input, derives the exact target projectio
 `project-output-controller.js` captures the whole collection, derives each file's target projection and schemas, and obtains separate authorization for every XML member. `project-bundle.js` creates one ZIP only after all decisions remain current. Cancellation, new staging, changed collection metadata or any invalid member prevents package delivery. Decoding checks the archive and restores editing state without importing output authorization.
 
 IndexedDB recovery commits one checkpoint atomically. Native XML and image writes have no cross-file transaction. The validated package supplies a single portable delivery artifact. Capability-gated native handles enhance the [portable file contract](integration.md#browser-files-and-deployment) without changing those guarantees.
+
+## Local SZD source mapping
+
+`/szd-mapping.html` is a development-only page that loads a compact local dataset through `szd-mapping.js`. The [fixture builder](../test/tools/make_szd_mapping_fixture.mjs) reads the external `typesafe-lab` frozen experiment, verifies recorded choices against source spans, converts Unicode codepoint offsets to browser UTF-16 offsets, and copies the selected scans. Dataset and image payloads remain gitignored. The [fixture README](../docs/data/editor/szd-mapping-local/README.md) gives the regeneration command and provenance. The browser receives recorded rule and Jev proposals without reference annotations or correctness labels; this path makes no model-service requests.
+
+Mapping decisions are stored separately from the immutable transcription and proposals. Browser storage and portable JSON bind them to a page identifier and source hash. `szd-mapping-export.js` inserts anchors into the preserved page text and represents overlapping roles with stand-off spans. Decision notes retain origin and individual confirmation, while a facsimile surface links the draft to its scan. A same-tab session-storage handoff enters the existing editor through its normal load boundary as a dirty draft; the transfer payload is removed only after successful loading. The [specification](specification.md#local-szd-mapping-contract) defines the scope and [design](design.md#local-szd-mapping-interaction) defines review interaction.
+
+`szd-mapping-state.js` owns working-copy validation and the offset conversion between normalized textarea line endings and the original source. Restoration also checks the experiment identifier. A stale tab cannot overwrite a newer browser record. Failed writes retain the changes in memory across page switches and trigger a warning on navigation. An asynchronous file restore is cancelled if the page or decision revision changed while reading. Confirmation is a property of the working copy; it does not identify an authenticated reviewer.
 
 ## Remote service boundary
 

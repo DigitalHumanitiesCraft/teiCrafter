@@ -1,11 +1,12 @@
 /** A missing optional corpus is the only accepted non-browser-specific skip. */
-export function evaluateBrowserReport(report, { codex = false, images = false, urfehde = false,
+export function evaluateBrowserReport(report, { codex = false, images = false, urfehde = false, szdRefactor = false,
   expectedProjects = null, expectedRepeat = 1 } = {}) {
   const problems = [], cases = [], coverage = new Map();
   const optional = new Map([
     ["real Wenzelsbibel codex preserves readings and validates an explicitly repaired copy", ["wenzelsbibel-workspace.spec.js", codex]],
     ["real Wenzelsbibel image annotations retain all bytes outside a title edit", ["wenzelsbibel-workspace.spec.js", images]],
     ["real Urfehde book supports the complete paged review workflow", ["app.spec.js", urfehde]],
+    ["SZD research fixture inventory is explicitly supplied", ["szd-research-refactor.spec.js", szdRefactor]],
   ]);
   function visit(suite, parents = []) {
     const trail = [...parents, suite.title || ""];

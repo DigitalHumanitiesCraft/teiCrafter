@@ -29,14 +29,14 @@ export function inputDigest(path) {
 
 export function evaluationInputPaths(root, env, real = false) {
   const paths = {};
-  for (const key of ["WB_CODEX", "WB_IMAGES", "WB_PAGE_ROOT", "UFBAS_TEI", "HERSCH_DIR", "SZD_DIR", "ZBZ1000_SRC"]) {
+  for (const key of ["WB_CODEX", "WB_IMAGES", "WB_PAGE_ROOT", "UFBAS_TEI", "HERSCH_DIR", "SZD_DIR", "SZD_REFACTOR_TEI", "ZBZ1000_SRC"]) {
     if (real && ["WB_CODEX", "WB_IMAGES", "WB_PAGE_ROOT"].includes(key) && !env[key]) {
       throw new Error(`--real requires ${key}; missing real material must never pass by skipping.`);
     }
     if (!env[key]) continue;
     const path = resolve(env[key]);
     if (!existsSync(path)) throw new Error(`${key} points to missing material.`);
-    const isDirectory = ["WB_PAGE_ROOT", "HERSCH_DIR", "SZD_DIR"].includes(key);
+    const isDirectory = ["WB_PAGE_ROOT", "HERSCH_DIR", "SZD_DIR", "SZD_REFACTOR_TEI"].includes(key);
     if (isDirectory !== statSync(path).isDirectory()) throw new Error(`${key} must name a ${isDirectory ? "directory" : "file"}.`);
     paths[key] = path;
   }
@@ -58,6 +58,7 @@ export function permittedProofSkips(root, env = {}) {
   const preview = (id) => join(hersch, "output", "entity_preview", `${id}_final.xml`);
   const page = (id) => join(hersch, "docs", "data", "pages", id, `${id}_final.xml`);
   const allowed = new Set();
+  if (!env.SZD_REFACTOR_TEI) allowed.add("szd_research_refactor_check.mjs");
   if (!existsSync(env.HERSCH_DIR || join(hersch, "output", "tei_final"))) allowed.add("hersch_loadability.mjs");
   if (![preview("1000"), join(hersch, "output", "tei_final", "1540_final.xml")].some(existsSync)) allowed.add("hersch_profile_workflow_check.mjs");
   if (![preview("1000"), preview("1540")].some(existsSync)) allowed.add("inline_gnd_real_hersch_check.mjs");

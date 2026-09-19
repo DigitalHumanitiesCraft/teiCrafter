@@ -10,6 +10,8 @@
     "skipLibCheck": true
   },
   "include": [
+    "docs/js/szd-mapping-export.js",
+    "docs/js/szd-mapping-state.js",
     "docs/js/editor/tei-document.js",
     "docs/js/editor/entry-model.js",
     "docs/js/editor/entry-workspace.js",

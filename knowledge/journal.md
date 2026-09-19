@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-09-11
+updated: 2026-09-19
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
@@ -20,7 +20,19 @@ related: [project, specification, architecture, data, design, testing, integrati
 
 # teiCrafter Decision Journal
 
+## 2026-09-19 | Integrated | Close the local mapping contract
+
+Final review of the source-mapping view found that browser line-ending normalization, restored confirmations and editor draft identity needed explicit contracts. Source-offset conversion and working-copy validation now share testable helpers; stale browser writes and contradictory absent values are refused. The editor preserves a distinct mapping draft identity, and the regular verification gate includes the mapping checks. [Testing](testing.md#local-szd-mapping-checks) links the executed evidence. The [architecture](architecture.md#local-szd-source-mapping) owns persistence and handoff; the frozen experiment and scholarly reference approval remain separate.
+
 The entries record the triggers, decisions and reasons that explain teiCrafter's development, in reverse chronological order. Integrated, Corrected and Rejected identify substantive transitions; Compacted identifies maintenance of their provenance.
+
+## 2026-09-19 | Integrated | Local source mapping from frozen proposals
+
+The request to inspect and correct recorded SZD extraction proposals led to a local page-level mapping view with exact source selections and explicit confirmation. Keeping frozen proposals separate from editorial decisions preserves the experiment while allowing corrections to become an anchored TEI draft. The view continues through the existing editor so that draft review and output validation share its established boundary. [Architecture](architecture.md#local-szd-source-mapping) owns the data path and [specification](specification.md#local-szd-mapping-contract) records the limited scholarly scope.
+
+## 2026-09-19 | Integrated | Complete SZD research draft boundary
+
+The research-pipeline refactoring requested complete-document export with exact stand-off evidence and real editor round trips. The existing native span and provenance contracts support this exchange without an application adapter. A source payload can preserve upstream variants, but deliberate editor mutations require explicit upstream reconciliation because schema validity does not update source fingerprints. [Integration](integration.md) records this boundary and [testing](testing.md) records the opt-in complete-object browser scenario.
 
 ## 2026-09-11 | Compacted | Decision provenance
 

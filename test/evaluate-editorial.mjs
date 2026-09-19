@@ -87,6 +87,7 @@ try {
   const browserReport = JSON.parse(readFileSync(join(output, "playwright.json"), "utf8"));
   report.browsers = evaluateBrowserReport(browserReport, {
     codex: !!process.env.WB_CODEX, images: !!process.env.WB_IMAGES, urfehde: !!process.env.UFBAS_TEI,
+    szdRefactor: !!inputPaths.SZD_REFACTOR_TEI,
     expectedProjects: ["chromium", "firefox"], expectedRepeat: repeat,
   });
   if (browserError) throw browserError;
