@@ -20,6 +20,10 @@ related: [project, specification, architecture, data, design, testing, integrati
 
 # teiCrafter Decision Journal
 
+## 2026-10-02 | Integrated | HEDIT demo path checked
+
+A protocol run before the Heidelberg workshop confirmed that the `o_szd.1079` conversion reproduces the shipped demo file and that the editor passes it through the TEI All output gate unchanged. Two consequences stay outside the code. Public users reach the example only by opening the file, because examples are gated to local development, and the recorded role proposals confuse dates, places and line spans in ways the mapping view leaves to the editor. The [run report](../reports/hedit-demo-run-2026-10-02.md) holds the observations.
+
 ## 2026-09-19 | Integrated | Close the local mapping contract
 
 Final review of the source-mapping view found that browser line-ending normalization, restored confirmations and editor draft identity needed explicit contracts. Source-offset conversion and working-copy validation now share testable helpers; stale browser writes and contradictory absent values are refused. The editor preserves a distinct mapping draft identity, and the regular verification gate includes the mapping checks. [Testing](testing.md#local-szd-mapping-checks) links the executed evidence. The [architecture](architecture.md#local-szd-source-mapping) owns persistence and handoff; the frozen experiment and scholarly reference approval remain separate.
