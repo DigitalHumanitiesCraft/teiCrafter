@@ -6,6 +6,10 @@ A browser editor for creating, reading and editing TEI XML with exact source pre
 
 **Research preview.** The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [editorial workspace report](reports/editorial-completion-2026-09-11.md) records the current implementation and verification boundary, extending the [Wenzelsbibel workflow report](reports/wenzelsbibel-workflow-2026-09-11.md). The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader product target.
 
+## Rebuild in progress
+
+teiCrafter is being rebuilt as a source-first TEI XML editor in `src/`. The XML source in a code editor becomes the primary surface for creating TEI from plain text, editing existing TEI and reading it, with continuous well-formedness checks, schema validation on demand and optional model proposals that an editor accepts or rejects. Three viewer prototypes run locally with `npm install` and `npm run dev:prototypes`. The [specification](knowledge/specification.md) describes the target behaviour. The published editor and the sections below describe the current legacy application in `docs/`.
+
 ## What editors can do
 
 | Task | Current route |

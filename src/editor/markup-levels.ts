@@ -1,8 +1,8 @@
 /**
- * Three ways to show markup while the source stays the edited object:
- * "source" with normal highlighting, "faint" with markup at low contrast and
- * text at full contrast, and "reading" with single-line tags hidden behind a
- * zero-width marker and the content of names tinted by entity type.
+ * Two ways to show markup while the source stays the edited object:
+ * "source" with normal highlighting, and "reading" with single-line tags hidden
+ * behind a zero-width marker, the remaining markup in a quiet secondary colour
+ * and the content of names tinted by entity type.
  *
  * The reading level cannot show or edit attributes, keeps tags that span
  * several lines visible (decorations computed per viewport may not replace line
@@ -16,7 +16,7 @@ import { HighlightStyle, foldState, syntaxHighlighting, syntaxTree } from "@code
 import { tags as t } from "@lezer/highlight";
 import { contentOf, localOf, nameOf } from "./element-path";
 
-export type MarkupLevel = "source" | "faint" | "reading";
+export type MarkupLevel = "source" | "reading";
 
 export const markupHighlight = HighlightStyle.define([
   { tag: [t.tagName, t.angleBracket], class: "cm-xml-tag" },
@@ -27,8 +27,7 @@ export const markupHighlight = HighlightStyle.define([
   { tag: t.content, class: "cm-xml-text" },
 ]);
 
-// Muted text alone falls just short of 3:1 against the editor surfaces, so faint markup mixes in secondary text.
-const FAINT = "color-mix(in oklch, var(--color-text-muted), var(--color-text-secondary) 40%)";
+// Markup the reading level leaves visible, such as tags spanning several lines, stays legible but recedes behind the text.
 const MARKUP = [".cm-xml-tag", ".cm-xml-attr", ".cm-xml-value", ".cm-xml-entity", ".cm-xml-meta"];
 
 const theme = EditorView.baseTheme({
@@ -38,7 +37,7 @@ const theme = EditorView.baseTheme({
   ".cm-xml-entity": { color: "var(--color-link)" },
   ".cm-xml-meta": { color: "var(--color-text-secondary)", fontStyle: "italic" },
   ".cm-xml-text": { color: "var(--color-text)" },
-  ...Object.fromEntries(MARKUP.map((m) => [`&.cm-markup-faint ${m}`, { color: FAINT }])),
+  ...Object.fromEntries(MARKUP.map((m) => [`&.cm-markup-reading ${m}`, { color: "var(--color-text-secondary)" }])),
   ".cm-tag-marker": {
     display: "inline-block",
     inlineSize: "0",
@@ -131,8 +130,7 @@ const protectHiddenTags = EditorState.transactionFilter.of((tr) => {
 
 function levelExtension(level: MarkupLevel): Extension {
   if (level === "source") return [];
-  const faint = EditorView.editorAttributes.of({ class: "cm-markup-faint" });
-  return level === "faint" ? faint : [faint, reading, protectHiddenTags];
+  return [EditorView.editorAttributes.of({ class: "cm-markup-reading" }), reading, protectHiddenTags];
 }
 
 export const markupLevel = new Compartment();

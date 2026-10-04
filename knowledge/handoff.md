@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/handoff
 status: active
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-04
 language: en
 topics: ["[[Promptotyping]]", "[[Knowledge Base]]"]
 related: [INDEX, journal]
@@ -24,4 +24,9 @@ This process inbox holds received deltas awaiting integration. Verify each sourc
 
 ## Open handoff items
 
-Keine offenen Handoff-Punkte.
+### Finish the source-first rebuild
+
+- Received: 2026-10-04
+- Source: session of 2026-10-04 (operator request to refocus and refactor)
+- Target: [architecture.md](architecture.md), [specification.md](specification.md), [design.md](design.md), `src/app/`
+- Context: Compare prototypes A, B and C under `prototypes/` in the browser and record which interaction carries into the product. Build the app shell on `src/` with the three use cases. Decide whether schema errors block Save (open decision in the specification). Then switch the GitHub Pages source from `main:/docs` to the build artifact, retire `docs/`, the legacy tests and the cluster-specific knowledge documents, and update [design.md](design.md), [testing.md](testing.md) and [project.md](project.md), which still describe the legacy editor.

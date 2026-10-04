@@ -5,7 +5,7 @@ import { createXmlEditor } from "../../src/editor/xml-editor";
 import { rawOf, toPos, toRaw } from "../../src/editor/offsets";
 import { foldStructure, structuralFolding, unfoldAll } from "../../src/editor/structural-fold";
 import { elementPath, selectElement } from "../../src/editor/element-path";
-import { markupLevels, setMarkupLevel } from "../../src/editor/markup-levels";
+import { markupLevels } from "../../src/editor/markup-levels";
 import { checkWellFormed } from "../../src/core/well-formed";
 import { parseDocument } from "../../src/core/tei-document.js";
 import { decodeXmlBytes, encodeXmlBytes } from "../../src/core/file-encoding.js";
@@ -33,7 +33,6 @@ const ui = {
   wellformed: byId<HTMLSpanElement>("wellformed"),
   dirty: byId<HTMLSpanElement>("dirty"),
   message: byId<HTMLOutputElement>("message"),
-  dim: byId<HTMLButtonElement>("dim-markup"),
   propose: byId<HTMLButtonElement>("propose"),
   sample: byId<HTMLSelectElement>("sample"),
   fileInput: byId<HTMLInputElement>("file-input"),
@@ -191,7 +190,6 @@ let fileName = "";
 let bom = false;
 let handle: FileSystemFileHandle | null = null;
 let savedDoc: Text | null = null;
-let dim = false;
 let currentSample = "";
 let analyseTimer = 0;
 let flashTimer = 0;
@@ -256,7 +254,7 @@ function mount(text: string, name: string, hasBom: boolean, fileHandle: FileSyst
   pathKey = "-";
   view = createXmlEditor(ui.editor, text, [
     EditorView.contentAttributes.of({ "aria-label": "XML source" }),
-    markupLevels(dim ? "faint" : "source"),
+    markupLevels(),
     structuralFolding(),
     problemExtensions,
     proposals,
@@ -377,15 +375,8 @@ async function save() {
   }
 }
 
-function setDim(on: boolean) {
-  dim = on;
-  ui.dim.setAttribute("aria-pressed", String(on));
-  if (view) setMarkupLevel(view, on ? "faint" : "source");
-}
-
 byId("fold-structure").addEventListener("click", () => { if (view) { foldStructure(view); view.focus(); } });
 byId("unfold-all").addEventListener("click", () => { if (view) { unfoldAll(view); view.focus(); } });
-ui.dim.addEventListener("click", () => setDim(!dim));
 byId("format-element").addEventListener("click", () => { if (view) openFormatDialog(view); });
 ui.propose.addEventListener("click", () => {
   if (!view) return;
@@ -410,7 +401,6 @@ ui.sample.addEventListener("change", async () => {
 byId("save").addEventListener("click", () => void save());
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === "s") { e.preventDefault(); void save(); }
-  else if (e.altKey && e.shiftKey && e.code === "KeyD") { e.preventDefault(); setDim(!dim); }
   else if (e.altKey && e.shiftKey && e.code === "KeyF" && view && !ui.formatDialog.open) { e.preventDefault(); openFormatDialog(view); }
 });
 window.addEventListener("beforeunload", (e) => { if (isDirty()) e.preventDefault(); });

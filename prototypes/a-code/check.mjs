@@ -103,6 +103,12 @@ await page.click("#unfold-all");
 check("Unfold all reveals header content", await page.locator(".cm-content:has-text('publicationStmt')").count() === 1);
 await page.click("#fold-structure");
 check("Fold structure folds the header again", (await header.count()) === 1);
+await page.locator(".cm-content").focus();
+await page.keyboard.press("Control+Alt+BracketRight");
+check("Ctrl+Alt+] unfolds all, as Unfold all declares", (await page.locator(".cm-fold-summary").count()) === 0
+  && (await page.getAttribute("#unfold-all", "aria-keyshortcuts")) === "Control+Alt+]");
+await page.click("#fold-structure");
+check("Fold structure declares no shortcut", (await page.getAttribute("#fold-structure", "aria-keyshortcuts")) === null && (await header.count()) === 1);
 
 const raw = await docText(page);
 await setCursor(page, raw.indexOf("A book asks"));
@@ -137,41 +143,17 @@ const contrast = await page.evaluate(() => {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-  // Resolve a colour through the canvas so color-mix results come back as sRGB.
+  // Resolve a colour through the canvas so any CSS colour syntax comes back as sRGB.
   const rgb = (css) => { const c = document.createElement("canvas").getContext("2d"); c.fillStyle = css; c.fillRect(0, 0, 1, 1); return `rgb(${[...c.getImageData(0, 0, 1, 1).data].slice(0, 3).join(",")})`; };
-  const tag = document.querySelector("#editor .cm-xml-tag");
-  const text = document.querySelector("#editor .cm-xml-text");
-  const s = getComputedStyle(document.documentElement);
-  return {
-    tag: rgb(getComputedStyle(tag).color), text: rgb(getComputedStyle(text).color),
-    vsPanel: ratio(rgb(getComputedStyle(tag).color), rgb(s.getPropertyValue("--color-panel"))),
-    vsActive: ratio(rgb(getComputedStyle(tag).color), rgb(s.getPropertyValue("--color-secondary"))),
-  };
-});
-await page.keyboard.press("Alt+Shift+KeyD");
-const dimmed = await page.evaluate(() => {
-  const lum = (c) => {
-    const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  };
-  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-  const rgb = (css) => { const c = document.createElement("canvas").getContext("2d"); c.fillStyle = css; c.fillRect(0, 0, 1, 1); return `rgb(${[...c.getImageData(0, 0, 1, 1).data].slice(0, 3).join(",")})`; };
-  const s = getComputedStyle(document.documentElement);
   const tag = rgb(getComputedStyle(document.querySelector("#editor .cm-xml-tag")).color);
-  const text = rgb(getComputedStyle(document.querySelector("#editor .cm-xml-text")).color);
+  const s = getComputedStyle(document.documentElement);
   return {
-    pressed: document.querySelector("#dim-markup").getAttribute("aria-pressed"), tag, text,
     vsPanel: ratio(tag, rgb(s.getPropertyValue("--color-panel"))),
     vsActive: ratio(tag, rgb(s.getPropertyValue("--color-secondary"))),
-    vsSelection: ratio(tag, rgb(s.getPropertyValue("--color-gold-light"))),
   };
 });
-check("dim toggle changes markup colour, text unchanged", dimmed.pressed === "true" && dimmed.tag !== contrast.tag && dimmed.text === contrast.text,
-  `markup ${contrast.tag} -> ${dimmed.tag}, text ${dimmed.text}`);
-check("dimmed markup keeps at least 3:1", dimmed.vsPanel >= 3 && dimmed.vsActive >= 3,
-  `panel ${dimmed.vsPanel.toFixed(2)}, active line ${dimmed.vsActive.toFixed(2)}`);
-await page.click("#dim-markup");
-check("dim button toggles back", (await page.getAttribute("#dim-markup", "aria-pressed")) === "false");
+check("markup keeps at least 3:1", contrast.vsPanel >= 3 && contrast.vsActive >= 3,
+  `panel ${contrast.vsPanel.toFixed(2)}, active line ${contrast.vsActive.toFixed(2)}`);
 
 // Format: cursor on the <div n="1"> line, outside any p.
 await setCursor(page, raw.indexOf('<div n="1">') + 2);

@@ -42,7 +42,20 @@ canonical XML string
 
 ## Source-first core under `src/`
 
-The successor architecture lives beside the current application until it covers open, edit and save. `src/core/` holds the unchanged exact-source modules (`tei-document.js`, `file-encoding.js`) and `well-formed.ts`, the browser-parser check that reports the one hard syntax error with its position. `src/editor/xml-editor.ts` holds the shared CodeMirror configuration (XML language, folding, search, history); every surface adds its own extensions. `src/ui/tokens.css` is the token sheet the new surfaces consume. Viewer prototypes under `prototypes/` are served by `npm run dev:prototypes` with the repository as server root and import only `src/`. Planned and not yet present are `src/io/` for open and save behind the capability check, `src/llm/` for the proposal shape (a splice with a rationale) and its review controls, and the app shell. Editor positions and raw offsets differ on CRLF documents, so the translation between them is a shared editor concern.
+The successor architecture lives beside the current application in `docs/` until an app shell covers open, edit and save. The layers depend downward only, so every layer stays testable without the ones above it.
+
+| Layer | Path | Content |
+| --- | --- | --- |
+| Core | `src/core/` | DOM-free JavaScript, Node-testable. The unchanged exact-source modules `tei-document.js` and `file-encoding.js`, `line-offsets.js` for line-separator arithmetic, `format.js` for formatting one element without touching mixed content, `plaintext-to-tei.js` for the deterministic starter, `proposal.js` for the proposal shape and its splice, `proposal-fixture.js` as an offline demo producer, `well-formed.ts` as the browser-parser check |
+| Editor | `src/editor/` | CodeMirror 6 extensions. `xml-editor.ts` holds the shared configuration, `offsets.ts` translates editor positions to raw offsets, `structural-fold.ts` folds by element with a default-collapsed list and summarising placeholders, `element-path.ts` derives the breadcrumb, `markup-levels.ts` offers the source and reading levels |
+| Validation | `src/validate/` | RelaxNG and XSD through libxml2-wasm in a module worker with a compiled-schema cache and line-bearing diagnostics. Schematron is not supported |
+| Files | `src/io/` | Open, drop and save behind the File System Access capability check with file input and download as fallback, external-change refusal, recent handles |
+| Model proposals | `src/llm/` | The provider adapter boundary with memory-only keys, `proposeEdit` with a delimited answer format and a fragment check, and an offline fixture provider |
+| Tokens | `src/ui/tokens.css` | The design token sheet |
+
+Runtime assets that are served unbundled (schemas, the libxml2-wasm runtime, the TEI Guidelines subset, samples, brand assets) live in `public/`. Identical copies stay under `docs/` while GitHub Pages publishes `main:/docs`. Viewer prototypes under `prototypes/` import only `src/` and are served by `npm run dev:prototypes` with the repository as server root.
+
+The code editor counts a CRLF line break as one position and joins lines with LF, while the core addresses raw string offsets. Every splice, fold, diagnostic and proposal therefore passes through `offsets.ts`. The first TEI All validation compiles the schema, which takes seconds; later validations reuse the compiled schema in the worker.
 
 ## Staged input and restoration
 
