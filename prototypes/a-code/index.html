@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>teiCrafter source editor</title>
+</head>
+<body>
+  <header class="bar">
+    <span class="wordmark">teiCrafter</span>
+    <h1 id="file-name" class="file-name">No file</h1>
+    <div class="tools" role="toolbar" aria-label="Source commands">
+      <button type="button" id="fold-structure" aria-keyshortcuts="Control+Shift+[">Fold structure</button>
+      <button type="button" id="unfold-all">Unfold all</button>
+      <button type="button" id="dim-markup" aria-pressed="false" aria-keyshortcuts="Alt+Shift+D">Dim markup</button>
+      <button type="button" id="format-element" aria-keyshortcuts="Alt+Shift+F">Format element</button>
+      <button type="button" id="propose" class="ai" hidden>Propose (demo)</button>
+    </div>
+    <div class="file">
+      <select id="sample" aria-label="Open sample">
+        <option value="" disabled>Sample</option>
+        <option value="zbz-hersch-synthetic.xml">zbz-hersch-synthetic.xml</option>
+        <option value="o_szd.1079.tei.xml">o_szd.1079.tei.xml</option>
+        <option value="wenzelsbibel-synthetic-codex.xml">wenzelsbibel-synthetic-codex.xml</option>
+      </select>
+      <button type="button" id="open">Open</button>
+      <input type="file" id="file-input" accept=".xml,application/xml,text/xml" hidden>
+      <button type="button" id="save" class="primary" aria-keyshortcuts="Control+S">Save</button>
+    </div>
+  </header>
+  <main>
+    <nav class="path" aria-label="Element path"><ol id="path"></ol></nav>
+    <div id="editor" class="editor"></div>
+  </main>
+  <footer class="status">
+    <span id="cursor">1:1</span>
+    <span id="encoding">UTF-8</span>
+    <span id="wellformed">well-formed</span>
+    <span id="dirty" class="dirty" hidden>unsaved</span>
+    <output id="message" class="message" aria-live="polite"></output>
+  </footer>
+
+  <dialog id="format-dialog" class="format-dialog" aria-labelledby="format-title">
+    <form method="dialog">
+      <h2 id="format-title">Format element</h2>
+      <div class="compare">
+        <section aria-labelledby="before-label">
+          <h3 id="before-label">Before</h3>
+          <pre id="format-before" tabindex="0"></pre>
+        </section>
+        <section aria-labelledby="after-label">
+          <h3 id="after-label">After</h3>
+          <pre id="format-after" tabindex="0"></pre>
+        </section>
+      </div>
+      <div class="actions">
+        <button value="cancel" formnovalidate>Cancel</button>
+        <button value="apply" class="primary">Apply</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="discard-dialog" aria-labelledby="discard-title">
+    <form method="dialog">
+      <h2 id="discard-title">Discard unsaved changes?</h2>
+      <p id="discard-text"></p>
+      <div class="actions">
+        <button value="cancel">Keep editing</button>
+        <button value="discard" class="danger">Discard changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./a-code.ts"></script>
+</body>
+</html>

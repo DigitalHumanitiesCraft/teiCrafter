@@ -21,7 +21,9 @@
     "test:szd-mapping": "node --test test/szd-mapping-export.test.mjs test/szd-mapping-state.test.mjs",
     "verify:full-corpus": "npm run verify && node test/run_all.mjs szd_loadability_sweep && node test/run_all.mjs port_parity",
     "test:e2e": "playwright test",
-    "evaluate:editorial": "node test/evaluate-editorial.mjs"
+    "evaluate:editorial": "node test/evaluate-editorial.mjs",
+    "dev:prototypes": "vite --config prototypes/vite.config.js",
+    "typecheck:src": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
@@ -29,5 +31,17 @@
     "@playwright/test": "1.62.1",
     "typescript": "7.0.2",
     "vite": "8.2.2"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-xml": "^6.1.0",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@lezer/common": "^1.5.3",
+    "@lezer/highlight": "^1.2.5",
+    "@lezer/xml": "^1.0.6"
   }
 }

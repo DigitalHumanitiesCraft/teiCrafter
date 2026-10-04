@@ -12,13 +12,17 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-09-19
+updated: 2026-10-04
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
 ---
 
 # teiCrafter Decision Journal
+
+## 2026-10-04 | Decided | Refocus on a source-first TEI XML editor
+
+A review of the whole repository against the operator's product statement showed that the specification had made the reading projection the home surface and the XML source a fallback, and that almost every module loaded at boot served a project-specific cluster rather than the three use cases the operator names: create TEI from plain text, edit an existing TEI XML, read a TEI XML, with well-formedness and schema validation throughout and model proposals as an optional layer. The decision is to rebuild around the source view as the primary surface on a code-editor component with element-level folding, and to retire the reading, workspace, project, annotation and authority clusters once the new editor covers open, edit and save. The byte-faithful core (`tei-document.js`, the UTF-8 boundary, offset splices) is kept unchanged because it already imports nothing from those clusters. Three viewer prototypes under `prototypes/` test how source work can feel: whole document with structural folding (built), a focus viewport with outline and breadcrumb, and a hybrid text view with markup as inline marks (both pending). The first prototype exposed that the code editor counts a CRLF as one position and joins lines with LF, so offset translation between editor positions and raw string offsets belongs in the shared editor module before anything else is built on it.
 
 ## 2026-10-02 | Integrated | HEDIT demo path checked
 

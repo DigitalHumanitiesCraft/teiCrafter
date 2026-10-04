@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: complete
 created: 2026-02-05
-updated: 2026-09-19
+updated: 2026-10-04
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, design, testing, wenzelsbibel]
@@ -188,6 +188,8 @@ The scenarios define assessable outcomes. A recorded technical pass applies to i
 | Attached project | Restore edited companions and settings, authorize every XML file for one ZIP, and reject invalid, cancelled or stale package output |
 
 ## Key decisions
+
+- **Source-first editor, 2026-10-04.** The reading projection as home surface and the per-project workspaces exceeded the product the operator wants: a browser editor for creating TEI from plain text, editing existing TEI XML and reading it, with well-formedness and schema validation always visible and model proposals as an optional, marked layer. The XML source becomes the primary surface on a code-editor component; the exact-source core stays, the projection and workspace clusters are retired once the new editor covers open, edit and save. Whether schema validation keeps gating Save or only reports is open.
 
 - **Project specialization, 2026-09-11.** The Wenzelsbibel workflow is a project workspace over the existing canonical document, session and schema gate. Its shared registers and verse model are editorial design decisions authorized for implementation; project editors retain scholarly acceptance.
 - **Editing and completeness, 2026-09-11.** The authored Schematron distinguishes saveable unfinished work from editorial completeness. Existing source anomalies remain visible and need deliberate correction.

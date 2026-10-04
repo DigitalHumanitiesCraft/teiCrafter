@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: complete
 created: 2026-02-05
-updated: 2026-09-19
+updated: 2026-10-04
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
@@ -39,6 +39,10 @@ canonical XML string
 `EditorSession` owns document identity, revision, history and dirty savepoint. A changed document enters through its mutation boundary; Undo and Redo restore canonical source through inverse patches. Byte-identical reprojection preserves revision, history and dirty state. Read-only mode rejects mutations and history changes while retaining navigation and inspection.
 
 `editor-app.js` composes the session and controllers. `reading-view.js` renders source-backed cells and handles reading navigation; `inline-editor.js` supplies text and dual-reading controls; `annotation-ui.js` collects selections and dispatches annotations. Internal imports use one module URL per file so shared state has one instance.
+
+## Source-first core under `src/`
+
+The successor architecture lives beside the current application until it covers open, edit and save. `src/core/` holds the unchanged exact-source modules (`tei-document.js`, `file-encoding.js`) and `well-formed.ts`, the browser-parser check that reports the one hard syntax error with its position. `src/editor/xml-editor.ts` holds the shared CodeMirror configuration (XML language, folding, search, history); every surface adds its own extensions. `src/ui/tokens.css` is the token sheet the new surfaces consume. Viewer prototypes under `prototypes/` are served by `npm run dev:prototypes` with the repository as server root and import only `src/`. Planned and not yet present are `src/io/` for open and save behind the capability check, `src/llm/` for the proposal shape (a splice with a rationale) and its review controls, and the app shell. Editor positions and raw offsets differ on CRLF documents, so the translation between them is a shared editor concern.
 
 ## Staged input and restoration
 

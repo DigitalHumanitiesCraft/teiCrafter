@@ -1,0 +1,103 @@
+:root {
+    /* Structure colors */
+    --color-surface: #FAFAF7;
+    --color-surface-sunken: #F2F2F0; /* ~3% darker than surface, for full-width section bands */
+    --color-panel: #FFFFFF;
+    --color-secondary: #F2F4F8;
+    --color-header: #0059A8; /* TEI blue */
+    --color-border: #D0D4DC;
+
+    /* Accent colors: the TEI brand yellow and blue; light/hover are derived */
+    --color-gold: #F7A824;       /* TEI yellow */
+    --color-gold-light: #FDE9C8;
+    --color-gold-hover: #DE9712;
+    /* Translucent text-selection tint. The XML source view layers a transparent
+       textarea over a coloured <pre>; an opaque selection would hide the text,
+       so selection uses this alpha tint and the coloured text shows through. */
+    --color-selection: rgba(247, 168, 36, 0.30);
+    /* Reading-text selection: selecting reading text IS the annotation gesture, so
+       it tints in the TEI blue interaction family (hover, mentions, tokens), kept
+       clearly stronger than the pale --color-blue-light hover and set apart from
+       the gold edit-field outline, so blue reads "annotate" and gold reads "write". */
+    --color-selection-read: rgba(0, 89, 168, 0.33);
+    /* Text-link orange: a darker tone for orange TEXT on a light background
+       (WCAG AA 5.0:1 on white). Fills and buttons keep the brighter --color-gold
+       (dark text on gold is 8.8:1), so only orange text links use this. */
+    --color-link: #B45309;
+    --color-blue: #0059A8;       /* TEI blue */
+    --color-blue-light: #E0EBF5;
+
+    /* AI on-ramp (violet): marks LLM-generated, unreviewed output and nothing else */
+    --color-ai: #6D4AB6;
+    --color-ai-tint: #F1ECFA;
+
+    /* Text */
+    --color-text: #1A1A1A;
+    --color-text-body: #2D3A4A;       /* reading-text grey for body copy on light pages, darker than secondary */
+    --color-text-secondary: #5A6270;
+    --color-text-muted: #8899AA;
+    --color-text-inverse: #FFFFFF;
+
+    /* Confidence (dual-channel: edge + tint) */
+    --color-confident: #2D8A70;
+    --color-confident-tint: #E8F5F0;
+    --color-review: #CC8A1E;
+    --color-review-tint: #FEF5E7;
+    --color-problem: #C0392B;
+    --color-problem-tint: #FDECEB;
+
+    /* Entity-type colors for mentions in the reading text */
+    --color-persName: #3B7DD8;
+    --color-persName-bg: #EBF2FC;
+    --color-placeName: #2A9D8F;
+    --color-placeName-bg: #E6F5F3;
+    /* Organisations sit in the olive family: the violet hue range is reserved
+       for AI-origin content (--color-ai), so a human-confirmed organisation
+       mention can never be mistaken for machine output in the reading text. */
+    --color-orgName: #708238;
+    --color-orgName-bg: #F1F4E6;
+    /* Works use a bibliographic hue, events a date hue; own tokens so either
+       family can diverge later without touching components. */
+    --color-workName: #C47A8A;
+    --color-workName-bg: #FAF0F2;
+    --color-eventName: #B8860B;
+    --color-eventName-bg: #FDF6E3;
+
+    /* Elevation: one shadow language for pop-ups, modals and cards. Scrims are
+       the translucent near-black fills behind modal and drop overlays. */
+    --shadow-pop: 0 6px 24px rgba(26, 26, 26, .18);
+    --shadow-modal: 0 10px 40px rgba(26, 26, 26, .25);
+    --shadow-card: 0 6px 24px rgba(26, 26, 26, .08);
+    --shadow-card-hover: 0 4px 16px rgba(26, 26, 26, .08);
+    --scrim-modal: rgba(26, 26, 26, .45);
+    --scrim-drop: rgba(26, 26, 26, .35);
+
+    /* Typography */
+    --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', Consolas, Monaco, monospace;
+    --font-serif: 'Georgia', 'Times New Roman', serif;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.8125rem;
+    --font-size-base: 0.875rem;
+    --font-size-lg: 1.125rem;
+    --line-height-base: 1.6;
+
+    /* Spacing (8px grid) */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 40px;  /* section rhythm: small */
+    --space-3xl: 64px;  /* section rhythm: medium */
+    --space-4xl: 96px;  /* section rhythm: large */
+
+    /* Radii */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-pill: 999px;
+
+    /* Layout */
+    --header-height: 48px;
+    --footer-height: 28px;
+}

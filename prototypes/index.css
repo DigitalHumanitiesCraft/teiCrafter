@@ -1,0 +1,5 @@
+body { font-family: var(--font-ui); color: var(--color-text); background: var(--color-surface); }
+main { max-width: 40rem; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
+h1 { font-size: var(--font-size-lg); margin-bottom: var(--space-md); }
+li { margin-block: var(--space-sm); }
+a { color: var(--color-blue); }
