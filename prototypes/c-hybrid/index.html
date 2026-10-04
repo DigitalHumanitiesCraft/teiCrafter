@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>teiCrafter text view</title>
+</head>
+<body>
+  <header class="bar">
+    <span class="wordmark">teiCrafter</span>
+    <h1 id="file-name" class="file-name">No file</h1>
+    <div class="file">
+      <select id="sample" aria-label="Open sample">
+        <option value="" disabled>Sample</option>
+        <option value="zbz-hersch-synthetic.xml">zbz-hersch-synthetic.xml</option>
+        <option value="o_szd.1079.tei.xml">o_szd.1079.tei.xml</option>
+        <option value="wenzelsbibel-synthetic-codex.xml">wenzelsbibel-synthetic-codex.xml</option>
+      </select>
+      <button type="button" id="open">Open</button>
+      <button type="button" id="save" class="primary" aria-keyshortcuts="Control+S">Save</button>
+    </div>
+    <div class="levels" role="group" aria-label="View level">
+      <button type="button" id="level-marks" aria-pressed="true" aria-keyshortcuts="1">Marks</button>
+      <button type="button" id="level-reading" aria-pressed="false" aria-keyshortcuts="2">Reading</button>
+    </div>
+  </header>
+  <main id="scroller" class="scroller">
+    <article id="doc" class="doc level-marks" aria-label="Document text"></article>
+  </main>
+  <footer class="status">
+    <span id="wellformed">well-formed</span>
+    <span id="dirty" class="dirty" hidden>unsaved</span>
+    <output id="message" class="message" aria-live="polite"></output>
+  </footer>
+
+  <dialog id="discard-dialog" aria-labelledby="discard-title">
+    <form method="dialog">
+      <h2 id="discard-title">Discard unsaved changes?</h2>
+      <p id="discard-text"></p>
+      <div class="actions">
+        <button value="cancel">Keep editing</button>
+        <button value="discard" class="danger">Discard changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./c-hybrid.ts"></script>
+</body>
+</html>

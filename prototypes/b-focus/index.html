@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>teiCrafter focused source editor</title>
+</head>
+<body>
+  <header class="bar">
+    <span class="wordmark">teiCrafter</span>
+    <h1 id="file-name" class="file-name">No file</h1>
+    <div class="file">
+      <select id="sample" aria-label="Open sample">
+        <option value="" disabled>Sample</option>
+        <option value="zbz-hersch-synthetic.xml">zbz-hersch-synthetic.xml</option>
+        <option value="o_szd.1079.tei.xml">o_szd.1079.tei.xml</option>
+        <option value="wenzelsbibel-synthetic-codex.xml">wenzelsbibel-synthetic-codex.xml</option>
+      </select>
+      <button type="button" id="open">Open</button>
+      <button type="button" id="save" class="primary" aria-keyshortcuts="Control+S">Save</button>
+    </div>
+  </header>
+  <div class="workspace">
+    <nav id="outline" class="outline" aria-label="Document outline">
+      <ul id="tree" class="tree" role="tree" aria-label="Document outline"></ul>
+    </nav>
+    <main class="focus">
+      <div class="crumbs-row">
+        <button type="button" id="outline-toggle" class="outline-toggle" aria-expanded="false" aria-controls="outline">Outline</button>
+        <nav class="crumbs" aria-label="Focus path"><ol id="crumbs"></ol></nav>
+      </div>
+      <div id="editor" class="editor"></div>
+      <div class="status">
+        <span id="cursor">1:1</span>
+        <div class="announced" aria-live="polite">
+          <span id="wellformed">well-formed</span>
+          <button type="button" id="problem-link" class="problem-link" hidden></button>
+          <span id="dirty" class="dirty" hidden>unsaved</span>
+          <output id="message" class="message"></output>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="discard-dialog" aria-labelledby="discard-title">
+    <form method="dialog">
+      <h2 id="discard-title">Discard unsaved changes?</h2>
+      <p id="discard-text"></p>
+      <div class="actions">
+        <button value="cancel">Keep editing</button>
+        <button value="discard" class="danger">Discard changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./b-focus.ts"></script>
+</body>
+</html>
