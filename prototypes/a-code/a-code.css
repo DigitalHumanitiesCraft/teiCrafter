@@ -1,8 +1,4 @@
-:root {
-  color-scheme: light;
-  /* Dimmed markup must keep at least 3:1 against the editor surfaces; muted text alone falls just short. */
-  --a-markup-dim: color-mix(in oklch, var(--color-text-muted), var(--color-text-secondary) 40%);
-}
+:root { color-scheme: light; }
 
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -98,14 +94,7 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-col
 #editor .cm-selectionBackground, #editor .cm-focused .cm-selectionBackground { background: var(--color-selection); }
 #editor .cm-cursor { border-inline-start-color: var(--color-text); }
 
-#editor .x-tag { color: var(--color-blue); }
-#editor .x-attr { color: var(--color-text-secondary); }
-#editor .x-value, #editor .x-entity { color: var(--color-link); }
-#editor .x-meta { color: var(--color-text-secondary); font-style: italic; }
-#editor .x-text { color: var(--color-text); }
-#editor .dim-markup :is(.x-tag, .x-attr, .x-value, .x-entity, .x-meta) { color: var(--a-markup-dim); }
-
-#editor .fold-summary {
+#editor .cm-fold-summary {
   display: inline-block;
   max-inline-size: 60ch;
   margin-inline: 2px;

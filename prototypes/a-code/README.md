@@ -13,4 +13,4 @@ The whole TEI document is edited as XML source. Element-level folding, low-contr
 
 ## Run
 
-`npx vite --config prototypes/vite.config.js`, then open `/prototypes/a-code/index.html`. `node prototypes/a-code/check.mjs` drives the page in Chromium against a running server on port 5174.
+`npx vite --config prototypes/vite.config.js`, then open `/prototypes/a-code/index.html`. `node prototypes/a-code/check.mjs` drives the page in Chromium against a running server on port 5174, or on the port given in the `PORT` environment variable.

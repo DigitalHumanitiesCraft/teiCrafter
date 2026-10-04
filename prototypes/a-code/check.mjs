@@ -1,20 +1,37 @@
-// Browser check for prototype A. Expects the prototype dev server on port 5174:
+// Browser check for prototype A. Expects the prototype dev server, by default on port 5174:
 //   npx vite --config prototypes/vite.config.js --port 5174 --strictPort
-// then: node prototypes/a-code/check.mjs
+// then: node prototypes/a-code/check.mjs (with PORT=5181 for a server on another port)
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { parseDocument } from "../../src/core/tei-document.js";
 
-const BASE = "http://127.0.0.1:5174/prototypes/a-code/index.html";
+const ORIGIN = `http://127.0.0.1:${process.env.PORT ?? "5174"}`;
+const BASE = `${ORIGIN}/prototypes/a-code/index.html`;
 const here = (name) => fileURLToPath(new URL(name, import.meta.url));
 const results = [];
 const check = (name, ok, detail = "") => { results.push({ name, ok, detail }); console.log(`${ok ? "ok  " : "FAIL"} ${name}${detail ? `  (${detail})` : ""}`); };
 
-// The editor view is reached through CodeMirror's own lookup, using the module instance the page already loaded.
-const viewModuleUrl = (await (await fetch("http://127.0.0.1:5174/prototypes/a-code/a-code.ts")).text())
-  .match(/from "([^"]*@codemirror_view\.js[^"]*)"/)[1];
+// The editor view is reached through CodeMirror's own lookup, using the module instances the page already loaded.
+const pageModule = await (await fetch(`${ORIGIN}/prototypes/a-code/a-code.ts`)).text();
+const moduleUrl = (pattern) => new URL(pageModule.match(new RegExp(`from "([^"]*${pattern}[^"]*)"`))[1], `${ORIGIN}/prototypes/a-code/`).href;
+const viewModuleUrl = moduleUrl("@codemirror_view[.]js");
+const levelsModuleUrl = moduleUrl("markup-levels");
+async function setLevel(page, level) {
+  await page.evaluate(async ({ url, levels, level }) => {
+    const { EditorView } = await import(url);
+    const { setMarkupLevel } = await import(levels);
+    setMarkupLevel(EditorView.findFromDOM(document.querySelector(".cm-editor")), level);
+  }, { url: viewModuleUrl, levels: levelsModuleUrl, level });
+}
+async function headText(page, length) {
+  return page.evaluate(async ({ url, length }) => {
+    const { EditorView } = await import(url);
+    const { state } = EditorView.findFromDOM(document.querySelector(".cm-editor"));
+    return state.sliceDoc(state.selection.main.head, state.selection.main.head + length);
+  }, { url: viewModuleUrl, length });
+}
 async function docText(page) {
   return page.evaluate(async (url) => {
     const { EditorView } = await import(url);
@@ -70,15 +87,15 @@ axe.violations = axe.violations
   .filter((v) => v.nodes.length > 0);
 check("axe reports no violations", axe.violations.length === 0, axe.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" ; ")}`).join(", "));
 
-const sampleText = (name) => readFileSync(here(`../samples/${name}`), "utf8");
+const sampleText = (name) => readFileSync(here(`../../public/samples/${name}`), "utf8");
 check("editor text equals the file text, CRLF kept", (await docText(page)) === sampleText("zbz-hersch-synthetic.xml"));
 
-const header = page.locator(".fold-summary[aria-label='Unfold teiHeader']");
+const header = page.locator(".cm-fold-summary[aria-label='Unfold teiHeader']");
 check("teiHeader folded on load with title summary", (await header.count()) === 1
   && (await header.innerText()).includes("A LETTER ON READING AND PATIENCE"), await header.innerText().catch(() => ""));
 check("standOff and facsimile folded on load",
-  (await page.locator(".fold-summary[aria-label='Unfold standOff']").count()) === 1
-  && (await page.locator(".fold-summary[aria-label='Unfold facsimile']").count()) === 1);
+  (await page.locator(".cm-fold-summary[aria-label='Unfold standOff']").count()) === 1
+  && (await page.locator(".cm-fold-summary[aria-label='Unfold facsimile']").count()) === 1);
 check("footer states well-formed and UTF-8", (await page.locator("#wellformed").innerText()) === "well-formed"
   && (await page.locator("#encoding").innerText()) === "UTF-8");
 
@@ -106,9 +123,13 @@ check("breadcrumb ancestor selects the full element", sel.startsWith('<div n="1"
 
 await setCursor(page, raw.indexOf("A book asks"));
 await page.keyboard.press("Control+Shift+BracketLeft");
-check("Ctrl+Shift+[ folds the element at the cursor", (await page.locator(".fold-summary[aria-label='Unfold p']").count()) === 1);
+check("Ctrl+Shift+[ folds the element at the cursor", (await page.locator(".cm-fold-summary[aria-label='Unfold p']").count()) === 1);
 await page.keyboard.press("Control+Shift+BracketRight");
-check("Ctrl+Shift+] unfolds it", (await page.locator(".fold-summary[aria-label='Unfold p']").count()) === 0);
+check("Ctrl+Shift+] unfolds it", (await page.locator(".cm-fold-summary[aria-label='Unfold p']").count()) === 0);
+await page.keyboard.press("Control+Shift+ArrowUp");
+check("Ctrl+Shift+ArrowUp folds the element at the cursor", (await page.locator(".cm-fold-summary[aria-label='Unfold p']").count()) === 1);
+await page.keyboard.press("Control+Shift+ArrowDown");
+check("Ctrl+Shift+ArrowDown unfolds it", (await page.locator(".cm-fold-summary[aria-label='Unfold p']").count()) === 0);
 
 const contrast = await page.evaluate(() => {
   const lum = (c) => {
@@ -118,8 +139,8 @@ const contrast = await page.evaluate(() => {
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
   // Resolve a colour through the canvas so color-mix results come back as sRGB.
   const rgb = (css) => { const c = document.createElement("canvas").getContext("2d"); c.fillStyle = css; c.fillRect(0, 0, 1, 1); return `rgb(${[...c.getImageData(0, 0, 1, 1).data].slice(0, 3).join(",")})`; };
-  const tag = document.querySelector("#editor .x-tag");
-  const text = document.querySelector("#editor .x-text");
+  const tag = document.querySelector("#editor .cm-xml-tag");
+  const text = document.querySelector("#editor .cm-xml-text");
   const s = getComputedStyle(document.documentElement);
   return {
     tag: rgb(getComputedStyle(tag).color), text: rgb(getComputedStyle(text).color),
@@ -136,8 +157,8 @@ const dimmed = await page.evaluate(() => {
   const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
   const rgb = (css) => { const c = document.createElement("canvas").getContext("2d"); c.fillStyle = css; c.fillRect(0, 0, 1, 1); return `rgb(${[...c.getImageData(0, 0, 1, 1).data].slice(0, 3).join(",")})`; };
   const s = getComputedStyle(document.documentElement);
-  const tag = rgb(getComputedStyle(document.querySelector("#editor .x-tag")).color);
-  const text = rgb(getComputedStyle(document.querySelector("#editor .x-text")).color);
+  const tag = rgb(getComputedStyle(document.querySelector("#editor .cm-xml-tag")).color);
+  const text = rgb(getComputedStyle(document.querySelector("#editor .cm-xml-text")).color);
   return {
     pressed: document.querySelector("#dim-markup").getAttribute("aria-pressed"), tag, text,
     vsPanel: ratio(tag, rgb(s.getPropertyValue("--color-panel"))),
@@ -189,6 +210,32 @@ await page.keyboard.press("Tab");
 await page.keyboard.press("Enter");
 check("Reject removes the proposal without change", (await page.locator(".proposal").count()) === 0 && (await docText(page)) === accepted);
 
+// Reading level: single-line tags hidden behind a marker, entity content tinted, hidden tags protected.
+await setLevel(page, "reading");
+const readingLine = page.locator(".cm-line", { hasText: "A book asks" });
+check("reading level hides tags", (await page.locator(".cm-tag-marker").count()) > 0
+  && !(await readingLine.innerText()).includes("<lb"), await readingLine.innerText());
+const entity = await page.evaluate(() => {
+  const el = document.querySelector("#editor .cm-entity-persName");
+  const probe = document.createElement("span");
+  probe.style.background = "var(--color-persName-bg)";
+  document.body.append(probe);
+  const expected = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return el ? { text: el.textContent, ok: getComputedStyle(el).backgroundColor === expected } : null;
+});
+check("reading level tints persName content", entity?.text === "Marguerite Vautier" && entity.ok, JSON.stringify(entity));
+await setCursor(page, accepted.indexOf("<lb", accepted.indexOf("<p ", accepted.indexOf("<body"))));
+await page.keyboard.press("ArrowRight");
+check("cursor passes a hidden tag in one step", (await headText(page, 11)) === "A book asks", await headText(page, 11));
+await page.keyboard.press("Backspace");
+check("Backspace does not delete a hidden tag", (await docText(page)) === accepted);
+await page.keyboard.type("X");
+check("typing next to a hidden tag inserts text outside it", (await docText(page)).includes('n="N001" />XA book asks'));
+await page.keyboard.press("Control+z");
+await setLevel(page, "source");
+check("source level shows every tag again", (await page.locator(".cm-tag-marker").count()) === 0 && (await docText(page)) === accepted);
+
 // Well-formedness marking.
 await setCursor(page, accepted.indexOf("A book asks"));
 await page.keyboard.type("&");
@@ -230,9 +277,9 @@ check("Escape closes the dialog and returns focus", !(await page.locator("#forma
   && await page.evaluate(() => document.activeElement?.id === "format-element"));
 
 await page.selectOption("#sample", "o_szd.1079.tei.xml");
-await page.waitForSelector(".fold-summary[aria-label='Unfold teiHeader']");
+await page.waitForSelector(".cm-fold-summary[aria-label='Unfold teiHeader']");
 check("SZD (LF) text equals the file text", (await docText(page)) === sampleText("o_szd.1079.tei.xml"));
-check("SZD header summary uses titleStmt title", (await page.locator(".fold-summary[aria-label='Unfold teiHeader']").innerText()).startsWith("Brief an Max Fleischer"));
+check("SZD header summary uses titleStmt title", (await page.locator(".cm-fold-summary[aria-label='Unfold teiHeader']").innerText()).startsWith("Brief an Max Fleischer"));
 
 await page.setInputFiles("#file-input", { name: "utf16.xml", mimeType: "application/xml", buffer: Buffer.from([0xff, 0xfe, 0x3c, 0x00]) });
 await page.waitForFunction(() => document.querySelector("#message").textContent.includes("not opened"));

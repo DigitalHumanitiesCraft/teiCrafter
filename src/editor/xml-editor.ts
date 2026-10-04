@@ -3,6 +3,7 @@
  * its own extensions (folding policy, decorations, panels) on top.
  */
 import { EditorState, type Extension } from "@codemirror/state";
+import { createXmlState } from "./offsets";
 import {
   EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter,
   drawSelection, dropCursor, rectangularSelection, crosshairCursor,
@@ -34,6 +35,5 @@ export function baseExtensions(): Extension[] {
 }
 
 export function createXmlEditor(parent: HTMLElement, doc: string, extensions: Extension[] = []): EditorView {
-  const state = EditorState.create({ doc, extensions: [...baseExtensions(), ...extensions] });
-  return new EditorView({ state, parent });
+  return new EditorView({ state: createXmlState(doc, [...baseExtensions(), ...extensions]), parent });
 }
