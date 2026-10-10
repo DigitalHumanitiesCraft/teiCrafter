@@ -58,8 +58,9 @@ test("an element is formatted at its depth, with its own line indentation correc
 });
 
 test("CRLF line endings are preserved", () => {
-  const raw = sample("zbz-hersch-synthetic.xml");
-  assert.ok(raw.includes("\r\n"), "fixture is expected to use CRLF");
+  // The sample is committed with LF; the CRLF variant is derived here so the
+  // test does not depend on the checkout's line-ending conversion.
+  const raw = sample("zbz-hersch-synthetic.xml").replace(/\r?\n/g, "\r\n");
   const { result, next } = formatWhole(raw);
   assert.notEqual(result.after, result.before, "fixture is expected to need formatting");
   assert.ok(!/[^\r]\n/.test(next), "a lone LF was introduced");
