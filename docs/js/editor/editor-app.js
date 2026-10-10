@@ -86,7 +86,7 @@ import { canStartEntryCollection, hasEntryWorkspace, resolveEntry } from "./entr
 import { captureProjectDocuments, restoreProjectDocuments, projectHasUnsavedDocuments } from "./project-documents.js";
 import { createProjectOutputController } from "./project-output-controller.js";
 import { editionFromDocument } from "./edition.js";
-import { listWorkspaces, modelFeaturesAllowed, withWorkspaceDefaults, workspaceFor, workspaceForStagedMode } from "./workspace-registry.js";
+import { listWorkspaces, modelFeaturesAllowed, withWorkspaceDefaults, workspaceExamples, workspaceFor, workspaceForStagedMode } from "./workspace-registry.js";
 import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 import {
   parseGuidelines, elementsForScope, elementByName,
@@ -95,8 +95,6 @@ import {
 import * as recents from "./recent-files.js";
 import { getSetting, setSetting } from "../services/storage.js";
 
-const DEMO_URL = "data/editor/wenzelsbibel-synthetic-codex.xml";
-const WB_CODEX_URL = "data/editor/wb-codex/codex-2759.xml";
 const ZBZ_URL = "data/editor/zbz-100/zbz-hersch-100.xml";
 const ZBZ_IMAGE_BASE = "data/editor/zbz-100/";
 const ZBZ_SYNTH_URL = "data/editor/zbz-hersch-synthetic.xml";
@@ -868,22 +866,12 @@ function fileInput() {
 }
 
 // Example registry: the toolbar menu and the landing-page deep links
-// (#example=KEY) load the same way. imageBase: local page images
-// next to the XML; without it the facsimile uses each surface's <graphic url>.
-// fallback: tried when the primary URL is absent (the real Wenzelsbibel codex
-// is licence-restricted, lives only on machines that materialized it, and the
-// public deployment serves the synthetic twin instead).
-const EXAMPLES = {
-  wb: {
-    label: "Wenzelsbibel", url: WB_CODEX_URL, file: "codex-2759.xml",
-    manifest: "data/editor/wb-codex/teicrafter.project.json",
-    done: "Loaded the real Wenzelsbibel codex (facsimile via IIIF).",
-    fallback: {
-      label: "synthetic Wenzelsbibel", url: DEMO_URL, file: "wenzelsbibel-synthetic-codex.xml",
-      project: { workspace: "wenzelsbibel", name: "Wenzelsbibel (synthetic example)" },
-      done: "Loaded the synthetic Wenzelsbibel twin (the real codex is not present here).",
-    },
-  },
+// (#example=KEY) load the same way. Registered workspaces add their own
+// examples. imageBase: local page images next to the XML; without it the
+// facsimile uses each surface's <graphic url>. fallback: tried when the primary
+// URL is absent (a licence-restricted original lives only on machines that
+// materialized it, and the public deployment serves a synthetic twin instead).
+const BUILTIN_EXAMPLES = {
   zbz: {
     label: "ZBZ Jeanne Hersch example", url: ZBZ_URL, file: "zbz-hersch-100.xml",
     manifest: "data/editor/zbz-100/teicrafter.project.json",
@@ -910,7 +898,7 @@ function confirmDiscard() {
 }
 
 async function loadExample(key) {
-  let ex = EXAMPLES[key];
+  let ex = { ...workspaceExamples(), ...BUILTIN_EXAMPLES }[key];
   if (!ex) return;
   const replacement = authorizeDocumentReplacement();
   if (!replacement) return;

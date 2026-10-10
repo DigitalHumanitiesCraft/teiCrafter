@@ -12,13 +12,15 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: draft
 created: 2026-02-05
-updated: 2026-10-04
+updated: 2026-10-10
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, design, testing, journal, converter-reference]
 ---
 
 # teiCrafter Specification
+
+This specification covers the source-first core under `src/`. The normative behaviour of the base application under `docs/` is the [specification at revision 6d720a6](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md).
 
 teiCrafter is a browser-based TEI XML editor whose primary surface is the XML source in a code editor. It serves three tasks, creating a TEI document from plain text, editing an existing TEI XML file and reading one. In all three the raw XML string is the canonical state and Save returns the original bytes outside deliberate edits, because a scholarly source must leave the editor unchanged except where someone edited it on purpose. Well-formedness is checked continuously, schema validation runs on demand, and proposals from a Large Language Model (LLM) form an optional layer on which the human decides.
 
@@ -106,6 +108,10 @@ Whether schema errors block Save is undecided. The options are:
 | Keyboard only | Opening, folding, validating, accepting a proposal and saving succeed without a pointer |
 
 ## Key decisions
+
+### Legacy application as derivable base, 2026-10-10
+
+Project-specific versions of teiCrafter are needed before the source-first editor carries an application, and the first of them, wenzelsbibel-teiCrafter, builds on the legacy application. The application under `docs/` therefore stays the derivable base from which such versions are forked, and the retirement of its projection and workspace clusters is suspended until the new editor can take over that role. This specification covers the source-first core under `src/`. The base keeps the normative behaviour recorded in the [specification at revision 6d720a6](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md), and changes to the base stay limited to generic mechanisms a derivation needs and to bug fixes.
 
 ### Source-first editor, 2026-10-04
 

@@ -1,6 +1,6 @@
 /**
  * Registry of project workspaces. The generic editor asks it for detection
- * profiles, default schemas, panels, staged modes and flags instead of naming
+ * profiles, default schemas, panels, staged modes, examples and flags instead of naming
  * a project. Installed workspaces register lazily on first use, so the module
  * graph may import this registry from any side without an evaluation-order cycle.
  */
@@ -39,6 +39,9 @@ export const workspaceProfiles = () => listWorkspaces().map((workspace) => works
 export const workspaceStagedModes = () => listWorkspaces().map((workspace) => workspace.stagedMode).filter(Boolean);
 
 export const workspaceForStagedMode = (mode) => listWorkspaces().find((workspace) => workspace.stagedMode === mode) || null;
+
+/** Built-in examples of the registered workspaces, keyed for the Load menu and `#example=KEY`. */
+export const workspaceExamples = () => Object.assign({}, ...listWorkspaces().map((workspace) => workspace.examples || {}));
 
 /** Model features stay available unless the selected workspace switches them off. */
 export const modelFeaturesAllowed = (project) => workspaceFor(project)?.flags?.modelFeatures !== false;

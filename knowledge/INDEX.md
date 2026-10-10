@@ -47,7 +47,7 @@ The required process documents are the decision [journal](journal.md) and the co
 | [Worked examples](worked-examples.md) | How do representative editorial workflows exercise those contracts? |
 | [Wenzelsbibel](wenzelsbibel.md) | Which editorial models, project forms and cross-file conventions support the Wenzelsbibel workflow? |
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
-| [Plan](plan.md) | What is planned in the base and in which order, including the refactoring that makes it derivable? |
+| [Plan](plan.md) | What is planned for the base and the source-first rebuild, and in which order? |
 | [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
 | [Handoff](handoff.md) | Which received deltas still require verification and integration? |
 

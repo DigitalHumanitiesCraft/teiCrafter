@@ -30,6 +30,12 @@ jobs:
         run: npm ci
       - name: Install Playwright Chromium and Firefox
         run: npx playwright install --with-deps chromium firefox
+      - name: Test the source-first core
+        run: npm run test:src
+      - name: Typecheck the source-first core and prototypes
+        run: npm run typecheck:src
+      - name: Lint the source-first core and prototypes with Biome
+        run: npx biome check --files-ignore-unknown=true src prototypes
       - name: Evaluate proofs, harness, types, build and browser workflows without retries
         run: npm run evaluate:editorial
       - name: Preserve browser verification reports

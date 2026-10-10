@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: complete
 created: 2026-05-27
-updated: 2026-09-19
+updated: 2026-10-10
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture, data, testing, wenzelsbibel]
@@ -69,7 +69,7 @@ Save is the primary gold action. Copy and preservation actions use neutral styli
 
 Reading, XML, Metadata and workspace forms share Apply and Cancel semantics. Unfinished values and caret position survive background refresh. Navigation, history or another mutation cannot silently replace the active input owner. A blocked action directs the editor back to that surface; a failed Apply keeps the entered values. XML source and Metadata retain ownership while open, so a context form presents a return hint instead of mounting another editor.
 
-Switching attached documents checkpoints the current collection first. A storage error or intervening edit leaves the current document active and explains the failed switch. Each file retains its own source and schema settings. Native Save remains an active-file operation. The [project collection contract](specification.md#project-and-schema-declarations) governs package output and recovery.
+Switching attached documents checkpoints the current collection first. A storage error or intervening edit leaves the current document active and explains the failed switch. Each file retains its own source and schema settings. Native Save remains an active-file operation. The [project collection contract](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#project-and-schema-declarations) governs package output and recovery.
 
 New document provides an explicit starter, transcription, optional source facts and images. Nearby help describes the resulting encoding. Correspondence facts appear with that starter; dictionary and encyclopedia choices remain distinct. Existing XML opens through the ordinary loader. Project-folder groups are keyboard-operable and use full relative paths as accessible file names.
 
@@ -95,7 +95,7 @@ Entity types use muted categorical colours. Nested and overlapping layers receiv
 
 **Add another segment** retains the current range and returns focus to the reading surface. The editor can collect another range in the same or a different navigation unit. The popover shows separated passages before an entity is selected or created.
 
-Overlapping collected ranges are refused. A range crossing XML structure or existing markup uses the stand-off route. Each visible segment opens the shared annotation; relinking and removal address that group. The [span contract](specification.md#cross-structure-and-discontinuous-spans) defines preservation and boundary cleanup.
+Overlapping collected ranges are refused. A range crossing XML structure or existing markup uses the stand-off route. Each visible segment opens the shared annotation; relinking and removal address that group. The [span contract](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#cross-structure-and-discontinuous-spans) defines preservation and boundary cleanup.
 
 For inline-GND output, the interface explains which crossing, overlapping or discontinuous selection cannot be represented and blocks the affected annotation action.
 
@@ -111,7 +111,7 @@ XML source exposes the current navigation range where a safe boundary exists, ot
 
 The Markup navigator offers All and Notes filters with an explicit pressed state. Notes limits the unit list to detected notes while the main total continues to describe all annotations. A result opens its source unit and focuses an available marker. Empty results are explained, and document replacement resets the filter.
 
-Markup coverage describes the presence of semantic markup. Review describes an editor's recorded examination of the current primary unit. Marking or reopening review retains history. Source changes produce **changed since review**; historical evidence remains inspectable. [Review Records](specification.md#review-records) govern the relationship between the visible status and the encoded evidence.
+Markup coverage describes the presence of semantic markup. Review describes an editor's recorded examination of the current primary unit. Marking or reopening review retains history. Source changes produce **changed since review**; historical evidence remains inspectable. [Review Records](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#review-records) govern the relationship between the visible status and the encoded evidence.
 
 The review dialog requests reviewer identity and rationale, identifies its default as an unnamed local editor, shows a prior record when present and explains the covered source range. An external register entry or another unit requires its own review. A structurally unsafe record mutation leaves the source unchanged with a specific explanation.
 
@@ -121,7 +121,7 @@ The validation details identify the effective repository, project or session sch
 
 Save and Download may initiate validation. Progress distinguishes schema preparation, XML parsing, validation and reuse of an identical successful result. The main interface remains usable during worker execution. Changed state invalidates output authorization; an earlier success cannot be shown as permission for different bytes.
 
-**Cancel validation** ends pending work without authorizing output. The editor can request validation again. Project package has its own cancellation control and reports success only after every XML file is authorized. Errors identify the affected document or schema. The [output gate requirements](specification.md#fail-closed-multi-schema-output-gate) define these decisions; [Architecture](architecture.md) describes worker and cache ownership.
+**Cancel validation** ends pending work without authorizing output. The editor can request validation again. Project package has its own cancellation control and reports success only after every XML file is authorized. Errors identify the affected document or schema. The [output gate requirements](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#fail-closed-multi-schema-output-gate) define these decisions; [Architecture](architecture.md) describes worker and cache ownership.
 
 ## Entry and witness interaction
 
@@ -129,11 +129,11 @@ The Entries pane combines a searchable collection with source-bound details. Sor
 
 Direct fields identify their target and expose structured or ambiguous values through XML. Duplication retains the original and selects the copy. **Preview deletion** names the whole subtree and displays blocking references; confirmation is available only for a safe current preview. These actions operate on the active XML file.
 
-Batch editing starts with checkboxes or **Select all matching**, then **Batch edit selected**. The editor chooses local language or number and inspects concrete before/after values. A field change invalidates the preview. Apply creates one Undo step. Recovery retains unfinished targets and values while requiring another preview. The [entry requirements](specification.md#entry-management) define duplication, reference protection and batch scope.
+Batch editing starts with checkboxes or **Select all matching**, then **Batch edit selected**. The editor chooses local language or number and inspects concrete before/after values. A field change invalidates the preview. Apply creates one Undo step. Recovery retains unfinished targets and values while requiring another preview. The [entry requirements](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#entry-management) define duplication, reference protection and batch scope.
 
 The Witnesses pane separates **Reading witness** from source edits. It exposes every apparatus alternative and direct attribution. **New witness** creates a description in the selected list; structured descriptions use **Edit witness XML**. Reading-attribution controls change the selected reading's witness pointers. Missing definitions, ambiguous readings and existing external pointers remain visible. Arbitrary list restructuring and external-reference conventions use exact XML.
 
-Witness forms share staged recovery and read-only behaviour. The [witness contract](specification.md#witness-reading-and-descriptions) defines supported evidence and preservation. Selecting a witness expresses a reading preference and provides no scholarly acceptance of that witness's reconstruction.
+Witness forms share staged recovery and read-only behaviour. The [witness contract](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#witness-reading-and-descriptions) defines supported evidence and preservation. Selecting a witness expresses a reading preference and provides no scholarly acceptance of that witness's reconstruction.
 
 ## Wenzelsbibel interaction
 
@@ -147,7 +147,7 @@ ICONCLASS lookup follows an explicit search or notation request. A selected resu
 
 Generated-document banners, proposal layers and model actions use violet. Dashed outlines and **AI-proposed, unverified** identify pending proposals without relying on colour. Accepted model-origin content uses solid violet treatment and explicit origin text. Confirmation retains responsibility evidence; rejection addresses pending proposals.
 
-Reload restores model-origin state from matching source declarations. Provider controls distinguish endpoint and model settings from memory-only API keys. Disabling assistance removes model surfaces while preserving deterministic work. [Specification](specification.md#llm-assistance-and-provenance) defines provenance and provider constraints.
+Reload restores model-origin state from matching source declarations. Provider controls distinguish endpoint and model settings from memory-only API keys. Disabling assistance removes model surfaces while preserving deterministic work. [Specification](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#llm-assistance-and-provenance) defines provenance and provider constraints.
 
 ## Browser capability disclosure
 
@@ -169,7 +169,7 @@ File input and Download provide the portable Chromium and Firefox workflow. A na
 
 The local mapping view places the facsimile beside the immutable OCR transcription and the active role decision. Editors select an exact text range, adopt a recorded rule or Jev proposal, or mark a role absent or uncertain. Confirmation belongs to the individual decision and can be removed. Jev provenance keeps the AI colour treatment after confirmation; manual assignments carry their own origin. The page-function classification is read-only context.
 
-The role list exposes confirmation state, and Undo reverses mapping changes. Browser persistence, portable decision files and the TEI preview remain distinct actions. Opening the draft continues in the existing editor with its facsimile and ordinary validation controls. The [mapping contract](specification.md#local-szd-mapping-contract) limits the scholarly claims of this view; [architecture](architecture.md#local-szd-source-mapping) owns the storage and transfer mechanisms.
+The role list exposes confirmation state, and Undo reverses mapping changes. Browser persistence, portable decision files and the TEI preview remain distinct actions. Opening the draft continues in the existing editor with its facsimile and ordinary validation controls. The [mapping contract](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#local-szd-mapping-contract) limits the scholarly claims of this view; [architecture](architecture.md#local-szd-source-mapping) owns the storage and transfer mechanisms.
 
 Imported confirmations are labelled as confirmations in the working copy. The interface does not attribute them to the current user. The editor identifies an imported mapping as an unsaved SZD mapping draft, retaining the distinction from deterministic plaintext conversion.
 

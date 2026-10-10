@@ -8,7 +8,7 @@ A browser editor for creating, reading and editing TEI XML with exact source pre
 
 ## Rebuild in progress
 
-teiCrafter is being rebuilt as a source-first TEI XML editor in `src/`. The XML source in a code editor becomes the primary surface for creating TEI from plain text, editing existing TEI and reading it, with continuous well-formedness checks, schema validation on demand and optional model proposals that an editor accepts or rejects. Three viewer prototypes run locally with `npm install` and `npm run dev:prototypes`. The [specification](knowledge/specification.md) describes the target behaviour. The published editor and the sections below describe the current legacy application in `docs/`.
+teiCrafter is being rebuilt as a source-first TEI XML editor in `src/`. The XML source in a code editor becomes the primary surface for creating TEI from plain text, editing existing TEI and reading it, with continuous well-formedness checks, schema validation on demand and optional model proposals that an editor accepts or rejects. Three viewer prototypes run locally with `npm install` and `npm run dev:prototypes`. The [specification](knowledge/specification.md) describes the target behaviour. The published editor and the sections below describe the current legacy application in `docs/`. Until the new editor carries an application, the application in `docs/` is also the base from which project-specific versions are derived as Git forks, as [integration](knowledge/integration.md#deriving-a-project-version) describes.
 
 ## What editors can do
 
@@ -43,7 +43,7 @@ Attach the companion codex, image annotations or registers under **Linked projec
 
 Use **Project package** for one ZIP containing the attached XML documents and eligible loaded images. Every XML file must pass its configured schemas before any package is downloaded. **Working copy** remains available for unfinished or invalid material. In-place Save affects the active document and does not write all companions to disk.
 
-The bundled image Schematron is an explicitly authored editorial profile. Its editing phase permits unfinished records; its review phase checks completeness. The original Bilderfassung.sch was unavailable. The [Wenzelsbibel contract and walkthrough](knowledge/wenzelsbibel.md) explains the encodings, sources and practical boundaries.
+The bundled image Schematron is an explicitly authored editorial profile. Its editing phase permits unfinished records; its review phase checks completeness. The original Bilderfassung.sch was unavailable. The [Wenzelsbibel contract and walkthrough](knowledge/wenzelsbibel.md) explains the encodings, sources and practical boundaries. The Wenzelsbibel code lives in the project folder `docs/js/projects/wenzelsbibel/`. The first derived version, [wenzelsbibel-teiCrafter](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter), develops the project tool for the edition team from this base.
 
 ## Preservation and support boundaries
 

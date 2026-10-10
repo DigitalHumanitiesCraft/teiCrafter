@@ -36,7 +36,7 @@ test("register deletion protects encoded companion references to descendant IDs 
   const selection = page.getByRole("combobox", { name: "Register entry", exact: true });
   await selection.selectOption("people-1");
   await page.getByRole("button", { name: "Remove annotation", exact: true }).click();
-  await expect(page.locator(".ed-wb-feedback")).toContainText("codex.xml still references this register entry or its contents");
+  await expect(page.locator(".ed-form-feedback")).toContainText("codex.xml still references this register entry or its contents");
   const untouched = await copy(page);
   expect(untouched.raw).toBe(registers);
   expect(untouched.fileEncoding).toMatchObject({ encoding: "UTF-8", bom: true });

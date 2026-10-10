@@ -10,7 +10,7 @@ import { importPageXml } from "./page-xml-import.js";
 export function mountPageXmlImport(host, { onImport, status = () => {}, readOnly = () => false, teiType = null }) {
   let disposed = false;
   let busy = false;
-  const form = el("form", { class: "ed-wb-form", "aria-label": "Import PAGE XML" });
+  const form = el("form", { class: "ed-form", "aria-label": "Import PAGE XML" });
   const title = el("input", { name: "title", value: "Imported PAGE transcription", required: true });
   const files = el("input", { type: "file", name: "page-files", accept: ".xml,application/xml,text/xml", multiple: true, required: true });
   const mets = el("input", { type: "file", name: "mets-file", accept: ".xml,application/xml,text/xml" });
@@ -18,9 +18,9 @@ export function mountPageXmlImport(host, { onImport, status = () => {}, readOnly
     el("option", { value: "filename", text: "Natural filename order" }),
     el("option", { value: "selection", text: "Selected file order" }),
   ]);
-  const feedback = el("p", { class: "ed-wb-feedback", role: "status" });
+  const feedback = el("p", { class: "ed-form-feedback", role: "status" });
   const submit = el("button", { class: "ed-btn", type: "submit", text: "Create TEI draft", disabled: readOnly() });
-  const label = (text, control) => el("label", { class: "ed-wb-field" }, [el("span", { text }), control]);
+  const label = (text, control) => el("label", { class: "ed-form-field" }, [el("span", { text }), control]);
   form.append(el("h3", { text: "Import PAGE XML" }),
     el("p", { text: "Create a separate TEI draft from selected PAGE files. Text, page geometry and source annotations are retained. The new draft requires editorial review." }),
     label("Draft title", title), label("PAGE XML files", files), label("Page order", ordering),

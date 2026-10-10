@@ -38,6 +38,17 @@ The real UFBAS browser case requires `UFBAS_TEI`; the Wenzelsbibel engine proof 
 
 The image model proof uses `WB_IMAGES` for its optional real-source extension. The PAGE import proof uses `WB_PAGE_ROOT` for the local Exodus_4 export folder containing `mets.xml` and `page/0001_00000145.xml`. Both proofs always run their committed synthetic assertions; supplying a real path also requires that source to exist.
 
+## Source-first core
+
+The source-first editor under `src/` has its own Node tests and strict type check. They run independently of `verify` and appear as separate steps in the checks workflow.
+
+```bash
+npm run test:src
+npm run typecheck:src
+```
+
+`test:src` runs `node --test "test/core/*.test.mjs" "test/validate/*.test.mjs"`, and Node 22 needs the quoted glob form. `npm run check:biome` lints `src/` and `prototypes/` together with the legacy paths.
+
 ## Fidelity harness
 
 The offline harness compares a candidate with a reference. Its levels are text fidelity (L1), structural invariants (L3), and formal schema evidence (L2). Schema diagnostics may be compared before and after an intentional edit when a reference is not valid under the comparison schema. This comparative harness is separate from the browser's mandatory output schema gate.
@@ -54,10 +65,13 @@ The negative self-test deliberately corrupts fixtures so that an ineffective val
 | --- | --- |
 | [proofs/](proofs/) | Node contracts for XML, reading, mutation, input ownership, persistence, schemas and integration. |
 | [e2e/](e2e/) | Built-browser workflows; app, safety and persistence scenarios. |
+| [core/](core/) | Node tests for the DOM-free source-first core in `src/core/`. |
+| [validate/](validate/) | Node tests for the schema worker client and libxml2-wasm runtime in `src/validate/`. |
 | [fixtures-synthetic/](fixtures-synthetic/) | Committed original synthetic TEI, schema and source-profile fixtures. |
 | `fixtures/` | Ignored rights-local source material. |
 | [harness/](harness/) | Node orchestration and Python/lxml validation. |
 | [generators/](generators/) | Reproducible synthetic data and local corpus extraction. |
+| [tools/](tools/) | Helper scripts that build local test fixtures, such as the SZD mapping fixture. |
 | `reports/` | Ignored generated harness output. |
 | [../reports/](../reports/) | Maintained dated project assessments and implementation evidence. |
 

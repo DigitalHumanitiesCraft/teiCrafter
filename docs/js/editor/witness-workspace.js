@@ -7,7 +7,7 @@ export function createWitnessWorkspace(ctx) {
   let host = null, selected = "", creating = false, sessionId = null, apparatusKey = "", xmlMode = false;
   let pendingRestore = false;
   let attribution = false, readingKey = "";
-  const notice = (text) => host.append(el("p", { class: "ed-wb-note", text }));
+  const notice = (text) => host.append(el("p", { class: "ed-form-note", text }));
   const button = (text, action, disabled = false) => el("button", {
     type: "button", class: "ed-btn", text, disabled, onclick: action,
   });
@@ -24,7 +24,7 @@ export function createWitnessWorkspace(ctx) {
     for (const [key, text, disabled = false] of options) control.append(el("option", { value: key, text, disabled }));
     control.value = value;
     control.addEventListener("change", () => { if (onChange(control.value) === false) control.value = value; });
-    host.append(el("label", { class: "ed-wb-field" }, [el("span", { text: label }), control]));
+    host.append(el("label", { class: "ed-form-field" }, [el("span", { text: label }), control]));
     return control;
   }
   function form(doc, inventory, record) {
@@ -32,7 +32,7 @@ export function createWitnessWorkspace(ctx) {
       : record ? { id: record.id, description: record.description } : {
       id: "", description: "", listKey: inventory.lists[0]?.key || "",
     };
-    const formNode = el("form", { class: "ed-wb-form", "aria-label": creating ? "New witness" : "Witness description" });
+    const formNode = el("form", { class: "ed-form", "aria-label": creating ? "New witness" : "Witness description" });
     const inputs = new Map();
     const specifications = xmlMode && record ? [["xml", "Witness XML"]] : [["id", "Witness identifier"], ["description", "Witness description"]];
     if (creating && inventory.lists.length > 1) specifications.push(["listKey", "Destination witness list"]);
@@ -43,13 +43,13 @@ export function createWitnessWorkspace(ctx) {
       input.disabled = !!app.readOnly || name !== "xml" && record?.kind !== "witness" && !!record || name === "description" && record?.editable === false;
       input.setAttribute("aria-label", label);
       inputs.set(name, input);
-      formNode.append(el("label", { class: "ed-wb-field" }, [el("span", { text: label }), input]));
+      formNode.append(el("label", { class: "ed-form-field" }, [el("span", { text: label }), input]));
     }
-    if (record && !record.editable && !xmlMode) formNode.append(el("p", { class: "ed-wb-note", text: "This description contains structured XML. Use Edit witness XML to edit it in its complete document context." }));
+    if (record && !record.editable && !xmlMode) formNode.append(el("p", { class: "ed-form-note", text: "This description contains structured XML. Use Edit witness XML to edit it in its complete document context." }));
     const read = () => ({ ...source, ...Object.fromEntries([...inputs].map(([name, input]) => [name, input.value])) });
     let disposed = false;
     const changed = () => !disposed && Object.keys(source).some((name) => read()[name] !== source[name]);
-    const message = el("p", { role: "status", class: "ed-wb-feedback" });
+    const message = el("p", { role: "status", class: "ed-form-feedback" });
     const apply = () => {
       if (disposed || app.readOnly || !formNode.reportValidity()) return false;
       return stagedInput.commit(() => {
@@ -67,7 +67,7 @@ export function createWitnessWorkspace(ctx) {
       });
     };
     const cancel = () => { stagedInput.clear(); creating = false; render(host); void persist(); };
-    const actions = el("div", { class: "ed-wb-actions" });
+    const actions = el("div", { class: "ed-form-actions" });
     actions.append(el("button", { type: "submit", class: "ed-btn", text: "Apply witness", disabled: !!app.readOnly }), button("Cancel", cancel));
     if (record?.kind === "witness") actions.append(button("Remove witness", () => {
       if (!stagedInput.allowChange("removing a witness")) return;
@@ -105,15 +105,15 @@ export function createWitnessWorkspace(ctx) {
     for (const target of previous) if (!options.has(target)) options.set(target, `${target} (existing unresolved or external pointer)`);
     const control = el("select", { multiple: true, size: Math.max(2, Math.min(8, options.size)), "aria-label": "Reading witnesses", disabled: !!app.readOnly });
     for (const [value, text] of options) control.append(el("option", { value, text, selected: previous.includes(value) }));
-    const formNode = el("form", { class: "ed-wb-form", "aria-label": "Reading witness attribution" });
-    formNode.append(el("label", { class: "ed-wb-field" }, [el("span", { text: "Reading witnesses" }), control]));
-    formNode.append(el("p", { class: "ed-wb-note", text: "Select all witnesses or defined witness groups that attest this reading. Removing every selection removes @wit. Other reading attributes and content remain unchanged." }));
+    const formNode = el("form", { class: "ed-form", "aria-label": "Reading witness attribution" });
+    formNode.append(el("label", { class: "ed-form-field" }, [el("span", { text: "Reading witnesses" }), control]));
+    formNode.append(el("p", { class: "ed-form-note", text: "Select all witnesses or defined witness groups that attest this reading. Removing every selection removes @wit. Other reading attributes and content remain unchanged." }));
     const value = () => {
       const picked = [...control.selectedOptions].map((option) => option.value);
       return new Set(previous).size === picked.length && previous.every((target) => picked.includes(target)) ? initial : picked.join(" ");
     };
     let disposed = false;
-    const message = el("p", { role: "status", class: "ed-wb-feedback" });
+    const message = el("p", { role: "status", class: "ed-form-feedback" });
     const apply = () => {
       if (disposed || app.readOnly) return false;
       return stagedInput.commit(() => {
@@ -140,7 +140,7 @@ export function createWitnessWorkspace(ctx) {
     if (!target || !app.state) return;
     host = target;
     if (stagedInput.hasChanges()) return;
-    host.classList.add("ed-wb-workspace");
+    host.classList.add("ed-form-workspace");
     if (sessionId !== app.sessionId) {
       sessionId = app.sessionId;
       if (!pendingRestore) { selected = ""; creating = false; apparatusKey = ""; xmlMode = false; attribution = false; readingKey = ""; }

@@ -69,7 +69,7 @@ test("Wenzelsbibel transcription preserves staged input, exact edits and Undo", 
   await expect(page.getByRole("button", { name: /Restore/ }).first()).toBeVisible();
   await page.getByRole("button", { name: /Restore/ }).first().click();
   await expect(normalized).toHaveValue("GOTT");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   expect(await download(page)).toBe(codex.replace('norm="Gott"', 'norm="GOTT"'));
   await page.locator("#btn-undo").click();
   expect((await workingCopy(page)).raw).toBe(codex);
@@ -84,7 +84,7 @@ test("Wenzelsbibel commentary and Bible verses create independent TEI annotation
   await page.getByRole("textbox", { name: "First word ID", exact: true }).fill("word-1");
   await page.getByRole("textbox", { name: "Last word ID", exact: true }).fill("word-2");
   await page.getByRole("textbox", { name: "Comment text", exact: true }).fill("A supplied editorial comment.");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   const commented = (await workingCopy(page)).raw;
   expect(commented).toContain('type="comment_edition"');
   expect(commented).toContain("A supplied editorial comment.");
@@ -94,7 +94,7 @@ test("Wenzelsbibel commentary and Bible verses create independent TEI annotation
   await page.getByRole("textbox", { name: "First word ID", exact: true }).fill("word-1");
   await page.getByRole("textbox", { name: "Last word ID", exact: true }).fill("word-3");
   await page.getByRole("textbox", { name: /^Latin text/ }).fill("In principio");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   const output = await download(page);
   expect(output).toContain("Gen 1:1");
   expect(output).toContain("In principio");
@@ -115,7 +115,7 @@ test("Wenzelsbibel image edits preserve the source and resolve an attached codex
   await page.getByRole("combobox", { name: "Image annotation", exact: true }).selectOption("image-1");
   await accessibleWorkspace(page, testInfo, "wenzels-image-annotation");
   await page.getByRole("textbox", { name: "Image title", exact: true }).fill("Changed initial");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   expect(await download(page)).toBe(images.replace("Initial A", "Changed initial"));
   await page.getByText("Linked project documents", { exact: true }).click();
   await page.getByLabel("Attach Codex", { exact: true }).setInputFiles({ name: "synthetic-codex.xml", mimeType: "application/xml", buffer: codexBytes });
@@ -126,7 +126,7 @@ test("Wenzelsbibel image edits preserve the source and resolve an attached codex
   await expect(facsimile.locator('.ed-osd-zone[data-zoneid="zone-1"]')).toHaveCount(1);
   await expect.poll(() => imageRequests).toBeGreaterThan(0);
   await workspace(page, "checks");
-  await expect(page.locator(".ed-wb-workspace")).toContainText("0 pointer issues");
+  await expect(page.locator(".ed-form-workspace")).toContainText("0 pointer issues");
   await page.getByText("Linked project documents", { exact: true }).click();
   let replacementPrompt = "";
   page.once("dialog", async (dialog) => {
@@ -160,7 +160,7 @@ test("Wenzelsbibel shared registers retain persons, places and peoples", async (
     await page.getByRole("combobox", { name: "Register", exact: true }).selectOption(kind);
     await page.getByRole("textbox", { name: "XML ID", exact: true }).fill(id);
     await page.getByRole("textbox", { name: "Name", exact: true }).fill(name);
-    await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+    await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   }
   const output = await download(page);
   expect(output).toContain('xml:id="person-1"');
@@ -176,7 +176,7 @@ test("Wenzelsbibel incomplete image records accept an isolated draft improvement
   await open(page, "synthetic-incomplete-images.xml", incomplete);
   await page.getByRole("combobox", { name: "Image annotation", exact: true }).selectOption("image-1");
   await page.getByRole("textbox", { name: "Short description", exact: true }).fill("A draft description.");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   expect(await download(page)).toBe(incomplete.replace("Short description", "A draft description."));
 });
 
@@ -188,7 +188,7 @@ test("real Wenzelsbibel image annotations retain all bytes outside a title edit"
   const title = page.getByRole("textbox", { name: "Image title", exact: true });
   const previous = await title.inputValue();
   await title.fill("Synthetic browser verification title");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   expect(await download(page)).toBe(readFileSync(realImages, "utf8").replace(previous, "Synthetic browser verification title"));
   await page.locator("#btn-undo").click();
   expect((await workingCopy(page)).raw).toBe(readFileSync(realImages, "utf8"));
@@ -205,7 +205,7 @@ test("real Wenzelsbibel codex preserves readings and validates an explicitly rep
   const normalized = page.getByRole("textbox", { name: /^Normalized reading/ });
   const previous = await normalized.inputValue();
   await normalized.fill("BROWSER_VERIFIED");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   const record = await workingCopy(page);
   expect(record.raw).toContain('norm="BROWSER_VERIFIED"');
   expect(record.raw.replace('norm="BROWSER_VERIFIED"', `norm="${previous}"`)).toBe(original);

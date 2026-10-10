@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/worked-example
 status: complete
 created: 2026-06-08
-updated: 2026-09-11
+updated: 2026-10-10
 language: en
 topics: ["[[Worked Example]]", "[[TEI XML]]", "[[Source Profiles]]", "[[Digital Scholarly Editing]]"]
 related: [project, specification, testing, integration, wenzelsbibel, converter-reference]
@@ -42,7 +42,7 @@ Actual menu labels and fixture assertions are exercised by the browser suite. Th
 
 ## Entry collection workflow
 
-The original synthetic fixtures [dictionary entries](../test/fixtures-synthetic/entries-30-dictionary.xml) and [encyclopedia articles](../test/fixtures-synthetic/entries-30-articles.xml) contain varying completeness, internal and cross-entry references, mixed content and foreign example markup. Their descriptions are software-test material and make no historical claims. The collection size follows the acceptance scenario in [specification](specification.md#deterministic-creation).
+The original synthetic fixtures [dictionary entries](../test/fixtures-synthetic/entries-30-dictionary.xml) and [encyclopedia articles](../test/fixtures-synthetic/entries-30-articles.xml) contain varying completeness, internal and cross-entry references, mixed content and foreign example markup. Their descriptions are software-test material and make no historical claims. The collection size follows the acceptance scenario in [specification](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#deterministic-creation).
 
 1. Open either file and inspect Entries. Search by headword, text or XML ID; use Incomplete entries only to locate absent definitions. Display sorting leaves the source order unchanged.
 2. Select an entry and edit an unambiguous heading or definition. Structured fields remain disabled in the scalar form and accessible through Edit entry XML. Apply a no-op to verify that the original source is retained.

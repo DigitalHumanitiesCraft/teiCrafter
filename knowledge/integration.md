@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: complete
 created: 2026-06-07
-updated: 2026-09-19
+updated: 2026-10-10
 language: en
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
@@ -47,6 +47,20 @@ Schema resources have two roles. Conservative inspection supplies authoring evid
 Served schemas resolve relative URL dependencies. Granted folders resolve nested relative RelaxNG and XSD resources within their root, with cycle and traversal limits. A standalone schema upload does not grant access to neighbouring files. XML catalogs and portable implicit dependency discovery remain outside the contract. Raw and compiled Schematron must satisfy the [supported runtime forms](data.md#schema-set-and-validation-result).
 
 An uploaded override belongs to its document and replaces that document's project set until reset. Project collections and recovery retain those choices separately. New companion documents receive their own defaults. Opening a package restores schema settings; it grants no continuing validation authorization.
+
+## Deriving a project version
+
+The application under `docs/` is the base from which project-specific versions are derived. A derivation is a Git fork of this repository that keeps teiCrafter as its `upstream` remote and takes base changes with `git fetch upstream` and `git merge upstream/main`. The generic editor under `docs/js/editor/`, the manifest contract, the schema runtime and the design tokens stay as merged, so every base improvement arrives through an ordinary merge. A change the derivation needs in a generic module goes to the base first and returns by merge.
+
+A derivation changes three zones:
+
+| Zone | Content | Merge behaviour |
+| --- | --- | --- |
+| Shell pages | `docs/index.html` and `docs/editor.html` | Conflicts are resolved for the derivation, then base changes such as new script or stylesheet links are carried over |
+| Project folder | `docs/js/projects/<id>/` with the entry file `index.js` that exports the workspace object, its registration in `docs/js/projects/index.js`, a stylesheet linked from `editor.html` and project Schematron under `docs/schemas/` whose URL the entry file computes | Conflicts stay local to the project folder and the registration list |
+| Files only the derivation writes | Its own knowledge base, editorial rules, fixtures and further components | No conflicts, because the base never writes them |
+
+The project stylesheet is linked from `editor.html` because the build inlines a small stylesheet as a `data:` URL, which the editor's `style-src` policy refuses for a link added at runtime. A derivation that replaces the inherited `knowledge/` folder with its own knowledge base receives a modify/delete conflict whenever a merge touches a base knowledge file, and keeps the deletion. [Architecture](architecture.md#project-workspaces) holds the module map and the workspace fields the registry reads.
 
 ## Downstream editorial evidence
 

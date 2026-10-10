@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: complete
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-10-10
 language: en
 topics: ["[[TEI XML]]", "[[Digital Editions]]", "[[Data Modelling]]"]
 knowledge-sources:
@@ -32,13 +32,15 @@ related: [project, specification, architecture, design, data, testing]
 
 ## Scope and status
 
-The Wenzelsbibel workspace provides source-preserving authoring for transcription readings, commentary, Bible references, miniature descriptions and shared registers. Its project-specific field mappings operate through the generic editor's transactions, facsimile viewer and output gate. A manifest selects it with `workspace: "wenzelsbibel"`; the built-in project profile supplies that configuration.
+The Wenzelsbibel workspace provides source-preserving authoring for transcription readings, commentary, Bible references, miniature descriptions and shared registers. Its project-specific field mappings operate through the generic editor's transactions, facsimile viewer and output gate. A manifest selects it with `workspace: "wenzelsbibel"`, or detection by TEI type or PID selects it for a file opened without a manifest. Its configuration (detection profile, default schema set, panel, staged mode and model-feature flag) comes from the workspace object in `docs/js/projects/wenzelsbibel/index.js`, which the [workspace registry](architecture.md#project-workspaces) supplies to the generic editor. This document describes the editorial models of that project folder in the base application.
 
 In the local development or build preview, the start page's Wenzelsbibel example opens this workspace with a synthetic codex when the local original is absent. The sample has no original page images. Examples remain hidden on the public deployment. For edition work in either environment, use **Load** to open the local codex and attach the corresponding image annotations and registers through **Linked project documents**.
 
+The derived repository [wenzelsbibel-teiCrafter](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter) develops the project version for the edition team and departs from these models by its decisions of 2026-10-10. It sets register links inline on the words, proposed to the edition team as `rs[@type][@ref]`, instead of stand-off spans. It writes no Bible-verse spans, and the list element for peoples remains open there. Its [knowledge base](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter/tree/main/knowledge) and the [open ratification points](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter/blob/main/knowledge/editorial-guidelines.md#open-ratification-points) of its editorial guidelines own those decisions.
+
 The register and verse conventions and the local editorial Schematron are implemented, teiCrafter-authored project decisions. The [editorial completion report](../reports/editorial-completion-2026-09-11.md) records technical verification against identified synthetic and local source data. Scholarly assessment of these conventions and user acceptance remain open. The edition team assesses individual readings, attributions and alignments against the cited sources.
 
-Existing codex and image-annotation topology remains intact. Forms change their represented fields and preserve unrelated attributes, namespaces, apparatus categories, multilingual notes and unknown markup. A semantic no-op preserves the original XML string. Ambiguous or mixed-content fields use exact XML when a text control lacks a lossless inverse. The [source and session requirements](specification.md#document-and-session-integrity) apply to every project form.
+Existing codex and image-annotation topology remains intact. Forms change their represented fields and preserve unrelated attributes, namespaces, apparatus categories, multilingual notes and unknown markup. A semantic no-op preserves the original XML string. Ambiguous or mixed-content fields use exact XML when a text control lacks a lossless inverse. The [source and session requirements](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#document-and-session-integrity) apply to every project form.
 
 ## Documents and ownership
 
@@ -51,7 +53,7 @@ Existing codex and image-annotation topology remains intact. Forms change their 
 
 Exactly one document is editable at a time. **Linked project documents** attaches local XML files to a persistent project collection. **Open for editing** checkpoints the current file before activating its companion. Each file retains its own XML, UTF-8 BOM, dirty state, project and schema settings, selected witness and attached images. Failed recovery storage blocks the switch; unfinished input must be applied or cancelled first.
 
-Every Apply operation changes the active document, and native **Save** writes that file. **Project package** authorizes each XML file under its own schema set before requesting one ZIP with the collection and eligible loaded images. **Load → Open project package...** restores the collection; later output requires current authorization. The [package contract](specification.md#project-and-schema-declarations) defines cancellation, invalidation and the active-file scope of native saves. A filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
+Every Apply operation changes the active document, and native **Save** writes that file. **Project package** authorizes each XML file under its own schema set before requesting one ZIP with the collection and eligible loaded images. **Load → Open project package...** restores the collection; later output requires current authorization. The [package contract](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#project-and-schema-declarations) defines cancellation, invalidation and the active-file scope of native saves. A filename is part of a relative register reference; renaming `registers.xml` requires updating references that contain that filename.
 
 The Wenzelsbibel forms are available in **Reading text**. While **XML source** or **Metadata** is open, that left-hand editor owns unfinished input and the project panel shows a navigation hint. Return to **Reading text** to resume project forms. Changing views requires applying or cancelling the current input; **Working copy** can preserve it unfinished.
 
@@ -63,7 +65,7 @@ Companions are snapshots of explicitly loaded files. Changes made by another app
 
 Normalization is an editorial assertion entered by the user. The workspace supplies no lexical normalization rules and does not generate normalized readings during PAGE import. XML identifiers and facsimile links remain unchanged when a word reading changes.
 
-The generic **Witnesses** pane can select explicitly encoded witness readings and maintain their descriptions and attributions. Its [reading-evidence contract](specification.md#witness-reading-and-descriptions) applies equally to a codex. Missing attribution, ambiguity and fragment boundaries remain explicit; selecting a witness does not reconstruct an unencoded text from commentary apparatus.
+The generic **Witnesses** pane can select explicitly encoded witness readings and maintain their descriptions and attributions. Its [reading-evidence contract](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#witness-reading-and-descriptions) applies equally to a codex. Missing attribution, ambiguity and fragment boundaries remain explicit; selecting a witness does not reconstruct an unencoded text from commentary apparatus.
 
 **Commentary** creates entries in a top-level `standOff/listApp`. A new entry inserts two unique boundary `anchor` elements around the selected source passage and records them in `app/@from` and `app/@to`. This follows TEI's double-end-point apparatus mechanism. The project offers `comment_edition` for editorial comments and `comment_understanding` for interpretative comments. Existing apparatus types remain available with their encoded values. Each note retains its own text, `xml:lang`, and `resp`. [TEI `app`](https://www.tei-c.org/release/doc/tei-p5-doc/en/html/ref-app.html)
 
@@ -174,7 +176,7 @@ The review phase checks nonempty title, short and full description, folio target
 
 **Project checks** also identifies unresolved apparatus endpoints and register references. **Keep sole reading** explicitly removes an attribute-free `choice` wrapper containing a single supported branch and retains that reading. The action creates no missing alternative. Other structures require inspection in XML source.
 
-Save, Download and Project package follow the shared [output gate](specification.md#fail-closed-multi-schema-output-gate). An identical successful vocabulary-schema result may be reused; changed XML or schema dependencies require another decision. **Cancel validation** and the package cancellation control prevent output from the pending operation. The first full validation of a large changed codex remains expensive, particularly in Firefox; measured limits are recorded in the [completion report](../reports/editorial-completion-2026-09-11.md). The explicit completeness review remains separate from the editing-phase output gate.
+Save, Download and Project package follow the shared [output gate](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#fail-closed-multi-schema-output-gate). An identical successful vocabulary-schema result may be reused; changed XML or schema dependencies require another decision. **Cancel validation** and the package cancellation control prevent output from the pending operation. The first full validation of a large changed codex remains expensive, particularly in Firefox; measured limits are recorded in the [completion report](../reports/editorial-completion-2026-09-11.md). The explicit completeness review remains separate from the editing-phase output gate.
 
 ## Applying, preserving, and reopening work
 

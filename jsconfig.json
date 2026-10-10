@@ -46,6 +46,7 @@
     "docs/js/editor/ai-suggest.js",
     "docs/js/services/authority-lookup.js",
     "docs/js/services/storage.js",
-    "docs/js/utils/constants.js"
+    "docs/js/utils/constants.js",
+    "docs/js/projects/**/*.js"
   ]
 }

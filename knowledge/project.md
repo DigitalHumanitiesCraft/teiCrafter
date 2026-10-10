@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: complete
 created: 2026-02-05
-updated: 2026-09-11
+updated: 2026-10-10
 language: en
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal, integration, testing, worked-examples, wenzelsbibel]
@@ -25,6 +25,8 @@ related: [data, specification, architecture, design, journal, integration, testi
 teiCrafter is a client-side editor for existing TEI documents and deterministic or model-assisted TEI drafts. It gives editors a readable work surface while retaining the source document as the canonical state. Exact offset splices preserve source bytes outside an intentional edit, including whitespace, prefixes, attribute order, comments, processing instructions, and entity spellings.
 
 The tool serves editors who must correct, annotate, review, and return heterogeneous TEI without first translating every project into one internal edition type. Its central contribution is a compositional Source Profile. The profile derives capabilities and navigation from the loaded TEI, can receive conservative Schema Profile evidence, and accepts explicit project policy from a manifest.
+
+Since 2026-10-04 teiCrafter is rebuilt as a source-first TEI XML editor under `src/`, whose primary surface is the XML source in a code editor and whose requirements the [specification](specification.md) states. Until that editor carries an application, the editor under `docs/` described in this document remains the published application and the derivable base for project-specific versions, which [integration](integration.md#deriving-a-project-version) describes. The first derived version is wenzelsbibel-teiCrafter.
 
 ## Product promise
 
@@ -61,7 +63,7 @@ Working copy preserves unfinished input and attached project documents independe
 
 teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set. The browser suite covers the fallback path in Chromium and Firefox; the [current report](../reports/editorial-completion-2026-09-11.md) records execution evidence and performance limits. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
 
-GitHub Pages automatically publishes the versioned `docs/` source from main. The checks workflow independently builds, verifies and packages `dist/`. Built-in examples are available on local development hosts; the public editor opens the researcher's local files through Load. Both forms of delivery use the same local XML and schema-worker model.
+The [deployment contract](integration.md#browser-files-and-deployment) states how GitHub Pages publishes the application and how the checks workflow builds and packages `dist/`. Built-in examples are available on local development hosts; the public editor opens the researcher's local files through Load. Both forms of delivery use the same local XML and schema-worker model.
 
 External LLM services are optional. Built-in providers and a configurable OpenAI-compatible endpoint share one catalogue. Application code can register adapters for other JSON protocols. API keys remain in memory, requests omit ambient credentials, and manifests cannot inject executable provider logic.
 

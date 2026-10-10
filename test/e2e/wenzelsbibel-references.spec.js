@@ -37,10 +37,10 @@ test("free verse references preserve staged input when an undeclared canonical r
   test.setTimeout(SCHEMA_WORKFLOW_TIMEOUT_MS);
   await open(page, raw);
   const canonical = page.getByRole("textbox", { name: "Canonical Vulgate reference", exact: true });
-  const apply = page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true });
+  const apply = page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true });
   await canonical.fill("Gen.1.1");
   await apply.click();
-  await expect(page.locator(".ed-wb-feedback")).toContainText("requires one unambiguous refsDecl");
+  await expect(page.locator(".ed-form-feedback")).toContainText("requires one unambiguous refsDecl");
   await expect(canonical).toHaveValue("Gen.1.1");
   const pending = await workingCopy(page);
   expect(pending.raw).toBe(raw);
@@ -64,13 +64,13 @@ test("an explicitly declared canonical reference remains distinct from the editi
   await open(page, source);
   await page.getByRole("textbox", { name: "Canonical Vulgate reference", exact: true }).fill("Gen.1.1");
   await page.getByRole("textbox", { name: "Comment and reference edition", exact: true }).fill("Synthetic declared edition; no Latin text supplied.");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   const output = await download(page);
   expect(output).toContain('<ref type="vulgate" cRef="Gen.1.1">Gen 1:1</ref>');
   expect(output).toContain(declaration);
   expect(output).toContain(body);
   expect(output).not.toContain("<quote");
   await page.getByRole("textbox", { name: "Book, chapter and verse", exact: true }).fill("Genesis 1, verse 1");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   expect((await workingCopy(page)).raw).toBe(output.replaceAll("Gen 1:1", "Genesis 1, verse 1"));
 });

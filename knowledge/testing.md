@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: complete
 created: 2026-05-30
-updated: 2026-09-19
+updated: 2026-10-10
 language: en
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
@@ -123,6 +123,17 @@ Missing required real inputs fail immediately. Set `UFBAS_TEI` separately to inc
 `evaluation.json`, `playwright.json`, logs and browser reports reside under ignored `node_modules/.tmp/evaluation/`; traces also use `test-results/`. The [checks workflow](../.github/workflows/checks.yml) uploads only these selected report directories, explicitly includes hidden paths and retains synthetic CI evidence for seven days. Local real-source traces remain outside publication artifacts.
 
 The pinned repository compiler is the only typecheck entry. Missing required tools fail verification. Type coverage follows [jsconfig.json](../jsconfig.json); a successful curated check does not claim that every application controller is a checked root.
+
+## Source-first core checks
+
+The source-first core under `src/` has its own Node tests and type check, separate from the legacy gate. `test/core/` checks the DOM-free core (offset translation, formatting, the plain-text starter and the proposal splice), and `test/validate/` checks the schema worker client and the libxml2-wasm runtime against vendored schemas. The type check runs strict TypeScript over `src/` and the prototypes through [tsconfig.json](../tsconfig.json).
+
+```powershell
+npm run test:src
+npm run typecheck:src
+```
+
+`npm run test:src` runs `node --test "test/core/*.test.mjs" "test/validate/*.test.mjs"`, and Node 22 needs the quoted glob form. Biome covers `src/` and `prototypes/` through `npm run check:biome`. The [checks workflow](../.github/workflows/checks.yml) runs these steps beside the editorial evaluation.
 
 ## Editorial acceptance boundary
 

@@ -52,7 +52,7 @@ test('witness projection discloses unresolved readings and witness CRUD preserve
   expect((await workingCopy(page)).raw).toBe(expected);
   await page.getByRole('combobox', { name: 'Witness record', exact: true }).selectOption({ label: 'A: Alpha' });
   await page.getByRole('button', { name: 'Remove witness', exact: true }).click();
-  await expect(page.locator('.ed-wb-feedback')).toContainText('referenced');
+  await expect(page.locator('.ed-form-feedback')).toContainText('referenced');
   expect((await workingCopy(page)).raw).toBe(expected);
   await page.locator('#btn-read-only').click();
   await expect(page.getByRole('button', { name: 'New witness', exact: true })).toBeDisabled();
@@ -82,11 +82,11 @@ test('witness forms recover staged XML and reject malformed or reference-breakin
   await expect(xml).toHaveValue(replacement);
   await xml.fill('<witness xml:id="B"><hi>Broken</witness>');
   await page.getByRole('button', { name: 'Apply witness', exact: true }).click();
-  await expect(page.locator('.ed-wb-feedback')).not.toBeEmpty();
+  await expect(page.locator('.ed-form-feedback')).not.toBeEmpty();
   expect((await workingCopy(page)).raw).toBe(source);
   await xml.fill(replacement.replace('xml:id="B"', 'xml:id="changed"'));
   await page.getByRole('button', { name: 'Apply witness', exact: true }).click();
-  await expect(page.locator('.ed-wb-feedback')).toContainText('referenced');
+  await expect(page.locator('.ed-form-feedback')).toContainText('referenced');
   expect((await workingCopy(page)).raw).toBe(source);
   await xml.fill(replacement);
   await page.getByRole('button', { name: 'Apply witness', exact: true }).click();

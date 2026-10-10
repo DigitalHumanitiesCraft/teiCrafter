@@ -1,15 +1,15 @@
 /* Form, action and note classes shared by the editorial workspaces and project panels. */
-.ed-wb-workspace {
+.ed-form-workspace {
   padding: var(--space-md);
   color: var(--color-text-body);
   overflow-wrap: anywhere;
 }
-.ed-wb-workspace h2 { font-size: 1.2rem; margin: 0 0 var(--space-md); }
-.ed-wb-workspace h3 { font-size: 1rem; margin: var(--space-md) 0; }
-.ed-wb-workspace select,
-.ed-wb-field input,
-.ed-wb-field textarea,
-.ed-wb-reference > input {
+.ed-form-workspace h2 { font-size: 1.2rem; margin: 0 0 var(--space-md); }
+.ed-form-workspace h3 { font-size: 1rem; margin: var(--space-md) 0; }
+.ed-form-workspace select,
+.ed-form-field input,
+.ed-form-field textarea,
+.ed-form-reference > input {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -20,15 +20,15 @@
   color: var(--color-text);
   font: inherit;
 }
-.ed-wb-field input:disabled,
-.ed-wb-field textarea:disabled { background: var(--color-surface-sunken); }
-.ed-wb-field { display: grid; gap: var(--space-xs); margin-block: var(--space-md); }
-.ed-wb-field > span { font-size: .875rem; font-weight: 600; }
-.ed-wb-field small,
-.ed-wb-note { font-size: .8125rem; line-height: 1.5; color: var(--color-text-secondary); }
-.ed-wb-field textarea { resize: vertical; line-height: 1.5; }
-.ed-wb-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-block: var(--space-md); }
-.ed-wb-actions > span { font-size: .75rem; }
-.ed-wb-reference { margin-block: var(--space-md); padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
-.ed-wb-reference summary { cursor: pointer; font-weight: 600; font-size: .875rem; }
-.ed-wb-feedback { font-size: .875rem; color: var(--color-problem); }
+.ed-form-field input:disabled,
+.ed-form-field textarea:disabled { background: var(--color-surface-sunken); }
+.ed-form-field { display: grid; gap: var(--space-xs); margin-block: var(--space-md); }
+.ed-form-field > span { font-size: .875rem; font-weight: 600; }
+.ed-form-field small,
+.ed-form-note { font-size: .8125rem; line-height: 1.5; color: var(--color-text-secondary); }
+.ed-form-field textarea { resize: vertical; line-height: 1.5; }
+.ed-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-block: var(--space-md); }
+.ed-form-actions > span { font-size: .75rem; }
+.ed-form-reference { margin-block: var(--space-md); padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.ed-form-reference summary { cursor: pointer; font-weight: 600; font-size: .875rem; }
+.ed-form-feedback { font-size: .875rem; color: var(--color-problem); }

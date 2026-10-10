@@ -66,7 +66,7 @@ export function createWenzelsWorkspace(ctx) {
     if (!stagedInput.allowChange("changing the Wenzelsbibel form")) return;
     stagedInput.clear(); section = nextSection; selected = id; render(host);
   }
-  function note(text) { host.append(el("p", { class: "ed-wb-note", text })); }
+  function note(text) { host.append(el("p", { class: "ed-form-note", text })); }
   function action(text, fn, extra = {}) {
     return el("button", { type: "button", class: "ed-btn", text, onclick: fn, ...extra });
   }
@@ -79,7 +79,7 @@ export function createWenzelsWorkspace(ctx) {
       if (!stagedInput.allowChange("changing records")) { control.value = selected; return; }
       stagedInput.clear(); selected = control.value; render(host);
     });
-    host.append(el("label", { class: "ed-wb-field" }, [el("span", { text: label }), control]));
+    host.append(el("label", { class: "ed-form-field" }, [el("span", { text: label }), control]));
     return records.find((record) => String(record.id || record.key) === selected) || null;
   }
   function form(title, specs, values, apply, remove = null) {
@@ -158,7 +158,7 @@ export function createWenzelsWorkspace(ctx) {
     for (const [role, label] of [["codex", "Codex"], ["images", "Image annotations"], ["registers", "Registers"]]) {
       const input = el("input", { type: "file", accept: ".xml", "aria-label": `Attach ${label}` });
       input.addEventListener("change", () => { void attach(role, input.files[0]); });
-      details.append(el("label", { class: "ed-wb-field" }, [el("span", { text: `Attach ${label}` }), input]));
+      details.append(el("label", { class: "ed-form-field" }, [el("span", { text: `Attach ${label}` }), input]));
       const entry = attachments.get(role);
       if (entry) details.append(el("div", { class: "ed-wb-resource" }, [
         el("span", { text: entry.name + (entry.dirty ? " (unsaved changes)" : "") }), action("Open for editing", () => openCompanion(entry)),
@@ -193,7 +193,7 @@ export function createWenzelsWorkspace(ctx) {
     const fromValue = formResult.controls.get(startKey)?.value.replace(/^#/, "");
     const initialIndex = all.findIndex((word) => word.id === fromValue);
     if (initialIndex >= 0) referenceOffset = initialIndex;
-    const box = el("details", { class: "ed-wb-reference" });
+    const box = el("details", { class: "ed-form-reference" });
     box.append(el("summary", { text: `Select a word range in ${reference.name}` }));
     const search = el("input", { type: "search", placeholder: "Word or XML ID", "aria-label": "Find reference word" });
     const target = el("select", { "aria-label": "Range endpoint to set" }, [el("option", { value: startKey, text: "Start word" }), el("option", { value: endKey, text: "End word" })]);
@@ -219,7 +219,7 @@ export function createWenzelsWorkspace(ctx) {
       const index = all.findIndex((word) => `${word.id} ${word.dipl} ${word.norm} ${word.text}`.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().includes(value));
       if (index >= 0) { referenceOffset = index; draw(); }
     });
-    box.append(search, target, page, el("div", { class: "ed-wb-actions" }, [
+    box.append(search, target, page, el("div", { class: "ed-form-actions" }, [
       action("Previous words", () => { referenceOffset -= 60; draw(); }), position,
       action("Next words", () => { referenceOffset += 60; draw(); }),
     ]));
@@ -246,7 +246,7 @@ export function createWenzelsWorkspace(ctx) {
       el("td", { text: word.norm || "" }),
     ]));
     table.append(body); host.append(el("div", { class: "ed-wb-readings-scroll" }, [table]));
-    host.append(el("div", { class: "ed-wb-actions" }, [
+    host.append(el("div", { class: "ed-form-actions" }, [
       action("Previous words", () => { if (stagedInput.allowChange("changing words")) { wordOffset = Math.max(0, wordOffset - 40); render(host); } }),
       el("span", { text: `${wordOffset + 1}–${Math.min(pageWords.length, wordOffset + 40)} of ${pageWords.length}` }),
       action("Next words", () => { if (stagedInput.allowChange("changing words")) { wordOffset = Math.min(Math.max(0, pageWords.length - 40), wordOffset + 40); render(host); } }),
@@ -275,7 +275,7 @@ export function createWenzelsWorkspace(ctx) {
         return first && last && first.outerStart <= word.start && last.outerEnd >= word.end;
       });
       if (related.length) {
-        const box = el("div", { class: "ed-wb-reference" }, [el("h3", { text: "Images referring to this word" })]);
+        const box = el("div", { class: "ed-form-reference" }, [el("h3", { text: "Images referring to this word" })]);
         for (const item of related) box.append(action(item.title || item.id, () => openCompanion(images, "image-annotation", item.id)));
         host.append(box);
       }
@@ -354,7 +354,7 @@ export function createWenzelsWorkspace(ctx) {
       const zoneId = record.zone.replace(/^#/, "");
       const surface = memo(linkedCodex.doc, "surfaces", readSurfaces).surfaces.find((item) => item.zones.some((zone) => zone.id === zoneId));
       if (surface?.graphic) {
-        const box = el("details", { class: "ed-wb-reference" }, [el("summary", { text: "Show miniature facsimile" })]);
+        const box = el("details", { class: "ed-form-reference" }, [el("summary", { text: "Show miniature facsimile" })]);
         const viewerHost = el("div", { class: "ed-wb-facsimile", role: "region", "aria-label": "Miniature facsimile" });
         box.append(viewerHost);
         box.addEventListener("toggle", () => {
@@ -427,8 +427,8 @@ export function createWenzelsWorkspace(ctx) {
     const last = el("input", { type: "text", "aria-label": "Last image-related word" });
     const endpoints = /^#range\(\s*([^,]+),\s*([^\)]+)\)$/.exec(record?.range || "");
     if (endpoints) { first.value = endpoints[1].trim(); last.value = endpoints[2].trim(); }
-    rangeFields.append(el("label", { class: "ed-wb-field" }, [el("span", { text: "First image-related word" }), first]),
-      el("label", { class: "ed-wb-field" }, [el("span", { text: "Last image-related word" }), last]), action("Set text range", () => {
+    rangeFields.append(el("label", { class: "ed-form-field" }, [el("span", { text: "First image-related word" }), first]),
+      el("label", { class: "ed-form-field" }, [el("span", { text: "Last image-related word" }), last]), action("Set text range", () => {
         const range = f.controls.get("range");
         if (range.disabled) return;
         range.value = `#range(${first.value.replace(/^#/, "")}, ${last.value.replace(/^#/, "")})`;
@@ -503,7 +503,7 @@ export function createWenzelsWorkspace(ctx) {
         if (owner !== app.sessionId || activeDoc() !== doc || !reviewResults.isConnected) return;
         reviewResults.replaceChildren();
         for (const result of results) {
-          reviewResults.append(el("p", { class: "ed-wb-note", text: `${result.name}: ${result.status}. ${result.diagnostics.length} editorial findings.` }));
+          reviewResults.append(el("p", { class: "ed-form-note", text: `${result.name}: ${result.status}. ${result.diagnostics.length} editorial findings.` }));
           const issues = el("ul", { class: "ed-wb-issues" });
           for (const issue of result.diagnostics.slice(0, 100)) issues.append(el("li", { text: `${issue.location || ""} ${issue.message}` }));
           reviewResults.append(issues);
@@ -541,7 +541,7 @@ export function createWenzelsWorkspace(ctx) {
       for (const issue of issues.slice(0, 100)) list.append(el("li", { text: issue }));
     } else note("Attach the shared registers to resolve person, place and people references.");
     for (const choice of singleBranchChoices(doc)) {
-      const box = el("div", { class: "ed-wb-note" }, [el("p", { text: `Choice with only one alternative: ${choiceLabel(choice)}. TEI requires alternative readings in a choice.` })]);
+      const box = el("div", { class: "ed-form-note" }, [el("p", { text: `Choice with only one alternative: ${choiceLabel(choice)}. TEI requires alternative readings in a choice.` })]);
       box.append(action("Keep sole reading", () => {
         try { mutate(keepSingleChoiceBranch(doc, choice), "Keep sole choice reading"); }
         catch (error) { setStatus(error.message); }
@@ -559,7 +559,7 @@ export function createWenzelsWorkspace(ctx) {
     if (app.sourceMode) {
       importForm?.dispose(); importForm = null;
       imageViewer?.destroy(); imageViewer = null;
-      clear(host); host.classList.add("ed-wb-workspace");
+      clear(host); host.classList.add("ed-form-workspace");
       host.append(el("h2", { text: "Wenzelsbibel" }));
       note("Use the editor on the left for XML source and metadata. Return to Reading text to use the Wenzelsbibel forms.");
       return;
@@ -572,7 +572,7 @@ export function createWenzelsWorkspace(ctx) {
       cache = new WeakMap();
       section = hasImages(activeDoc()) ? "image-annotation" : registers()?.doc === activeDoc() ? "registers" : "diplomatic";
     }
-    clear(host); host.classList.add("ed-wb-workspace");
+    clear(host); host.classList.add("ed-form-workspace");
     host.append(el("h2", { text: "Wenzelsbibel" }));
     const choose = el("select", { "aria-label": "Wenzelsbibel workspace" });
     for (const [key, label] of SECTIONS) choose.append(el("option", { value: key, text: label }));
@@ -584,7 +584,7 @@ export function createWenzelsWorkspace(ctx) {
     host.append(choose); attachmentControls();
     const imported = app.source?.importSummary;
     if (imported?.format === "page-xml") {
-      const summary = el("details", { class: "ed-wb-note" }, [el("summary", { text: `PAGE import: ${imported.pages} pages (${imported.order})` })]);
+      const summary = el("details", { class: "ed-form-note" }, [el("summary", { text: `PAGE import: ${imported.pages} pages (${imported.order})` })]);
       const warnings = Array.isArray(imported.warnings) ? imported.warnings : [];
       summary.append(el("p", { text: warnings.length ? `${warnings.length} import notices. Keep the original PAGE files as source evidence.` : "No import warnings. Review the separate TEI draft before scholarly use." }));
       for (const warning of warnings.slice(0, 100)) summary.append(el("p", { text: warning }));

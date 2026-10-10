@@ -6,7 +6,7 @@ import {
 
 const PAGE_SIZE = 25;
 const button = (text, onclick, props = {}) => el("button", { type: "button", class: "ed-btn", text, onclick, ...props });
-const note = (text) => el("p", { class: "ed-wb-note", text });
+const note = (text) => el("p", { class: "ed-form-note", text });
 
 /** One active document, one revision-owned form and one transaction per applied preview. */
 export function createEntryWorkspace(ctx) {
@@ -53,7 +53,7 @@ export function createEntryWorkspace(ctx) {
     control.value = value || "";
     control.disabled = app.readOnly || readOnly;
     control.required = required;
-    const wrapper = el("label", { class: "ed-wb-field" }, [el("span", { text: label }), control]);
+    const wrapper = el("label", { class: "ed-form-field" }, [el("span", { text: label }), control]);
     if (help) {
       const id = `entry-help-${name}`;
       control.setAttribute("aria-describedby", id);
@@ -111,7 +111,7 @@ export function createEntryWorkspace(ctx) {
       replacement?.focus();
     };
     search.addEventListener("input", () => changeFilter(search, query, () => { query = search.value; }));
-    list.append(el("label", { class: "ed-wb-field" }, [el("span", { text: "Search entries" }), search]));
+    list.append(el("label", { class: "ed-form-field" }, [el("span", { text: "Search entries" }), search]));
     const incompleteControl = el("input", { type: "checkbox", "aria-label": "Incomplete entries only", checked: incomplete });
     incompleteControl.addEventListener("change", () => {
       if (!stagedInput.allowChange("filtering entries")) { incompleteControl.checked = incomplete; return; }
@@ -131,7 +131,7 @@ export function createEntryWorkspace(ctx) {
     const items = filterEntries(doc(), { query, incomplete, kind: filterKind, sort });
     offset = Math.min(offset, Math.max(0, Math.floor((items.length - 1) / PAGE_SIZE) * PAGE_SIZE));
     list.append(note(`${items.length} of ${readEntries(doc()).length} entries match. ${targets.size} selected for batch editing. Display sorting leaves source order unchanged.`));
-    const table = el("table", { class: "ed-wb-table", "aria-label": "Entries" });
+    const table = el("table", { class: "ed-form-table", "aria-label": "Entries" });
     table.append(el("thead", {}, [el("tr", {}, ["Select", "Headword or heading", "XML ID", "Completeness"].map((text) => el("th", { scope: "col", text })))]));
     const body = el("tbody");
     for (const item of items.slice(offset, offset + PAGE_SIZE)) {
@@ -150,7 +150,7 @@ export function createEntryWorkspace(ctx) {
     }
     table.append(body); list.append(el("div", { class: "ed-entry-table-scroll", tabindex: "0", role: "region", "aria-label": "Scrollable entry rows" }, [table]));
     if (!items.length) list.append(note("No entries match these filters."));
-    const actions = el("div", { class: "ed-wb-actions" }, [
+    const actions = el("div", { class: "ed-form-actions" }, [
       button("Previous entries", () => { if (stagedInput.allowChange("changing the entry page")) { offset -= PAGE_SIZE; render(host); } }, { disabled: offset === 0 }),
       button("Next entries", () => { if (stagedInput.allowChange("changing the entry page")) { offset += PAGE_SIZE; render(host); } }, { disabled: offset + PAGE_SIZE >= items.length }),
       button("Select all matching", () => { if (stagedInput.allowChange("changing the batch selection")) { targets = new Set(items.map((item) => item.key)); render(host); } }),
@@ -169,7 +169,7 @@ export function createEntryWorkspace(ctx) {
   function renderDetail() {
     const item = resolveEntry(doc(), selected);
     kind = item.kind;
-    const form = el("form", { class: "ed-wb-form", "aria-label": "Entry details" });
+    const form = el("form", { class: "ed-form", "aria-label": "Entry details" });
     form.append(el("h3", { text: `${item.kind === "dictionary" ? "Dictionary entry" : "Encyclopedia article"}: ${item.id || "no XML ID"}` }));
     if (item.issues.length) form.append(note(item.issues.join(". ") + ". Completeness describes these fields and is separate from schema validation."));
     const controls = {
@@ -178,10 +178,10 @@ export function createEntryWorkspace(ctx) {
       language: formField(form, "language", "Entry language", item.language, { help: "Local xml:lang. Empty removes a local language override; inherited language may still apply." }),
       number: formField(form, "number", "Entry number", item.number, { help: "Local n attribute, independent of source order and XML ID." }),
     };
-    form.append(el("div", { class: "ed-wb-actions" }, [el("button", { type: "submit", class: "ed-btn", text: "Apply entry", disabled: app.readOnly }), cancelButton()]));
+    form.append(el("div", { class: "ed-form-actions" }, [el("button", { type: "submit", class: "ed-btn", text: "Apply entry", disabled: app.readOnly }), cancelButton()]));
     mountForm(form, controls, (values) => { mutate(updateEntry(doc(), item, values, { readOnly: app.readOnly }), "Edit entry"); });
     host.append(form);
-    const actions = el("div", { class: "ed-wb-actions" });
+    const actions = el("div", { class: "ed-form-actions" });
     actions.append(button("Duplicate entry", () => {
       if (!stagedInput.allowChange("duplicating this entry")) return;
       try {
@@ -228,7 +228,7 @@ export function createEntryWorkspace(ctx) {
   function renderCreate() {
     const anchor = selected ? resolveEntry(doc(), selected) : null;
     if (anchor) kind = anchor.kind;
-    const form = el("form", { class: "ed-wb-form", "aria-label": "New entry" });
+    const form = el("form", { class: "ed-form", "aria-label": "New entry" });
     form.append(el("h3", { text: "Create entry" }), note(anchor ? `Insert a ${kind === "dictionary" ? "dictionary entry" : "encyclopedia article"} after ${anchor.id || anchor.headword}.` : "Create the first entry in the document body."));
     const controls = {
       id: formField(form, "id", "New XML ID", "", { help: "Leave empty to allocate an unused ID." }),
@@ -237,7 +237,7 @@ export function createEntryWorkspace(ctx) {
       language: formField(form, "language", "New entry language", ""),
     };
     if (!anchor) controls.kind = formField(form, "kind", "New entry encoding", "", { required: true, options: [["", "Choose an encoding"], ["dictionary", "Dictionary entry (entry/form/sense)"], ["articles", "Encyclopedia article (div/head/p)"]] });
-    form.append(el("div", { class: "ed-wb-actions" }, [el("button", { type: "submit", class: "ed-btn", text: "Create entry", disabled: app.readOnly }), cancelButton()]));
+    form.append(el("div", { class: "ed-form-actions" }, [el("button", { type: "submit", class: "ed-btn", text: "Create entry", disabled: app.readOnly }), cancelButton()]));
     mountForm(form, controls, (values) => {
       const { kind: explicitKind, ...fields } = values;
       if (!anchor) kind = explicitKind;
@@ -249,7 +249,7 @@ export function createEntryWorkspace(ctx) {
   }
 
   function renderBatch() {
-    const form = el("form", { class: "ed-wb-form", "aria-label": "Entry batch edit" });
+    const form = el("form", { class: "ed-form", "aria-label": "Entry batch edit" });
     form.append(el("h3", { text: "Batch edit selected entries" }), note(`${targets.size} explicitly selected entries in this XML file. Review each before and after value. Applying the preview creates one Undo step.`));
     const controls = {
       field: formField(form, "field", "Batch field", "", { required: true, options: [["", "Choose a batch field"], ["language", "Entry language (xml:lang)"], ["number", "Entry number (n)"]] }),
@@ -264,14 +264,14 @@ export function createEntryWorkspace(ctx) {
         preview = previewEntryBatch(doc(), [...targets], { field: controls.field.value, value: controls.value.value });
         clear(previewHost);
         previewHost.append(note(`${preview.changed} of ${preview.selected} selected entries will change.`));
-        const table = el("table", { class: "ed-wb-table", "aria-label": "Batch before and after" });
+        const table = el("table", { class: "ed-form-table", "aria-label": "Batch before and after" });
         table.append(el("thead", {}, [el("tr", {}, ["Entry", "Before", "After", "Change"].map((text) => el("th", { scope: "col", text })))]));
         table.append(el("tbody", {}, preview.changes.map((change) => el("tr", {}, [change.key, change.before || "No local value", change.after || "No local value", change.changed ? "Change" : "Unchanged"].map((text) => el("td", { text }))))));
         previewHost.append(el("div", { class: "ed-entry-table-scroll", tabindex: "0", role: "region", "aria-label": "Scrollable batch changes" }, [table]));
         applyButton.disabled = app.readOnly || !preview.changed;
       } catch (error) { invalidate(); fail(error); }
     };
-    form.append(el("div", { class: "ed-wb-actions" }, [button("Preview batch", prepare, { disabled: app.readOnly }), applyButton, cancelButton()]));
+    form.append(el("div", { class: "ed-form-actions" }, [button("Preview batch", prepare, { disabled: app.readOnly }), applyButton, cancelButton()]));
     form.append(previewHost);
     mountForm(form, controls, () => {
       if (!preview || preview.field !== controls.field.value || preview.value !== controls.value.value) throw new Error("Preview the current batch values before applying.");
@@ -287,7 +287,7 @@ export function createEntryWorkspace(ctx) {
     if (!element || !doc()) return;
     host = element;
     if (app.sourceMode) {
-      disposeForm(); clear(host); host.classList.add("ed-entry-workspace", "ed-wb-workspace");
+      disposeForm(); clear(host); host.classList.add("ed-entry-workspace", "ed-form-workspace");
       host.append(el("h2", { text: "Entries" }), note("Use the editor on the left for XML source and metadata. Return to Reading text to use the entry forms."));
       return;
     }
@@ -298,7 +298,7 @@ export function createEntryWorkspace(ctx) {
     }
     const entries = readEntries(doc());
     if (!selected && entries.length) selected = entries[0].key;
-    clear(host); host.classList.add("ed-entry-workspace", "ed-wb-workspace");
+    clear(host); host.classList.add("ed-entry-workspace", "ed-form-workspace");
     host.append(el("h2", { text: "Entries" }), note("Entry operations affect this open XML file. Deletion checks references to the entry and all its descendant IDs within this file. Linked files require their own review."));
     renderList();
     if (section !== "detail") host.append(button("Back to entry details", () => navigate("detail")));

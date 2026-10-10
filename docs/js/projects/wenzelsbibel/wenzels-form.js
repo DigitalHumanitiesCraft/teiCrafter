@@ -2,14 +2,14 @@ import { el } from "../../editor/dom.js";
 
 /** Forms share the editor's revision ownership and recovery contract. */
 export function mountWenzelsForm(host, { title, fields, values, identity, ctx, onApply, onDelete }) {
-  const form = el("form", { class: "ed-wb-form", "aria-label": title });
+  const form = el("form", { class: "ed-form", "aria-label": title });
   form.append(el("h3", { text: title }));
   const controls = new Map();
   const initial = {};
   for (const spec of fields) {
     const value = String(values[spec.key] ?? "");
     initial[spec.key] = value;
-    const label = el("label", { class: "ed-wb-field" });
+    const label = el("label", { class: "ed-form-field" });
     label.append(el("span", { text: spec.label }));
     let input;
     if (spec.options) {
@@ -52,7 +52,7 @@ export function mountWenzelsForm(host, { title, fields, values, identity, ctx, o
   const read = () => Object.fromEntries([...controls].map(([key, input]) => [key, controlValue(input)]));
   const changed = () => Object.keys(initial).some((key) => controlValue(controls.get(key)) !== initial[key]);
   let disposed = false;
-  const message = el("p", { class: "ed-wb-feedback", role: "status" });
+  const message = el("p", { class: "ed-form-feedback", role: "status" });
   const apply = () => {
     if (disposed || ctx.readOnly() || !form.reportValidity()) return false;
     return ctx.stagedInput.commit(() => {
@@ -67,7 +67,7 @@ export function mountWenzelsForm(host, { title, fields, values, identity, ctx, o
       }
     });
   };
-  const actions = el("div", { class: "ed-wb-actions" });
+  const actions = el("div", { class: "ed-form-actions" });
   actions.append(el("button", { type: "submit", class: "ed-btn", text: "Apply", disabled: ctx.readOnly() }));
   actions.append(el("button", {
     type: "button", class: "ed-btn", text: "Cancel",

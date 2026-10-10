@@ -168,7 +168,7 @@ test("an applied correction during a recovery wait rejects the stale companion s
   await requestSwitch(page, "images.xml");
   await waitForDelayedRecovery(page);
   await page.getByRole("textbox", { name: /^Normalized reading/ }).fill("Kept correction");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   await releaseRecovery(page);
   const expected = codex.replace('norm="Gott"', 'norm="Kept correction"');
   const saved = await copy(page);

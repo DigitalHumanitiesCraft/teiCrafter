@@ -1,4 +1,4 @@
-/** Wenzelsbibel workspace: detection, default schemas, panel and flags for the workspace registry. */
+/** Wenzelsbibel workspace: detection, default schemas, panel, flags and examples for the workspace registry. */
 import { DEFAULT_SCHEMA } from "../../editor/schema-validation.js";
 import { createWenzelsWorkspace } from "./wenzels-workspace.js";
 
@@ -29,5 +29,18 @@ export const wenzelsbibel = Object.freeze({
   stagedMode: "wenzels",
   draftTeiType: DRAFT_TEI_TYPE,
   flags: Object.freeze({ modelFeatures: false }),
+  // Built-in examples, shown only on local development hosts. URLs are relative to editor.html.
+  examples: Object.freeze({
+    wb: Object.freeze({
+      label: "Wenzelsbibel", url: "data/editor/wb-codex/codex-2759.xml", file: "codex-2759.xml",
+      manifest: "data/editor/wb-codex/teicrafter.project.json",
+      done: "Loaded the real Wenzelsbibel codex (facsimile via IIIF).",
+      fallback: Object.freeze({
+        label: "synthetic Wenzelsbibel", url: "data/editor/wenzelsbibel-synthetic-codex.xml", file: "wenzelsbibel-synthetic-codex.xml",
+        project: { workspace: "wenzelsbibel", name: "Wenzelsbibel (synthetic example)" },
+        done: "Loaded the synthetic Wenzelsbibel twin (the real codex is not present here).",
+      }),
+    }),
+  }),
   createPanel: (ctx) => createWenzelsWorkspace({ ...ctx, editorialSchemaUrl: WENZELS_EDITORIAL_SCHEMA_URL, draftTeiType: DRAFT_TEI_TYPE }),
 });

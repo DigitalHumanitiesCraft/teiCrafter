@@ -51,7 +51,7 @@ export const SOURCE_LABELS = Object.freeze({
   print: 'Print',
   recipe: 'Recipe',
   bookkeeping: 'Account Book',
-  wenzelsbibel: 'Wenzelsbibel (word-level)',
+  'word-level': 'Word-level transcription',
   generic: 'Document',
 });
 
@@ -62,7 +62,7 @@ const DEFAULT_MAPPINGS = Object.freeze({
   print: 'Mapping rules:\n* <div> Chapter\n* <head> Heading\n* <p> Paragraphs\n* <pb> Page breaks\n* <persName> Person\n* <placeName> Place',
   recipe: 'Mapping rules:\n* <div type="recipe"> Recipe\n* <head> Title\n* <p> Instructions\n* <name type="ingredient"> Ingredients\n* <measure> Quantities',
   bookkeeping: 'Mapping rules:\n* <div type="account"> Account\n* <head> Account heading\n* <persName> Person\n* <placeName> Place\n* <measure unit="fl|kr" quantity="N"> Amount\n* <date when="YYYY-MM-DD"> Date',
-  wenzelsbibel: 'Mapping rules:\n* <pb facs="#surface_n"/> Folio break linked to facsimile\n* <l n="N"> Verse line\n* <lb/> Physical line break\n* <w xml:id="w_s_n"> Word token with stable id\n* <facsimile>/<surface>/<zone> Image zones\n* <standOff><note target="#w..."> Apparatus anchored to words',
+  'word-level': 'Mapping rules:\n* <pb facs="#surface_n"/> Folio break linked to facsimile\n* <l n="N"> Verse line\n* <lb/> Physical line break\n* <w xml:id="w_s_n"> Word token with stable id\n* <facsimile>/<surface>/<zone> Image zones\n* <standOff><note target="#w..."> Apparatus anchored to words',
   generic: 'Mapping rules:\n* <div> Division\n* <p> Paragraphs\n* <persName> Person\n* <placeName> Place',
 });
 

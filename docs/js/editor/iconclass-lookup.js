@@ -22,11 +22,11 @@ export function iconclassNotation(value) {
 
 /** Remote requests run only after an explicit lookup or search action. */
 export function mountIconclassLookup(host, { onPick, current, readOnly }) {
-  const box = el("details", { class: "ed-wb-reference" });
+  const box = el("details", { class: "ed-form-reference" });
   box.append(el("summary", { text: "Look up ICONCLASS" }));
   const input = el("input", { type: "search", "aria-label": "ICONCLASS notation or search term", placeholder: "11C21 or German search term" });
-  const results = el("div", { class: "ed-wb-actions" });
-  const message = el("p", { role: "status", class: "ed-wb-note" });
+  const results = el("div", { class: "ed-form-actions" });
+  const message = el("p", { role: "status", class: "ed-form-note" });
   let request = null;
   async function run(search) {
     request?.abort();
@@ -61,7 +61,7 @@ export function mountIconclassLookup(host, { onPick, current, readOnly }) {
       if (fresh()) message.textContent = error.name === "AbortError" ? "ICONCLASS lookup timed out. You can enter the URI and labels manually." : error.message;
     } finally { clearTimeout(timer); }
   }
-  box.append(input, el("div", { class: "ed-wb-actions" }, [
+  box.append(input, el("div", { class: "ed-form-actions" }, [
     el("button", { type: "button", class: "ed-btn", text: "Look up notation", disabled: readOnly(), onclick: () => { void run(false); } }),
     el("button", { type: "button", class: "ed-btn", text: "Search ICONCLASS", disabled: readOnly(), onclick: () => { void run(true); } }),
   ]), message, results);

@@ -61,17 +61,17 @@ test("linked XML changes survive recovery, working copy and one validated projec
   page.on("dialog", async (dialog) => { dialogs.push(dialog.message()); await dialog.accept(); });
   await open(page);
   await page.getByRole("textbox", { name: /^Normalized reading/ }).fill("GOTT");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   await attach(page, "Attach Image annotations", "images.xml", images);
   await attach(page, "Attach Registers", "registers.xml", registers, true);
   await activate(page, "images.xml");
   await page.getByRole("combobox", { name: "Image annotation", exact: true }).selectOption("image1");
   await page.getByRole("textbox", { name: "Image title", exact: true }).fill("Changed initial");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   await activate(page, "registers.xml");
   await page.getByRole("textbox", { name: "XML ID", exact: true }).fill("Gott");
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Gott");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   const saved = await copy(page);
   const registerChanged = saved.record.raw;
   const expected = [["codex.xml", codex.replace('norm="Gott"', 'norm="GOTT"'), true, true],
@@ -135,7 +135,7 @@ test("failed local storage keeps linked XML in memory and blocks a document swit
   });
   await open(page);
   await page.getByRole("textbox", { name: /^Normalized reading/ }).fill("Preserved");
-  await page.locator(".ed-wb-form").getByRole("button", { name: "Apply", exact: true }).click();
+  await page.locator(".ed-form").getByRole("button", { name: "Apply", exact: true }).click();
   await resources(page);
   await page.getByLabel("Attach Image annotations", { exact: true }).setInputFiles(file("images.xml", images));
   await expect(page.locator("#ed-status")).toContainText("Local recovery failed");
