@@ -12,11 +12,11 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: complete
 created: 2026-05-27
-updated: 2026-09-11
+updated: 2026-10-10
 language: en
 version: "0.23"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, journal, handoff, testing, integration, converter-reference, worked-examples, wenzelsbibel]
+related: [project, data, specification, architecture, design, plan, journal, handoff, testing, integration, converter-reference, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Knowledge Base
@@ -47,6 +47,7 @@ The required process documents are the decision [journal](journal.md) and the co
 | [Worked examples](worked-examples.md) | How do representative editorial workflows exercise those contracts? |
 | [Wenzelsbibel](wenzelsbibel.md) | Which editorial models, project forms and cross-file conventions support the Wenzelsbibel workflow? |
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
+| [Plan](plan.md) | What is planned in the base and in which order, including the refactoring that makes it derivable? |
 | [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
 | [Handoff](handoff.md) | Which received deltas still require verification and integration? |
 

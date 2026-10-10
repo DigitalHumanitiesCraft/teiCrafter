@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/handoff
 status: active
 created: 2026-09-11
-updated: 2026-10-04
+updated: 2026-10-10
 language: en
 topics: ["[[Promptotyping]]", "[[Knowledge Base]]"]
 related: [INDEX, journal]
@@ -36,4 +36,4 @@ This process inbox holds received deltas awaiting integration. Verify each sourc
   - B loses undo at every focus change, which violates F.7, and slices start without their first-line indentation. Hiding the surrounding document inside one whole-document editor would keep undo.
   - C reads well at the reading level and its click-to-caret source editing is precise, but word-level TEI becomes a wall of marks, attributes reflow lines, and every Apply re-renders the whole document.
   - Candidates for `src/`: a well-formedness reason extractor (duplicated in A and C), the outline builder from B, the `name` and `rs` entity resolver from C, an offset-tree element summary.
-- Context: Compare prototypes A, B and C under `prototypes/` in the browser and record which interaction carries into the product. Build the app shell on `src/` with the three use cases. Decide whether schema errors block Save (open decision in the specification). Then switch the GitHub Pages source from `main:/docs` to the build artifact, retire `docs/`, the legacy tests and the cluster-specific knowledge documents, and update [design.md](design.md), [testing.md](testing.md) and [project.md](project.md), which still describe the legacy editor.
+- Context: Compare prototypes A, B and C under `prototypes/` in the browser and record which interaction carries into the product. Build the app shell on `src/` with the three use cases. Decide whether schema errors block Save (open decision in the specification). The switch of the GitHub Pages source and the retirement of `docs/`, the legacy tests and the cluster-specific knowledge documents are deferred since 2026-10-10, because the legacy application is the derivable base for project-specific versions until the new editor carries an application (journal entry of 2026-10-10, steps in [plan.md](plan.md)). [design.md](design.md), [testing.md](testing.md) and [project.md](project.md) still describe the legacy editor.

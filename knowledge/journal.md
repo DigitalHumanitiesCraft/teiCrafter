@@ -12,13 +12,17 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-10-04
+updated: 2026-10-10
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
 ---
 
 # teiCrafter Decision Journal
+
+## 2026-10-10 | Decided | The legacy application becomes the derivable base
+
+The Wenzelsbibel edition project started on 2026-10-01 and expects a tool for its first meeting, and the operator wants project-specific versions of teiCrafter to be derived from a common base rather than built inside it. The source-first core under `src/` has no application shell, no manifest or workspace concept and no Schematron support, so it cannot carry a derivation yet, while the legacy application under `docs/` already runs the Wenzelsbibel workspace against the real codex. The decision is that the legacy application is the derivable base and the source-first rebuild continues as a parallel line until it carries an application; the retirement of `docs/` planned on 2026-10-04 is deferred to that point. A derivation is a Git clone with teiCrafter as upstream remote. To make the base derivable, the Wenzelsbibel code moves into a project folder, a workspace registry replaces the hard-wired references in the generic editor, and the manifest declares the schema set; the steps and their acceptance are in [plan.md](plan.md). The first derivation is `DigitalHumanitiesCraft/wenzelsbibel-teiCrafter`, which carries its own knowledge base; `wenzelsbibel.md` here keeps describing the base's implementation until the project folder exists.
 
 ## 2026-10-04 | Integrated | Shared modules extracted from the first prototype
 
