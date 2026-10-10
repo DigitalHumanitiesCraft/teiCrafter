@@ -99,20 +99,20 @@ The rebuild under `src/` continues as a parallel line until it carries an applic
 
 | Step | Status | Notes |
 | --- | --- | --- |
-| a | pending | |
-| b | pending | |
-| c | pending | |
-| d | pending | |
-| e | pending | |
+| a | completed | Module name `xml-records.js` |
+| b | completed | Generic form classes in `css/editorial-forms.css`; the project stylesheet is linked from `editor.html`, because the build inlines a small CSS asset as a `data:` URL that the editor's `style-src` policy blocks for a runtime `<link>`. The Schematron stays in `docs/schemas/` with its URL computed in the entry file |
+| c | completed | Registration in `projects/index.js`, applied lazily by the registry. The registry pulls the project module graph into the type check, which required JSDoc annotations in `facsimile.js`, `starter-profiles.js` and `page-xml-onramp.js`. The built-in example entries in `editor-app.js` still name the Wenzelsbibel example files |
+| d | completed | The served manifest stays without a schema, since `project_manifest_check.mjs` asserts that it declares none and a schema path leaving the folder is refused when the folder is opened as a project; the workspace default set applies. A declared schema wins and resolves through `schemaBaseUrl`. The manifest stays at its path |
+| e | completed | Gate steps green under Node 22 with the Node 24.13.0 toolchain check bypassed; `node test/verify.mjs` itself stops at that check on a machine without Node 24.13.0. `wenzels_project_controls_check.mjs` asserts the default schema set through `withWorkspaceDefaults` and the workspace object |
 
 Legend: completed, in progress, pending.
 
 ## Open decisions and dependencies
 
+Settled during implementation: the manifest stays at `docs/data/editor/wb-codex/`, and the generic XML helper module is `xml-records.js`.
+
 | Decision | Needed before | Recommendation |
 | --- | --- | --- |
-| Location of the Wenzelsbibel manifest: project folder, or remain at `docs/data/editor/wb-codex/` where the local example loader (`editor-app.js`) and `project_manifest_check.mjs` read it next to the local codex | Step b | Keep it in `docs/data/editor/wb-codex/`, since it is project data describing a folder, not code |
-| Name of the generic XML helper module | Step a | `xml-records.js` |
 | Whether the bottom inspector (forms from a field table) and the register autocomplete built for the wenzelsbibel-teiCrafter fork become generic base components | After step e; does not block the refactor | Generic base components, project field tables and labels stay in the fork |
 | Phase selection for a Schematron entry in the schema set, replacing the rewrite of `defaultPhase` in the workspace's review action | After step e | Add as a generic schema-set option |
 

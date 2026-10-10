@@ -1,7 +1,7 @@
-import { getAttr, getXmlId, isTeiElement, teiElementsByLocal, spliceDocument, textOf, walk } from "./tei-document.js";
+import { getAttr, getXmlId, isTeiElement, teiElementsByLocal, spliceDocument, textOf, walk } from "../../editor/tei-document.js";
 import { parseWenzelsRegisterTarget, readWenzelsRegisters, readWenzelsRegisterLinks } from "./wenzels-register-model.js";
 import { readImageAnnotations } from "./wenzels-image-model.js";
-import { children, contentText, idIndex, requireId } from "./wenzels-xml.js";
+import { children, contentText, idIndex, requireId } from "../../editor/xml-records.js";
 
 export function checkWenzelsRegisters({ registers, codex = null, images = null, name = "registers.xml" }) {
   const entries = readWenzelsRegisters(registers);

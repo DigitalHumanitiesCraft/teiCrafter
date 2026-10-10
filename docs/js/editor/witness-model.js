@@ -2,7 +2,7 @@ import { escapeAttr, escapeText, getAttrInNamespace, getXmlId, isReadingContext,
 import {
   appendChild, applyEdits, assertCurrent, attr, children, contentText, has, idIndex,
   newId, patchAttribute, patchText, requireId, resolveRecord,
-} from "./wenzels-xml.js";
+} from "./xml-records.js";
 
 const inventories = new WeakMap();
 const apparatusCache = new WeakMap();

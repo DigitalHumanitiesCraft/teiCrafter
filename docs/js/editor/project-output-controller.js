@@ -3,13 +3,13 @@ import { checkpointFromProjectDocuments, projectForSnapshot, restoreProjectDocum
 import { schemaSources, schemaSetKey, schemaGate, validateWithSchemas } from "./schema-validation.js";
 import { parseDocument } from "./tei-document.js";
 import { targetDocument, usesInlineGND } from "./interchange.js";
-import { withWenzelsDefaults } from "./wenzels-profile.js";
+import { withWorkspaceDefaults } from "./workspace-registry.js";
 
 /** Every XML file receives its own schema decision before the single download. */
 export function createProjectOutputController(ctx, { validate = validateWithSchemas } = {}) {
   let operation = null;
   const sourcesFor = (entry) => {
-    const project = withWenzelsDefaults(projectForSnapshot(entry));
+    const project = withWorkspaceDefaults(projectForSnapshot(entry));
     return schemaSources(project?.schema, entry.schemaSettings?.customSchema, project?.schemaBaseUrl, project?.localSchemas);
   };
 
@@ -24,7 +24,7 @@ export function createProjectOutputController(ctx, { validate = validateWithSche
       if (!captured?.snapshot) throw new Error("There are no project documents to export.");
       const snapshot = restoreProjectDocuments(captured.snapshot);
       for (const entry of snapshot.documents) {
-        const project = withWenzelsDefaults(projectForSnapshot(entry));
+        const project = withWorkspaceDefaults(projectForSnapshot(entry));
         if (usesInlineGND(project)) entry.raw = targetDocument(parseDocument(entry.raw), project).raw;
       }
       const current = () => operation === controller && !controller.signal.aborted && captured.isCurrent();

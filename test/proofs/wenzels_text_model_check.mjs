@@ -4,13 +4,13 @@ import {
   addBibleVerseMapping, createWenzelsComment, readBibleVerseMappings, readWenzelsComments,
   readWenzelsWords, removeBibleVerseMapping, removeWenzelsComment,
   updateBibleVerseMapping, updateWenzelsComment, updateWenzelsWord,
-} from "../../docs/js/editor/wenzels-text-model.js";
+} from "../../docs/js/projects/wenzelsbibel/wenzels-text-model.js";
 import {
   addWenzelsRegisterLink, createWenzelsRegisterEntry, createWenzelsRegistersDocument,
   parseWenzelsRegisterTarget, readWenzelsRegisterLinks, readWenzelsRegisters,
   removeWenzelsRegisterEntry, removeWenzelsRegisterLink,
   updateWenzelsRegisterEntry, updateWenzelsRegisterLink,
-} from "../../docs/js/editor/wenzels-register-model.js";
+} from "../../docs/js/projects/wenzelsbibel/wenzels-register-model.js";
 import { validateWithSchemas } from "../../docs/js/editor/schema-validation.js";
 import { check, finish, section } from "./_assert.mjs";
 

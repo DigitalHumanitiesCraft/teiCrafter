@@ -1,4 +1,4 @@
-import { el } from "./dom.js";
+import { el } from "../../editor/dom.js";
 
 /** Forms share the editor's revision ownership and recovery contract. */
 export function mountWenzelsForm(host, { title, fields, values, identity, ctx, onApply, onDelete }) {

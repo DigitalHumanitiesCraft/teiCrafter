@@ -1,18 +1,17 @@
-import { el, clear } from "./dom.js";
-import { parseDocument, getXmlId, getAttr, teiElementsByLocal, readSurfaces } from "./tei-document.js";
+import { el, clear } from "../../editor/dom.js";
+import { parseDocument, getXmlId, getAttr, teiElementsByLocal, readSurfaces } from "../../editor/tei-document.js";
 import { readImageAnnotations, updateImageAnnotation, createImageAnnotation, indexWenzelsCodex, validateImageAnnotationPointers } from "./wenzels-image-model.js";
 import { readWenzelsWords, updateWenzelsWord, readWenzelsComments, createWenzelsComment, updateWenzelsComment, removeWenzelsComment, readBibleVerseMappings, addBibleVerseMapping, updateBibleVerseMapping, removeBibleVerseMapping } from "./wenzels-text-model.js";
 import { createWenzelsRegistersDocument, readWenzelsRegisters, createWenzelsRegisterEntry, updateWenzelsRegisterEntry, removeWenzelsRegisterEntry, readWenzelsRegisterLinks, addWenzelsRegisterLink, updateWenzelsRegisterLink, removeWenzelsRegisterLink } from "./wenzels-register-model.js";
 import { mountWenzelsForm } from "./wenzels-form.js";
-import { decodeXmlBytes } from "./file-encoding.js";
-import { mountIconclassLookup } from "./iconclass-lookup.js";
-import { mountPageXmlImport } from "./page-xml-onramp.js";
-import { validateWithSchemas } from "./schema-validation.js";
-import { WENZELS_EDITORIAL_SCHEMA_URL } from "./wenzels-profile.js";
+import { decodeXmlBytes } from "../../editor/file-encoding.js";
+import { mountIconclassLookup } from "../../editor/iconclass-lookup.js";
+import { mountPageXmlImport } from "../../editor/page-xml-onramp.js";
+import { validateWithSchemas } from "../../editor/schema-validation.js";
 import { checkWenzelsRegisters, referencesRegisterSubtree, singleBranchChoices, keepSingleChoiceBranch, choiceLabel } from "./wenzels-project-checks.js";
-import { createFacsimile, plainImageTileSource } from "./facsimile.js";
-import { projectTileSource } from "./project-profiles.js";
-import { captureProjectDocuments, snapshotProjectDocument, projectForSnapshot, projectPathKey } from "./project-documents.js";
+import { createFacsimile, plainImageTileSource } from "../../editor/facsimile.js";
+import { projectTileSource } from "../../editor/project-profiles.js";
+import { captureProjectDocuments, snapshotProjectDocument, projectForSnapshot, projectPathKey } from "../../editor/project-documents.js";
 
 const SECTIONS = [
   ["diplomatic", "Transcription"], ["commentary", "Commentary"],
@@ -24,7 +23,7 @@ const field = (key, label, extra = {}) => ({ key, label, ...extra });
 
 /** A project workspace edits the active session and reads explicitly attached companions. */
 export function createWenzelsWorkspace(ctx) {
-  const { app, stagedInput, setStatus, persist, applyDocument, loadDocument } = ctx;
+  const { app, stagedInput, setStatus, persist, applyDocument, loadDocument, editorialSchemaUrl, draftTeiType } = ctx;
   let host = null;
   let section = "diplomatic";
   let selected = "";
@@ -497,7 +496,7 @@ export function createWenzelsWorkspace(ctx) {
       event.currentTarget.disabled = true;
       reviewResults.textContent = "Checking the Wenzelsbibel review profile...";
       try {
-        const response = await fetch(WENZELS_EDITORIAL_SCHEMA_URL);
+        const response = await fetch(editorialSchemaUrl);
         if (!response.ok) throw new Error("The local Wenzelsbibel schema could not be loaded.");
         const schema = (await response.text()).replace('defaultPhase="editing"', 'defaultPhase="review"');
         const results = await validateWithSchemas(doc.raw, [{ type: "schematron", name: "Wenzelsbibel editorial review", text: schema }]);
@@ -597,7 +596,7 @@ export function createWenzelsWorkspace(ctx) {
         "image-annotation": renderImages, registers: renderRegisters, checks: renderChecks,
         import: () => {
           const owner = app.sessionId;
-          importForm = mountPageXmlImport(host, { status: setStatus, readOnly: () => app.readOnly,
+          importForm = mountPageXmlImport(host, { status: setStatus, readOnly: () => app.readOnly, teiType: draftTeiType,
             onImport: async ({ raw, name, pages, warnings, order }) => {
               if (owner !== app.sessionId) throw new Error("The active document changed. Open the import again.");
               const collection = rememberActive();

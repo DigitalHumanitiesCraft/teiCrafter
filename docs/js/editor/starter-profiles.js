@@ -33,6 +33,7 @@ export function draftFilename(title) {
   return base + ".xml";
 }
 
+/** @param {{ text: string, title: string, profile?: string, metadata?: { source?: string, sender?: string, place?: string, date?: string, recipient?: string }, images?: any[] }} starter */
 export function teiFromStarter({ text, title, profile = "generic", metadata = {}, images = [] }) {
   const template = STARTER_PROFILES.find((item) => item.id === profile);
   if (!template) throw new Error("Choose a supported document starter.");

@@ -2,8 +2,12 @@ import { el } from "./dom.js";
 import { decodeXmlBytes } from "./file-encoding.js";
 import { importPageXml } from "./page-xml-import.js";
 
-/** Mount the deterministic PAGE import form; the caller owns draft/recovery transitions. */
-export function mountPageXmlImport(host, { onImport, status = () => {}, readOnly = () => false }) {
+/**
+ * Mount the deterministic PAGE import form; the caller owns draft/recovery transitions and supplies the draft TEI type.
+ * @param {HTMLElement} host
+ * @param {{ onImport: Function, status?: (message: string) => void, readOnly?: () => boolean, teiType?: string|null }} options
+ */
+export function mountPageXmlImport(host, { onImport, status = () => {}, readOnly = () => false, teiType = null }) {
   let disposed = false;
   let busy = false;
   const form = el("form", { class: "ed-wb-form", "aria-label": "Import PAGE XML" });
@@ -35,7 +39,7 @@ export function mountPageXmlImport(host, { onImport, status = () => {}, readOnly
     try {
       const selected = Array.from(files.files || []);
       const metsFile = mets.files?.[0];
-      const options = { title: title.value, order: ordering.value, teiType: "wenzelsbibel-transcription" };
+      const options = { title: title.value, order: ordering.value, teiType };
       const pageFiles = await Promise.all(selected.map(async (file) => ({ name: file.name, raw: decodeXmlBytes(await file.arrayBuffer()).text })));
       const result = importPageXml(pageFiles, {
         ...options,

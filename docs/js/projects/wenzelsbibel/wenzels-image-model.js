@@ -2,7 +2,7 @@ import {
   assertEditableEntities, escapeAttr, escapeText, getUnqualifiedAttr, getXmlId,
   isTeiElement, parseDocument, qualifyTeiMarkup, teiElementsByLocal, textNodes, textOf,
   editTextAndAttrs, walk,
-} from "./tei-document.js";
+} from "../../editor/tei-document.js";
 
 const XML_NS = "http://www.w3.org/XML/1998/namespace";
 const attr = getUnqualifiedAttr;

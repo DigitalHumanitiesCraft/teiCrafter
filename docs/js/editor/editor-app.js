@@ -80,14 +80,13 @@ import { createOutputController } from "./output-controller.js";
 import { downloadFile } from "./download-file.js";
 import { encodeWorkingCopy, decodeWorkingCopy } from "./working-copy.js";
 import { createReadingView } from "./reading-view.js";
-import { createWenzelsWorkspace } from "./wenzels-workspace.js";
 import { createWitnessWorkspace } from "./witness-workspace.js";
 import { createEntryWorkspace } from "./entry-workspace.js";
 import { canStartEntryCollection, hasEntryWorkspace, resolveEntry } from "./entry-model.js";
 import { captureProjectDocuments, restoreProjectDocuments, projectHasUnsavedDocuments } from "./project-documents.js";
 import { createProjectOutputController } from "./project-output-controller.js";
 import { editionFromDocument } from "./edition.js";
-import { isWenzelsProject, withWenzelsDefaults } from "./wenzels-profile.js";
+import { listWorkspaces, modelFeaturesAllowed, withWorkspaceDefaults, workspaceFor, workspaceForStagedMode } from "./workspace-registry.js";
 import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 import {
   parseGuidelines, elementsForScope, elementByName,
@@ -654,7 +653,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   }
   schemaProfileRequest++;
   activeSchemaProfile = null;
-  const resolvedProject = withWenzelsDefaults(project || detectProject(openedState.doc));
+  const resolvedProject = withWorkspaceDefaults(project || detectProject(openedState.doc));
   const workingDoc = workingDocument(openedState.doc, resolvedProject);
   const importedInterchange = workingDoc !== openedState.doc;
   const workingState = importedInterchange ? parseEdition(workingDoc.raw) : openedState;
@@ -717,9 +716,9 @@ function applyLoad(raw, name, handle, project, opts = {}) {
     xmlIds: xmlIdSet(app.state),
     counts: countTags(app.state.doc.raw),
   };
-  // Default context panel: the facsimile when the document has page images, the
-  // entity Index otherwise.
-  app.panel = isWenzelsProject(app.project) ? "wenzels" : entriesAllowed() && hasEntryWorkspace(app.state.doc) ? "entries" : docHasImages() ? "facs" : "index";
+  // Default context panel: the project workspace's panel, else entries, the
+  // facsimile when the document has page images, the entity Index otherwise.
+  app.panel = workspaceFor(app.project)?.panel.id || (entriesAllowed() && hasEntryWorkspace(app.state.doc) ? "entries" : docHasImages() ? "facs" : "index");
   app.entryWorkspaceEnabled = hasEntryWorkspace(app.state.doc);
   // F4: the reading variant resets to diplomatic per load; applyDocLayout then
   // restores the persisted value when this document had one.
@@ -2041,9 +2040,10 @@ const PANELS = [
 
 function activePanels() {
   const extra = app.project && Array.isArray(app.project.panels) ? app.project.panels : [];
-  const projectPanels = isWenzelsProject(app.project) ? [{
-    id: "wenzels", label: "Wenzelsbibel", title: "Transcription, apparatus, Bible verses, image annotations and shared registers",
-    render: () => wenzelsWorkspace.render(panelHost({ id: "wenzels" })),
+  const workspace = workspaceFor(app.project);
+  const projectPanels = workspace ? [{
+    ...workspace.panel,
+    render: () => projectWorkspaces.get(workspace.id).render(panelHost({ id: workspace.panel.id })),
   }] : [];
   return projectPanels.concat(PANELS, extra);
 }
@@ -2611,12 +2611,13 @@ const documentFacts = createDocumentFacts({
       stagedInput.restore(staged.value);
       return;
     }
-    if (staged.mode === "wenzels") {
+    const stagedWorkspace = workspaceForStagedMode(staged.mode);
+    if (stagedWorkspace) {
       app.sourceMode = false;
-      app.panel = "wenzels";
+      app.panel = stagedWorkspace.panel.id;
       app.folio = Math.max(0, Math.min(staged.folio, app.state.folios.length - 1));
       render();
-      wenzelsWorkspace.restore(staged.value, panelHost({ id: "wenzels" }));
+      projectWorkspaces.get(stagedWorkspace.id).restore(staged.value, panelHost({ id: stagedWorkspace.panel.id }));
       return;
     }
     app.sourceMode = staged.mode === "inline" ? false : staged.mode;
@@ -2675,7 +2676,7 @@ function projectContextCurrent() {
     && images.length === app.pageImages.size && images.every(([key, item]) => app.pageImages.get(key) === item);
 }
 
-const wenzelsWorkspace = createWenzelsWorkspace({
+const projectWorkspaceContext = {
   ...workspaceContext,
   schemaSnapshot: () => validationView.recoverySettings(),
   loadDocument: async (raw, name, project, draft = false, encoding = null, projectDocuments = null) => {
@@ -2704,7 +2705,8 @@ const wenzelsWorkspace = createWenzelsWorkspace({
     }
     return loaded;
   },
-});
+};
+const projectWorkspaces = new Map(listWorkspaces().map((workspace) => [workspace.id, workspace.createPanel(projectWorkspaceContext)]));
 const projectOutput = createProjectOutputController({
   capture: () => {
     if (!app.state) return null;
@@ -2776,7 +2778,7 @@ const genModal = setupGenModal({
   authorizeDocumentReplacement, beginAiJob, aiJobCurrent, finishAiJob, abortAiJob,
 });
 function applyLlmGate() {
-  const on = llmEnabled() && !isWenzelsProject(app.project);
+  const on = llmEnabled() && modelFeaturesAllowed(app.project);
   $("btn-generate").hidden = !on;
   const propose = $("btn-propose");
   if (propose) propose.hidden = !on || app.readOnly;
@@ -2788,7 +2790,7 @@ function applyLlmGate() {
 // on-ramp set (in memory); without a key the call fails with a clear hint.
 async function proposeOnFolio() {
   if (app.readOnly) return;
-  if (isWenzelsProject(app.project)) return;
+  if (!modelFeaturesAllowed(app.project)) return;
   if (!app.state || !llmEnabled()) return;
   if (app.sourceMode) {
     setStatus("Return to Reading text before requesting annotation proposals.");

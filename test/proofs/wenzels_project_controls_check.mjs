@@ -1,11 +1,13 @@
 import { parseDocument, firstTeiByLocal, editTextAndAttrs, getXmlId } from "../../docs/js/editor/tei-document.js";
 import { inventoryDocument } from "../../docs/js/editor/document-inventory.js";
 import { iconclassNotation } from "../../docs/js/editor/iconclass-lookup.js";
-import { isWenzelsProject, withWenzelsDefaults, WENZELS_EDITORIAL_SCHEMA_URL } from "../../docs/js/editor/wenzels-profile.js";
-import { checkWenzelsRegisters, referencesRegisterId, singleBranchChoices, keepSingleChoiceBranch, choiceLabel } from "../../docs/js/editor/wenzels-project-checks.js";
-import { createWenzelsRegistersDocument, createWenzelsRegisterEntry } from "../../docs/js/editor/wenzels-register-model.js";
-import { readWenzelsWords, updateWenzelsWord } from "../../docs/js/editor/wenzels-text-model.js";
+import { WENZELS_EDITORIAL_SCHEMA_URL } from "../../docs/js/projects/wenzelsbibel/index.js";
+import { workspaceFor, withWorkspaceDefaults } from "../../docs/js/editor/workspace-registry.js";
+import { checkWenzelsRegisters, referencesRegisterId, singleBranchChoices, keepSingleChoiceBranch, choiceLabel } from "../../docs/js/projects/wenzelsbibel/wenzels-project-checks.js";
+import { createWenzelsRegistersDocument, createWenzelsRegisterEntry } from "../../docs/js/projects/wenzelsbibel/wenzels-register-model.js";
+import { readWenzelsWords, updateWenzelsWord } from "../../docs/js/projects/wenzelsbibel/wenzels-text-model.js";
 import { check, finish, section } from "./_assert.mjs";
+const isWenzelsProject = (project) => workspaceFor(project)?.id === "wenzelsbibel";
 
 function rejects(action) { try { action(); return false; } catch { return true; } }
 function documentWith(content) {
@@ -81,18 +83,18 @@ for (const input of ["", "11C21\n11C22", "https://example.org/11C21", "https://i
 
 section("Explicit Wenzelsbibel profile and schema ownership");
 const ordinary = { id: "another-project", views: [{ key: "image-annotation" }] };
-check("an image-annotation view alone does not identify Wenzelsbibel", !isWenzelsProject(ordinary) && withWenzelsDefaults(ordinary) === ordinary);
-check("an unrelated project remains unchanged", withWenzelsDefaults({ id: "another" }).schema === undefined);
+check("an image-annotation view alone does not identify Wenzelsbibel", !isWenzelsProject(ordinary) && withWorkspaceDefaults(ordinary) === ordinary);
+check("an unrelated project remains unchanged", withWorkspaceDefaults({ id: "another" }).schema === undefined);
 check("an explicit workspace declaration identifies Wenzelsbibel", !!isWenzelsProject({ workspace: "wenzelsbibel" }));
 const identified = { id: "wenzelsbibel", name: "WB" };
-const defaults = withWenzelsDefaults(identified);
+const defaults = withWorkspaceDefaults(identified);
 check("default schema installation preserves the original project object", defaults !== identified && !identified.schema);
 check("the default schema order is vocabulary then editorial checks", defaults.schema.schemas.length === 2
   && defaults.schema.schemas[0].type === "relaxng" && defaults.schema.schemas[1].type === "schematron"
   && defaults.schema.schemas[1].path === WENZELS_EDITORIAL_SCHEMA_URL);
-check("default installation is idempotent", withWenzelsDefaults(defaults) === defaults);
+check("default installation is idempotent", withWorkspaceDefaults(defaults) === defaults);
 const explicitSchema = { workspace: "wenzelsbibel", schema: { schemas: [{ type: "relaxng", path: "project.rng" }] }, localSchemas: { "project.rng": "Source" } };
-check("explicit project schemas and local resources retain identity", withWenzelsDefaults(explicitSchema) === explicitSchema);
+check("explicit project schemas and local resources retain identity", withWorkspaceDefaults(explicitSchema) === explicitSchema);
 
 section("Document inventory cache and ordered distinct values");
 const inventoryRaw = `<?xml-model href="schema.rng" schematypens="http://relaxng.org/ns/structure/1.0"?><TEI xmlns="http://www.tei-c.org/ns/1.0" xmlns:f="urn:foreign" type="original"><text><body><p><w xml:id="one" norm="β" facs="#z one.jpg">One</w><w norm="a"/><w norm="β"/><w norm=""/><w norm="&#97;"/><f:w norm="foreign"/><w f:norm="qualified"/><w norm="constructor"/><w norm="__proto__"/><w norm="toString"/></p></body></text></TEI>`;

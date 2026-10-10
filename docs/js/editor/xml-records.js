@@ -1,4 +1,4 @@
-/** Shared lossless XML operations for the Wenzelsbibel workspaces. */
+/** Shared lossless XML record operations: ID index, patches, appends and guarded removal. */
 import {
   escapeAttr, escapeText, getAttrObjInNamespace, getXmlId, isTeiElement,
   parseDocument, qualifyTeiMarkup, textNodes, textOf, walk,

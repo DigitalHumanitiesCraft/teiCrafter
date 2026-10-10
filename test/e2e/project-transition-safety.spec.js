@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { decodeWorkingCopy } from "../../docs/js/editor/working-copy.js";
-import { createWenzelsRegistersDocument } from "../../docs/js/editor/wenzels-register-model.js";
+import { createWenzelsRegistersDocument } from "../../docs/js/projects/wenzelsbibel/wenzels-register-model.js";
 
 const header = '<teiHeader><fileDesc><titleStmt><title>Project transition proof</title></titleStmt><publicationStmt><p>Synthetic test</p></publicationStmt><sourceDesc><p>Synthetic source</p></sourceDesc></fileDesc></teiHeader>';
 const codex = `<TEI xmlns="http://www.tei-c.org/ns/1.0" type="wenzelsbibel-transcription">${header}<text><body><p><w xml:id="w1" orig="got" norm="Gott">got</w></p></body></text></TEI>`;

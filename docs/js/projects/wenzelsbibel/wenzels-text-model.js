@@ -2,12 +2,12 @@
 import {
   escapeAttr, escapeText, getUnqualifiedAttr, getXmlId, isReadingContext, isReadingText, isTeiElement,
   qualifyTeiMarkup, teiElementsByLocal, textNodes, textOf, walk,
-} from "./tei-document.js";
-import { readingCellVisible } from "./reading-policy.js";
+} from "../../editor/tei-document.js";
+import { readingCellVisible } from "../../editor/reading-policy.js";
 import {
   appendChild, applyEdits, attr, children, contentText, has, idIndex, newId, noteXml,
   patchAttribute, patchNotes, patchText, readNotes, removeRecord, requireId, resolveRecord, topLevelStandOff,
-} from "./wenzels-xml.js";
+} from "../../editor/xml-records.js";
 
 const COMMENT_TYPES = new Set(["comment_edition", "comment_understanding"]);
 const indexes = new WeakMap();

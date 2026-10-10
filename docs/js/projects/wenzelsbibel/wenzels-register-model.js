@@ -1,10 +1,10 @@
 /** Separate Wenzelsbibel authority registers and source-linked mentions. */
-import { escapeAttr, escapeText, getXmlId, parseDocument } from "./tei-document.js";
+import { escapeAttr, escapeText, getXmlId, parseDocument } from "../../editor/tei-document.js";
 import { appendWenzelsStandOff, wenzelsWordRange } from "./wenzels-text-model.js";
 import {
   appendChild, applyEdits, assertUnreferenced, attr, children, contentText, has, idIndex, newId,
   patchAttribute, patchText, removeRecord, requireId, resolveRecord, topLevelStandOff,
-} from "./wenzels-xml.js";
+} from "../../editor/xml-records.js";
 
 const KINDS = {
   person: { list: "listPerson", entry: "person", name: "persName" },

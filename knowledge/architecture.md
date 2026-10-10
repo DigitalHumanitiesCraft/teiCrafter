@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: complete
 created: 2026-02-05
-updated: 2026-10-04
+updated: 2026-10-10
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
@@ -108,15 +108,33 @@ Mutation modules preserve semantic no-ops and refuse operations without a lossle
 | Unit XML | Exact unit-span substitution in the complete document |
 | Entries | `entry-model.js` supplies unambiguous scalar mappings, creation, ID-safe duplication, protected deletion and revision-bound batch plans |
 | Witnesses | `witness-model.js` inventories definitions, groups and direct attestation, supplies explicit reading states and guards referenced identifiers |
-| Wenzelsbibel | `wenzels-text-model.js`, `wenzels-image-model.js` and `wenzels-register-model.js` edit source-preserving project records |
+| Wenzelsbibel | `wenzels-text-model.js`, `wenzels-image-model.js` and `wenzels-register-model.js` in the project folder edit source-preserving project records |
 
 `entry-workspace.js` adds list filtering, detail forms, creation, reference navigation and batch preview. Display sorting preserves XML order. Duplication rewrites supported internal pointers within the copied source; deletion checks descendant references within the active document. A confirmed batch becomes one canonical change and one history step. Restored fields and targets require a newly computed preview. [Data](data.md#entry-and-witness-encodings) specifies the supported encodings and pointer limits.
 
 `witness-workspace.js` uses the shared staged contract for descriptions, exact witness XML and reading assignments. Reading projection discloses missing, ambiguous, omitted and fragment-boundary states. It does not infer inherited attestation from grouping or reconstruct unencoded witness text.
 
-`wenzels-workspace.js` composes the project panels over the ordinary session and retained companion collection. `wenzels-form.js` supplies staged ownership. `wenzels-project-checks.js` checks linked records and offers a narrowly guarded, explicit sole-reading repair. `wenzels-profile.js` supplies project defaults; `iconclass-lookup.js` guards user-triggered requests against stale completion. `page-xml-import.js` and `page-xml-onramp.js` produce a separate draft through the same guarded load boundary. [Wenzelsbibel](wenzelsbibel.md) owns these editorial rules.
+`xml-records.js` supplies the lossless record operations shared by the witness and project models: ID index, new identifiers, attribute and text patches, child appends, guarded removal and note patching.
 
 `starter-profiles.js` and `image-onramp.js` create deterministic TEI for explicitly selected source templates. They do not rebuild existing XML. Starter drafts enter the normal session, recovery and output paths; template availability does not establish a complete specialized workspace.
+
+### Project workspaces
+
+The generic editor under `docs/js/editor/` names no project. Project code lives under `docs/js/projects/<id>/`, behind one entry file `index.js` that exports a workspace object. `docs/js/projects/index.js` is the single registration point listing the installed entry files; a derived tool adds its own entry there. `workspace-registry.js` registers those objects lazily on first use and answers the generic editor's questions:
+
+| Workspace field | Consumer |
+| --- | --- |
+| `id` | `project-manifest.js` accepts `workspace` only for a registered id; `workspaceFor` selects a workspace from a manifest's `workspace` or a detected profile's `id` |
+| `profile` (TEI types, PID pattern, IIIF image template) | `project-profiles.js` detection after the built-in profiles |
+| `defaultSchemas` | `withWorkspaceDefaults`, applied on open and per member in `project-output-controller.js` when a project declares no schema |
+| `panel`, `createPanel(ctx)` | `editor-app.js`: default panel on open, panel list, panel instance |
+| `stagedMode` | `working-copy.js` staged-mode check and the staged restore in `editor-app.js` |
+| `draftTeiType` | PAGE import draft type, passed through `mountPageXmlImport` |
+| `flags.modelFeatures` | `editor-app.js` hides model features when `false` |
+
+A declared project schema takes precedence over the default set. The default stays necessary because a granted project folder resolves schema paths only inside that folder, so a manifest cannot reference a schema shipped with the application. Workspace stylesheets are linked from `editor.html`; the shared form, action and note classes (`ed-wb-*`) of the editorial workspaces live in `css/editorial-forms.css`.
+
+In `docs/js/projects/wenzelsbibel/`, `wenzels-workspace.js` composes the project panels over the ordinary session and retained companion collection. `wenzels-form.js` supplies staged ownership. `wenzels-project-checks.js` checks linked records and offers a narrowly guarded, explicit sole-reading repair. `index.js` holds detection, the default schema set (TEI All and `schemas/wenzelsbibel-editorial.sch`), panel, staged mode, draft type and flags; `wenzels-workspace.css` holds the panel rules. The generic `iconclass-lookup.js` guards user-triggered requests against stale completion. `page-xml-import.js` and `page-xml-onramp.js` produce a separate draft through the same guarded load boundary. [Wenzelsbibel](wenzelsbibel.md) owns these editorial rules.
 
 ## Annotation and review projections
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { parseDocument } from "../../docs/js/editor/tei-document.js";
-import { readWenzelsRegisters, removeWenzelsRegisterEntry } from "../../docs/js/editor/wenzels-register-model.js";
-import { referencesRegisterId, referencesRegisterSubtree } from "../../docs/js/editor/wenzels-project-checks.js";
+import { readWenzelsRegisters, removeWenzelsRegisterEntry } from "../../docs/js/projects/wenzelsbibel/wenzels-register-model.js";
+import { referencesRegisterId, referencesRegisterSubtree } from "../../docs/js/projects/wenzelsbibel/wenzels-project-checks.js";
 
 const entry = '<org xml:id="people-1" type="people"><orgName xml:id="people-name">Synthetic people</orgName><note><foreign:detail xmlns:foreign="urn:test" xml:id="deep-identity">Retained source</foreign:detail></note></org>';
 const spare = '<org xml:id="spare" type="people"><orgName>Unreferenced people</orgName></org>';

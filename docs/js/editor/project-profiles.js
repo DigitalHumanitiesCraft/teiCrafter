@@ -5,19 +5,18 @@
  * decision 2026-06-10): a profile is detected from the loaded document itself
  * and contributes project-specific behavior when a manifest is unavailable.
  * A profile may be detected from a narrow root or publicationStmt signature.
- * The Wenzelsbibel profile contributes an image resolver that turns a surface's
- * <graphic url> into an OpenSeadragon tile source. The codex references its page images by bare filename
- * (e.g. "00000010.jpg") while the ÖNB serves them through the IIIF Image API
- * as .jp2; the resolver maps filename -> info.json URL so OSD deep-zooms real
- * tiles instead of fetching one enormous plain jpg. When the manifest lands
- * (WB-AP3 / M2.9 "Open project folder"), a manifest entry populates the same
- * shape; PID detection stays the fallback for bare files opened without a
- * project folder.
+ * Registered project workspaces contribute further profiles after the built-in
+ * ones. A profile may carry an image template that turns a surface's bare
+ * <graphic url> filename into an IIIF info.json tile source, so OpenSeadragon
+ * deep-zooms real tiles instead of fetching one large plain image. A manifest
+ * entry populates the same shape; detection stays the fallback for bare files
+ * opened without a project folder.
  *
- * Pure module: imports only tei-document.js, touches no DOM, mutates nothing.
+ * Pure module: touches no DOM, mutates nothing.
  */
 
 import { firstByLocal, elementsByLocal, getAttr, decodeEntities } from "./tei-document.js";
+import { workspaceProfiles } from "./workspace-registry.js";
 
 const PROFILES = [
   {
@@ -26,15 +25,6 @@ const PROFILES = [
     teiType: "naegeli",
     interchange: "inline-gnd",
     exportableEntityTypes: ["person", "org", "work"],
-  },
-  {
-    id: "wenzelsbibel",
-    teiTypes: ["wenzelsbibel-registers", "wenzelsbibel-transcription"],
-    name: "Wenzelsbibel (Codex 2759)",
-    pidPattern: /^o:wen\./,
-    // {stem} is the graphic filename without its extension. OpenSeadragon
-    // accepts the info.json URL string directly as a IIIF tile source.
-    iiifImageTemplate: "https://iiif.onb.ac.at/images/REPO/8977428/{stem}.jp2/info.json",
   },
 ];
 
@@ -53,13 +43,14 @@ export function readPid(doc) {
 
 /** Detect the built-in profile for a loaded document, or null. */
 export function detectProject(doc) {
+  const profiles = [...PROFILES, ...workspaceProfiles()];
   const tei = firstByLocal(doc.root, "TEI");
   const rootType = getAttr(tei, "type");
-  const rootProfile = PROFILES.find((p) => (p.teiType && p.teiType === rootType) || p.teiTypes?.includes(rootType));
+  const rootProfile = profiles.find((p) => (p.teiType && p.teiType === rootType) || p.teiTypes?.includes(rootType));
   if (rootProfile) return rootProfile;
   const pid = readPid(doc);
   if (!pid) return null;
-  return PROFILES.find((p) => p.pidPattern && p.pidPattern.test(pid)) || null;
+  return profiles.find((p) => p.pidPattern && p.pidPattern.test(pid)) || null;
 }
 
 /**

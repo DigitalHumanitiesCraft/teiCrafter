@@ -56,7 +56,7 @@ export function plainImageTileSource(url) {
 export function createFacsimile(hostEl, opts = {}) {
   const tileSourceFor = typeof opts.tileSourceFor === "function" ? opts.tileSourceFor : plainImageTileSource;
   const coordScale = Number.isFinite(opts.coordScale) && opts.coordScale > 0 ? opts.coordScale : 1;
-  const hasOSD = typeof window !== "undefined" && window.OpenSeadragon;
+  const hasOSD = typeof window !== "undefined" && /** @type {any} */ (window).OpenSeadragon;
 
   // Per-controller state. The OSD instance is reused across pages when possible
   // (viewer.open(newTileSource)); overlays are torn down and rebuilt each page.
@@ -143,7 +143,7 @@ export function createFacsimile(hostEl, opts = {}) {
     osdHost.style.width = "100%";
     osdHost.style.height = "100%";
     hostEl.appendChild(osdHost);
-    viewer = window.OpenSeadragon({
+    viewer = /** @type {any} */ (window).OpenSeadragon({
       element: osdHost,
       prefixUrl: OSD_PREFIX,
       showNavigator: false,
@@ -163,6 +163,7 @@ export function createFacsimile(hostEl, opts = {}) {
 
   // ---- public: show a page -------------------------------------------------
 
+  /** @param {{ imageUrl?: string|null, surface?: any, onZoneEnter?: Function, onZoneLeave?: Function, onZoneClick?: Function, focusZoneId?: string|null }} [page] */
   function showPage({ imageUrl, surface, onZoneEnter, onZoneLeave, onZoneClick, focusZoneId = null } = {}) {
     if (!hasOSD) {
       if (!warned) {

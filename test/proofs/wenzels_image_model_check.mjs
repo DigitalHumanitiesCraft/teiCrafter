@@ -4,7 +4,7 @@ import { parseDocument, teiElementsByLocal, getXmlId } from "../../docs/js/edito
 import {
   createImageAnnotation, indexWenzelsCodex, readImageAnnotation, readImageAnnotations,
   updateImageAnnotation, validateImageAnnotationPointers,
-} from "../../docs/js/editor/wenzels-image-model.js";
+} from "../../docs/js/projects/wenzelsbibel/wenzels-image-model.js";
 import { validateWithSchemas } from "../../docs/js/editor/schema-validation.js";
 
 const source = `<?xml version="1.0"?>

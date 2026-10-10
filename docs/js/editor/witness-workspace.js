@@ -1,5 +1,5 @@
 import { clear, el } from "./dom.js";
-import { contentText, attr } from "./wenzels-xml.js";
+import { contentText, attr } from "./xml-records.js";
 import { createWitness, deleteWitness, updateWitness, updateWitnessXml, updateReadingWitnesses, witnessInventory, witnessReadingPolicy } from "./witness-model.js";
 
 export function createWitnessWorkspace(ctx) {

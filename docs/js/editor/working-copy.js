@@ -1,5 +1,6 @@
 /** Portable, unvalidated editing state, including pending XML and image bytes. */
 import { restoreProjectDocuments } from "./project-documents.js";
+import { workspaceStagedModes } from "./workspace-registry.js";
 
 async function encodeImages(items) {
   const images = [];
@@ -34,7 +35,8 @@ export function decodeWorkingCopy(text) {
     throw new Error("This is not a supported teiCrafter working copy.");
   }
   const record = data.record;
-  if (record.staged && (!['page', 'metadata', 'metadata-form', 'inline', 'wenzels', 'witness', 'entries'].includes(record.staged.mode)
+  const workspaceModes = workspaceStagedModes();
+  if (record.staged && (![...['page', 'metadata', 'metadata-form', 'inline', 'witness', 'entries'], ...workspaceModes].includes(record.staged.mode)
     || !Number.isInteger(record.staged.folio)
     || (record.staged.mode === 'witness' ? typeof record.staged.value?.selected !== 'string'
       || typeof record.staged.value?.creating !== 'boolean' || !plainFields(record.staged.value?.fields)
@@ -42,7 +44,7 @@ export function decodeWorkingCopy(text) {
       || typeof record.staged.value?.selected !== 'string' || !['dictionary', 'articles'].includes(record.staged.value?.kind)
       || !plainFields(record.staged.value?.fields) || !Array.isArray(record.staged.value?.targets)
       || record.staged.value.targets.some((id) => typeof id !== 'string')
-      : record.staged.mode === 'wenzels' ? typeof record.staged.value?.section !== 'string'
+      : workspaceModes.includes(record.staged.mode) ? typeof record.staged.value?.section !== 'string'
       || !record.staged.value?.fields || typeof record.staged.value.fields !== 'object' || Array.isArray(record.staged.value.fields)
       : record.staged.mode === 'metadata-form' ? !Array.isArray(record.staged.value)
       : record.staged.mode === 'inline' ? typeof record.staged.value?.core !== 'string' || typeof record.staged.cellId !== 'string'

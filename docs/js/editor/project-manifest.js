@@ -79,6 +79,7 @@
 
 import { elementByName } from "./tei-guidelines.js";
 import { normalizeSchemaSet } from "./schema-set.js";
+import { workspaceById } from "./workspace-registry.js";
 
 export const MANIFEST_FILENAME = "teicrafter.project.json";
 export const MANIFEST_VERSION = 1;
@@ -323,7 +324,7 @@ export function parseManifest(input) {
   if (!m || typeof m !== "object" || Array.isArray(m)) fail("not a JSON object");
   if (m.teicrafter !== MANIFEST_VERSION) fail(`"teicrafter" must be ${MANIFEST_VERSION} (got ${JSON.stringify(m.teicrafter)})`);
   if (typeof m.name !== "string" || !m.name.trim()) fail('"name" is missing');
-  if (m.workspace !== undefined && m.workspace !== "wenzelsbibel") fail('"workspace" must name a supported built-in workspace');
+  if (m.workspace !== undefined && !workspaceById(m.workspace)) fail('"workspace" must name a supported built-in workspace');
 
   let iiifImageTemplate = null;
   let iiifPresentationManifest = null;
