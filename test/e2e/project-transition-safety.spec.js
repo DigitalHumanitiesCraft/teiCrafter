@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { decodeWorkingCopy } from "../../docs/js/editor/working-copy.js";
 import { createWenzelsRegistersDocument } from "../../docs/js/projects/wenzelsbibel/wenzels-register-model.js";
+import { recoveryRecords } from "./helpers/recovery-records.js";
 
 const header = '<teiHeader><fileDesc><titleStmt><title>Project transition proof</title></titleStmt><publicationStmt><p>Synthetic test</p></publicationStmt><sourceDesc><p>Synthetic source</p></sourceDesc></fileDesc></teiHeader>';
 const codex = `<TEI xmlns="http://www.tei-c.org/ns/1.0" type="wenzelsbibel-transcription">${header}<text><body><p><w xml:id="w1" orig="got" norm="Gott">got</w></p></body></text></TEI>`;
@@ -63,22 +64,8 @@ const entry = (record, name) => record.projectDocuments.documents.find((item) =>
 const expectCustom = (settings) => expect(settings?.customSchema).toMatchObject({ name: "codex-session.sch", text: customSchema });
 
 async function latestRecovery(page, name) {
-  return page.evaluate(async (docName) => {
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open("teicrafter.recovery");
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    return new Promise((resolve, reject) => {
-      const request = db.transaction("sessions").objectStore("sessions").getAll();
-      request.onsuccess = () => {
-        db.close();
-        resolve(request.result.filter((record) => record.docName === docName)
-          .sort((left, right) => right.savedAt.localeCompare(left.savedAt))[0] || null);
-      };
-      request.onerror = () => { db.close(); reject(request.error); };
-    });
-  }, name);
+  return (await recoveryRecords(page)).filter((record) => record.docName === name)
+    .sort((left, right) => right.savedAt.localeCompare(left.savedAt))[0] || null;
 }
 
 async function expectSeparateSchemas(page, activeName) {
@@ -176,6 +163,11 @@ test("an applied correction during a recovery wait rejects the stale companion s
   expect(entry(saved, "codex.xml")).toMatchObject({ raw: expected, dirty: true, fileEncoding: { encoding: "UTF-8", bom: true } });
   expect(entry(saved, "images.xml").raw).toBe(images);
   await expect.poll(async () => (await latestRecovery(page, "codex.xml"))?.raw).toBe(expected);
+  // Each document's XML is stored once: the active entry shares the checkpoint's text.
+  const stored = await latestRecovery(page, "codex.xml");
+  expect({ top: stored.storedAs, active: stored.activeStored }).toEqual({ top: "blob:application/xml", active: "none" });
+  expect(entry(stored, "codex.xml").raw).toBe(expected);
+  expect(entry(stored, "images.xml").raw).toBe(images);
   await activate(page, "images.xml");
   await activate(page, "codex.xml");
   expect((await copy(page)).raw).toBe(expected);

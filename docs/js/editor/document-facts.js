@@ -25,7 +25,7 @@
 
 import { el, clear } from "./dom.js";
 import { typeForFile } from "./project-manifest.js";
-import { captureCheckpoint, createRecoveryStore, migrateLegacyDraft } from "./session-recovery.js";
+import { captureCheckpoint, createRecoveryStore, detachCheckpoint, migrateLegacyDraft, readCheckpoint } from "./session-recovery.js";
 import { createRecoveryCoordinator } from "./recovery-coordinator.js";
 import { requireCtx } from "./ctx.js";
 import { unitTerms } from "./unit-labels.js";
@@ -50,6 +50,7 @@ export function createDocumentFacts(ctx) {
     capture: () => app.state && app.recoveryId
       ? captureCheckpoint(app, ctx.stagedSnapshot?.() || null, ctx.schemaSnapshot?.() || null) : null,
     onError: reportRecoveryError,
+    clone: detachCheckpoint,
   });
 
   /** A plain explanation of a failed checkpoint; browser messages may end in their own period. */
@@ -225,7 +226,12 @@ export function createDocumentFacts(ctx) {
     box.appendChild(sec);
   }
 
-  async function restoreDraft(record) {
+  async function restoreDraft(stored) {
+    let record;
+    try { record = await readCheckpoint(stored); } catch (err) {
+      setStatus(`Could not restore local work: ${String(err?.message || err).replace(/\.+$/, "")}. The stored checkpoint was kept.`);
+      return false;
+    }
     // Load the stored raw with no handle, then re-mark it as a handle-less draft
     // so Save falls back to a download and the strip wording matches a draft.
     const project = projectForSnapshot(record);

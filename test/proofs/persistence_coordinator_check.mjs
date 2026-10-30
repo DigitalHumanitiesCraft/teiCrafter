@@ -37,6 +37,29 @@ assert.deepEqual(events, [
 ]);
 assert.deepEqual(errors, ["QuotaExceededError"]);
 
+// Captures made while a write runs join one waiting batch, the latest capture of an id
+// is the one written, and every caller learns that its state is stored.
+{
+  const gate = deferred();
+  const writes = [];
+  let raw = "edit 0";
+  const coalescing = createRecoveryCoordinator({
+    capture: () => ({ id: "codex", raw }),
+    store: { put: async (value) => { writes.push(value.raw); await gate.promise; }, remove: async () => {}, list: async () => [] },
+    onError: (error) => { throw error; },
+  });
+  const pending = [coalescing.persist()];
+  await new Promise((done) => setTimeout(done));
+  for (let edit = 1; edit <= 50; edit++) {
+    raw = `edit ${edit}`;
+    pending.push(coalescing.persist());
+  }
+  gate.resolve();
+  assert.deepEqual(await Promise.all(pending), pending.map(() => true));
+  assert.deepEqual(writes, ["edit 0", "edit 50"], "the running write and then only the last edit are written");
+  await coalescing.flush();
+}
+
 function fixture(overrides = {}) {
   const state = { sessionId: 1, revision: 0, staged: false, dirty: true, writes: [], aborts: 0,
     closes: 0, saved: 0, removed: [], persisted: 0, downloads: [], statuses: [], imageCalls: 0 };
@@ -166,4 +189,4 @@ function fixture(overrides = {}) {
   assert.equal(await f.output.download("inline-gnd"), false, "every export resolves visible input");
   assert.equal(f.state.downloads.length, 0);
 }
-console.log("PASS: immutable recovery queue, quota recovery, output ownership, staged edits, conflicts, fallback and delayed writes.");
+console.log("PASS: immutable recovery queue, coalesced checkpoints, quota recovery, output ownership, staged edits, conflicts, fallback and delayed writes.");
