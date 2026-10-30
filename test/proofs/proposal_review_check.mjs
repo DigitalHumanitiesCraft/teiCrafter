@@ -2,7 +2,7 @@
  * Proof: per-construct confirm / reject for AI-proposed constructs
  * (proposal-review.js), the human gate generalised beyond entity mentions.
  *
- *   - confirm drops the @resp marker, keeping the construct and the reading text;
+ *   - confirm records acceptance and keeps the @resp origin, the construct and the reading text;
  *   - reject unwraps a reading-text wrapper (entity/markup/criticism) so the text
  *     is restored byte-for-byte (the exact inverse of the wrap), removes a standOff
  *     <note>, and removes a <gap/>;
@@ -61,7 +61,7 @@ function aiNoteEl(raw) {
   return elementsByLocal(doc.root, "note").find((n) => getAttr(n, "resp") === AI_RESP) || null;
 }
 
-// --- 1. confirm drops @resp, keeps the construct and the reading text ---------
+// --- 1. confirm keeps origin, the construct and the reading text ---------
 {
   const el = layerEl(base, "Schuchardt", "persName");
   check(!!el, "the proposed persName projects as an AI layer");
@@ -115,7 +115,7 @@ function aiNoteEl(raw) {
   check(readBefore === readAfter, "removing the standOff note leaves the reading text unchanged");
 }
 
-// --- 5. gap: confirm drops @resp, reject removes the marker -------------------
+// --- 5. gap: confirm keeps origin, reject removes the marker -------------------
 {
   const gsrc = "<TEI><text><body><p><lb/>verbum</p></body></text></TEI>";
   const st = parseEdition(gsrc);
@@ -154,7 +154,7 @@ function aiNoteEl(raw) {
 console.log("=".repeat(66));
 if (failed === 0) {
   console.log(`PASSED (${passed}/${passed})`);
-  console.log("AI-proposed constructs of any kind confirm (drop @resp) or reject (remove) losslessly.");
+  console.log("AI-proposed constructs of any kind confirm (origin retained) or reject (remove) losslessly.");
   process.exit(0);
 } else {
   console.log(`FAILED (${passed}/${passed + failed}, ${failed} failing)`);

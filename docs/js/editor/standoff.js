@@ -44,10 +44,10 @@ import {
 import { parseEdition } from "./edition.js";
 import { resolvedSpanGroups, spanEntityId } from "./span-projection.js";
 
-// Responsibility pointer marking an AI-proposed, human-unverified entity. The
-// editor renders these violet (per design.md) until a human confirms (drops the
-// marker) or rejects (deletes the entity). It is a TEI @resp value, so it stays
-// schema-valid and round-trips losslessly.
+// Responsibility pointer marking AI-proposed content. The editor renders it violet
+// (per design.md). Confirmation keeps the pointer, records acceptance in @ana and
+// adds the confirming person to @resp; rejection deletes the proposal. It is a TEI
+// @resp value, so it stays schema-valid and round-trips losslessly.
 export const AI_RESP = "#ai";
 import { acceptProposal, hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
 
@@ -506,14 +506,14 @@ export function retypeEntity(doc, id, newType) {
 }
 
 /**
- * Confirm an AI-proposed entity while retaining origin and recording acceptance.
- * Reject is just deleteEntity. Returns a NEW doc, or the
+ * Confirm an AI-proposed entity while retaining origin and recording acceptance and
+ * the confirming person. Reject is just deleteEntity. Returns a NEW doc, or the
  * SAME doc when the entity is absent or carries no AI marker (no-op).
  */
-export function confirmEntity(doc, id, responsibility = AI_RESP) {
+export function confirmEntity(doc, id, responsibility = AI_RESP, confirmer = undefined) {
   const el = findEntityElement(doc, id);
   if (!el || !isPendingProposal(el, responsibility)) return doc;
-  return acceptProposal(doc, el, responsibility);
+  return acceptProposal(doc, el, responsibility, confirmer);
 }
 
 // ---- authority identifiers (idno) ------------------------------------------

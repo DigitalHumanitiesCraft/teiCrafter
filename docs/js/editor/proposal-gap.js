@@ -32,10 +32,10 @@ export function proposalGapParts(el, expectedResp) {
 }
 
 /** Accept the gap while retaining its responsibility and acceptance markers. */
-export function confirmProposalGap(doc, parts) {
+export function confirmProposalGap(doc, parts, confirmer) {
   const fragment = parseDocument(doc.raw.slice(parts.gap.outerStart, parts.gap.outerEnd));
   const gap = fragment.root.children.find((node) => node.type === "element");
-  const gapRaw = acceptProposal(fragment, gap, parts.expectedResp || parts.resp).raw;
+  const gapRaw = acceptProposal(fragment, gap, parts.expectedResp || parts.resp, confirmer).raw;
   return spliceDocument(doc, parts.choice.outerStart, parts.choice.outerEnd, gapRaw);
 }
 

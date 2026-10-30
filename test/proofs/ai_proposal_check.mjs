@@ -1,7 +1,7 @@
 /**
  * Proof: AI-proposed entities (M3.7) carry a lossless, schema-valid marker
  * (resp="#ai"), are readable as unverified, and the human gate works:
- *   - confirm drops the marker (entity becomes verified), keeping name + idno;
+ *   - confirm records acceptance and the confirmer while keeping the marker, name and idno;
  *   - reject (deleteEntity) removes the entity entirely;
  *   - every step round-trips byte-identically.
  * This is the "AI assists, human decides" mechanism the expert-in-the-loop thesis rests on.
@@ -50,18 +50,19 @@ check(doc.raw.includes('<idno type="GND">118649919</idno>'), "an authority idno 
 check(readEntities(doc).persons[0].ai === true, "it stays unverified until a human confirms");
 check(reparses(doc), "authority on an AI entity re-parses byte-identically");
 
-// --- 3. confirm drops the marker, keeping the name and the idno --------------
+// --- 3. confirm records acceptance, keeping origin, the name and the idno ----
 
 const confirmed = confirmEntity(doc, person.id);
 const cp = readEntities(confirmed).persons[0];
 check(cp.ai === false, "confirm clears the AI marker (now verified)");
 check(cp.name === "Anna" && cp.authorities.some((a) => a.type === "GND" && a.value === "118649919"),
   "confirm preserves the name and the GND idno");
-check(confirmed.raw.includes('resp="#ai"') && cp.aiOrigin, "acceptance retains the machine responsibility");
+check(confirmed.raw.includes('resp="#ai urn:teicrafter:local-reviewer"') && cp.aiOrigin,
+  "acceptance retains the machine responsibility and records the confirming person");
 check(confirmed.raw.includes("urn:teicrafter:proposal:accepted:%23ai"), "acceptance has its own TEI analysis pointer");
 check(reparses(confirmed), "confirm re-parses byte-identically");
 
-// confirm again is a no-op (no marker left).
+// confirm again is a no-op (already accepted).
 check(confirmEntity(confirmed, person.id) === confirmed, "confirm on a verified entity is a no-op (same doc)");
 
 // --- 4. reject removes the entity entirely ----------------------------------

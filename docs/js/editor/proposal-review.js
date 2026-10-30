@@ -4,8 +4,9 @@
  * The human gate for the general proposal layer (proposal-apply.js): every model
  * construct is inserted carrying a @resp marker (default "#ai") and rendered violet.
  * This resolves one, for ANY construct kind, not only entity mentions:
- *   - confirmConstruct records acceptance while retaining responsibility pointers;
- *     every byte of reading text is untouched except an explicitly accepted gap.
+ *   - confirmConstruct records acceptance and the confirming person while retaining
+ *     the origin pointers; every byte of reading text is untouched except an
+ *     explicitly accepted gap.
  *   - rejectConstruct removes the construct. A reading-text wrapper (an entity name
  *     wrap, a markup wrap, an <unclear>/<del>/<add>) is unwrapped, restoring the
  *     surrounded reading text verbatim, so reject is the exact inverse of the wrap.
@@ -29,7 +30,8 @@ import {
 } from "./proposal-gap.js";
 
 /**
- * Confirm a proposed construct: record acceptance while retaining origin and
+ * Confirm a proposed construct: record acceptance and the confirming person
+ * (opts.confirmer, a pointer; see acceptProposal) while retaining origin and
  * responsibility pointers. Keep its markup and reading text except a gap. By default
  * only a construct carrying the AI marker is confirmed; opts.resp overrides the
  * expected value (null confirms whatever @resp is present). A no-op (SAME doc) when
@@ -39,11 +41,11 @@ export function confirmConstruct(doc, el, opts = {}) {
   if (!el || el.type !== "element") return doc;
   const want = opts.resp === undefined ? AI_RESP : opts.resp;
   const gapParts = proposalGapParts(el, want);
-  if (gapParts) return confirmProposalGap(doc, gapParts);
+  if (gapParts) return confirmProposalGap(doc, gapParts, opts.confirmer);
   const cur = getAttr(el, "resp");
   if (cur == null) return doc;
   if (want != null && !isPendingProposal(el, want)) return doc;
-  return acceptProposal(doc, el, want);
+  return acceptProposal(doc, el, want, opts.confirmer);
 }
 
 /**

@@ -3,8 +3,10 @@
  *
  * Turns the normalised proposals from ai-suggest.js into lossless, resp-marked
  * engine edits, anchored to the surface text they name. Every construct is inserted
- * with the project's responsibility id (default "#ai"), so it shows as the AI family
- * and a human confirms (drops @resp) or rejects (unwraps/removes) it. Each proposal
+ * with the project's responsibility id (default "#ai"), so it shows as the AI family.
+ * A human confirms it (proposal-review.js: the origin pointer stays in @resp, the
+ * acceptance goes into @ana and the confirming person joins @resp) or rejects it
+ * (unwraps/removes). Each proposal
  * is located unambiguously inside the requested folio snapshot against a freshly
  * re-parsed edition, so shifting offsets after one edit never corrupt the next.
  * (wrapRange / markCritical / addNoteForNode), so the layer is TEI-vocabulary-general
@@ -20,7 +22,7 @@ import { proposalGapMarkup } from "./proposal-gap.js";
 
 // Entity type -> the TEI name element a proposed mention is wrapped in. A proposed
 // entity is an inline, resp-marked name wrap (not a standOff entry): lossless, shows
-// violet, confirmable by dropping @resp, and promotable to a standOff entity later.
+// violet, confirmable with retained origin, and promotable to a standOff entity later.
 const ENTITY_ELEMENT = { person: "persName", place: "placeName", org: "orgName", work: "title", event: "name" };
 
 const escA = (s) => escapeAttr(String(s));

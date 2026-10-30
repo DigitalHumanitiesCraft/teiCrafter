@@ -11,7 +11,7 @@ const doc = parseDocument(wrap('<hi resp="#human #ai" ana="#existing">A &amp; B<
 const accepted = confirmConstruct(doc, firstTeiByLocal(doc.root, "hi"));
 const reopened = parseDocument(accepted.raw);
 const hi = firstTeiByLocal(reopened.root, "hi");
-assert.equal(getUnqualifiedAttr(hi, "resp"), "#human #ai");
+assert.equal(getUnqualifiedAttr(hi, "resp"), "#human #ai urn:teicrafter:local-reviewer");
 assert.equal(getUnqualifiedAttr(hi, "ana"), "#existing urn:teicrafter:proposal:accepted:%23ai");
 assert.equal(isAcceptedProposal(hi, "#ai"), true);
 assert.equal(isPendingProposal(hi, "#ai"), false);
@@ -26,7 +26,7 @@ assert.equal(readEntities(register, "#custom").persons[0].ai, true);
 const confirmedRegister = confirmEntity(register, "p1", "#custom");
 assert.equal(readEntities(confirmedRegister, "#custom").persons[0].ai, false);
 assert.equal(readEntities(confirmedRegister, "#custom").persons[0].aiOrigin, true);
-assert.equal(getUnqualifiedAttr(readEntities(confirmedRegister).persons[0].node, "resp"), "#custom #human");
+assert.equal(getUnqualifiedAttr(readEntities(confirmedRegister).persons[0].node, "resp"), "#custom #human urn:teicrafter:local-reviewer");
 const schema = [{ ...schemaSources(null)[0], text: readFileSync("docs/schemas/tei-p5-4.11.0/tei_all.rng", "utf8") }];
 for (const raw of [accepted.raw, gapAccepted.raw]) {
   assert.equal((await validateWithSchemas(raw, schema))[0].status, "valid");

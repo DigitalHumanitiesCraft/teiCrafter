@@ -44,7 +44,7 @@ import { mountSourceView } from "./source-view.js";
 import { mountMetadataView } from "./metadata-view.js";
 import { annotationPageSummary } from "./annotation-progress.js";
 import { reviewPageSummary, setFolioReviewed } from "./review-progress.js";
-import { chooseReviewDetails } from "./review-dialog.js";
+import { chooseReviewDetails, currentReviewer } from "./review-dialog.js";
 import { setupGenModal } from "./gen-modal.js";
 import { setupImageOnramp } from "./image-onramp.js";
 import { createPageImages } from "./page-images.js";
@@ -3006,7 +3006,7 @@ $("ed-review-summary").addEventListener("click", async () => {
   if (!current || !current.markable) return;
   const unit = unitTerms(app.state.sourceProfile).singular;
   const state = app.state;
-  const details = current.reviewed ? { who: getSetting("reviewerIdentity", "urn:teicrafter:local-reviewer") }
+  const details = current.reviewed ? { who: currentReviewer() }
     : await chooseReviewDetails(unit, current.record);
   if (!details) return;
   if (app.state !== state) { setStatus("The document changed while review details were open. Review the current revision again."); return; }

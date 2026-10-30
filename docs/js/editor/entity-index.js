@@ -27,6 +27,7 @@
 import { el, clear } from "./dom.js";
 import { createIndexPanel, DEFAULT_SECTIONS } from "./index-panel.js";
 import * as standoff from "./standoff.js";
+import { currentReviewer } from "./review-dialog.js";
 import { requireCtx } from "./ctx.js";
 import { lookup as authorityLookup } from "../services/authority-lookup.js";
 import { exportableEntityTypes } from "./interchange.js";
@@ -124,7 +125,7 @@ export function createEntityIndex(ctx) {
         (doc) => standoff.setAuthority(doc, id, authority, value),
         { label: "Authority id updated", failPrefix: "Set authority id" }),
       onConfirm: (id) => commitStandoff(
-        (doc) => standoff.confirmEntity(doc, id, app.aiResp || standoff.AI_RESP),
+        (doc) => standoff.confirmEntity(doc, id, app.aiResp || standoff.AI_RESP, currentReviewer()),
         { label: "AI suggestion confirmed", failPrefix: "Confirm entity" }),
       onLookup: (id, { authority, query, anchor, onPick }) => runLookup(authority, query, anchor, onPick),
     });

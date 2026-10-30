@@ -54,6 +54,7 @@ import { requireCtx } from "./ctx.js";
 import { shouldDismissPopover } from "./interaction-rules.js";
 import { confirmConstruct, rejectConstruct } from "./proposal-review.js";
 import { hasResponsibility, isPendingProposal } from "./proposal-provenance.js";
+import { currentReviewer } from "./review-dialog.js";
 import { exportableEntityTypes, usesInlineGND } from "./interchange.js";
 import { allowsArbitraryMarkup } from "./project-manifest.js";
 import { markCriticalRange } from "./criticism.js";
@@ -563,7 +564,7 @@ export function createAnnotationUi(ctx) {
       if (meta && meta.ai) {
         btn("confirm", "accept this AI proposal while retaining its origin", () => {
           commitAndReopen(
-            (doc) => standoff.confirmEntity(doc, entity.id, app.aiResp || standoff.AI_RESP),
+            (doc) => standoff.confirmEntity(doc, entity.id, app.aiResp || standoff.AI_RESP, currentReviewer()),
             `Confirmed ${entity.name || entity.id}`,
             cell.id,
           );
@@ -915,7 +916,7 @@ export function createAnnotationUi(ctx) {
         cb.addEventListener("click", (e) => {
           e.stopPropagation();
           removeSelPopover();
-          resolveProposal((doc) => confirmConstruct(doc, layer.el, { resp: aiResp }),
+          resolveProposal((doc) => confirmConstruct(doc, layer.el, { resp: aiResp, confirmer: currentReviewer() }),
             { label: `Confirmed <${layer.localName}>`, failPrefix: "Confirm", noopLabel: "Already confirmed" });
         });
         row.appendChild(cb);
@@ -955,7 +956,7 @@ export function createAnnotationUi(ctx) {
     cb.addEventListener("click", (e) => {
       e.stopPropagation();
       removeSelPopover();
-      resolveProposal((doc) => confirmConstruct(doc, detail.el, { resp: aiResp }),
+      resolveProposal((doc) => confirmConstruct(doc, detail.el, { resp: aiResp, confirmer: currentReviewer() }),
         { label: "Confirmed <note>", failPrefix: "Confirm", noopLabel: "Already confirmed" }, aiResp);
     });
     row.appendChild(cb);

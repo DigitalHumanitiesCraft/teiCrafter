@@ -2,6 +2,11 @@ import { el } from "./dom.js";
 import { DEFAULT_REVIEWER, DEFAULT_REVIEW_RATIONALE } from "./review-record.js";
 import { getSetting, setSetting } from "../services/storage.js";
 
+/** The person pointer recorded for reviews and proposal confirmations. */
+export function currentReviewer() {
+  return getSetting("reviewerIdentity", DEFAULT_REVIEWER) || DEFAULT_REVIEWER;
+}
+
 export function chooseReviewDetails(unit, previous = null) {
   return new Promise((resolve) => {
     const dialog = el("dialog", { class: "ed-review-dialog", "aria-labelledby": "ed-review-title" });
@@ -9,7 +14,7 @@ export function chooseReviewDetails(unit, previous = null) {
     form.appendChild(el("h2", { id: "ed-review-title", text: `Review ${unit}` }));
     form.appendChild(el("p", { text: "This review covers the source unit and its inline markup. Referenced register entries and other units need their own review." }));
     if (previous) form.appendChild(el("p", { text: `Previous record: ${previous.who || "unspecified reviewer"}, ${previous.when || "undated"}. ${previous.rationale || ""}` }));
-    const identity = el("input", { type: "text", required: "", value: getSetting("reviewerIdentity", DEFAULT_REVIEWER) });
+    const identity = el("input", { type: "text", required: "", value: currentReviewer() });
     const rationale = el("textarea", { rows: "3", required: "" });
     rationale.value = DEFAULT_REVIEW_RATIONALE;
     form.appendChild(el("label", {}, [el("span", { text: "Reviewer identifier (URI or TEI pointer)" }), identity]));

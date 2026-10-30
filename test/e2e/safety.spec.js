@@ -154,7 +154,7 @@ test("confirming a proposal preserves its visible and persisted origin", async (
   const requested = page.waitForEvent("download");
   await page.locator("#btn-working-copy").click();
   const saved = JSON.parse(readFileSync(await (await requested).path(), "utf8"));
-  expect(saved.record.raw).toContain('resp="#ai #human"');
+  expect(saved.record.raw).toContain('resp="#ai #human urn:teicrafter:local-reviewer"');
   expect(saved.record.raw).toContain("#existing urn:teicrafter:proposal:accepted:%23ai");
 });
 
@@ -304,7 +304,7 @@ test("accepted register origin remains visible and read-only indices expose no e
   const requested = page.waitForEvent("download");
   await page.locator("#btn-working-copy").click();
   const saved = JSON.parse(readFileSync(await (await requested).path(), "utf8"));
-  expect(saved.record.raw).toContain('resp="#ai #human"');
+  expect(saved.record.raw).toContain('resp="#ai #human urn:teicrafter:local-reviewer"');
   expect(saved.record.raw).toContain("urn:teicrafter:proposal:accepted:%23ai");
 });
 
