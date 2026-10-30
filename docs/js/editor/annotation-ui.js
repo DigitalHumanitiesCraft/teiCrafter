@@ -379,12 +379,28 @@ export function createAnnotationUi(ctx) {
       .find((e) => e.id === id) || null;
   }
 
-  /** Anchor a popover at a viewport rect, inside the scrolling reading pane. */
+  /**
+   * Anchor a popover at a viewport rect, inside the scrolling reading pane:
+   * below the rect, or above it when only the space above holds the popover.
+   * When neither side holds it, the pane scrolls the selection towards its top
+   * so the popover below shows as much as possible without covering the selection.
+   */
   function anchorPopAt(pop, rect, host) {
     const hostRect = host.getBoundingClientRect();
     host.appendChild(pop);
     pop.style.left = Math.max(0, Math.min(rect.left - hostRect.left, host.clientWidth - pop.offsetWidth - 8)) + "px";
-    pop.style.top = (rect.bottom - hostRect.top + host.scrollTop + 6) + "px";
+    const gap = 6;
+    const height = pop.offsetHeight;
+    const visibleTop = Math.max(hostRect.top, 0);
+    const visibleBottom = Math.min(hostRect.top + host.clientHeight, window.innerHeight);
+    const roomBelow = visibleBottom - rect.bottom - gap;
+    const roomAbove = rect.top - visibleTop - gap;
+    if (height > roomBelow && height <= roomAbove) {
+      pop.style.top = (rect.top - height - gap - hostRect.top + host.scrollTop) + "px";
+      return;
+    }
+    pop.style.top = (rect.bottom + gap - hostRect.top + host.scrollTop) + "px";
+    if (height > roomBelow) host.scrollTop += Math.max(0, Math.min(height - roomBelow, roomAbove));
   }
 
   /** Resolve one proposal and remove a respStmt inserted during this open session

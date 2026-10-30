@@ -1,4 +1,4 @@
-/** Pure keyboard routing for document-level Undo and Redo. */
+/** Pure keyboard routing for document-level Undo, Redo and Save. */
 
 export function isTextEntryTarget(target) {
   if (!target) return false;
@@ -13,4 +13,10 @@ export function historyCommand(event) {
   if (!(event.ctrlKey || event.metaKey) || String(event.key || "").toLowerCase() !== "z") return null;
   if (isTextEntryTarget(event.target)) return null;
   return event.shiftKey ? "redo" : "undo";
+}
+
+/** Ctrl/Cmd+S saves from any focus, text fields included, because it never edits text. */
+export function isSaveShortcut(event) {
+  if (!event || event.defaultPrevented || event.isComposing || event.altKey || event.shiftKey) return false;
+  return !!(event.ctrlKey || event.metaKey) && String(event.key || "").toLowerCase() === "s";
 }

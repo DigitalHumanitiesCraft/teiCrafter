@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { historyCommand } from "../../docs/js/editor/history-shortcuts.js";
+import { historyCommand, isSaveShortcut } from "../../docs/js/editor/history-shortcuts.js";
 import { check, finish, section } from "./_assert.mjs";
 
 section("Undo and Redo browser wiring");
@@ -27,5 +27,19 @@ check("both buttons and the global shortcut use the single history action",
   app.includes('$("btn-undo").addEventListener("click", () => applyHistory("undo"))')
     && app.includes('$("btn-redo").addEventListener("click", () => applyHistory("redo"))')
     && app.includes("const command = historyCommand(event)"));
+
+section("Save shortcut wiring");
+check("Ctrl+S and Cmd+S route to Save, also from a text field",
+  isSaveShortcut({ key: "s", ctrlKey: true, target: target("DIV") })
+    && isSaveShortcut({ key: "S", metaKey: true, target: target("TEXTAREA") }));
+check("Save ignores plain, shifted, Alt and composing key presses",
+  !isSaveShortcut({ key: "s", target: target("DIV") })
+    && !isSaveShortcut({ key: "s", ctrlKey: true, shiftKey: true, target: target("DIV") })
+    && !isSaveShortcut({ key: "s", ctrlKey: true, altKey: true, target: target("DIV") })
+    && !isSaveShortcut({ key: "s", ctrlKey: true, isComposing: true, target: target("DIV") }));
+check("the Save button declares the shortcut and the shortcut uses the button's action",
+  /id="btn-save"[^>]*aria-keyshortcuts="Control\+S Meta\+S"/.test(html)
+    && app.includes("if (!isSaveShortcut(event)) return;")
+    && app.includes('if (!$("btn-save").disabled) save();'));
 
 finish("history_wiring_check passed");

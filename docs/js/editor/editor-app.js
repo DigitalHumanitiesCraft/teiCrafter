@@ -58,7 +58,7 @@ import { buildSuggestPrompt, parseSuggestions } from "./ai-suggest.js";
 import { applyProposals, createProposalScope } from "./proposal-apply.js";
 import { createSessionSafety, stageContext } from "./session-safety.js";
 import { EditorSession } from "./editor-session.js";
-import { historyCommand } from "./history-shortcuts.js";
+import { historyCommand, isSaveShortcut } from "./history-shortcuts.js";
 import { createRevisionCache } from "./revision-cache.js";
 import { toInlineGND, inlineGndFilename } from "./inline-gnd.js";
 import { targetDocument, usesInlineGND, workingDocument } from "./interchange.js";
@@ -666,6 +666,7 @@ function applyLoad(raw, name, handle, project, opts = {}) {
   app.revision = editorSession.revision;
   app.folio = 0;
   app.recoveryId = opts.recoveryId || crypto.randomUUID();
+  app.recoveryProblem = null;
   app.annotationProgressFilter = "all";
   app.sourceMode = false;
   app.fileHandle = handle || null;
@@ -1262,6 +1263,7 @@ function updateFolioButtons() {
     vm.title = continuous
       ? `Continuous view (all ${terms.plural}). Click for one ${terms.singular} at a time.`
       : `One ${terms.singular} at a time. Click for continuous view.`;
+    vm.setAttribute("aria-label", vm.title);
     vm.setAttribute("aria-pressed", String(continuous));
   }
   updateAnnotationProgress();
@@ -3040,6 +3042,12 @@ document.addEventListener("keydown", (e) => {
   gotoFolio(app.folio + (e.key === "ArrowRight" ? 1 : -1));
 });
 $("btn-save").addEventListener("click", save);
+// Ctrl/Cmd+S also replaces the browser's own page save while the editor is open.
+document.addEventListener("keydown", (event) => {
+  if (!isSaveShortcut(event)) return;
+  event.preventDefault();
+  if (!$("btn-save").disabled) save();
+});
 $("btn-download").addEventListener("click", () => download());
 $("btn-working-copy").addEventListener("click", () => downloadWorkingCopy());
 $("btn-open-working-copy").addEventListener("click", openWorkingCopy);

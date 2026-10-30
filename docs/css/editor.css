@@ -106,7 +106,10 @@
 }
 .ed-docstrip-name { font-family: var(--font-mono); font-size: var(--font-size-sm);
   color: var(--color-text); min-width: 4rem; overflow: hidden; text-overflow: ellipsis; }
-.ed-docstrip-name.dirty::after { content: " *"; color: var(--color-gold-hover); }
+/* State marks sit beside the name so the ellipsis on a long name cannot hide them. */
+.ed-docstrip-state { flex: none; padding: 0 var(--space-xs); border: 1px solid var(--color-review);
+  border-radius: var(--radius-sm); background: var(--color-review-tint); color: var(--color-text); }
+.ed-docstrip-state.problem { border-color: var(--color-problem); background: var(--color-problem-tint); }
 .ed-docstrip-sep { color: var(--color-text-muted); }
 .ed-docstrip-fact { color: var(--color-text-secondary); min-width: 0;
   overflow: hidden; text-overflow: ellipsis; }
@@ -1011,7 +1014,10 @@
 
 /* Footer content conventions come from .site-foot (style.css); the editor
    adds only its strip geometry and the status line. */
-.ed-footer { height: var(--footer-height); padding: 0 var(--space-md); background: var(--color-panel); }
+/* The footer grows for a long status message instead of cutting it off. */
+.ed-footer { min-height: var(--footer-height); flex-wrap: wrap; row-gap: 0; padding: 2px var(--space-md); background: var(--color-panel); }
+.ed-footer > a { flex: none; white-space: nowrap; }
+.ed-status-wrap { min-width: 0; }
 .ed-status-dot { color: var(--color-confident); }
 .ed-status-dot.dirty { color: var(--color-review); }
 

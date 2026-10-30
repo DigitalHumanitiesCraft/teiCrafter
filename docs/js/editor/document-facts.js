@@ -39,13 +39,28 @@ export function createDocumentFacts(ctx) {
     ["app"]);
   const { app, setStatus, setDirty, load, render, renderActivePanel } = ctx;
   const recovery = createRecoveryStore();
-  const reportRecoveryError = (err) => setStatus(`Local recovery failed: ${err.message}. Download a working copy to keep your work.`);
+  // A failed checkpoint stays visible in the document strip until a later one succeeds.
+  const reportRecoveryError = (err) => {
+    app.recoveryProblem = recoveryProblemText(err);
+    setStatus(app.recoveryProblem);
+    updateDocStrip();
+  };
   const checkpoints = createRecoveryCoordinator({
     store: recovery,
     capture: () => app.state && app.recoveryId
       ? captureCheckpoint(app, ctx.stagedSnapshot?.() || null, ctx.schemaSnapshot?.() || null) : null,
     onError: reportRecoveryError,
   });
+
+  /** A plain explanation of a failed checkpoint; browser messages may end in their own period. */
+  function recoveryProblemText(err) {
+    const detail = String(err?.message || err || "unknown error").trim().replace(/\.+$/, "");
+    if (err?.name === "QuotaExceededError" || /too large|quota/i.test(detail)) {
+      return "Local recovery is not available: this document is too large for the browser's recovery storage. "
+        + "Download a working copy to keep your work.";
+    }
+    return `Local recovery failed (${detail}). Download a working copy to keep your work.`;
+  }
 
   /** The project in force: the open folder's project wins over a detected one. */
   function activeProject() {
@@ -79,6 +94,14 @@ export function createDocumentFacts(ctx) {
       text: app.docName || "" });
     if (app.dirty) name.title = "Unsaved changes";
     strip.appendChild(name);
+    if (app.dirty) {
+      strip.appendChild(el("span", { class: "ed-docstrip-state", text: "unsaved",
+        title: "This document has changes that are not saved yet" }));
+    }
+    if (app.recoveryProblem) {
+      strip.appendChild(el("span", { class: "ed-docstrip-state problem", text: "no local recovery",
+        title: app.recoveryProblem }));
+    }
 
     // The badge identifies the draft workflow; individual proposals retain their origin.
     if (isUnsavedDraft()) {
@@ -147,7 +170,10 @@ export function createDocumentFacts(ctx) {
 
   /** Capture before queueing so a file switch cannot replace the pending revision. */
   function persistDraftIfNeeded() {
-    return checkpoints.persist();
+    return checkpoints.persist().then((ok) => {
+      if (ok && app.recoveryProblem) { app.recoveryProblem = null; updateDocStrip(); }
+      return ok;
+    });
   }
 
   /** Remove this session's checkpoint after earlier queued writes have completed. */
