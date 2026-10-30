@@ -32,7 +32,7 @@ The human editor decides scholarly content. Deterministic transformations use or
 
 The wordmark `<teiCrafter>` combines the TEI blue and yellow brand family. TEI yellow marks primary actions with dark text for contrast. TEI blue marks source and annotation interactions. Violet is reserved for model-origin content.
 
-Components consume the shared CSS custom properties. Component styles introduce no raw colour values. CodeMirror 6 injects its base styles outside any cascade layer, so they override application CSS inside layers. Editor colours therefore belong in an `EditorView.theme` that consumes the design tokens.
+Components consume the shared CSS custom properties. Component styles introduce no raw colour values. CodeMirror 6 injects its base styles outside any cascade layer, so they override application CSS inside layers. Editor colours therefore belong in an `EditorView.theme` that consumes the design tokens. The shared editor configuration colours the drawn selection with the selection token through a selector of the base theme's own specificity and keeps the native selection transparent, so the syntax colours stay readable and a view adds no selection rules of its own. Long source lines scroll horizontally by default. A view can switch on line wrapping, which hangs each continuation line two columns under the start of its own line's content.
 
 | Family | Tokens | Meaning |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ Status uses categories and words. Numeric confidence requires a calibrated produ
 
 The left pane holds Reading text, XML source and Metadata. The right pane holds context panels, including Facsimile, Index, Source and supported editorial workspaces. A keyboard-operable splitter resizes or collapses the context pane; a narrow layout stacks the panes.
 
-Document identity below the toolbar identifies the source, project interpretation and save target. The empty editor provides a direct load prompt, recent handles where supported and independent recovery offers. View tabs stay in their pane headers. Pane-header controls wrap according to the available pane width so that resized panes retain accessible targets.
+Document identity below the toolbar identifies the source, project interpretation and save target. Unsaved changes and a failed local recovery appear as words beside the file name, outside the shortened name, so a narrow strip cannot hide them. The recovery word stays until a later checkpoint succeeds, and its explanation names the working copy as the route that keeps the work. The empty editor provides a direct load prompt, recent handles where supported and independent recovery offers. View tabs stay in their pane headers. Pane-header controls wrap according to the available pane width so that resized panes retain accessible targets.
 
 The toolbar distinguishes actions by their actual effect.
 
@@ -65,7 +65,7 @@ The toolbar distinguishes actions by their actual effect.
 | Discard | Explicitly remove the selected preserved work |
 | Read only / Edit document | Disable or restore source-changing actions while retaining inspection |
 
-Save is the primary gold action. Copy and preservation actions use neutral styling. Download feedback reports a requested download and retained recovery. A browser download supplies no evidence that the user has stored the file durably.
+Save is the primary gold action, and Ctrl or Cmd+S runs the same action from any focus. Copy and preservation actions use neutral styling. Download feedback reports a requested download and retained recovery. A browser download supplies no evidence that the user has stored the file durably.
 
 Reading, XML, Metadata and workspace forms share Apply and Cancel semantics. Unfinished values and caret position survive background refresh. Navigation, history or another mutation cannot silently replace the active input owner. A blocked action directs the editor back to that surface; a failed Apply keeps the entered values. XML source and Metadata retain ownership while open, so a context form presents a return hint instead of mounting another editor.
 
@@ -83,7 +83,7 @@ An unsatisfied manifest request or ambiguous interpretation remains visible besi
 
 ## Reading surface
 
-A plain click positions the cursor. Double-click opens exact text or dual-reading editing. Existing annotation layers open their inspector; right-click and text selection expose scholarly actions. Selection stays visibly painted while a popover holds focus. Keyboard arrows traverse cells, and F2 or Enter opens a supported editor. Composition input cannot commit prematurely.
+A plain click positions the cursor. Double-click opens exact text or dual-reading editing. Existing annotation layers open their inspector; right-click and text selection expose scholarly actions. Selection stays visibly painted while a popover holds focus. A selection popover opens below the selection, or above it when only the space above holds it. When neither side holds it, the reading pane scrolls the selection towards its top so the popover shows as much as possible without covering the selection. Keyboard arrows traverse cells, and F2 or Enter opens a supported editor. Composition input cannot commit prematurely.
 
 Local cells determine the edit controls. Encoded tokens expose their text and reading attributes; other readable content uses exact text runs. Mixed documents retain both forms. The reading preserves source adjacency and selects the appropriate encoded choice branch. The [reading representations](data.md) define the source contract.
 
@@ -158,7 +158,8 @@ File input and Download provide the portable Chromium and Firefox workflow. A na
 - Tabs use tablist relationships and roving keyboard focus.
 - The splitter exposes its separator role, value, orientation and keyboard controls.
 - Reading and panel regions have visible focus and accessible names.
-- Asynchronous status, loading, validation and failures use appropriate live regions.
+- Asynchronous status, loading, validation and failures use appropriate live regions. The footer status line wraps and the footer grows rather than cutting a message off.
+- A control shown as a glyph carries its description as accessible name.
 - Popovers and dialogs return focus to their originating control or reading location.
 - Actions remain reachable without hover; hover emphasis also appears on keyboard focus.
 - Provenance, validation, review and annotations use text or pattern alongside colour.
