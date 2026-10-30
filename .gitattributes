@@ -11,6 +11,10 @@ docs/data/editor/** -text
 test/fixtures/** -text
 test/fixtures-synthetic/** -text
 
+# The source-first prototypes and tests use this sample as their CRLF document;
+# normalising it to LF would remove the line endings they exercise.
+public/samples/zbz-hersch-synthetic.xml -text
+
 # The vendored TEI Guidelines compilation is stored byte-verbatim; its SHA-256
 # is recorded in docs/data/tei/NOTICE.md. No line-ending conversion, ever.
 docs/data/tei/p5subset_en.json -text
