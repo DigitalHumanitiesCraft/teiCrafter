@@ -99,6 +99,75 @@ check("standOff and facsimile folded on load",
 check("footer states well-formed and UTF-8", (await page.locator("#wellformed").innerText()) === "well-formed"
   && (await page.locator("#encoding").innerText()) === "UTF-8");
 
+// The selection colour comes from the shared editor theme, focused and unfocused; the native selection stays transparent.
+const selectionToken = await page.evaluate(() => {
+  const probe = document.createElement("div");
+  probe.style.color = "var(--color-selection)";
+  document.body.append(probe);
+  const colour = getComputedStyle(probe).color;
+  probe.remove();
+  return colour;
+});
+await page.locator(".cm-content").click({ position: { x: 40, y: 30 } });
+await page.keyboard.press("Control+Home");
+for (let i = 0; i < 4; i++) await page.keyboard.press("Shift+ArrowDown");
+const selectionColours = () => page.evaluate(() => {
+  const drawn = document.querySelector(".cm-selectionBackground");
+  const line = document.querySelector(".cm-line");
+  return { drawn: drawn && getComputedStyle(drawn).backgroundColor, native: line && getComputedStyle(line, "::selection").backgroundColor };
+});
+const focusedSelection = await selectionColours();
+await page.evaluate(() => (document.activeElement instanceof HTMLElement) && document.activeElement.blur());
+const blurredSelection = await selectionColours();
+check("selection uses the selection token, focused and unfocused",
+  focusedSelection.drawn === selectionToken && blurredSelection.drawn === selectionToken,
+  JSON.stringify({ selectionToken, focusedSelection, blurredSelection }));
+check("native selection inside lines is transparent", focusedSelection.native === "rgba(0, 0, 0, 0)", focusedSelection.native);
+
+// Wrapping is off by default; the toggle wraps long lines with a hanging indent and changes no text.
+const textBeforeWrap = await docText(page);
+await page.click("#unfold-all");
+const scrollsWide = await page.evaluate(() => {
+  const scroller = document.querySelector(".cm-scroller");
+  return scroller.scrollWidth > scroller.clientWidth && !document.querySelector(".cm-content").classList.contains("cm-lineWrapping");
+});
+check("long lines scroll horizontally while wrapping is off", scrollsWide);
+await page.click("#wrap-lines");
+await page.evaluate(async (url) => {
+  const { EditorView } = await import(url);
+  const view = EditorView.findFromDOM(document.querySelector(".cm-editor"));
+  let longest = view.state.doc.line(1);
+  for (let i = 2; i <= view.state.doc.lines; i++) if (view.state.doc.line(i).length > longest.length) longest = view.state.doc.line(i);
+  view.dispatch({ effects: EditorView.scrollIntoView(longest.from, { y: "center" }) });
+}, viewModuleUrl);
+await page.waitForTimeout(200);
+const hang = await page.evaluate(() => {
+  const scroller = document.querySelector(".cm-scroller");
+  const lines = [...document.querySelectorAll(".cm-line")];
+  const lineHeight = parseFloat(getComputedStyle(lines[0]).lineHeight);
+  const line = lines.reduce((a, b) => (b.getBoundingClientRect().height > a.getBoundingClientRect().height ? b : a));
+  if (line.getBoundingClientRect().height < 1.5 * lineHeight) return null;
+  const probe = document.createElement("span");
+  probe.textContent = "0".repeat(100);
+  line.append(probe);
+  const ch = probe.getBoundingClientRect().width / 100;
+  probe.remove();
+  const range = document.createRange();
+  range.selectNodeContents(line);
+  const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+  const lead = /^[ \t]*/.exec(line.textContent)[0].length;
+  const firstLeft = rects[0].left;
+  const continuation = Math.min(...rects.filter((r) => r.top > rects[0].top + 1).map((r) => r.left));
+  return { hScroll: scroller.scrollWidth > scroller.clientWidth, lead, offsetCh: (continuation - firstLeft) / ch };
+});
+check("Wrap lines wraps without horizontal scroll", hang !== null && !hang.hScroll && (await page.getAttribute("#wrap-lines", "aria-pressed")) === "true", JSON.stringify(hang));
+check("a wrapped line hangs two columns under its own content", hang !== null && Math.abs(hang.offsetCh - (hang.lead + 2)) < 0.2, JSON.stringify(hang));
+await page.click("#wrap-lines");
+check("Wrap lines toggles off again", (await page.getAttribute("#wrap-lines", "aria-pressed")) === "false"
+  && !(await page.locator(".cm-content.cm-lineWrapping").count()));
+check("wrapping changes no text", (await docText(page)) === textBeforeWrap);
+await page.click("#fold-structure");
+
 await page.click("#unfold-all");
 check("Unfold all reveals header content", await page.locator(".cm-content:has-text('publicationStmt')").count() === 1);
 await page.click("#fold-structure");

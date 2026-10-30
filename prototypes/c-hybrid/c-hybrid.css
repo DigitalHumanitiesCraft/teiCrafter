@@ -197,7 +197,6 @@ dialog button.danger { border-color: var(--color-problem); color: var(--color-pr
 .inline-cm .cm-gutters { background: var(--color-surface); color: var(--color-text-secondary); border-inline-end: 1px solid var(--color-border); }
 .inline-cm .cm-activeLine { background: var(--color-secondary); }
 .inline-cm .cm-activeLineGutter { background: var(--color-secondary); color: var(--color-text); }
-.inline-cm .cm-selectionBackground, .inline-cm .cm-focused .cm-selectionBackground { background: var(--color-selection); }
 .inline-cm .cm-cursor { border-inline-start-color: var(--color-text); }
 .edit-actions {
   display: flex;

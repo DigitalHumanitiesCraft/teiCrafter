@@ -416,8 +416,7 @@ function openEditor(from: number, caret?: number) {
       doc: original,
       extensions: [
         EditorState.lineSeparator.of(lineSeparatorOf(raw)),
-        baseExtensions(),
-        EditorView.lineWrapping,
+        baseExtensions({ wrap: true }),
         EditorView.contentAttributes.of({ "aria-label": `Source of ${label}` }),
         EditorView.updateListener.of((u) => { if (u.docChanged) updateStatus(); }),
         Prec.highest(keymap.of([

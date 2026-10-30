@@ -91,7 +91,6 @@ main { display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-col
 #editor .cm-gutters { background: var(--color-surface); color: var(--color-text-secondary); border-inline-end: 1px solid var(--color-border); }
 #editor .cm-activeLine { background: var(--color-secondary); }
 #editor .cm-activeLineGutter { background: var(--color-secondary); color: var(--color-text); }
-#editor .cm-selectionBackground, #editor .cm-focused .cm-selectionBackground { background: var(--color-selection); }
 #editor .cm-cursor { border-inline-start-color: var(--color-text); }
 
 #editor .cm-fold-summary {

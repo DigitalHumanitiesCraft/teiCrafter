@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { StateEffect, StateField, type Text } from "@codemirror/state";
 import { Decoration, EditorView, GutterMarker, WidgetType, gutter } from "@codemirror/view";
-import { createXmlEditor } from "../../src/editor/xml-editor";
+import { createXmlEditor, setLineWrapping } from "../../src/editor/xml-editor";
 import { rawOf, toPos, toRaw } from "../../src/editor/offsets";
 import { foldStructure, structuralFolding, unfoldAll } from "../../src/editor/structural-fold";
 import { elementPath, selectElement } from "../../src/editor/element-path";
@@ -275,7 +275,7 @@ function mount(text: string, name: string, hasBom: boolean, fileHandle: FileSyst
       }
       if (u.docChanged || u.selectionSet || u.viewportChanged) updateStatus(u.view);
     }),
-  ]);
+  ], { wrap: wrapLines });
   savedDoc = view.state.doc;
   ui.fileName.textContent = name;
   document.title = `${name} (teiCrafter)`;
@@ -378,6 +378,14 @@ async function save() {
 byId("fold-structure").addEventListener("click", () => { if (view) { foldStructure(view); view.focus(); } });
 byId("unfold-all").addEventListener("click", () => { if (view) { unfoldAll(view); view.focus(); } });
 byId("format-element").addEventListener("click", () => { if (view) openFormatDialog(view); });
+// Long lines scroll by default; the toggle wraps them for the open file and the next one.
+let wrapLines = false;
+const wrapToggle = byId<HTMLButtonElement>("wrap-lines");
+wrapToggle.addEventListener("click", () => {
+  wrapLines = !wrapLines;
+  wrapToggle.setAttribute("aria-pressed", String(wrapLines));
+  if (view) { setLineWrapping(view, wrapLines); view.focus(); }
+});
 ui.propose.addEventListener("click", () => {
   if (!view) return;
   const raw = rawOf(view.state);

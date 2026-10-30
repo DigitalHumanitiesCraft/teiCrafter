@@ -138,7 +138,6 @@ button.danger { border-color: var(--color-problem); color: var(--color-problem);
 /* The default highlight colour for tag names falls below 4.5:1 on any tinted line, so the active line is marked in the gutter only. */
 #editor .cm-activeLine { background: none; }
 #editor .cm-activeLineGutter { background: var(--color-secondary); color: var(--color-text); }
-#editor .cm-selectionBackground, #editor .cm-focused .cm-selectionBackground { background: var(--color-selection); }
 #editor .cm-cursor { border-inline-start-color: var(--color-text); }
 #editor .cm-problemLine { background: var(--color-problem-tint); box-shadow: inset 3px 0 0 var(--color-problem); }
 #editor .cm-fold-summary {
