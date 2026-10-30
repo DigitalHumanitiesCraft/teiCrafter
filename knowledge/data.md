@@ -114,7 +114,7 @@ Unchanged field values preserve their lexical form. In the generic metadata inte
 
 ## Local recovery and portable working copies
 
-IndexedDB database `teicrafter.recovery`, store `sessions`, holds version 1 checkpoints keyed by independent session UUIDs. A checkpoint contains canonical `raw`, filename, source metadata, UTF-8/BOM state, dirty baseline, manifest text, schema resources and settings, capture time, staged input, image blobs and optional project documents. The [restoration boundary](architecture.md#staged-input-and-restoration) installs the full record before its first automatic checkpoint.
+IndexedDB database `teicrafter.recovery`, store `sessions`, holds checkpoints keyed by independent session UUIDs. A checkpoint contains canonical `raw`, filename, source metadata, UTF-8/BOM state, dirty baseline, manifest text, schema resources and settings, capture time, staged input, image blobs and optional project documents. Version 2 stores each document's XML once, as a UTF-8 `Blob` of type `application/xml`. The active project document carries no text of its own (`raw` is `null`) and shares the checkpoint's `raw`. A text with an unpaired surrogate has no UTF-8 form, so it is stored as a string instead. Reading decodes a Blob with a fatal UTF-8 decoder that keeps a leading U+FEFF, so the text returns unchanged or the restore fails visibly. Version 1 checkpoints, which hold every text as a string, remain readable. The [restoration boundary](architecture.md#staged-input-and-restoration) installs the full record before its first automatic checkpoint.
 
 | Staged mode | Retained unfinished state |
 | --- | --- |
