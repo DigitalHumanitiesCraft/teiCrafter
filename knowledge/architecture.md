@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: complete
 created: 2026-02-05
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing]
@@ -55,7 +55,7 @@ The successor architecture lives beside the current application in `docs/` until
 
 Runtime assets that are served unbundled (schemas, the libxml2-wasm runtime, the TEI Guidelines subset, samples, brand assets) live in `public/`. Identical copies stay under `docs/`, which the published application uses ([deployment](integration.md#browser-files-and-deployment)). Viewer prototypes under `prototypes/` import only `src/` and are served by `npm run dev:prototypes` with the repository as server root.
 
-The code editor counts a CRLF line break as one position and joins lines with LF, while the core addresses raw string offsets. Every splice, fold, diagnostic and proposal therefore passes through `offsets.ts`. The first TEI All validation compiles the schema, which takes seconds; later validations reuse the compiled schema in the worker.
+The code editor counts a CRLF line break as one position and joins lines with LF, while the core addresses raw string offsets. Every splice, fold, diagnostic and proposal therefore passes through `offsets.ts`. Text leaves the editor through `state.sliceDoc()`, which honours `EditorState.lineSeparator`, and never through `doc.toString()`, which always joins lines with LF. The first TEI All validation compiles the schema, which takes seconds; later validations reuse the compiled schema in the worker.
 
 ## Staged input and restoration
 

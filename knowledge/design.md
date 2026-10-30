@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: complete
 created: 2026-05-27
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture, data, testing, wenzelsbibel]
@@ -32,7 +32,7 @@ The human editor decides scholarly content. Deterministic transformations use or
 
 The wordmark `<teiCrafter>` combines the TEI blue and yellow brand family. TEI yellow marks primary actions with dark text for contrast. TEI blue marks source and annotation interactions. Violet is reserved for model-origin content.
 
-Components consume the shared CSS custom properties. Component styles introduce no raw colour values.
+Components consume the shared CSS custom properties. Component styles introduce no raw colour values. CodeMirror 6 injects its base styles outside any cascade layer, so they override application CSS inside layers. Editor colours therefore belong in an `EditorView.theme` that consumes the design tokens.
 
 | Family | Tokens | Meaning |
 | --- | --- | --- |

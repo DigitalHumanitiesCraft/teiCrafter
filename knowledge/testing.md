@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: complete
 created: 2026-05-30
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
@@ -55,7 +55,7 @@ The executable contracts live in [proofs](../test/proofs/) and [browser scenario
 
 ## State-transition regressions
 
-Restoration tests inspect actual IndexedDB `sessions` writes. Every first checkpoint after Working-copy import must use the intended identity and contain images, source metadata, schemas and unfinished input together. Recovery failure must retain the visible document and keep later storage usable. Duplicate recovery entries, a partial initial checkpoint or an imported dirty baseline lost by Undo are failures.
+Restoration tests inspect actual IndexedDB `sessions` writes. Every first checkpoint after Working-copy import must use the intended identity and contain images, source metadata, schemas and unfinished input together. Recovery failure must retain the visible document and keep later storage usable. Duplicate recovery entries, a partial initial checkpoint or an imported dirty baseline lost by Undo are failures. A save confirmation can be overwritten by a debounced check that fires after it, so saving runs the pending check first. The browser check of the SZD derivation `szd-teiCrafter` covers this transition, and the base has no such test yet.
 
 [Project transition scenarios](../test/e2e/project-transition-safety.spec.js) delay recovery while text or attachments change. The attempted switch must refuse the stale transition and preserve the changed collection. Other cases replace a document while custom-schema file reading is pending, ensuring the old choice cannot affect the new session. Newly created registers and imported drafts receive their own schema settings; outgoing companions retain theirs.
 

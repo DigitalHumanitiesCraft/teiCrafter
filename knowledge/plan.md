@@ -13,7 +13,7 @@ template:
   alias: https://dhcraft.org/Promptotyping/#promptotyping-document-plan
 status: complete
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 related: [architecture, specification, testing, wenzelsbibel, journal, handoff, INDEX]
 ---
@@ -25,6 +25,8 @@ This plan orders the work that remains planned for teiCrafter. The legacy applic
 ## Completed
 
 The refactoring that makes the base derivable is complete. The generic editor under `docs/js/editor/` names no project, the Wenzelsbibel code, styles and examples live in `docs/js/projects/wenzelsbibel/` behind one entry file, and a workspace registry answers the generic editor's questions about installed projects. [Architecture](architecture.md#project-workspaces) holds the resulting module map and workspace fields, the [journal](journal.md) records the decisions taken on the way, and [integration](integration.md#deriving-a-project-version) states how a derived version builds on the base.
+
+One coupling remains open. The generic browser spec `test/e2e/project-transition-safety.spec.js` still imports `createWenzelsRegistersDocument` from `docs/js/projects/wenzelsbibel/`, as the audit of 2026-10-30 found, so the generic tests do not yet run without the Wenzelsbibel project folder.
 
 ## Open decisions in the base
 

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: complete
 created: 2026-06-07
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
 related: [project, data, specification, architecture, design, testing]
@@ -111,13 +111,15 @@ The upstream combination of catalogue TEI and handwriting-recognition Page-JSON 
 
 Converted TEI uses the same source profiles, metadata, review, annotation and output gate as other documents. A manifest can add type-specific markup, schemas, images and model mapping. [Worked examples](worked-examples.md) connects these exchanges to concrete objects.
 
+GAMS serves a IIIF Presentation 2 manifest for each object at `https://gams.uni-graz.at/{pid}/sdef:IIIF/getManifest`, with Image API level 2 services and permissive CORS. It is a stronger facsimile route for SZD than the plain `IMG.n` image URLs, as the SZD derivation `szd-teiCrafter` shows.
+
 ## Model and authority services
 
 Project data supplies editorial prompts, mapping text, responsibility and provider-neutral context. Transport is trusted application code. Built-in providers and a custom OpenAI-compatible endpoint cover standard JSON protocols; `registerProviderAdapter` permits trusted bundled code to implement request construction and response extraction for another protocol. A manifest cannot load executable adapters.
 
 Endpoint validation rejects embedded credentials. Keys remain in memory, and model requests omit ambient browser credentials. Explicit model actions transmit their supplied source context; generated TEI and proposals then enter structural checks, provenance and human review before schema-gated output. Model availability is optional for deterministic editing.
 
-Image and authority requests use their declared external services. Wenzelsbibel ICONCLASS lookup sends user-entered terms or selected notations to the official service. It does not send the edition text. Service responses remain suggestions or resolved resources until the user applies a supported source mutation.
+Image and authority requests use their declared external services. Wenzelsbibel ICONCLASS lookup sends user-entered terms or selected notations to the official service. It does not send the edition text. lobid-gnd ranks a surname-only query poorly for historical persons, so a person search combines the selection with context such as the date of the document, and persons without a GND record need a project person register. Service responses remain suggestions or resolved resources until the user applies a supported source mutation.
 
 ## Browser files and deployment
 

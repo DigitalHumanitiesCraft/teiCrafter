@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
@@ -21,6 +21,10 @@ related: [project, specification, architecture, data, design, testing, integrati
 # teiCrafter Decision Journal
 
 The entries record the triggers, decisions and reasons that explain teiCrafter's development, in reverse chronological order. Integrated, Corrected and Rejected identify substantive transitions; Compacted identifies maintenance of their provenance.
+
+## 2026-10-30 | Integrated | Technical findings from the SZD derivation
+
+The handoff item from the standalone derivation `szd-teiCrafter` carried five findings that apply to the base, verified against its journal, `js/editor.js`, `js/iiif.js`, `js/gnd.js` and `test/browser-check.mjs`. [Architecture](architecture.md#source-first-core-under-src) now states that text leaves the editor through `sliceDoc()` and not `doc.toString()`, [design](design.md#visual-identity-and-tokens) that editor colours belong in an `EditorView.theme` on the tokens because CodeMirror's base styles sit outside the cascade layers, and [testing](testing.md#state-transition-regressions) that saving runs a pending debounced check first. [Integration](integration.md) records the GAMS IIIF manifest route for SZD and the weak lobid-gnd ranking of surname-only queries with the need for a project person register. The line-separator and byte-fidelity rules were already in the specification and are not repeated. The same review found that [plan.md](plan.md#completed) reports the decoupling as complete while `test/e2e/project-transition-safety.spec.js` still imports from the Wenzelsbibel project folder, so the plan now names that coupling as open. The derivation trial item stays in the inbox with the operator's answer of 2026-10-30 and the next action of a single derivation document.
 
 ## 2026-10-10 | Integrated | Base documents and code brought into step with the derivable base
 
