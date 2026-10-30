@@ -1,142 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-auto">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="color-scheme" content="light dark">
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <title>teiCrafter - a browser TEI working environment</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* Landing styles, tokens only (no raw hex). The page states what the
-           editor is, offers one primary action and the example projects,
-           and describes the core behaviour in plain sentences. Sections are
-           separated by the spacing scale, not rules; the principles band uses
-           a full-width sunken background instead of borders. */
-
-        /* Smooth in-page scroll only when the visitor has not asked to reduce
-           motion (the "Try an example" jump to #examples). */
-        @media (prefers-reduced-motion: no-preference) {
-            html { scroll-behavior: smooth; }
-        }
-
-        /* Header: wordmark left, nav right; status pill is non-interactive. */
-        .lp-header { justify-content: space-between; }
-        .lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
-        .lp-status {
-            font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
-            font-weight: 500; color: var(--color-text-inverse);
-            background: rgba(255, 255, 255, .15); border-radius: var(--radius-pill);
-            padding: 3px 10px; cursor: default; user-select: none;
-        }
-
-        /* Centered content column, reused by every section and the footer. */
-        .lp-wrap { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-md); }
-
-        .lp-hero { padding: var(--space-3xl) 0 var(--space-2xl); }
-        .lp-hero h1 {
-            font-family: var(--font-serif); font-size: 2.4rem; font-weight: 600;
-            letter-spacing: -.01em; color: var(--color-text); margin: 0 0 var(--space-md);
-        }
-        .lp-lede {
-            font-size: var(--font-size-lg); color: var(--color-text-body);
-            line-height: 1.6; max-width: 68ch; margin: 0 0 var(--space-lg);
-        }
-
-        /* Call to action: filled primary plus ghost secondary, then the
-           reassurance line. */
-        .lp-cta-group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
-        .lp-btn {
-            display: inline-block; font-family: var(--font-ui); font-weight: 600;
-            font-size: var(--font-size-base); text-decoration: none;
-            border-radius: var(--radius-sm); padding: var(--space-sm) var(--space-lg);
-            border: 1px solid transparent; transition: background .15s, border-color .15s;
-        }
-        /* Primary: dark text on TEI yellow (8.8:1, AA pass). */
-        .lp-open { color: var(--color-text); background: var(--color-gold); border-color: var(--color-gold); }
-        .lp-open:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
-        /* Ghost: dark text on transparent with a neutral border (high contrast). */
-        .lp-ghost { color: var(--color-text); background: transparent; border-color: var(--color-border); }
-        .lp-ghost:hover { background: var(--color-secondary); border-color: var(--color-gold); }
-        /* AI on-ramp: violet ghost, the page's reserved AI accent, so the entry
-           that leads to machine-drafted TEI reads as the AI family from the start. */
-        .lp-ai { color: var(--color-ai); background: transparent; border-color: var(--color-ai); }
-        .lp-ai:hover { background: var(--color-ai-tint); border-color: var(--color-ai); }
-
-        /* Hero screenshot slot (placeholder image until the next build). */
-        .lp-shot { margin: var(--space-2xl) 0 0; }
-        .lp-shot img {
-            display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
-            border: 1px solid var(--color-border); border-radius: var(--radius-md);
-            box-shadow: var(--shadow-card);
-        }
-
-        .lp-section-title {
-            font-family: var(--font-serif); font-size: 1.4rem; font-weight: 600;
-            color: var(--color-text); margin: 0 0 var(--space-lg);
-        }
-
-        .lp-examples { padding: var(--space-2xl) 0; }
-        .lp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); }
-        .lp-card {
-            display: flex; flex-direction: column; gap: var(--space-sm);
-            padding: var(--space-lg); text-decoration: none;
-            background: var(--color-panel); border: 1px solid var(--color-border);
-            border-radius: var(--radius-sm); transition: border-color .15s, box-shadow .15s, transform .15s;
-        }
-        .lp-card:hover { border-color: var(--color-gold); box-shadow: var(--shadow-card-hover); transform: translateY(-2px); }
-        /* The badge states a detected fact, not a fixed category: the editor
-           reads the editing unit from the document, so any TEI unit (entries,
-           sentences, ...) fits this same pattern later. */
-        .lp-badge {
-            align-self: flex-start; font-family: var(--font-ui); font-weight: 500;
-            font-size: var(--font-size-xs); color: var(--color-blue);
-            background: var(--color-blue-light); border-radius: var(--radius-pill);
-            padding: 2px 10px;
-        }
-        .lp-card h3 { margin: 0; font-size: 1.1rem; color: var(--color-text); }
-        .lp-card p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
-        /* "Load example" is orange TEXT on a white card: uses --color-link
-           (#B45309, 5.0:1 on #FFFFFF, AA pass). The previous --color-gold-hover
-           (#DE9712) measured 2.5:1 here and failed. */
-        .lp-card .lp-cta { margin-top: auto; font-size: var(--font-size-sm); font-weight: 600; color: var(--color-link); }
-
-        /* Principles band: full-width sunken background instead of a rule. The
-           band and the footer share the sunken tone so the grey runs to the
-           bottom of the page with no cream gap between them. */
-        .lp-principles { background: var(--color-surface-sunken); padding: var(--space-4xl) 0 var(--space-3xl); }
-        .lp-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
-        /* Feature headings carry the cool TEI blue (the badges' colour), the one
-           accent besides the gold action colour; violet stays AI-only. */
-        .lp-feature h3 { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-blue); margin: 0 0 var(--space-xs); }
-        .lp-feature p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
-        .lp-feature a { color: var(--color-blue); }
-        /* Inline TEI tokens read in the same blue-on-blue-tint as the badges, so
-           markup names stand out as one consistent family instead of grey. */
-        .lp-feature code { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-blue);
-            background: var(--color-blue-light); border-radius: var(--radius-sm); padding: 0 4px; }
-
-        .lp-footer { margin-top: 0; background: var(--color-surface-sunken); }
-        .lp-footer .lp-wrap { padding-top: var(--space-md); padding-bottom: var(--space-md); }
-
-        @media (max-width: 900px) {
-            .lp-cards, .lp-features { grid-template-columns: 1fr; }
-        }
-
-        /* Visible focus ring on every interactive element. */
-        .lp-card:focus-visible, .lp-btn:focus-visible,
-        .lp-lede a:focus-visible, .lp-feature a:focus-visible, .site-foot a:focus-visible {
-            outline: 2px solid var(--color-blue); outline-offset: 2px; border-radius: var(--radius-sm);
-        }
-        .site-head-link:focus-visible { outline: 2px solid var(--color-text-inverse); outline-offset: 2px; }
-    </style>
+    <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
     <header class="lp-header site-head">
         <span class="site-logo"><span class="accent">&lt;</span>tei<span class="accent">Crafter</span><span class="accent">&gt;</span></span>
         <nav class="lp-nav" aria-label="Site">
             <a class="site-head-link" href="about.html" title="What teiCrafter is, who makes it, and how it works">About</a>
-            <span class="lp-status">Research Preview</span>
+            <a class="lp-status" href="#status" title="What research preview means for teiCrafter">Research preview</a>
         </nav>
     </header>
 
@@ -147,23 +26,22 @@
                 <p class="lp-lede">teiCrafter opens any TEI document and lets you correct the text and annotate entities with authority identifiers (GND, GeoNames, Wikidata). Where a facsimile is linked, text and page image appear side by side. It runs in the browser; your file stays local.</p>
                 <div class="lp-cta-group">
                     <a class="lp-btn lp-open" href="editor.html" title="Open the editor to load a TEI document or a project folder">Open the editor</a>
-                    <a class="lp-btn lp-ai" href="editor.html#generate" id="lp-llm-onramp" hidden title="Draft an initial TEI from plaintext with a language model, then review and correct it in the editor">New from text (LLM)</a>
-                    <a class="lp-btn lp-ghost" href="#examples" id="lp-try-example" hidden>Try an example</a>
+                    <a class="lp-example" href="editor.html#example=szd">Open the example letter (Stefan Zweig, 1901)</a>
                 </div>
                 <figure class="lp-shot">
-                    <img src="assets/editor-screenshot.png" alt="teiCrafter editor: facsimile left, TEI text right, entity annotation panel open">
+                    <img src="assets/editor-screenshot.png" width="1280" height="800"
+                         alt="teiCrafter editor showing page 3 of a 1901 letter by Stefan Zweig to Max Fleischer: the transcribed lines as reading text on the left, the facsimile of the handwritten page on the right">
+                    <figcaption>Letter by Stefan Zweig to Max Fleischer, 1901, from Stefan Zweig Digital, Literaturarchiv Salzburg, under CC BY 4.0 (<a href="data/editor/szd/NOTICE.md">licence notice</a>).</figcaption>
                 </figure>
             </div>
         </section>
 
-        <!-- Hidden by default; the script at the end of body reveals the
-             example surfaces on local development hosts (FEATURES.examples). -->
+        <!-- Hidden by default; the script reveals the full example set on local
+             development hosts (FEATURES.examples). -->
         <section id="examples" class="lp-examples" hidden>
             <div class="lp-wrap">
                 <h2 class="lp-section-title">Example projects</h2>
                 <div class="lp-cards">
-                    <!-- The same three examples as in the editor's welcome state; the
-                         #example deep link loads them directly. -->
                     <a class="lp-card" href="editor.html#example=wb">
                         <h3>Wenzelsbibel</h3>
                         <p>Codex 2759 of the Austrian National Library: word-level encoding with IIIF facsimile. Where the licence-restricted file is not present, a structurally identical sample file loads instead.</p>
@@ -199,7 +77,26 @@
                         <h3>Validated while you type</h3>
                         <p>As you edit, the editor checks that the XML stays well-formed and that its structure is preserved (identifiers and element counts unchanged), and reports the result next to the text. How machine-generated content is handled is described in <a href="about.html">About</a>.</p>
                     </div>
+                    <div class="lp-feature lp-feature-ai" id="lp-llm-onramp" hidden>
+                        <h3>Optional: a first draft from plain text</h3>
+                        <p>With a language model you configure, <a href="editor.html#generate">New from text (LLM)</a> drafts TEI from a plain transcription; the draft is marked as machine-generated and unreviewed until you check it in the editor.</p>
+                    </div>
                 </div>
+            </div>
+        </section>
+
+        <section id="editions" class="lp-editions" aria-labelledby="editions-title" hidden>
+            <div class="lp-wrap">
+                <h2 class="lp-section-title" id="editions-title">Editions built on teiCrafter</h2>
+                <p class="lp-intro">An edition project can derive its own editor from teiCrafter, as a fork that keeps merging the base or as a separate editor that follows its design. Each entry names its form, its data and their licence.</p>
+                <ul class="lp-eds" id="editions-list"></ul>
+            </div>
+        </section>
+
+        <section id="status" class="lp-status-section" aria-labelledby="status-title">
+            <div class="lp-wrap">
+                <h2 class="lp-section-title" id="status-title">Status</h2>
+                <p class="lp-intro">teiCrafter is a research preview. It stays one until editors and users have accepted it for their work and a release has been decided. The technical scope that has been tested so far is recorded in the <a href="https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/main/reports/README.md">verification reports</a>.</p>
             </div>
         </section>
     </main>

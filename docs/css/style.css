@@ -3,8 +3,8 @@
    The single source of truth for colors, typography, spacing and radii.
    TEI brand colors: TEI blue #0059A8, TEI yellow #F7A824, near-black text;
    derived tints and hovers are computed from them. Surface styles live with
-   their surfaces: editor.css for the editor, inline style blocks for the
-   landing and About pages. No raw hex outside this file.
+   their surfaces: editor.css for the editor, landing.css for the start page,
+   an inline style block for the About page. No raw hex outside this file.
    ============================================================================= */
 
 :root {
@@ -106,9 +106,40 @@
     --radius-md: 8px;
     --radius-pill: 999px;
 
+    /* Dark text on the TEI yellow, constant in both colour schemes. */
+    --color-on-gold: #1A1A1A;
+
     /* Layout */
     --header-height: 48px;
     --footer-height: 28px;
+}
+
+/* Dark scheme for pages that opt in with class="theme-auto" on <html>. Only the
+   start page does; the editor's surfaces stay light until their own tokens are
+   checked in the dark scheme. Browsers without light-dark() keep the light
+   values above. */
+@supports (color: light-dark(#000, #fff)) {
+    :root.theme-auto {
+        color-scheme: light dark;
+        --color-surface: light-dark(#FAFAF7, #15181D);
+        --color-surface-sunken: light-dark(#F2F2F0, #1B1F25);
+        --color-panel: light-dark(#FFFFFF, #20252C);
+        --color-secondary: light-dark(#F2F4F8, #29303A);
+        --color-header: light-dark(#0059A8, #0A3F73);
+        --color-border: light-dark(#D0D4DC, #3A424D);
+        --color-gold-hover: light-dark(#DE9712, #FFBE4D);
+        --color-link: light-dark(#B45309, #F2A541);
+        --color-blue: light-dark(#0059A8, #8CBDF0);
+        --color-blue-light: light-dark(#E0EBF5, #1D3550);
+        --color-ai: light-dark(#6D4AB6, #BBA2F5);
+        --color-ai-tint: light-dark(#F1ECFA, #2B2342);
+        --color-text: light-dark(#1A1A1A, #ECEEF1);
+        --color-text-body: light-dark(#2D3A4A, #CDD3DB);
+        --color-text-secondary: light-dark(#5A6270, #A7B0BC);
+        --color-text-muted: light-dark(#8899AA, #8590A0);
+        --shadow-card: 0 6px 24px light-dark(rgba(26, 26, 26, .08), rgba(0, 0, 0, .45));
+        --shadow-card-hover: 0 4px 16px light-dark(rgba(26, 26, 26, .08), rgba(0, 0, 0, .45));
+    }
 }
 
 /* Reset and base. Fonts are loaded via <link> in each page's head. */

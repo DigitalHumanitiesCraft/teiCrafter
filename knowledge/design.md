@@ -47,6 +47,17 @@ Components consume the shared CSS custom properties. Component styles introduce 
 
 Status uses categories and words. Numeric confidence requires a calibrated producer; the application currently supplies none. Colour has a second channel through text, borders, underlines or patterns.
 
+## Public start page
+
+The start page serves a researcher who decides whether teiCrafter fits a TEI task and then opens it. Its order follows that decision.
+
+1. The hero states what the editor does, offers one primary button, Open the editor, and one text link that names the public example, Open the example letter (Stefan Zweig, 1901), which opens `editor.html#example=szd`. The screenshot below shows that letter in the editor with its facsimile and carries the letter's attribution and licence notice as caption. `test/tools/make_landing_screenshot.mjs` regenerates it at the size the page reserves.
+2. How teiCrafter treats your document describes saving, configuration and checks in full sentences. Drafting from plain text with a language model is one optional item there in the violet model family, shown only when the model features are enabled, because it is a path beside the editor rather than its entry.
+3. Editions built on teiCrafter lists the derivations registered in [derivation](derivation.md#case-register) from `docs/data/derivations.json`, one card per edition with its status, what it demonstrates, its form, data and licence, and a link to its derivation notes. A card links into the editor only when its entry carries a public URL, so an edition without cleared rights or without a public deployment is described without a demonstration.
+4. Status says what research preview means and links the verification reports. The Research preview pill in the header links there.
+
+Local development hosts additionally show the full example set between hero and principles. The page follows the operating system's colour scheme through the tokens of `style.css`, which define a dark value with `light-dark()` for pages that opt in with `class="theme-auto"` on the root element; the editor does not opt in yet, so its surfaces stay light. Text on the TEI yellow uses `--color-on-gold`, which stays dark in both schemes. Landing styles live in `css/landing.css`; the page carries no inline style, so its policy allows stylesheets from its own origin only.
+
 ## Source-first editor surfaces
 
 The source-first editor presents one document on one editor state at two levels. The source level shows the complete XML with folding, the element path and a problem mark at the error line. The text level hides markup on the same state and sets the text in the serif reading typography with entity colours, so a switch of level keeps cursor, folds and Undo. Focus on a page or division folds the rest of the document rather than opening a second editor. Typing inserts exactly the typed characters; the editor closes no tag on its own. [Views](views.md) owns the comparison and the reasons behind these surfaces.

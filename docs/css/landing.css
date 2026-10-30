@@ -1,0 +1,138 @@
+/* Start page. Tokens only (style.css); sections are separated by the spacing
+   scale, not rules, and the principles band uses a full-width sunken
+   background instead of borders. */
+
+@media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+}
+
+.lp-header { justify-content: space-between; }
+.lp-nav { display: inline-flex; align-items: center; gap: var(--space-md); }
+/* The status pill links to the Status section; it sits on the blue header in both schemes. */
+.lp-status {
+    font-size: var(--font-size-xs); text-transform: uppercase; letter-spacing: .05em;
+    font-weight: 500; color: var(--color-text-inverse); text-decoration: none;
+    background: color-mix(in srgb, var(--color-text-inverse) 15%, transparent);
+    border-radius: var(--radius-pill); padding: 3px 10px;
+}
+.lp-status:hover { background: color-mix(in srgb, var(--color-text-inverse) 25%, transparent); }
+
+/* Centered content column, reused by every section and the footer. */
+.lp-wrap { max-width: 1080px; margin: 0 auto; padding: 0 var(--space-md); }
+
+.lp-hero { padding: var(--space-3xl) 0 var(--space-2xl); }
+.lp-hero h1 {
+    font-family: var(--font-serif); font-size: clamp(1.8rem, 1.4rem + 1.6vw, 2.4rem); font-weight: 600;
+    letter-spacing: -.01em; color: var(--color-text); margin: 0 0 var(--space-md);
+}
+.lp-lede {
+    font-size: var(--font-size-lg); color: var(--color-text-body);
+    line-height: 1.6; max-width: 68ch; margin: 0 0 var(--space-lg);
+}
+
+/* One primary button, then the example as a plain text link. */
+.lp-cta-group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg); }
+.lp-btn {
+    display: inline-block; font-family: var(--font-ui); font-weight: 600;
+    font-size: var(--font-size-base); text-decoration: none;
+    border-radius: var(--radius-sm); padding: var(--space-sm) var(--space-lg);
+    border: 1px solid transparent; transition: background .15s, border-color .15s;
+}
+.lp-open { color: var(--color-on-gold); background: var(--color-gold); border-color: var(--color-gold); }
+.lp-open:hover { background: var(--color-gold-hover); border-color: var(--color-gold-hover); }
+.lp-example { font-size: var(--font-size-base); font-weight: 600; color: var(--color-link); text-underline-offset: 3px; }
+.lp-example:hover { text-decoration-thickness: 2px; }
+
+.lp-shot { margin: var(--space-2xl) 0 0; }
+.lp-shot img {
+    display: block; width: 100%; height: auto;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+}
+.lp-shot figcaption { margin-top: var(--space-sm); font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.lp-shot figcaption a { color: inherit; }
+
+.lp-section-title {
+    font-family: var(--font-serif); font-size: 1.4rem; font-weight: 600;
+    color: var(--color-text); margin: 0 0 var(--space-lg);
+}
+.lp-intro {
+    font-size: var(--font-size-base); color: var(--color-text-body);
+    line-height: 1.6; max-width: 68ch; margin: 0 0 var(--space-lg);
+}
+.lp-intro a { color: var(--color-blue); }
+
+/* Local development only: the full example set. */
+.lp-examples { padding: var(--space-2xl) 0; }
+.lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-md); }
+.lp-card {
+    display: flex; flex-direction: column; gap: var(--space-sm);
+    padding: var(--space-lg); text-decoration: none;
+    background: var(--color-panel); border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm); transition: border-color .15s, box-shadow .15s;
+}
+.lp-card:hover { border-color: var(--color-gold); box-shadow: var(--shadow-card-hover); }
+.lp-card h3 { margin: 0; font-size: 1.1rem; color: var(--color-text); }
+.lp-card p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
+.lp-card .lp-cta { margin-top: auto; font-size: var(--font-size-sm); font-weight: 600; color: var(--color-link); }
+
+/* Principles band; the band and the footer share the sunken tone. */
+.lp-principles { background: var(--color-surface-sunken); padding: var(--space-4xl) 0 var(--space-3xl); }
+.lp-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-lg); }
+.lp-feature h3 { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-blue); margin: 0 0 var(--space-xs); }
+.lp-feature p { margin: 0; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.6; }
+.lp-feature a { color: var(--color-blue); }
+.lp-feature code { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-blue);
+    background: var(--color-blue-light); border-radius: var(--radius-sm); padding: 0 4px; }
+/* The model path keeps the violet that marks model-origin content everywhere. */
+.lp-feature-ai h3, .lp-feature-ai a { color: var(--color-ai); }
+
+/* Editions gallery: one card per independent edition editor. */
+.lp-editions { padding: var(--space-3xl) 0 var(--space-2xl); }
+.lp-eds {
+    list-style: none; display: grid; gap: var(--space-md);
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+.lp-ed {
+    display: flex; flex-direction: column; gap: var(--space-sm);
+    padding: var(--space-lg); background: var(--color-panel);
+    border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+}
+.lp-ed-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-xs) var(--space-sm); }
+.lp-ed-head h3 { font-size: 1.1rem; color: var(--color-text); }
+.lp-ed-status {
+    font-size: var(--font-size-xs); font-weight: 500; color: var(--color-blue);
+    background: var(--color-blue-light); border-radius: var(--radius-pill); padding: 2px 10px;
+}
+.lp-ed-shows { margin: 0 0 0 1.1em; font-size: var(--font-size-sm); color: var(--color-text-body); line-height: 1.5; }
+.lp-ed-shows li + li { margin-top: var(--space-xs); }
+.lp-ed-facts {
+    display: grid; grid-template-columns: auto 1fr; gap: 2px var(--space-sm);
+    font-size: var(--font-size-xs); color: var(--color-text-secondary); line-height: 1.5;
+}
+.lp-ed-facts dt { font-weight: 600; }
+.lp-ed-facts a { color: var(--color-blue); }
+.lp-ed-links {
+    margin-top: auto; display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-md);
+    font-size: var(--font-size-sm);
+}
+.lp-ed-links a { color: var(--color-blue); }
+.lp-ed-links .lp-ed-open { font-weight: 600; color: var(--color-link); }
+
+.lp-status-section { padding: 0 0 var(--space-3xl); }
+
+.lp-footer { margin-top: 0; background: var(--color-surface-sunken); }
+.lp-footer .lp-wrap { padding-top: var(--space-md); padding-bottom: var(--space-md); flex-wrap: wrap; }
+/* The DHCraft mark is drawn in black; the dark scheme inverts it. */
+@supports (color: light-dark(#000, #fff)) {
+    @media (prefers-color-scheme: dark) {
+        .theme-auto .site-foot img { filter: invert(1); }
+    }
+}
+
+.lp-card:focus-visible, .lp-btn:focus-visible, .lp-example:focus-visible,
+.lp-lede a:focus-visible, .lp-feature a:focus-visible, .lp-intro a:focus-visible,
+.lp-ed a:focus-visible, .lp-shot a:focus-visible, .site-foot a:focus-visible {
+    outline: 2px solid var(--color-blue); outline-offset: 2px; border-radius: var(--radius-sm);
+}
+.site-head-link:focus-visible, .lp-status:focus-visible { outline: 2px solid var(--color-text-inverse); outline-offset: 2px; }

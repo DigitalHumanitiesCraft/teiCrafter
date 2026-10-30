@@ -48,7 +48,7 @@ import { chooseReviewDetails, currentReviewer } from "./review-dialog.js";
 import { setupGenModal } from "./gen-modal.js";
 import { setupImageOnramp } from "./image-onramp.js";
 import { createPageImages } from "./page-images.js";
-import { FEATURES, llmEnabled } from "../utils/constants.js";
+import { FEATURES, exampleAvailable, llmEnabled } from "../utils/constants.js";
 import { teiFromPlaintext } from "./plaintext-import.js";
 import { teiFromStarter, draftFilename } from "./starter-profiles.js";
 import { detectProject, projectTileSource } from "./project-profiles.js";
@@ -2924,19 +2924,17 @@ $("menu-new-from-text").addEventListener("click", () => {
   closeLoadMenu();
   imageOnramp.open();
 });
-// Built-in examples: shown during local development, removed on the public
-// deployment (FEATURES.examples), together with their menu separator.
-if (FEATURES.examples) {
-  for (const item of document.querySelectorAll("[data-example]")) {
-    item.addEventListener("click", () => {
-      closeLoadMenu();
-      loadExample(item.dataset.example);
-    });
+// Built-in examples: all of them during local development, only the publicly
+// redistributable ones on the public deployment (exampleAvailable).
+for (const item of document.querySelectorAll("#ed-load-menu [data-example]")) {
+  if (!exampleAvailable(item.dataset.example)) {
+    item.remove();
+    continue;
   }
-} else {
-  for (const node of document.querySelectorAll("#ed-load-menu [data-example], #ed-load-menu .ed-dd-sep")) {
-    node.remove();
-  }
+  item.addEventListener("click", () => {
+    closeLoadMenu();
+    loadExample(item.dataset.example);
+  });
 }
 // Runtime AI on/off toggle in the Load menu: present only when the build allows AI
 // at all (else there is nothing to toggle). Persists per browser and re-applies the
@@ -3111,9 +3109,9 @@ document.addEventListener("visibilitychange", () => {
 render(); // start state: the empty editor (no document) with its load prompt
 
 // Deep link from the landing page: editor.html#example=KEY loads that example.
-// Gated like the menu entries: inert on the public deployment.
+// Gated like the menu entries, so only public examples load on the deployment.
 const exampleLink = location.hash.match(/^#example=([a-z]+)$/);
-if (exampleLink && FEATURES.examples) loadExample(exampleLink[1]);
+if (exampleLink && exampleAvailable(exampleLink[1])) loadExample(exampleLink[1]);
 
 const szdImportLink = location.hash.match(/^#szd-import=([a-f0-9-]{36})$/i);
 if (szdImportLink && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {

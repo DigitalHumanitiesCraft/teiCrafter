@@ -727,6 +727,72 @@ test("start page and editor workflow stay deterministic", async ({ browserName, 
   await landingPage.close();
 });
 
+test("start page offers one primary action, the public example and the editions gallery", async ({ page }) => {
+  const expectRuntimeClean = await monitorRuntime(page);
+  await page.goto("/index.html");
+  const hero = page.locator(".lp-hero");
+  await expect(hero.locator(".lp-btn")).toHaveCount(1);
+  await expect(hero.getByRole("link", { name: "Open the editor", exact: true })).toHaveAttribute("href", "editor.html");
+  await expect(hero.getByRole("link", { name: "Open the example letter (Stefan Zweig, 1901)" })).toHaveAttribute("href", "editor.html#example=szd");
+
+  const derivations = JSON.parse(readFileSync(new URL("../../docs/data/derivations.json", import.meta.url), "utf8"));
+  const cards = page.locator("#editions-list > li");
+  await expect(cards).toHaveCount(derivations.length);
+  for (const entry of derivations) {
+    const card = page.locator(`#editions-list > li[data-derivation="${entry.id}"]`);
+    await expect(card.getByRole("heading", { name: entry.title, exact: true })).toBeVisible();
+    await expect(card).toContainText(entry.status);
+    const open = card.getByRole("link", { name: "Open in the editor" });
+    if (entry.url === null) await expect(open).toHaveCount(0);
+    else await expect(open).toHaveAttribute("href", entry.url);
+  }
+
+  await page.getByRole("link", { name: "Research preview" }).click();
+  await expect(page).toHaveURL(/#status$/);
+  await expect(page.getByRole("heading", { name: "Status", exact: true })).toBeInViewport();
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(page.locator("body")).not.toHaveCSS("background-color", "rgb(250, 250, 247)");
+  await expectA11ySmoke(page);
+  await expectRuntimeClean();
+});
+
+test("on a public host only the SZD example opens", async ({ page }) => {
+  // HTTPS like the deployment: the editor needs a secure context (crypto.randomUUID), which only loopback hosts get over HTTP.
+  const origin = "https://teicrafter.test";
+  const served = test.info().project.use.baseURL;
+  await page.route(`${origin}/**`, async (route) => {
+    const url = new URL(route.request().url());
+    // The preview server refuses a foreign Host header, which Firefox forwards from the original request.
+    const headers = { ...route.request().headers(), host: new URL(served).host };
+    await route.fulfill({ response: await route.fetch({ url: `${served}${url.pathname}${url.search}`, headers }) });
+  });
+  // The facsimile service is outside this check.
+  await page.route(/^https:\/\/(?!teicrafter\.test\/)/, (route) => route.abort());
+
+  await page.goto(`${origin}/index.html`);
+  await expect(page.locator("#examples")).toBeHidden();
+  await expect(page.getByRole("link", { name: "Open the example letter (Stefan Zweig, 1901)" })).toBeVisible();
+
+  // A hash change alone does not reload the editor, so every deep link starts from another page.
+  for (const key of ["wb", "zbz"]) {
+    await page.goto(`${origin}/index.html`);
+    await page.goto(`${origin}/editor.html#example=${key}`);
+    await expect(page.locator("#ed-status")).not.toContainText("Loading");
+    await expect(page.locator("#ed-docstrip")).not.toContainText(".xml");
+  }
+  await page.locator("#btn-load").click();
+  await expect(page.locator("#ed-load-menu [data-example]")).toHaveCount(1);
+  await expect(page.locator('#ed-load-menu [data-example="szd"]')).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await page.goto(`${origin}/index.html`);
+  await page.getByRole("link", { name: "Open the example letter (Stefan Zweig, 1901)" }).click();
+  await expect(page).toHaveURL(`${origin}/editor.html#example=szd`);
+  await expect(page.locator("#ed-docstrip")).toContainText("o_szd.1079.tei.xml");
+  // Requests still in flight when the page closes must not fail the routed fetches.
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test("local OpenSeadragon and uploaded synthetic TEI work without CSP violations", async ({ page }) => {
   const expectRuntimeClean = await monitorRuntime(page);
   await page.addInitScript(() => {
@@ -742,7 +808,7 @@ test("local OpenSeadragon and uploaded synthetic TEI work without CSP violations
     }
   });
   await page.goto("/index.html");
-  const screenshot = page.getByRole("img", { name: "teiCrafter editor: facsimile left, TEI text right, entity annotation panel open", exact: true });
+  const screenshot = page.getByRole("img", { name: /^teiCrafter editor showing page 3 of a 1901 letter by Stefan Zweig/ });
   const image = await screenshot.evaluate(async (element) => {
     await element.decode();
     return { url: element.currentSrc, width: element.naturalWidth, height: element.naturalHeight };

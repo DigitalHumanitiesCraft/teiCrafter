@@ -105,6 +105,8 @@ Both cases check that a saved file differs from the opened one only by the delib
 
 ## Case register
 
+The start page's gallery Editions built on teiCrafter renders `docs/data/derivations.json`, one entry per case below plus the base, each pointing with `caseAnchor` to its heading in this document. The [derivations proof](../test/proofs/derivations_check.mjs) fails when an anchor, a licence notice or a public URL there no longer matches, so a new or renamed case is entered in both places.
+
 ### Wenzelsbibel, fork
 
 - Repository: [wenzelsbibel-teiCrafter](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter), derived on 2026-10-10 with `upstream` pointing at this repository.

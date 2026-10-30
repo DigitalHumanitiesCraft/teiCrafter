@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/project
 status: complete
 created: 2026-02-05
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[Digital Scholarly Editing]]", "[[TEI XML]]", "[[Scholar-Centered Design]]"]
 related: [data, specification, architecture, design, journal, integration, testing, worked-examples, wenzelsbibel]
@@ -63,7 +63,7 @@ Working copy preserves unfinished input and attached project documents independe
 
 teiCrafter is a static application with no mandatory server. It targets the Browserslist `baseline widely available` set. The browser suite covers the fallback path in Chromium and Firefox; the [current report](../reports/editorial-completion-2026-09-11.md) records execution evidence and performance limits. File input and direct download provide the portable path. Native File System Access remains capability-gated and enables in-place project and file workflows where the browser provides it.
 
-The [deployment contract](integration.md#browser-files-and-deployment) states how GitHub Pages publishes the application and how the checks workflow builds and packages `dist/`. Built-in examples are available on local development hosts; the public editor opens the researcher's local files through Load. Both forms of delivery use the same local XML and schema-worker model.
+The [deployment contract](integration.md#browser-files-and-deployment) states how GitHub Pages publishes the application and how the checks workflow builds and packages `dist/`. All built-in examples are available on local development hosts; the public editor opens the researcher's local files through Load and offers the freely licensed Stefan Zweig Digital letter as its one public example. Both forms of delivery use the same local XML and schema-worker model.
 
 External LLM services are optional. Built-in providers and a configurable OpenAI-compatible endpoint share one catalogue. Application code can register adapters for other JSON protocols. API keys remain in memory, requests omit ambient credentials, and manifests cannot inject executable provider logic.
 

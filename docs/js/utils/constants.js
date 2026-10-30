@@ -13,16 +13,22 @@ const IS_LOCAL_DEV = typeof location !== "undefined" &&
   (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) ||
     location.protocol === "file:");
 
-// Feature flags. llmOnRamp shows or hides the "New from text (LLM)" entries;
-// the landing-page card in index.html is static and changes with this flag.
-// examples gates the built-in demo surfaces (landing cards, Load... menu
-// entries, the #example deep link): visible during local development, hidden
-// on the public deployment. This gates UI only; committed files under
-// docs/data/ remain fetchable by URL.
+// Feature flags. llmOnRamp shows or hides the "New from text (LLM)" entries.
+// examples opens every built-in example (landing cards, Load... menu entries,
+// the #example deep link) during local development. publicExamples names the
+// examples that also load on the public deployment, because their data may be
+// redistributed (docs/data/editor/szd/NOTICE.md). This gates UI only;
+// committed files under docs/data/ remain fetchable by URL.
 export const FEATURES = Object.freeze({
   llmOnRamp: true,
   examples: IS_LOCAL_DEV,
+  publicExamples: Object.freeze(["szd"]),
 });
+
+/** Whether the built-in example with this key may be offered and loaded here. */
+export function exampleAvailable(key) {
+  return FEATURES.examples || FEATURES.publicExamples.includes(key);
+}
 
 // The single LLM capability gate, read at every AI entry point. AI is on only
 // when the build allows it (FEATURES.llmOnRamp, the deployment default) AND the
