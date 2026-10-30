@@ -1,0 +1,51 @@
+[
+  {
+    "id": "teicrafter",
+    "title": "teiCrafter",
+    "form": "base",
+    "demonstrates": [
+      "Correcting an existing TEI document in the browser and saving it with every byte outside the edits unchanged",
+      "Navigation by the pages and other structures the document encodes",
+      "The page facsimile beside the transcription",
+      "Schema validation against TEI All before saving"
+    ],
+    "data": "Letter by Stefan Zweig to Max Fleischer, 1901, object o:szd.1079 of Stefan Zweig Digital, Literaturarchiv Salzburg",
+    "licence": "CC BY 4.0",
+    "licenceNotice": "data/editor/szd/NOTICE.md",
+    "url": "editor.html#example=szd",
+    "status": "Research preview",
+    "caseAnchor": "overview"
+  },
+  {
+    "id": "szd-teicrafter",
+    "title": "teiCrafter SZD",
+    "form": "standalone",
+    "demonstrates": [
+      "An editor for one edition built from a small set of modules, without a build step",
+      "One source configuration that holds every rule specific to the edition",
+      "A person register with a GND search for the persons a letter names"
+    ],
+    "data": "Freely licensed letters of Stefan Zweig Digital",
+    "licence": "CC BY 4.0",
+    "licenceNotice": null,
+    "url": null,
+    "status": "Local, in development",
+    "caseAnchor": "teicrafter-szd-standalone-editor"
+  },
+  {
+    "id": "wenzelsbibel-teicrafter",
+    "title": "Wenzelsbibel",
+    "form": "fork",
+    "demonstrates": [
+      "A Git fork that takes every change of the base by merge",
+      "Word-level transcription of a codex with image annotations and shared registers",
+      "The edition team's own Schematron rules beside TEI All"
+    ],
+    "data": "Codex 2759 of the Austrian National Library",
+    "licence": "Rights for the transcription and the images are not yet cleared, so there is no public demonstration",
+    "licenceNotice": null,
+    "url": null,
+    "status": "In development, no public demonstration",
+    "caseAnchor": "wenzelsbibel-fork"
+  }
+]

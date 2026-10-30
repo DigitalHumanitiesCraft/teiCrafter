@@ -52,7 +52,7 @@ The criteria, in order of weight, were the source fidelity requirements of the [
 | Criterion | A, source editor | B, focused slices | C, hybrid text view |
 | --- | --- | --- | --- |
 | Byte fidelity, BOM and CRLF | No-op and local-edit round trips identical | No-op identical | No-op identical |
-| Undo (F.7) | One history, including Accept and Format; redo and undo only while the editor has focus | History lost at every change of unit; ten undos after a unit switch leave the edit in place | No undo after Apply; history exists only inside the open inline editor |
+| Undo (F.7) | One history, including Accept of a proposal; the history keys act only on the editor, so redo with Ctrl+Y does nothing while focus is on a toolbar button | History lost at every change of unit; ten undos after a unit switch leave the edit in place | No undo after Apply; history exists only inside the open inline editor |
 | Load and typing | Wheaton loads in 259 ms; the codex loads in 6.8 s; keystroke to frame 12 to 19 ms | An open-time byte-fidelity self-test makes Wheaton take 8.5 s and the codex not finish | Wheaton loads in 573 ms and each Apply re-renders the whole document in 653 ms; the codex loads in 31 s |
 | Default folds | Fail on the codex, because `foldStructure` gives the parser a 2000 ms budget that the codex exceeds | Not applicable | Header and apparatus collapse to a summary row |
 | Slices and caret | Not applicable | Slices start without their first-line indentation; text typed at the start of a unit lands before its `pb` | Click-to-caret is exact, entity references count as one character |
@@ -73,8 +73,8 @@ All three shared three findings:
 
 The operator decided on 2026-10-30 for A as the source view plus a hidden-markup text level on the same `EditorState`, and for removing the prototypes once their knowledge is in this base. The reasons:
 
-- A is the only prototype that meets F.7 and keeps one history across Accept, Format and view changes, because everything is one state. B and C fail F.7 because each holds its edits in a second, short-lived editor state, and repairing that would mean rebuilding them on one state, which is A.
-- A scales to the real codex in load and typing. B's self-test and C's full re-render do not, and both costs are inherent to slicing and to rendering the whole tree as DOM.
+- A is the only prototype that meets F.7 and keeps one history across proposals, formatting and view changes, because everything is one state. B and C fail F.7 because each holds its edits in a second, short-lived editor state, and repairing that would mean rebuilding them on one state, which is A.
+- A scales to the real codex in load and typing. B's open-time self-test and C's full re-render do not, and C's cost is inherent to rendering the whole tree as DOM.
 - C's reading quality is the strongest finding of the comparison, and a text level that hides markup by decoration on A's state carries it over without C's undo loss and re-render cost.
 - B's navigation value lies in the outline and in reaching errors outside the visible part, which work as well with folding on one state.
 
