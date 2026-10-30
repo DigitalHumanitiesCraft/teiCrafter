@@ -51,6 +51,8 @@ Exact-source checks compare complete expected strings or encoded downloads, pres
 | Schema and file output | Ordered schema decisions, dependency graphs, projection binding, cancellation and external-version checks | Valid downloads, invalid/unavailable refusal, late completion and native/fallback delivery |
 | Intake and external services | Deterministic PAGE/text conversion, provider mapping and provenance | Import diagnostics, generated drafts and guarded asynchronous suggestions |
 
+Proposal provenance (`resp`, `cert` and acceptance) is checked through apply, save, confirm and reopen in [proposal_provenance_roundtrip_check.mjs](../test/proofs/proposal_provenance_roundtrip_check.mjs). The pending and the confirmed state each re-serialise byte-identically and validate against TEI All, the confirmed construct carries origin, certainty, acceptance and the confirming person, and a second confirmation leaves the first record unchanged.
+
 The executable contracts live in [proofs](../test/proofs/) and [browser scenarios](../test/e2e/). [Architecture](architecture.md) identifies the implementation boundaries; [data](data.md) specifies the expected serialized forms.
 
 ## State-transition regressions

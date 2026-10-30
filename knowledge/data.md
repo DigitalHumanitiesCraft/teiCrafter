@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: complete
 created: 2026-05-27
-updated: 2026-09-11
+updated: 2026-10-30
 language: en
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
@@ -208,7 +208,7 @@ Whole-document generated TEI carries a configured responsibility pointer on the 
 
 Reload detection requires both pointer and declaration. Per-construct proposals also use `@resp`; project policy can replace the default local pointer.
 
-Acceptance preserves the complete `resp` token list and adds `urn:teicrafter:proposal:accepted:` plus the URI-encoded responsibility token to `ana`. Accepting `#ai` therefore adds `urn:teicrafter:proposal:accepted:%23ai` while retaining existing analysis tokens. Origin and pending status remain independent. An accepted gap retains this evidence when its reversible choice is collapsed. Provider transport and key handling belong to [integration](integration.md#model-and-authority-services).
+Acceptance preserves the complete `resp` token list, appends the confirming person's pointer to `resp` and adds `urn:teicrafter:proposal:accepted:` plus the URI-encoded responsibility token to `ana`. Accepting `#ai` therefore adds `urn:teicrafter:proposal:accepted:%23ai` while retaining existing analysis tokens, and a confirmation by `https://example.org/editor` turns `resp="#ai"` into `resp="#ai https://example.org/editor"`. The person pointer is the configured reviewer identity, by default `urn:teicrafter:local-reviewer`, and a pointer already present in `resp` is not repeated. Origin and pending status remain independent. The first acceptance stands, and a repeated confirmation changes nothing. The time of acceptance is not recorded per construct. An accepted gap retains this evidence when its reversible choice is collapsed. Provider transport and key handling belong to [integration](integration.md#model-and-authority-services).
 
 <a id="licence-boundary"></a>
 

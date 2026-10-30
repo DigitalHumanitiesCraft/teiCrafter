@@ -145,7 +145,7 @@ In `docs/js/projects/wenzelsbibel/`, `wenzels-workspace.js` composes the project
 
 `review-record.js` resolves a unique navigation target, supplies an identifier when needed and appends a review change in the relevant document or corpus-member header. `review-evidence.js` fingerprints the exact review scope; `review-progress.js` distinguishes current, changed, historical and reopened state. Duplicate targets and incompatible revision structures prevent writing. A matching verified record establishes current review only for its encoded scope. Annotation presence and linked register content outside that scope do not establish review.
 
-`proposal-provenance.js` keeps model origin separate from per-responsibility acceptance. Whole-document origin is reconstructed from a root responsibility pointer and its header declaration after loading. The [serialized evidence](data.md#machine-provenance) remains the source of truth for these projections.
+`proposal-provenance.js` keeps model origin separate from per-responsibility acceptance. Every editor path that confirms a model proposal, the entity confirmation in `standoff.js` and the construct and gap confirmation in `proposal-review.js` and `proposal-gap.js`, routes through its `acceptProposal`. That function records the confirming person from the shared reviewer identity, which `currentReviewer()` in `review-dialog.js` supplies to proposal confirmations and review records alike. Whole-document origin is reconstructed from a root responsibility pointer and its header declaration after loading. The [serialized evidence](data.md#machine-provenance) remains the source of truth for these projections.
 
 ## Schema execution and currentness
 

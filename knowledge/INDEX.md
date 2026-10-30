@@ -92,7 +92,7 @@ Current facts belong to their owning knowledge document. Reports retain historic
 
 **Witness reading** chooses an explicitly attributed apparatus branch for a selected local witness. Missing or ambiguous attestation is disclosed. Text outside the apparatus remains base text.
 
-**Accepted AI provenance** retains the origin pointer while recording human acceptance separately. Acceptance is not a schema result or a fingerprinted review of the surrounding navigation unit.
+**Accepted AI provenance** retains the origin pointer and records human acceptance and the confirming person separately. Acceptance is not a schema result or a fingerprinted review of the surrounding navigation unit.
 
 **Open provider adapter** is an application-code extension point for nonstandard LLM protocols. A custom OpenAI-compatible endpoint is configurable in the interface. Project manifests remain declarative and cannot inject executable adapters.
 

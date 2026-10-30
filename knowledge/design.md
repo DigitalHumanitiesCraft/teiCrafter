@@ -145,7 +145,7 @@ ICONCLASS lookup follows an explicit search or notation request. A selected resu
 
 ## Model assistance
 
-Generated-document banners, proposal layers and model actions use violet. Dashed outlines and **AI-proposed, unverified** identify pending proposals without relying on colour. Accepted model-origin content uses solid violet treatment and explicit origin text. Confirmation retains responsibility evidence; rejection addresses pending proposals.
+Generated-document banners, proposal layers and model actions use violet. Dashed outlines and **AI-proposed, unverified** identify pending proposals without relying on colour. Accepted model-origin content uses solid violet treatment and explicit origin text. Confirmation retains responsibility evidence and records the configured reviewer identity as the confirming person. Rejection addresses pending proposals.
 
 Reload restores model-origin state from matching source declarations. Provider controls distinguish endpoint and model settings from memory-only API keys. Disabling assistance removes model surfaces while preserving deterministic work. [Specification](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md#llm-assistance-and-provenance) defines provenance and provider constraints.
 

@@ -35,6 +35,9 @@ The generic code and tests still carry project-specific parts. [Derivation](deri
 | Whether the bottom inspector (forms from a field table) and the register autocomplete built for the wenzelsbibel-teiCrafter fork become generic base components | No blocking dependency | Generic base components, project field tables and labels stay in the fork |
 | Phase selection for a Schematron entry in the schema set, replacing the rewrite of `defaultPhase` in the workspace's review action | No blocking dependency | Add as a generic schema-set option |
 | Whether `knowledge/wenzelsbibel.md` stays in the base now that the Wenzelsbibel code lives in its project folder and the fork carries its own knowledge base | No blocking dependency | Operator decision; the document describes the base's Wenzelsbibel workspace as long as that workspace is installed here |
+| Where the confirmer identity of accepted model proposals is set; today only the review dialog sets the reviewer identity that confirmation records, and a project-level or toolbar setting would make it reachable before the first confirmation | No blocking dependency | Operator decision |
+| How a free-text reviewer identity is handled, since an identity containing whitespace is split into several `resp` tokens on confirmation | No blocking dependency | Operator decision; the dialog asks for a URI or TEI pointer, so a check at input is one option |
+| Whether confirmations are dated, which needs a serialisation decision between an `xml:id` on the construct plus a `revisionDesc/change` and undated acceptance as today | Any claim that the file dates a confirmation | Operator decision |
 
 ## Rebuild phase
 
