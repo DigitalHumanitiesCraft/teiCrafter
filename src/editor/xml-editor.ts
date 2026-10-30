@@ -48,7 +48,8 @@ export function baseExtensions({ wrap = false }: { wrap?: boolean } = {}): Exten
     foldGutter(),
     highlightSelectionMatches(),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-    xml(),
+    // Automatic closing tags would insert characters the user did not type (F.5).
+    xml({ autoCloseTags: false }),
     selectionTheme,
     lineWrapping.of(wrapExtension(wrap)),
     EditorState.tabSize.of(2),
