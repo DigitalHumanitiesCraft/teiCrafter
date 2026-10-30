@@ -47,7 +47,7 @@ npm run test:src
 npm run typecheck:src
 ```
 
-`test:src` runs `node --test "test/core/*.test.mjs" "test/validate/*.test.mjs"`, and Node 22 needs the quoted glob form. `npm run check:biome` lints `src/` and `prototypes/` together with the legacy paths.
+`test:src` runs `node --test "test/core/*.test.mjs" "test/editor/*.test.mjs" "test/validate/*.test.mjs"`, and Node 22 needs the quoted glob form. `npm run check:biome` lints `src/` together with the legacy paths.
 
 ## Fidelity harness
 

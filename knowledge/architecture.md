@@ -15,7 +15,7 @@ created: 2026-02-05
 updated: 2026-10-30
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
-related: [specification, data, design, testing, derivation]
+related: [specification, data, design, testing, derivation, views]
 ---
 
 # teiCrafter Architecture
@@ -46,14 +46,14 @@ The successor architecture lives beside the current application in `docs/` until
 
 | Layer | Path | Content |
 | --- | --- | --- |
-| Core | `src/core/` | DOM-free JavaScript, Node-testable. The unchanged exact-source modules `tei-document.js` and `file-encoding.js`, `line-offsets.js` for line-separator arithmetic, `format.js` for formatting one element without touching mixed content, `plaintext-to-tei.js` for the deterministic starter, `proposal.js` for the proposal shape and its splice, `proposal-fixture.js` as an offline demo producer, `well-formed.ts` as the browser-parser check |
-| Editor | `src/editor/` | CodeMirror 6 extensions. `xml-editor.ts` holds the shared configuration, including the token-based selection theme and a line-wrapping compartment that is off unless a view asks for it, `hanging-indent.ts` hangs wrapped continuation lines under their own line's content, `offsets.ts` translates editor positions to raw offsets, `structural-fold.ts` folds by element with a default-collapsed list and summarising placeholders, `element-path.ts` derives the breadcrumb, `markup-levels.ts` offers the source and reading levels |
+| Core | `src/core/` | DOM-free JavaScript, Node-testable. The unchanged exact-source modules `tei-document.js` and `file-encoding.js`, `line-offsets.js` for line-separator arithmetic, `format.js` for formatting one element without touching mixed content, `plaintext-to-tei.js` for the deterministic starter, `proposal.js` for the proposal shape and its splice, `proposal-fixture.js` as an offline demo producer, `well-formed.ts` as the browser-parser check with the error description stripped of each browser's framing, `outline.ts` for the navigation units of a document (header parts, text structure, divisions and pages) as raw ranges with source labels, `element-facts.ts` for the entity class of an element and a one-line summary of its content |
+| Editor | `src/editor/` | CodeMirror 6 extensions. `xml-editor.ts` holds the shared configuration, including the token-based selection theme, the XML language without automatic closing tags (F.5) and a line-wrapping compartment that is off unless a view asks for it, `hanging-indent.ts` hangs wrapped continuation lines under their own line's content, `offsets.ts` translates editor positions to raw offsets, `structural-fold.ts` folds by element with a default-collapsed list and summarising placeholders, `element-path.ts` derives the breadcrumb, `markup-levels.ts` offers the source and reading levels |
 | Validation | `src/validate/` | RelaxNG and XSD through libxml2-wasm in a module worker with a compiled-schema cache and line-bearing diagnostics. Schematron is not supported |
 | Files | `src/io/` | Open, drop and save behind the File System Access capability check with file input and download as fallback, external-change refusal, recent handles |
 | Model proposals | `src/llm/` | The provider adapter boundary with memory-only keys, `proposeEdit` with a delimited answer format and a fragment check, and an offline fixture provider |
 | Tokens | `src/ui/tokens.css` | The design token sheet |
 
-Runtime assets that are served unbundled (schemas, the libxml2-wasm runtime, the TEI Guidelines subset, samples, brand assets) live in `public/`. Identical copies stay under `docs/`, which the published application uses ([deployment](integration.md#browser-files-and-deployment)). Viewer prototypes under `prototypes/` import only `src/` and are served by `npm run dev:prototypes` with the repository as server root.
+Runtime assets that are served unbundled (schemas, the libxml2-wasm runtime, the TEI Guidelines subset, samples, brand assets) live in `public/`. Identical copies stay under `docs/`, which the published application uses ([deployment](integration.md#browser-files-and-deployment)). The surfaces built on these layers, a source level and a hidden-markup text level on one `EditorState` with focus by folding, are described in [views](views.md).
 
 The code editor counts a CRLF line break as one position and joins lines with LF, while the core addresses raw string offsets. Every splice, fold, diagnostic and proposal therefore passes through `offsets.ts`. Text leaves the editor through `state.sliceDoc()`, which honours `EditorState.lineSeparator`, and never through `doc.toString()`, which always joins lines with LF. The first TEI All validation compiles the schema, which takes seconds; later validations reuse the compiled schema in the worker.
 

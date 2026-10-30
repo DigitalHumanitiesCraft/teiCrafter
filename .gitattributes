@@ -11,8 +11,8 @@ docs/data/editor/** -text
 test/fixtures/** -text
 test/fixtures-synthetic/** -text
 
-# The source-first prototypes and tests use this sample as their CRLF document;
-# normalising it to LF would remove the line endings they exercise.
+# The source-first tests use this sample as their CRLF document; normalising
+# it to LF would remove the line endings they exercise.
 public/samples/zbz-hersch-synthetic.xml -text
 
 # The vendored TEI Guidelines compilation is stored byte-verbatim; its SHA-256

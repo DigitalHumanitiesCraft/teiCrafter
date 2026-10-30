@@ -15,7 +15,7 @@ created: 2026-02-05
 updated: 2026-10-10
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
-related: [project, data, architecture, design, testing, journal, converter-reference]
+related: [project, data, architecture, design, views, testing, journal, converter-reference]
 ---
 
 # teiCrafter Specification
@@ -108,6 +108,10 @@ Whether schema errors block Save is undecided. The options are:
 | Keyboard only | Opening, folding, validating, accepting a proposal and saving succeed without a pointer |
 
 ## Key decisions
+
+### View model, 2026-10-30
+
+The source-first editor is prototype A's source view plus a hidden-markup text level on the same `EditorState`, with focus by folding rather than a slice editor, because only one state per document meets F.7 and scales to the real codex. [Views](views.md) owns the comparison and what carries over.
 
 ### Legacy application as derivable base, 2026-10-10
 

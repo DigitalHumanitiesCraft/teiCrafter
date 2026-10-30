@@ -16,7 +16,7 @@ updated: 2026-10-30
 language: en
 version: "0.23"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, plan, journal, handoff, testing, integration, derivation, converter-reference, worked-examples, wenzelsbibel]
+related: [project, data, specification, architecture, design, views, plan, journal, handoff, testing, integration, derivation, converter-reference, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Knowledge Base
@@ -44,6 +44,7 @@ The required process documents are the decision [journal](journal.md) and the co
 | [Specification](specification.md) | Which behaviours and constraints are normative? |
 | [Architecture](architecture.md) | How do inventory, profiles, navigation, mutations, validation, and browser boundaries compose? |
 | [Design](design.md) | How does the interface expose document structure, risk, provenance, and review? |
+| [Views](views.md) | Which surfaces present a document in the source-first editor, on what comparison evidence, and what carries over from the prototypes? |
 | [Testing](testing.md) | Which evidence supports each technical and editorial claim? |
 | [Integration](integration.md) | Which contracts connect teiCrafter to project repositories, schemas, images, and model services? |
 | [Derivation](derivation.md) | What does a derived project version inherit, which base coupling does it meet, and which derivations are observed? |

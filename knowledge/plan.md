@@ -15,7 +15,7 @@ status: active
 created: 2026-10-10
 updated: 2026-10-30
 language: en
-related: [architecture, specification, testing, wenzelsbibel, derivation, journal, handoff, INDEX]
+related: [architecture, specification, testing, wenzelsbibel, derivation, views, journal, handoff, INDEX]
 ---
 
 # Plan
@@ -38,20 +38,18 @@ The generic code and tests still carry project-specific parts. [Derivation](deri
 | Where the confirmer identity of accepted model proposals is set; today only the review dialog sets the reviewer identity that confirmation records, and a project-level or toolbar setting would make it reachable before the first confirmation | No blocking dependency | Operator decision |
 | How a free-text reviewer identity is handled, since an identity containing whitespace is split into several `resp` tokens on confirmation | No blocking dependency | Operator decision; the dialog asks for a URI or TEI pointer, so a check at input is one option |
 | Whether confirmations are dated, which needs a serialisation decision between an `xml:id` on the construct plus a `revisionDesc/change` and undated acceptance as today | Any claim that the file dates a confirmation | Operator decision |
-| Whether the prototype sample `public/samples/wenzelsbibel-synthetic-codex.xml` carries CRLF like the Hersch sample; the checks of prototypes B and C treat it as a CRLF document and fail on its committed LF bytes | A passing prototype comparison in step 1 of the rebuild phase | Convert it to CRLF and exempt it from normalisation in `.gitattributes`, as for the Hersch sample |
 
 ## Rebuild phase
 
 The source-first rebuild under `src/` continues until the new editor carries an application shell for the three use cases. It writes nothing into `docs/`. The switch of the GitHub Pages source, the retirement of `docs/`, the legacy tests and the cluster-specific knowledge documents wait until the new editor can also serve as derivable base. [Design](design.md), [testing](testing.md) and [project](project.md) describe the legacy editor until then.
 
-1. Compare prototypes A, B and C under `prototypes/` in the browser and record which interaction carries into the product.
-2. Build the app shell on `src/` with the three use cases, targeting [architecture](architecture.md), [specification](specification.md), [design](design.md) and `src/app/`.
-3. Decide whether schema errors block Save (the open decision in the [specification](specification.md#open-decision-on-save)).
+The comparison of prototypes A, B and C is complete. The editor is A's source view plus a hidden-markup text level on the same `EditorState`, and [views](views.md) owns the evidence, the reasons and the list of what carries over. Automatic closing tags are switched off in `src/editor/xml-editor.ts`.
 
-Corrections in `src/` that building the prototypes showed to be needed:
+1. Build the app shell on `src/` with the three use cases, targeting [architecture](architecture.md), [specification](specification.md), [design](design.md), [views](views.md) and `src/app/`. The shell takes over from prototype A, at revision `9ae6534`, the problem gutter (`problemLine`, `problemExtensions`), the proposal state and widget (`proposals`, `ProposalWidget`), `applyCanonical`, and the format and discard dialogs (`openFormatDialog`, `confirmDiscard`), and saves through `src/io/open-save.ts` so that F.8 holds. The proposal widget must not shift the editor horizontally when it scrolls. A browser check of the shell takes over the assertions of `prototypes/a-code/check.mjs` on the selection colour and line wrapping ([testing](testing.md#source-first-core-checks)).
+2. Build the text level on the same state: extend `src/editor/markup-levels.ts` with the reading typography of `prototypes/c-hybrid/c-hybrid.css`, entity colours from `entityOf` in `src/core/element-facts.ts`, block layout and token spacing that keeps word-level TEI readable, and C's keyboard model (`items`, `focusItem`, `focusMarkAt`) where marks stay focusable. `caretOffset` from `prototypes/c-hybrid/c-hybrid.ts` maps a click in decoded text to a raw offset.
+3. Build focus by folding: an outline beside the editor from `buildOutline` in `src/core/outline.ts` with B's tree rendering and keys (`renderTree`, `treeItem`, `moveTreeFocus`, `activate` in `prototypes/b-focus/b-focus.ts`), a focus command that folds everything outside the chosen unit (specification S.9), and B's "Go to line" link for a well-formedness error outside the visible part.
+4. Make the default folds work on large documents: `foldStructure` in `src/editor/structural-fold.ts` gives the parser a 2000 ms budget that the Wenzelsbibel codex exceeds, so the folds have to follow the incremental parse.
+5. Add a dark colour scheme for the editor surfaces through the design tokens.
+6. Decide whether schema errors block Save (the open decision in the [specification](specification.md#open-decision-on-save)).
 
-- Switch off the automatic closing of tags (`autoCloseTags` of the XML language package, enabled by default) in `xml-editor.ts`, because it breaks F.5 of the [specification](specification.md#source-fidelity).
-- Add a token-based highlight style to `src/editor/`, because the default highlight style misses contrast on the secondary surface.
-- Let `createXmlState` take the line separator as an argument, because a slice without its own line break cannot reveal the document's separator ([architecture](architecture.md#source-first-core-under-src)).
-
-Observations to weigh in the comparison of step 1: B loses undo at every focus change, which violates F.7, and its slices start without their first-line indentation, while hiding the surrounding document inside one whole-document editor would keep undo. C reads well at the reading level and its click-to-caret source editing is precise, but word-level TEI becomes a wall of marks, attributes reflow lines, and every Apply re-renders the whole document. Candidates for `src/` are a well-formedness reason extractor (duplicated in A and C), the outline builder from B, the `name` and `rs` entity resolver from C and an offset-tree element summary.
+A correction in `src/` that building the prototypes showed to be needed: add a token-based highlight style to `src/editor/`, because the default highlight style misses contrast on the secondary surface. Prototype paths in this list refer to revision `9ae6534`, the last commit containing `prototypes/`.

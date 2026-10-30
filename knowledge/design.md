@@ -15,7 +15,7 @@ created: 2026-05-27
 updated: 2026-10-30
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
-related: [project, specification, architecture, data, testing, wenzelsbibel]
+related: [project, specification, architecture, data, testing, wenzelsbibel, views]
 ---
 
 # teiCrafter Design System
@@ -46,6 +46,10 @@ Components consume the shared CSS custom properties. Component styles introduce 
 | Type | `--font-ui`, `--font-mono`, `--font-serif` | Controls, XML or identifiers, and public narrative text |
 
 Status uses categories and words. Numeric confidence requires a calibrated producer; the application currently supplies none. Colour has a second channel through text, borders, underlines or patterns.
+
+## Source-first editor surfaces
+
+The source-first editor presents one document on one editor state at two levels. The source level shows the complete XML with folding, the element path and a problem mark at the error line. The text level hides markup on the same state and sets the text in the serif reading typography with entity colours, so a switch of level keeps cursor, folds and Undo. Focus on a page or division folds the rest of the document rather than opening a second editor. Typing inserts exactly the typed characters; the editor closes no tag on its own. [Views](views.md) owns the comparison and the reasons behind these surfaces.
 
 ## Editor frame
 

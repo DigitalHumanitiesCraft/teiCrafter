@@ -130,14 +130,14 @@ The pinned repository compiler is the only typecheck entry. Missing required too
 
 ## Source-first core checks
 
-The source-first core under `src/` has its own Node tests and type check, separate from the legacy gate. `test/core/` checks the DOM-free core (offset translation, formatting, the plain-text starter and the proposal splice), and `test/validate/` checks the schema worker client and the libxml2-wasm runtime against vendored schemas. The type check runs strict TypeScript over `src/` and the prototypes through [tsconfig.json](../tsconfig.json). The browser check of prototype A, `prototypes/a-code/check.mjs`, also asserts the shared editor configuration: the drawn selection carries the selection token whether or not the editor has focus, the native selection stays transparent, and the wrap toggle wraps long lines without horizontal scrolling, hangs continuation lines two columns under their own content and changes no text.
+The source-first core under `src/` has its own Node tests and type check, separate from the legacy gate. `test/core/` checks the DOM-free core (offset translation, formatting, the plain-text starter, the proposal splice, the outline, entity classes, element summaries and the browser-independent well-formedness reason), `test/editor/` checks the shared CodeMirror configuration (no automatic closing tags, F.5), and `test/validate/` checks the schema worker client and the libxml2-wasm runtime against vendored schemas. The type check runs strict TypeScript over `src/` through [tsconfig.json](../tsconfig.json). The browser assertions on the shared editor configuration, that the drawn selection carries the selection token, the native selection stays transparent and wrapping hangs continuation lines without changing text, ran in the check of prototype A and have no browser check until the app shell has one ([plan](plan.md#rebuild-phase)).
 
 ```powershell
 npm run test:src
 npm run typecheck:src
 ```
 
-`npm run test:src` runs `node --test "test/core/*.test.mjs" "test/validate/*.test.mjs"`, and Node 22 needs the quoted glob form. Biome covers `src/` and `prototypes/` through `npm run check:biome`. The [checks workflow](../.github/workflows/checks.yml) runs these steps beside the editorial evaluation.
+`npm run test:src` runs `node --test "test/core/*.test.mjs" "test/editor/*.test.mjs" "test/validate/*.test.mjs"`, and Node 22 needs the quoted glob form. Biome covers `src/` through `npm run check:biome`. The [checks workflow](../.github/workflows/checks.yml) runs these steps beside the editorial evaluation.
 
 ## Editorial acceptance boundary
 
