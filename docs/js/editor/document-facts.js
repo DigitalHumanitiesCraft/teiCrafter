@@ -55,11 +55,10 @@ export function createDocumentFacts(ctx) {
   /** A plain explanation of a failed checkpoint; browser messages may end in their own period. */
   function recoveryProblemText(err) {
     const detail = String(err?.message || err || "unknown error").trim().replace(/\.+$/, "");
-    if (err?.name === "QuotaExceededError" || /too large|quota/i.test(detail)) {
-      return "Local recovery is not available: this document is too large for the browser's recovery storage. "
-        + "Download a working copy to keep your work.";
-    }
-    return `Local recovery failed (${detail}). Download a working copy to keep your work.`;
+    const reason = /too large/i.test(detail) ? "this document is too large for the browser's recovery storage"
+      : err?.name === "QuotaExceededError" ? "the browser's storage for this site is full"
+      : detail;
+    return `Local recovery failed: ${reason}. Download a working copy to keep your work.`;
   }
 
   /** The project in force: the open folder's project wins over a detected one. */
