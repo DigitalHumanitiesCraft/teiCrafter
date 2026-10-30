@@ -15,7 +15,7 @@ created: 2026-02-05
 updated: 2026-10-30
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
-related: [specification, data, design, testing]
+related: [specification, data, design, testing, derivation]
 ---
 
 # teiCrafter Architecture
@@ -120,7 +120,7 @@ Mutation modules preserve semantic no-ops and refuse operations without a lossle
 
 ### Project workspaces
 
-The generic editor under `docs/js/editor/` names no project. Project code lives under `docs/js/projects/<id>/`, behind one entry file `index.js` that exports a workspace object. `docs/js/projects/index.js` is the single registration point listing the installed entry files; a derived tool adds its own entry there. `workspace-registry.js` registers those objects lazily on first use and answers the generic editor's questions:
+Workspace code reaches the generic editor under `docs/js/editor/` only through the registry. The generic editor still carries built-in examples, a detection profile, an interchange shape and a draft handoff for other projects, which [derivation](derivation.md#base-coupling-a-derivation-meets) lists. Project code lives under `docs/js/projects/<id>/`, behind one entry file `index.js` that exports a workspace object. `docs/js/projects/index.js` is the single registration point listing the installed entry files; a derived tool adds its own entry there. `workspace-registry.js` registers those objects lazily on first use and answers the generic editor's questions:
 
 | Workspace field | Consumer |
 | --- | --- |

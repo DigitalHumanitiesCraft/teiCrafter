@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: complete
 created: 2026-09-11
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 topics: ["[[TEI XML]]", "[[Digital Editions]]", "[[Data Modelling]]"]
 knowledge-sources:
@@ -25,7 +25,7 @@ knowledge-sources:
       uri: https://www.primaresearch.org/schema/PAGE/gts/pagecontent/2017-07-15/Simple%20PAGE%20XML%20Example.pdf
     - label: METS structural maps
       uri: https://www.loc.gov/standards/mets/METSOverview.html
-related: [project, specification, architecture, design, data, testing]
+related: [project, specification, architecture, design, data, testing, derivation]
 ---
 
 # Wenzelsbibel Editorial Workspace
@@ -36,7 +36,7 @@ The Wenzelsbibel workspace provides source-preserving authoring for transcriptio
 
 In the local development or build preview, the start page's Wenzelsbibel example opens this workspace with a synthetic codex when the local original is absent. The sample has no original page images. Examples remain hidden on the public deployment. For edition work in either environment, use **Load** to open the local codex and attach the corresponding image annotations and registers through **Linked project documents**.
 
-The derived repository [wenzelsbibel-teiCrafter](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter) develops the project version for the edition team and departs from these models by its decisions of 2026-10-10. It sets register links inline on the words, proposed to the edition team as `rs[@type][@ref]`, instead of stand-off spans. It writes no Bible-verse spans, and the list element for peoples remains open there. Its [knowledge base](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter/tree/main/knowledge) and the [open ratification points](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter/blob/main/knowledge/editorial-guidelines.md#open-ratification-points) of its editorial guidelines own those decisions.
+The derived repository [wenzelsbibel-teiCrafter](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter) develops the project version for the edition team and departs from these models by its decisions of 2026-10-10. It sets register links inline on the words, proposed to the edition team as `rs[@type][@ref]`, instead of stand-off spans. It writes no Bible-verse spans, and the list element for peoples remains open there. Its [knowledge base](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter/tree/main/knowledge) and the [open ratification points](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter/blob/main/knowledge/editorial-guidelines.md#open-ratification-points) of its editorial guidelines own those decisions. [Derivation](derivation.md#wenzelsbibel-fork) registers the repository as a case of the fork form.
 
 The register and verse conventions and the local editorial Schematron are implemented, teiCrafter-authored project decisions. The [editorial completion report](../reports/editorial-completion-2026-09-11.md) records technical verification against identified synthetic and local source data. Scholarly assessment of these conventions and user acceptance remain open. The edition team assesses individual readings, attributions and alignments against the cited sources.
 

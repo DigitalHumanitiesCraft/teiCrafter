@@ -12,16 +12,18 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: complete
 created: 2026-05-27
-updated: 2026-10-10
+updated: 2026-10-30
 language: en
 version: "0.23"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, plan, journal, handoff, testing, integration, converter-reference, worked-examples, wenzelsbibel]
+related: [project, data, specification, architecture, design, plan, journal, handoff, testing, integration, derivation, converter-reference, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Knowledge Base
 
 teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Save and TEI Download require every configured schema to pass for the exact projected bytes. Working copy preserves unfinished work and attached documents. Project package validates each XML document before producing one delivery archive.
+
+This model describes the legacy application under `docs/`, which is also the base from which project-specific versions are derived. A source-first editor is rebuilt beside it under `src/`, with its requirements in the [specification](specification.md) and its order in the [plan](plan.md). Derivations take two observed forms, a Git fork that merges the base and a standalone editor with one source configuration, which [derivation](derivation.md) registers as cases.
 
 ## Documentation maintenance
 
@@ -44,6 +46,7 @@ The required process documents are the decision [journal](journal.md) and the co
 | [Design](design.md) | How does the interface expose document structure, risk, provenance, and review? |
 | [Testing](testing.md) | Which evidence supports each technical and editorial claim? |
 | [Integration](integration.md) | Which contracts connect teiCrafter to project repositories, schemas, images, and model services? |
+| [Derivation](derivation.md) | What does a derived project version inherit, which base coupling does it meet, and which derivations are observed? |
 | [Worked examples](worked-examples.md) | How do representative editorial workflows exercise those contracts? |
 | [Wenzelsbibel](wenzelsbibel.md) | Which editorial models, project forms and cross-file conventions support the Wenzelsbibel workflow? |
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |

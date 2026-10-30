@@ -11,11 +11,11 @@ template:
   version: 0.3
   url: https://dhcraft.org/Promptotyping/promptotyping-document/plan
   alias: https://dhcraft.org/Promptotyping/#promptotyping-document-plan
-status: complete
+status: active
 created: 2026-10-10
 updated: 2026-10-30
 language: en
-related: [architecture, specification, testing, wenzelsbibel, journal, handoff, INDEX]
+related: [architecture, specification, testing, wenzelsbibel, derivation, journal, handoff, INDEX]
 ---
 
 # Plan
@@ -24,9 +24,9 @@ This plan orders the work that remains planned for teiCrafter. The legacy applic
 
 ## Completed
 
-The refactoring that makes the base derivable is complete. The generic editor under `docs/js/editor/` names no project, the Wenzelsbibel code, styles and examples live in `docs/js/projects/wenzelsbibel/` behind one entry file, and a workspace registry answers the generic editor's questions about installed projects. [Architecture](architecture.md#project-workspaces) holds the resulting module map and workspace fields, the [journal](journal.md) records the decisions taken on the way, and [integration](integration.md#deriving-a-project-version) states how a derived version builds on the base.
+The refactoring that makes the base derivable is complete. The Wenzelsbibel code, styles and examples live in `docs/js/projects/wenzelsbibel/` behind one entry file, and a workspace registry, the only route by which workspace code reaches the generic editor under `docs/js/editor/`, answers the generic editor's questions about installed projects. [Architecture](architecture.md#project-workspaces) holds the resulting module map and workspace fields, the [journal](journal.md) records the decisions taken on the way, and [derivation](derivation.md) states how a derived version builds on the base.
 
-One coupling remains open. The generic browser spec `test/e2e/project-transition-safety.spec.js` still imports `createWenzelsRegistersDocument` from `docs/js/projects/wenzelsbibel/`, as the audit of 2026-10-30 found, so the generic tests do not yet run without the Wenzelsbibel project folder.
+The generic code and tests still carry project-specific parts. [Derivation](derivation.md#base-coupling-a-derivation-meets) holds the one list of that coupling, and removing an entry is base work under the rule of the [specification](specification.md#legacy-application-as-derivable-base-2026-10-10).
 
 ## Open decisions in the base
 
@@ -34,6 +34,7 @@ One coupling remains open. The generic browser spec `test/e2e/project-transition
 | --- | --- | --- |
 | Whether the bottom inspector (forms from a field table) and the register autocomplete built for the wenzelsbibel-teiCrafter fork become generic base components | No blocking dependency | Generic base components, project field tables and labels stay in the fork |
 | Phase selection for a Schematron entry in the schema set, replacing the rewrite of `defaultPhase` in the workspace's review action | No blocking dependency | Add as a generic schema-set option |
+| Whether `knowledge/wenzelsbibel.md` stays in the base now that the Wenzelsbibel code lives in its project folder and the fork carries its own knowledge base | No blocking dependency | Operator decision; the document describes the base's Wenzelsbibel workspace as long as that workspace is installed here |
 
 ## Rebuild phase
 
@@ -43,11 +44,10 @@ The source-first rebuild under `src/` continues until the new editor carries an 
 2. Build the app shell on `src/` with the three use cases, targeting [architecture](architecture.md), [specification](specification.md), [design](design.md) and `src/app/`.
 3. Decide whether schema errors block Save (the open decision in the [specification](specification.md#open-decision-on-save)).
 
-Findings from building the prototypes, to be weighed in the comparison:
+Corrections in `src/` that building the prototypes showed to be needed:
 
-- The automatic closing of tags while typing (`autoCloseTags` of the XML language package) contradicts F.5 in A and B and should be switched off in `xml-editor.ts`.
-- The default highlight style misses contrast on the secondary surface; a token-based highlight style belongs in `src/editor/`.
-- `createXmlState` needs an explicit line-separator argument for slices without their own line break (B and C work around it).
-- B loses undo at every focus change, which violates F.7, and slices start without their first-line indentation. Hiding the surrounding document inside one whole-document editor would keep undo.
-- C reads well at the reading level and its click-to-caret source editing is precise, but word-level TEI becomes a wall of marks, attributes reflow lines, and every Apply re-renders the whole document.
-- Candidates for `src/`: a well-formedness reason extractor (duplicated in A and C), the outline builder from B, the `name` and `rs` entity resolver from C, an offset-tree element summary.
+- Switch off the automatic closing of tags (`autoCloseTags` of the XML language package, enabled by default) in `xml-editor.ts`, because it breaks F.5 of the [specification](specification.md#source-fidelity).
+- Add a token-based highlight style to `src/editor/`, because the default highlight style misses contrast on the secondary surface.
+- Let `createXmlState` take the line separator as an argument, because a slice without its own line break cannot reveal the document's separator ([architecture](architecture.md#source-first-core-under-src)).
+
+Observations to weigh in the comparison of step 1: B loses undo at every focus change, which violates F.7, and its slices start without their first-line indentation, while hiding the surrounding document inside one whole-document editor would keep undo. C reads well at the reading level and its click-to-caret source editing is precise, but word-level TEI becomes a wall of marks, attributes reflow lines, and every Apply re-renders the whole document. Candidates for `src/` are a well-formedness reason extractor (duplicated in A and C), the outline builder from B, the `name` and `rs` entity resolver from C and an offset-tree element summary.

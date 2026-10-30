@@ -15,7 +15,7 @@ created: 2026-06-07
 updated: 2026-10-30
 language: en
 topics: ["[[TEI XML]]", "[[Data Flow]]", "[[HTR Pipelines]]"]
-related: [project, data, specification, architecture, design, testing]
+related: [project, data, specification, architecture, design, testing, derivation]
 ---
 
 # teiCrafter Integration Contracts
@@ -50,17 +50,7 @@ An uploaded override belongs to its document and replaces that document's projec
 
 ## Deriving a project version
 
-The application under `docs/` is the base from which project-specific versions are derived. A derivation is a Git fork of this repository that keeps teiCrafter as its `upstream` remote and takes base changes with `git fetch upstream` and `git merge upstream/main`. The generic editor under `docs/js/editor/`, the manifest contract, the schema runtime and the design tokens stay as merged, so every base improvement arrives through an ordinary merge. A change the derivation needs in a generic module goes to the base first and returns by merge.
-
-A derivation changes three zones:
-
-| Zone | Content | Merge behaviour |
-| --- | --- | --- |
-| Shell pages | `docs/index.html` and `docs/editor.html` | Conflicts are resolved for the derivation, then base changes such as new script or stylesheet links are carried over |
-| Project folder | `docs/js/projects/<id>/` with the entry file `index.js` that exports the workspace object, its registration in `docs/js/projects/index.js`, a stylesheet linked from `editor.html` and project Schematron under `docs/schemas/` whose URL the entry file computes | Conflicts stay local to the project folder and the registration list |
-| Files only the derivation writes | Its own knowledge base, editorial rules, fixtures and further components | No conflicts, because the base never writes them |
-
-The project stylesheet is linked from `editor.html` because the build inlines a small stylesheet as a `data:` URL, which the editor's `style-src` policy refuses for a link added at runtime. A derivation that replaces the inherited `knowledge/` folder with its own knowledge base receives a modify/delete conflict whenever a merge touches a base knowledge file, and keeps the deletion. [Architecture](architecture.md#project-workspaces) holds the module map and the workspace fields the registry reads.
+The application under `docs/` is the base from which project-specific versions are derived, either as a Git fork that merges the base or as a standalone editor with one source configuration. [Derivation](derivation.md) owns the derivation contract, the base coupling a derivation meets, the integration traps and the register of observed cases.
 
 ## Downstream editorial evidence
 
