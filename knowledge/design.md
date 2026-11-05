@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: complete
 created: 2026-05-27
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture, data, testing, wenzelsbibel, views]
@@ -37,7 +37,7 @@ Components consume the shared CSS custom properties. Component styles introduce 
 | Family | Tokens | Meaning |
 | --- | --- | --- |
 | Surface | `--color-surface`, `--color-surface-sunken`, `--color-panel`, `--color-secondary` | Document, pane, band and control backgrounds |
-| Brand and action | `--color-header`, `--color-gold`, `--color-gold-hover`, `--color-link` | Site identity, primary actions, focus and links |
+| Brand and action | `--color-header`, `--color-gold`, `--color-gold-hover`, `--color-link`, `--color-focus` | Site identity, primary actions, links and the focus ring of editor controls |
 | Text | `--color-text`, `--color-text-body`, `--color-text-secondary`, `--color-text-muted`, `--color-text-inverse` | Reading text and information hierarchy |
 | State | `--color-confident`, `--color-review`, `--color-problem` with tint partners | Categorical success, review, warning and failure |
 | Model provenance | `--color-ai`, `--color-ai-tint` | Generated or proposed content, with pending and accepted treatments |
@@ -178,7 +178,8 @@ File input and Download provide the portable Chromium and Firefox workflow. A na
 - Popovers and dialogs return focus to their originating control or reading location.
 - Actions remain reachable without hover; hover emphasis also appears on keyboard focus.
 - Provenance, validation, review and annotations use text or pattern alongside colour.
-- Body copy uses the darker body-text token; contrast and automated accessibility checks apply to the actual rendered views.
+- Body copy uses the darker body-text token. Muted, confidence and review tokens also set text, so they keep 4.5:1 on every surface and their tints, and the focus token keeps 3:1; the brand gold is a fill, not a focus ring. A token proof checks these ratios, because Axe cannot measure the syntax colours under the source textarea. Automated accessibility checks apply to the actual rendered views.
+- Tab indents in the XML source textarea; Shift+Tab, and Tab after Escape, move focus on, and a visible hint under the source bar says so.
 - Decorative motion respects `prefers-reduced-motion`.
 
 ## Local SZD mapping interaction
@@ -191,4 +192,4 @@ Imported confirmations are labelled as confirmations in the working copy. The in
 
 ## Label discipline
 
-One command keeps one label across its control, tooltip, dialog and status. Source-derived terms remain consistent across pager, review and context panels. **AI-proposed, unverified**, **Output schema gate** and **XML-only** identify distinct provenance, authorization and editing states.
+One command keeps one label across its control, tooltip, dialog and status. Facts in one line are separate fields divided by layout, or joined by ordinary punctuation, never by a middle dot. Source-derived terms remain consistent across pager, review and context panels. **AI-proposed, unverified**, **Output schema gate** and **XML-only** identify distinct provenance, authorization and editing states.

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/testing
 status: complete
 created: 2026-05-30
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 topics: ["[[Software Testing]]", "[[Evaluation]]", "[[TEI XML]]"]
 related: [architecture, specification, data]
@@ -82,6 +82,8 @@ The normal [Playwright configuration](../playwright.config.js) builds and serves
 A run against directly served `docs/` establishes that source-delivery path only. The [source-browser diagnostic configuration](../reports/source-browser-check.config.mjs) complements the production gate. GitHub Pages deployment and CI build artifacts follow the distinct [integration contract](integration.md#browser-files-and-deployment).
 
 Public-example scenarios exercise actual missing-source responses and HTML with HTTP 200, ensuring a soft error cannot become an edition. Because the Playwright server runs on a loopback host, where every example is available, one scenario serves the build under a routed HTTPS host name and requires that only the examples in `FEATURES.publicExamples` load there and appear in the Load menu. The start-page scenario checks one primary button, the example link, a gallery card per entry of `derivations.json` with an open link only for an entry with a URL, the status link, and the automated accessibility floor in the dark scheme. The [derivations proof](../test/proofs/derivations_check.mjs) in the Node gate checks the gallery data against the headings of [derivation](derivation.md#case-register) and the files under `docs/`. Facsimile checks resolve the actual image URL, decode pixels and await a newly created overlay. An HTTP response or viewer container alone is insufficient evidence of image rendering.
+
+Axe cannot see every accessibility property, so further checks cover the gaps. The [editor chrome scenarios](../test/e2e/editor-chrome.spec.js) require that Tab indents in the XML source while Shift+Tab, and Tab after Escape, move focus out. The [contrast proof](../test/proofs/contrast_tokens_check.mjs) computes the ratios of the text and focus tokens, including the syntax colours that lie under the transparent source textarea, and the [separator proof](../test/proofs/ui_separator_check.mjs) refuses the middle dot as a separator in interface sources. The [TEI root proof](../test/proofs/tei_root_check.mjs) requires a plain message for an empty file or another root element, and the [timeout proof](../test/proofs/llm_timeout_check.mjs) requires that a provider which never answers ends in a named timeout while a user cancel keeps its own error.
 
 ## Real material and reproducibility
 

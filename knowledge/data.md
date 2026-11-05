@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/data
 status: complete
 created: 2026-05-27
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 topics: ["[[TEI XML]]", "[[Data Modelling]]"]
 knowledge-sources:
@@ -38,7 +38,7 @@ TEI identity is the namespace URI `http://www.tei-c.org/ns/1.0`; a default names
 
 | Form | Data contract |
 | --- | --- |
-| TEI XML | UTF-8 with optional BOM; Save and Download encode the exact schema-authorized target projection |
+| TEI XML | UTF-8 with optional BOM and one `TEI` or `teiCorpus` root; an empty file or another root is refused before editing with a message naming what was found; Save and Download encode the exact schema-authorized target projection |
 | Plaintext or Markdown | Deterministic draft with blank lines as paragraphs and `\|N\|` as a page milestone; selected starter templates supply their declared encoding |
 | Project folder | TEI or text sources beside a declarative manifest, mapping text, schema resources and optional images |
 | PAGE XML and optional METS | Deterministic separate TEI draft with explicit page ordering and retained import diagnostics; details in [Wenzelsbibel](wenzelsbibel.md) |

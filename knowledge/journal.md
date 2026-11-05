@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
@@ -21,6 +21,10 @@ related: [project, specification, architecture, data, design, testing, integrati
 # teiCrafter Decision Journal
 
 The entries record the triggers, decisions and reasons that explain teiCrafter's development, in reverse chronological order. Integrated, Corrected and Rejected identify substantive transitions, Decided identifies a direction set without a received delta, and Compacted identifies maintenance of their provenance.
+
+## 2026-11-05 | Corrected | Audit findings before the workshop
+
+A read-only audit of the published editor before the workshop of 9 and 10 November combined two independent scripted click-throughs, an accessibility audit and the existing gates. It found no loss of bytes and a working schema gate, but a keyboard trap in the XML source, text and focus colours below WCAG contrast, a raw JavaScript error for an empty or non-TEI file, provider requests without a time bound and middle dots as separators. The operator ordered these five corrected. Every load now refuses a file without one TEI or teiCorpus root with a message naming what it found, because only examples had been guarded and profile detection dereferenced the missing root. The focus ring moved from the brand gold, which reaches 1.9:1, to a darker token in the same warm family, so gold stays the fill of primary actions. Provider requests end after a generous bound that a long draft does not reach, and a user cancel stays distinct from the timeout. Each correction has a check that fails without it. The remaining findings are listed in the [plan](plan.md#open-defects-in-the-base); the SZD derivation turned out to be a private repository with a further editor derived from it, which [derivation](derivation.md#teicrafter-szd-standalone-editor) now records, and the README describes the three routes to an editor of one's own.
 
 ## 2026-10-30 | Decided | Start page with one public example and an editions gallery
 

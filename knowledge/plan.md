@@ -13,7 +13,7 @@ template:
   alias: https://dhcraft.org/Promptotyping/#promptotyping-document-plan
 status: active
 created: 2026-10-10
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 related: [architecture, specification, testing, wenzelsbibel, derivation, views, journal, handoff, INDEX]
 ---
@@ -38,6 +38,20 @@ The generic code and tests still carry project-specific parts. [Derivation](deri
 | Where the confirmer identity of accepted model proposals is set; today only the review dialog sets the reviewer identity that confirmation records, and a project-level or toolbar setting would make it reachable before the first confirmation | No blocking dependency | Operator decision |
 | How a free-text reviewer identity is handled, since an identity containing whitespace is split into several `resp` tokens on confirmation | No blocking dependency | Operator decision; the dialog asks for a URI or TEI pointer, so a check at input is one option |
 | Whether confirmations are dated, which needs a serialisation decision between an `xml:id` on the construct plus a `revisionDesc/change` and undated acceptance as today | Any claim that the file dates a confirmation | Operator decision |
+
+## Open defects in the base
+
+These defects of the published editor under `docs/` are known and not yet corrected. Each is a bug fix or an accessibility repair, which the [specification](specification.md#legacy-application-as-derivable-base-2026-10-10) admits in the base.
+
+- Double-clicking a word in the reading text selects the whole text run (`inline-editor.js`), so typing the correction replaces the line.
+- Reloading or navigating back to `editor.html#example=...` loads the example again instead of offering the recovery checkpoint, which only the plain `editor.html` shows.
+- The first schema-gated Download or Save shows its wait only in the status line; the button stays active and repeated clicks request several downloads.
+- The XML source checks well-formedness only on Check XML or Apply, shows the browser's raw parser text, and a non-well-formed file opens with an ordinary load message; the output block then names the schema instead of well-formedness.
+- Provider errors show raw response bodies, and a failed Propose (AI) always refers to the key dialog, also when a key is set.
+- A model-generated draft carries its provenance at document level only, while the banner says that AI output is marked violet.
+- Focus falls back to the page body after the Load menu, the New document dialog and inline editing; the LLM dialog does not keep focus inside; the context menu and the selection popover open by pointer only; the Load menu carries menu roles without arrow-key support.
+- Inline edit fields and the attribute editor input have no accessible name, index row actions at rest reach only about 1.8:1 through their opacity, and the editor scrolls sideways at 320 px width.
+- The Firefox browser scenarios that restore staged input after a reload fail intermittently when Playwright runs several workers and pass when run serially.
 
 ## Rebuild phase
 

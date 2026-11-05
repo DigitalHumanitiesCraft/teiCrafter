@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/integration
 status: complete
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 topics: ["[[TEI XML]]", "[[Promptotyping]]"]
 related: [integration, architecture, specification, plan, wenzelsbibel, journal, handoff]
@@ -119,11 +119,11 @@ The start page's gallery Editions built on teiCrafter renders `docs/data/derivat
 
 ### teiCrafter SZD, standalone editor
 
-- Repository: `szd-teiCrafter`, local, without a remote at the time of registration, started on 2026-10-30 on a freely licensed Stefan Zweig Digital letter.
+- Repository: [szd-teiCrafter](https://github.com/DigitalHumanitiesCraft/szd-teiCrafter), a private GitHub repository, started on 2026-10-30 on a freely licensed Stefan Zweig Digital letter. Because it is private, the start page describes it without a link.
 - Taken over: libxml2-wasm 0.7.1 and the TEI P5 4.11.0 `tei_all.rng`, byte-identical to the base's copy; CodeMirror 6, bundled once with esbuild into a vendored module; OpenSeadragon; the byte-fidelity rule and the lessons on `sliceDoc`, editor theming and the pending check before save. No module of `docs/js/editor/` or `src/` is copied. Its modules for editor, TEI facts, IIIF resolution, viewer, validation, split, person register and GND search are its own, and `js/source.js` holds the IIIF manifest rule, the element suggestions, the HTR marker actions and the person index with its reference forms (ADR-002, ADR-003).
 - Departures from the base: saving is always possible and the document state is to be shown instead of the fail-closed save gate (ADR-008); the state display is planned in its milestone S2, while the unsaved-work mark and the check results already show. Auto-closing tags are on, which contradicts the base requirement that typing inserts exactly the typed characters ([specification](specification.md#source-fidelity), F.5), and the derivation keeps this as an open decision. There is no build step (ADR-001). Validation runs on the main thread rather than in a worker. The interface is German. Editor and research data live in one Git repository that serves as the backend for the team (ADR-004). The working state is to live in `revisionDesc/@status` (ADR-011) and persons point to the Stefan Zweig Digital person index with the GND as fallback (ADR-007).
 - Why: project partners should run and host the editor without a toolchain; interrupted work belongs in the repository, where Git keeps it, and visibility rather than a gate keeps unfinished and finished files apart (operator, 2026-10-30); one source configuration per edition is meant to let another edition derive its editor by replacing one file (ADR-002, ADR-009).
-- Observations: the edition specifics, including the person index added later, stayed confined to the source configuration through the operator's review rounds of 2026-10-30. The case shows that a useful edition editor can be built from a small set of modules without the base's projection and workspace clusters.
+- Observations: the edition specifics, including the person index added later, stayed confined to the source configuration through the operator's review rounds of 2026-10-30. The case shows that a useful edition editor can be built from a small set of modules without the base's projection and workspace clusters. A further editor, `hersch-teiCrafter` for the Jeanne Hersch writings of the Zentralbibliothek Zürich, derives from this standalone editor rather than from the base and replaces its source configuration; it is local, without a remote, and its data stay outside the repository for rights reasons. It is not registered as a separate case, because it repeats the standalone form.
 - Source of truth: its `knowledge/specification.md`, ADR-001 to ADR-011, and its `knowledge/plan.md`, milestone S6 and the open decisions.
 
 ## Open questions for generalisation

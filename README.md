@@ -55,6 +55,16 @@ Entry forms support TEI dictionary entries and article divisions with the declar
 
 Review records retain their history and identify the reviewed source scope. A later change can make that review stale. Schema validation, human review and annotation coverage answer different questions; none establishes scholarly correctness by itself.
 
+## Derive an editor for your edition
+
+teiCrafter can be the starting point for an editor that serves one edition. Three routes exist, in increasing effort.
+
+1. **Configuration only.** Place a `teicrafter.project.json` beside your TEI files and open the folder with Open project folder (Chromium-based browsers). The manifest binds files to document types and declares schemas, markup, registers, images and the primary navigation, without code changes. [Data](knowledge/data.md#project-manifest) documents its fields; `docs/data/editor/szd/teicrafter.project.json` is a minimal example.
+2. **Fork with upstream merge.** Fork this repository, keep it as the `upstream` remote and add a project folder under `docs/js/projects/<id>/` with its entry file and registration. A fork still edits two base files, the registration list and a stylesheet link in `editor.html`, which [derivation](knowledge/derivation.md#base-coupling-a-derivation-meets) lists with the other project-specific parts of the base.
+3. **Standalone editor.** Write a small editor of your own after the base's rules: the raw XML string stays canonical, saving keeps every byte outside deliberate edits, schema validation runs locally, and there is no backend. Nothing is merged from the base.
+
+[Derivation](knowledge/derivation.md) records the observed cases of routes 2 and 3, the rules they share and the traps found so far. It is a register of observations, not a step-by-step guide. Of the registered cases, the [Wenzelsbibel fork](https://github.com/DigitalHumanitiesCraft/wenzelsbibel-teiCrafter) is public and still builds its new interface; the SZD standalone editor is a private repository.
+
 ## Optional model assistance and data handling
 
 New from text (LLM) can propose a TEI draft; Propose (AI) can suggest annotations in the current navigation unit. These features share a user-controlled AI toggle. Deterministic editing and starters require no model or key.
@@ -65,7 +75,7 @@ teiCrafter has no application backend or account system. The browser retains rec
 
 ## Development and verification
 
-Use **Node 24.13.0**, **npm 11.6.2**, and Python with **lxml 5.4.0**, matching the repository's verification setup.
+Use **Node 24.13.0**, **npm 11.6.2**, and Python with **lxml 5.4.0**, matching the repository's verification setup. `npm run verify` and `npm run evaluate:editorial` check the exact Node and npm versions and stop with any other.
 
 ```bash
 npm ci

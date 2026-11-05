@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/architecture
 status: complete
 created: 2026-02-05
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 topics: ["[[Software Architecture]]", "[[TEI XML]]"]
 related: [specification, data, design, testing, derivation, views]
@@ -175,4 +175,4 @@ Mapping decisions are stored separately from the immutable transcription and pro
 
 ## Remote service boundary
 
-`services/llm.js` keeps built-in providers and a registry of trusted code-level adapters. Project data selects prompts, mappings and responsibility; it cannot supply executable functions. Keys remain in memory and requests omit ambient credentials. Generated documents and proposals enter structural gates and ordinary canonical mutations. [Integration](integration.md#model-and-authority-services) defines what leaves the browser and how external results enter the editor.
+`services/llm.js` keeps built-in providers and a registry of trusted code-level adapters. Project data selects prompts, mappings and responsibility; it cannot supply executable functions. Keys remain in memory and requests omit ambient credentials. Every request is bounded by `REQUEST_TIMEOUT_MS`, including the response body, and ends with a message naming the provider; a cancel through the caller's signal keeps its own error. Generated documents and proposals enter structural gates and ordinary canonical mutations. [Integration](integration.md#model-and-authority-services) defines what leaves the browser and how external results enter the editor.
