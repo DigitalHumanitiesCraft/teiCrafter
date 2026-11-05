@@ -39,18 +39,30 @@ The generic code and tests still carry project-specific parts. [Derivation](deri
 | How a free-text reviewer identity is handled, since an identity containing whitespace is split into several `resp` tokens on confirmation | No blocking dependency | Operator decision; the dialog asks for a URI or TEI pointer, so a check at input is one option |
 | Whether confirmations are dated, which needs a serialisation decision between an `xml:id` on the construct plus a `revisionDesc/change` and undated acceptance as today | Any claim that the file dates a confirmation | Operator decision |
 
+## Operator decisions from the workshop audit
+
+Each question can be answered with yes or no. The recommendation is the yes; the reasons and the evidence follow it.
+
+| Question | Yes (recommended) | No | Evidence |
+| --- | --- | --- | --- |
+| Pause the source-first rebuild and develop the legacy application as the product until the derivation questions are settled? | `docs/` stays the published editor and the derivable base; `src/` stays a tested core library without a shell. Costs: two code bases remain, and the legacy editor keeps its size. Risks: `src/` ages without users. | Continue the rebuild steps below. Costs: an application shell, the text level, the outline, large-document folds and a dark scheme, and then every legacy surface the new editor must take over or drop deliberately (registers, metadata forms, project folder, working copy, project package, entries, witnesses, the Wenzelsbibel workspace). Risks: the fork and the public site wait on it. | No interface exists in `src/` ([architecture](architecture.md#source-first-core-under-src)); the published site serves `docs/` ([integration](integration.md#browser-files-and-deployment)); the fork depends on the base's shell and the standalone case built a small editor without either ([derivation](derivation.md#case-register)); the audit corrections in `docs/` took hours, not a rebuild |
+| Keep Save and Download bound to a valid schema result (fail-closed) in the legacy editor? | Invalid XML never leaves the editor through Save; Working copy keeps unfinished work. | Save always and show the state, with one confirmation, as the SZD derivation does. | Specification [open decision on Save](specification.md#open-decision-on-save); the audit found the gate working and explained; the SZD case's ADR-008 ([derivation](derivation.md#teicrafter-szd-standalone-editor)) |
+| Present teiCrafter in the workshop as an editor to try and as a model for one's own tool, rather than as a fork template? | The site text names the editor and the three routes the README describes. | Keep "template to fork" and write a step-by-step fork guide first. | Only one public derivation exists and its interface is not built; the README section "Derive an editor for your edition"; the site text lives outside this repository |
+| Make szd-teiCrafter public? | The workshop gets a working, freely licensed derivation to look at, and the gallery can link it. | It stays private and the gallery describes it without a link. | Its letters are freely licensed and its code follows the MIT default; `docs/data/derivations.json` has no URL for it |
+| Accept a Node and npm version range in `npm run verify`, keeping the exact pin only for `npm run evaluate:editorial` and CI? | Contributors and forks can run the gate with any Node 24 release. | Every gate keeps the exact pin. | `test/verify.mjs` refuses any version but 24.13.0 and 11.6.2; every gate step passed under Node 24.20.0 in the audit run |
+| Keep the model features on by default on the public site? | Without a key nothing is sent, and the dialog says that a key is needed. | The public build hides them until a user switches them on. | `FEATURES.llmOnRamp` and the per-user setting in `docs/js/utils/constants.js`; the audit found no request without a key |
+| Change the generated-draft banner to say that the whole document is model-generated, instead of marking each element violet? | The banner is accurate for the document-level provenance the file records. | Record and mark provenance per element. | `generated-provenance.js` writes `resp="#ai"` on the root only; the banner says that AI output is marked violet |
+| Keep resolving staged metadata input on output while unparseable XML source blocks it? | The output transaction applies staged input that applies cleanly, as [architecture](architecture.md#output-and-file-operations) states. | Every staged input needs an explicit Apply before output. | The audit saw a staged title enter the download and a broken XML edit block it |
+| Leave the legacy editor light until the rebuild decision, rather than opting it into the dark scheme now? | No second token review for surfaces that may be replaced. | Check every editor surface in the dark scheme and opt the editor in. | Only the start page opts in ([design](design.md#public-start-page)); the contrast proof covers dark muted text only |
+
 ## Open defects in the base
 
 These defects of the published editor under `docs/` are known and not yet corrected. Each is a bug fix or an accessibility repair, which the [specification](specification.md#legacy-application-as-derivable-base-2026-10-10) admits in the base.
 
-- Double-clicking a word in the reading text selects the whole text run (`inline-editor.js`), so typing the correction replaces the line.
-- Reloading or navigating back to `editor.html#example=...` loads the example again instead of offering the recovery checkpoint, which only the plain `editor.html` shows.
-- The first schema-gated Download or Save shows its wait only in the status line; the button stays active and repeated clicks request several downloads.
-- The XML source checks well-formedness only on Check XML or Apply, shows the browser's raw parser text, and a non-well-formed file opens with an ordinary load message; the output block then names the schema instead of well-formedness.
-- Provider errors show raw response bodies, and a failed Propose (AI) always refers to the key dialog, also when a key is set.
-- A model-generated draft carries its provenance at document level only, while the banner says that AI output is marked violet.
-- Focus falls back to the page body after the Load menu, the New document dialog and inline editing; the LLM dialog does not keep focus inside; the context menu and the selection popover open by pointer only; the Load menu carries menu roles without arrow-key support.
-- Inline edit fields and the attribute editor input have no accessible name, index row actions at rest reach only about 1.8:1 through their opacity, and the editor scrolls sideways at 320 px width.
+- Annotating a selection needs a pointer: keyboard selection inside a reading line selects nothing, so the annotate popover cannot open from the keyboard.
+- An authority id is stored as typed; a value that is not a GND number is accepted as a GND id.
+- Metadata labels show raw element names such as `title` or `p` beside the named fields, and the annotate popover clips its rows.
+- At 800 by 600 pixels the facsimile pane stacks under the reading pane and leaves about three lines of text.
 - The Firefox browser scenarios that restore staged input after a reload fail intermittently when Playwright runs several workers and pass when run serially.
 
 ## Rebuild phase

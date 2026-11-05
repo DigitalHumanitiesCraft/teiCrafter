@@ -98,7 +98,7 @@ An unsatisfied manifest request or ambiguous interpretation remains visible besi
 
 ## Reading surface
 
-A plain click positions the cursor. Double-click opens exact text or dual-reading editing. Existing annotation layers open their inspector; right-click and text selection expose scholarly actions. Selection stays visibly painted while a popover holds focus. A selection popover opens below the selection, or above it when only the space above holds it. When neither side holds it, the reading pane scrolls the selection towards its top so the popover shows as much as possible without covering the selection. Keyboard arrows traverse cells, and F2 or Enter opens a supported editor. Composition input cannot commit prematurely.
+A plain click positions the cursor. Double-click opens exact text or dual-reading editing with the clicked word selected, so typing replaces that word; F2 or Enter opens it with the caret at the end. Existing annotation layers open their inspector; right-click and text selection expose scholarly actions. Selection stays visibly painted while a popover holds focus. A selection popover opens below the selection, or above it when only the space above holds it. When neither side holds it, the reading pane scrolls the selection towards its top so the popover shows as much as possible without covering the selection. Keyboard arrows traverse cells, and F2 or Enter opens a supported editor. Composition input cannot commit prematurely.
 
 Local cells determine the edit controls. Encoded tokens expose their text and reading attributes; other readable content uses exact text runs. Mixed documents retain both forms. The reading preserves source adjacency and selects the appropriate encoded choice branch. The [reading representations](data.md) define the source contract.
 
@@ -175,7 +175,9 @@ File input and Download provide the portable Chromium and Firefox workflow. A na
 - Reading and panel regions have visible focus and accessible names.
 - Asynchronous status, loading, validation and failures use appropriate live regions. The footer status line wraps and the footer grows rather than cutting a message off.
 - A control shown as a glyph carries its description as accessible name.
-- Popovers and dialogs return focus to their originating control or reading location.
+- Popovers and dialogs return focus to their originating control or reading location, and modal dialogs keep Tab inside. Ending an inline edit by keyboard returns focus to the edited text.
+- The Load menu and the reading-text context menu follow the menu pattern: focus enters at the first item, arrow keys, Home and End move, Escape closes and returns focus. The context-menu key or Shift+F10 opens the context menu on focused text; actions that need a pointer position stay disabled there.
+- A schema-gated output marks its buttons busy and names the wait; a second request during the wait is refused with a message.
 - Actions remain reachable without hover; hover emphasis also appears on keyboard focus.
 - Provenance, validation, review and annotations use text or pattern alongside colour.
 - Body copy uses the darker body-text token. Muted, confidence and review tokens also set text, so they keep 4.5:1 on every surface and their tints, and the focus token keeps 3:1; the brand gold is a fill, not a focus ring. A token proof checks these ratios, because Axe cannot measure the syntax colours under the source textarea. Automated accessibility checks apply to the actual rendered views.
