@@ -63,7 +63,7 @@ These defects of the published editor under `docs/` are known and not yet correc
 - An authority id is stored as typed; a value that is not a GND number is accepted as a GND id.
 - Metadata labels show raw element names such as `title` or `p` beside the named fields, and the annotate popover clips its rows.
 - At 800 by 600 pixels the facsimile pane stacks under the reading pane and leaves about three lines of text.
-- The Firefox browser scenarios that restore staged input after a reload fail intermittently when Playwright runs several workers and pass when run serially.
+- The Firefox browser scenarios that restore staged input after a reload fail intermittently, under several workers and also in serial runs. After a failed reload the empty editor lists no checkpoint, so the record written before the reload is missing then; whether the write is still queued at unload or later removed is not established. The failures appeared at revision `ad9eccf` already and more often after the second audit round in repeated serial runs.
 
 ## Rebuild phase
 
