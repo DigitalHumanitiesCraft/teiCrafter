@@ -103,7 +103,7 @@ The strict evaluator records available inputs, file or directory hashes, reposit
 
 ## Running the gates
 
-Use the pinned Node/npm versions in [package.json](../package.json), Python with the harness dependency and installed Playwright browsers. [The test README](../test/README.md) supplies installation and focused commands.
+Use the pinned Node/npm versions in [package.json](../package.json), Python with the harness dependency and installed Playwright browsers. `npm run verify` stops before its first step when the running Node or npm release differs from the pin (`test/verify.mjs`); whether the gate should accept a version range is an open operator decision in the [plan](plan.md#operator-decisions-from-the-workshop-audit). [The test README](../test/README.md) supplies installation and focused commands.
 
 The pinned Playwright release bundles an older Chromium than current browsers. A recovery write that this Chromium accepts can be refused by a newer one, as the Wenzelsbibel codex showed in a newer Chromium's in-memory storage, which Playwright's default browser contexts and private windows use. The suite therefore does not establish that a large checkpoint fits the storage of a current browser. That claim needs a run with a newer Chromium in a fresh context against the real codex, outside the pinned matrix.
 

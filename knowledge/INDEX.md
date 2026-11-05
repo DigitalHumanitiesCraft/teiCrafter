@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/index
 status: complete
 created: 2026-05-27
-updated: 2026-10-30
+updated: 2026-11-05
 language: en
 version: "0.23"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
@@ -23,7 +23,7 @@ related: [project, data, specification, architecture, design, views, plan, journ
 
 teiCrafter is a client-side, byte-faithful TEI editor. Its current model derives an editing surface from each document, enriches that evidence with conservative schema information, and lets a project manifest state explicit policy. Save and TEI Download require every configured schema to pass for the exact projected bytes. Working copy preserves unfinished work and attached documents. Project package validates each XML document before producing one delivery archive.
 
-This model describes the legacy application under `docs/`, which is also the base from which project-specific versions are derived. A source-first editor is rebuilt beside it under `src/`, with its requirements in the [specification](specification.md) and its order in the [plan](plan.md). Derivations take two observed forms, a Git fork that merges the base and a standalone editor with one source configuration, which [derivation](derivation.md) registers as cases.
+This model describes the legacy application under `docs/`, which is also the base from which project-specific versions are derived. A source-first editor is rebuilt beside it under `src/`, with its requirements in the [specification](specification.md) and its order in the [plan](plan.md). Derivations take two observed forms, a Git fork that merges the base and a standalone editor with one source configuration, which [derivation](derivation.md) registers as cases. Whether the rebuild continues or pauses while `docs/` is developed as the product is an open operator decision; the [plan](plan.md#operator-decisions-from-the-workshop-audit) holds it with the other questions from the workshop audit.
 
 ## Documentation maintenance
 

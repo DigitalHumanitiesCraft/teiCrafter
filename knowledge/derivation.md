@@ -96,7 +96,7 @@ Comments in `tei-document.js`, `page-images.js`, `entity-index.js`, `edition.js`
 - Git text normalisation of research data rewrites a partner's CRLF file on commit although nobody edited it. The standalone case exempts its data from line-ending conversion.
 - CodeMirror's base styles sit outside the cascade layers, so editor colours belong in an `EditorView.theme` on the design tokens ([design](design.md#visual-identity-and-tokens)).
 - A debounced check that fires after a save can overwrite the save confirmation, so saving runs the pending check first ([testing](testing.md#state-transition-regressions)).
-- The fork publishes `docs/` directly, while the base tests and deploys the Vite build in `dist/`, so the tested form and the published form of the fork differ by bundling.
+- The fork publishes `docs/` directly, as the base does. The base's browser scenarios run against the Vite build of `dist/` (`playwright.config.js` builds and previews it), so in the base the tested form and the published form differ by bundling ([integration](integration.md#browser-files-and-deployment)).
 - A surname-only GND query ranks the intended person low, so a project person register comes first where one exists ([integration](integration.md)).
 
 ## Checks each derivation runs
