@@ -233,7 +233,7 @@ export function mountMetadataView(host, opts = {}) {
   const root = el("div", { class: "ed-meta-root" });
   const scope = el("span", {
     class: "ed-src-scope",
-    text: opts.readOnly ? "teiHeader inventory · read only" : `teiHeader inventory · ${editable.length} editable · ${xmlOnly} XML-only`,
+    text: opts.readOnly ? "teiHeader inventory (read only)" : `teiHeader inventory: ${editable.length} editable, ${xmlOnly} XML-only`,
     title: "Every teiHeader element and attribute is inventoried. Simple text and attribute values are editable; structured XML remains byte-safe in Edit XML.",
   });
   const result = el("span", { class: "ed-src-result", "aria-live": "polite" });

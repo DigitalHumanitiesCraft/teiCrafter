@@ -10,6 +10,11 @@
 import { LLM_PROVIDERS } from '../utils/constants.js';
 import { getSetting, setSetting } from './storage.js';
 
+// A provider that never answers would otherwise leave the dialog waiting until
+// the user cancels. Drafting a long TEI document can take minutes, so the bound
+// is generous; callers may pass a shorter timeoutMs.
+export const REQUEST_TIMEOUT_MS = 180_000;
+
 // --- Module-scoped secrets (never exported, never on window) ---
 const apiKeys = new Map();
 
@@ -306,11 +311,12 @@ export function pickModel(config, stored) {
  * @param {string} prompt
  * @param {Object} [options]
  * @param {AbortSignal} [options.signal]
+ * @param {number} [options.timeoutMs] Bound for the whole request including the body
  * @returns {Promise<string>} The LLM response text
- * @throws {Error} On network error, auth error, or invalid response
+ * @throws {Error} On network error, auth error, timeout, or invalid response
  */
 export async function complete(prompt, options = {}) {
-    const { signal } = options;
+    const { signal, timeoutMs = REQUEST_TIMEOUT_MS } = options;
     const config = PROVIDER_CONFIGS[currentProvider];
     if (!config) throw new Error('Unknown provider: ' + currentProvider);
 
@@ -343,21 +349,35 @@ export async function complete(prompt, options = {}) {
     // Build body
     const body = JSON.stringify(config.buildRequest(prompt, model));
 
-    // Fetch
-    const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body,
-        credentials: 'omit',
-        signal
-    });
+    const timer = new AbortController();
+    const timeoutId = setTimeout(() => timer.abort(), timeoutMs);
+    const requestSignal = signal ? AbortSignal.any([signal, timer.signal]) : timer.signal;
+    let data;
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body,
+            credentials: 'omit',
+            signal: requestSignal
+        });
 
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(config.name + ' API error ' + response.status + ': ' + errorText.slice(0, 200));
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => '');
+            throw new Error(config.name + ' API error ' + response.status + ': ' + errorText.slice(0, 200));
+        }
+
+        data = await response.json();
+    } catch (err) {
+        // A user cancel keeps its own error; only the bound gets the timeout message.
+        if (timer.signal.aborted && !signal?.aborted) {
+            throw new Error(config.name + ' did not answer within ' + Math.round(timeoutMs / 1000)
+                + ' seconds, so the request was cancelled. Try again, or send a shorter text.');
+        }
+        throw err;
+    } finally {
+        clearTimeout(timeoutId);
     }
-
-    const data = await response.json();
     const text = config.extractResponse(data);
 
     if (!text) {

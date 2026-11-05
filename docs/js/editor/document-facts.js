@@ -105,7 +105,6 @@ export function createDocumentFacts(ctx) {
 
     // The badge identifies the draft workflow; individual proposals retain their origin.
     if (isUnsavedDraft()) {
-      strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
       const badge = el("span", { class: "ed-docstrip-fact",
         text: draftBadgeText(),
         title: app.source?.draftKind === "project"
@@ -128,7 +127,6 @@ export function createDocumentFacts(ctx) {
     facts.push(`${app.state.folios.length} ${app.state.folios.length === 1 ? terms.singular : terms.plural}`);
 
     for (const f of facts) {
-      strip.appendChild(el("span", { class: "ed-docstrip-sep", text: "·" }));
       strip.appendChild(el("span", { class: "ed-docstrip-fact", text: f }));
     }
   }

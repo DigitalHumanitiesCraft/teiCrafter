@@ -148,3 +148,22 @@ test("a failed recovery checkpoint stays visible in words and the footer shows t
   await expect(problem).toHaveText("no local recovery");
   await expect(page.locator("#ed-docstrip .ed-docstrip-state", { hasText: "unsaved" })).toBeVisible();
 });
+
+test("Tab indents in the XML source while Shift+Tab and Escape then Tab leave it", async ({ page }) => {
+  await openSzdExample(page);
+  await page.locator("#view-xml").click();
+  const source = page.locator(".ed-src-ta");
+  await source.focus();
+  const before = await source.inputValue();
+  await page.keyboard.press("Tab");
+  await expect(source).toBeFocused();
+  expect((await source.inputValue()).length).toBe(before.length + 2);
+  await page.keyboard.press("Shift+Tab");
+  await expect(source).not.toBeFocused();
+  await source.focus();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Tab");
+  await expect(source).not.toBeFocused();
+  expect((await source.inputValue()).length).toBe(before.length + 2);
+  await expect(source).toHaveAccessibleDescription(/Escape, then Tab/);
+});

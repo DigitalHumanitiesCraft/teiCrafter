@@ -35,13 +35,13 @@
     --color-text: #1A1A1A;
     --color-text-body: #2D3A4A;       /* reading-text grey for body copy on light pages, darker than secondary */
     --color-text-secondary: #5A6270;
-    --color-text-muted: #8899AA;
+    --color-text-muted: #636E7C;
     --color-text-inverse: #FFFFFF;
 
     /* Confidence (dual-channel: edge + tint) */
-    --color-confident: #2D8A70;
+    --color-confident: #257A62;
     --color-confident-tint: #E8F5F0;
-    --color-review: #CC8A1E;
+    --color-review: #94600F;
     --color-review-tint: #FEF5E7;
     --color-problem: #C0392B;
     --color-problem-tint: #FDECEB;

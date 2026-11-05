@@ -96,7 +96,7 @@ function renderDecision() {
   const quote = document.createElement('p');
   quote.textContent = describe(decision);
   const source = document.createElement('small');
-  source.textContent = `${decision.origin === 'jev' ? 'Jev proposal' : decision.origin === 'rules' ? 'Rule-based proposal' : 'Manual decision'} · ${decision.reviewed ? 'Confirmed in working copy' : 'Not reviewed'}`;
+  source.textContent = `${decision.origin === 'jev' ? 'Jev proposal' : decision.origin === 'rules' ? 'Rule-based proposal' : 'Manual decision'}: ${decision.reviewed ? 'Confirmed in working copy' : 'Not reviewed'}`;
   current.append(quote, source);
   for (const origin of ['rules', 'jev']) {
     $(`use-${origin}`).querySelector('span').textContent = describe(field[origin]);
@@ -232,7 +232,7 @@ async function start() {
   dataset = await response.json();
   if (dataset.schemaVersion !== 'szd-mapping-1' || !dataset.pages?.length) throw new Error('Unsupported SZD dataset.');
   for (const item of dataset.pages) {
-    $('page-picker').add(new Option(`${item.objectId} · page ${item.pageNumber}`, item.id));
+    $('page-picker').add(new Option(`${item.objectId}, page ${item.pageNumber}`, item.id));
   }
   loadPage(dataset.pages[0].id);
   for (const id of ['page-picker', 'save-work', 'restore-work', 'open-editor']) $(id).disabled = false;

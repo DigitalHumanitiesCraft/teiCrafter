@@ -42,7 +42,7 @@
 /* Keyboard focus is always visible (triple-coding stance: never hover-only). */
 :is(.ed-btn, .ed-dd-item, .ed-crit-btn, .ed-act-btn, .ed-menu-item,
     .ed-idx-btn, .ed-idx-rowbody, .ed-idx-authlink, .ed-recent-row, .ed-logo, .ed-val-chip):focus-visible {
-  outline: 2px solid var(--color-gold); outline-offset: 1px;
+  outline: 2px solid var(--color-focus); outline-offset: 1px;
 }
 .ed-btn-ai:focus-visible { outline-color: var(--color-ai); }
 
@@ -110,9 +110,10 @@
 .ed-docstrip-state { flex: none; padding: 0 var(--space-xs); border: 1px solid var(--color-review);
   border-radius: var(--radius-sm); background: var(--color-review-tint); color: var(--color-text); }
 .ed-docstrip-state.problem { border-color: var(--color-problem); background: var(--color-problem-tint); }
-.ed-docstrip-sep { color: var(--color-text-muted); }
+/* Facts are separate fields divided by a rule, not by a separator character. */
 .ed-docstrip-fact { color: var(--color-text-secondary); min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; }
+  overflow: hidden; text-overflow: ellipsis;
+  padding-left: var(--space-xs); border-left: 1px solid var(--color-border); }
 @media (max-width: 1400px) {
   .ed-docstrip { flex-basis: 100%; margin-left: 0; padding-left: 0; }
 }
@@ -221,7 +222,7 @@
   transition: background 0.12s ease;
 }
 .ed-splitter:hover { background: var(--color-gold); }
-.ed-splitter:focus-visible { background: var(--color-gold); outline: 2px solid var(--color-gold); outline-offset: -1px; }
+.ed-splitter:focus-visible { background: var(--color-gold); outline: 2px solid var(--color-focus); outline-offset: -1px; }
 /* Grip: three short vertical lines centred on the rail, faint until hover, so the
    rule reads as a handle rather than a border. */
 .ed-splitter::before {
@@ -286,7 +287,7 @@
   color: var(--color-text); font-weight: 600;
 }
 .ed-tab:disabled { opacity: .5; cursor: not-allowed; }
-.ed-tab:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-tab:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
 /* Context panels in the right pane: exactly the active one is shown. */
 .ed-panel { height: 100%; min-height: 0; }
@@ -327,7 +328,7 @@
   border-color: var(--color-blue); background: var(--color-blue-light); color: var(--color-text);
   font-weight: 600;
 }
-.ed-ann-filter:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-ann-filter:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-ann-caption { font-size: var(--font-size-xs); font-weight: 500; color: var(--color-text-secondary);
   white-space: normal; }
 .ed-ann-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(3.2em, 1fr)); gap: var(--space-xs); }
@@ -337,7 +338,7 @@
   font-family: var(--font-mono); font-size: var(--font-size-xs); font-variant-numeric: tabular-nums;
 }
 .ed-ann-page:hover, .ed-ann-page.active { border-color: var(--color-gold); background: var(--color-gold-light); }
-.ed-ann-page:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-ann-page:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-ann-empty { grid-column: 1 / -1; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
 
 /* View controls at the right edge of the text-pane header: text zoom and the
@@ -408,7 +409,7 @@
 .ed-reading { --ed-read-size: calc(1.05rem * var(--ed-zoom, 1));
   font-family: var(--font-serif); font-size: var(--ed-read-size); line-height: 1.9; color: var(--color-text);
   background: var(--color-surface); position: relative; }
-.ed-reading:focus-visible { outline: 2px solid var(--color-gold); outline-offset: -2px; }
+.ed-reading:focus-visible { outline: 2px solid var(--color-focus); outline-offset: -2px; }
 /* Line rows carry an IDE-style gutter: the document's own line label (@n) in a
    fixed, right-aligned mono channel set off by a continuous rule, then the text.
    The label is the edition's @n. When a folio numbers no line at all, the gutter
@@ -469,7 +470,7 @@
   text-underline-offset: 2px;
 }
 :is(.ed-w, .ed-legend-chip).has-note { box-shadow: inset 0 -2px 0 var(--color-review); }
-.ed-w.ed-note-target:focus { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+.ed-w.ed-note-target:focus { outline: 2px solid var(--color-focus); outline-offset: 2px; }
 .ed-w.linked { background: var(--color-gold-light); }
 
 /* Textual-critical markup: editorial (not AI), so it uses the human
@@ -491,7 +492,7 @@
 .ed-crit-btn:hover { border-color: var(--color-review); color: var(--color-review); background: var(--color-review-tint); }
 .ed-w-input { font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.9;
   color: var(--color-text); background: var(--color-panel);
-  border: none; outline: 2px solid var(--color-gold); border-radius: 2px;
+  border: none; outline: 2px solid var(--color-focus); border-radius: 2px;
   padding: 0 1px; margin: 0; min-width: 2ch; }
 /* Line/paragraph cell edit: a wrapping textarea grown to its content, so a whole
    paragraph stays visible at once instead of scrolling past a single-line field. */
@@ -527,7 +528,7 @@
   border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text-secondary); }
 .ed-zones-toggle:hover { border-color: var(--color-gold); }
 .ed-zones-toggle.active { border-color: var(--color-blue); color: var(--color-blue); }
-.ed-zones-toggle:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-zones-toggle:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 
 /* Validation / info side pane */
 .ed-section { margin-bottom: var(--space-md); }
@@ -560,7 +561,7 @@
 
 /* Entity index panel (a right-pane context panel);
    inputs focus gold here (violet is AI-only). */
-#ed-panel-index input:focus, #ed-panel-index select:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+#ed-panel-index input:focus, #ed-panel-index select:focus { outline: 2px solid var(--color-focus); border-color: var(--color-gold); }
 .ed-idx-filter {
   display: block; box-sizing: border-box; width: 100%;
   margin: 0 0 var(--space-sm);
@@ -578,7 +579,7 @@
   border: 1px solid var(--color-border); background: var(--color-panel); color: var(--color-text-secondary);
 }
 .ed-idx-wfbtn:hover { border-color: var(--color-gold); color: var(--color-text); }
-.ed-idx-wfbtn:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-idx-wfbtn:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-idx-wfbtn[aria-pressed="true"] {
   border-color: var(--color-gold); color: var(--color-text);
   background: var(--color-gold-light); font-weight: 600;
@@ -597,7 +598,7 @@
   background: none; border: none;
 }
 .ed-idx-heading:hover { color: var(--color-gold-hover); }
-.ed-idx-heading:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-idx-heading:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-idx-heading::before { content: "\25B8"; font-size: .85em; color: var(--color-text-muted); }
 .ed-idx-heading[aria-expanded="true"]::before { content: "\25BE"; }
 .ed-idx-heading-label { flex: 1; }
@@ -643,7 +644,7 @@
 .ed-idx-rename {
   flex: 1; min-width: 0; font-family: var(--font-ui); font-size: var(--font-size-sm);
   color: var(--color-text); background: var(--color-panel);
-  border: none; outline: 2px solid var(--color-gold); border-radius: 2px; padding: 0 2px;
+  border: none; outline: 2px solid var(--color-focus); border-radius: 2px; padding: 0 2px;
 }
 /* Row actions rest quiet so the panel scans as an overview, and come forward on
    hover or keyboard focus (focus-within keeps them reachable by tab). */
@@ -814,7 +815,7 @@
 .ed-annotate-pop .ed-act-btn:not(.ed-btn-ai):focus-visible {
   background: var(--color-blue-light); border-color: var(--color-blue); color: var(--color-blue); }
 .ed-annotate-pop .ed-attr-input { border-color: var(--color-gold); }
-.ed-annotate-pop .ed-attr-input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+.ed-annotate-pop .ed-attr-input:focus { outline: 2px solid var(--color-focus); border-color: var(--color-gold); }
 /* Overlap inspector: the stack of annotations on one text, innermost first. Each
    row reads by colour family (entity and markup are TEI elements -> blue,
    criticism -> review), names the element, and carries the per-layer actions.
@@ -842,7 +843,7 @@
   border: none; background: none; color: var(--color-text-muted); cursor: pointer;
   padding: 0 var(--space-xs); border-radius: var(--radius-sm); }
 .ed-sel-pop-close:hover { color: var(--color-text); }
-.ed-sel-pop-close:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-sel-pop-close:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-sel-pop-row { display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: center;
   max-height: 140px; overflow: auto; }
 /* Disclosure header for the "link to an existing entity" section: a real toggle
@@ -852,7 +853,7 @@
   cursor: pointer; border: none; background: none; padding: 2px 0;
   color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .08em; }
 .ed-sel-sec-head:hover { color: var(--color-text); }
-.ed-sel-sec-head:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-sel-sec-head:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-sel-sec-head::before { content: "\25B8"; font-size: .9em; color: var(--color-text-muted); }
 .ed-sel-sec-head[aria-expanded="true"]::before { content: "\25BE"; }
 /* The disclosure body indents and quiets its provenance sub-headings so they
@@ -908,7 +909,7 @@
 .ed-src-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs); padding-bottom: var(--space-sm); }
 .ed-src-find input { font-family: var(--font-mono); font-size: var(--font-size-xs);
   padding: 2px var(--space-xs); }
-.ed-src-find input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+.ed-src-find input:focus { outline: 2px solid var(--color-focus); border-color: var(--color-gold); }
 .ed-find-q, .ed-find-r { width: 16ch; }
 .ed-find-ln { width: 5ch; text-align: right; }
 .ed-src-find-count { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted); min-width: 6ch; }
@@ -938,11 +939,16 @@
 .ed-src-completion:hover, .ed-src-completion.active {
   border-color: var(--color-gold); background: var(--color-gold-light);
 }
-.ed-src-completion:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-src-completion:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-src-wrap { flex: 1; min-height: 0; display: flex;
   font-family: var(--font-mono); font-size: calc(var(--font-size-sm) * var(--ed-zoom, 1)); line-height: 1.5;
   border: 1px solid var(--color-border); border-radius: var(--radius-sm);
   background: var(--color-panel); overflow: hidden; }
+/* The textarea draws no outline of its own (it lies under the highlight layer),
+   so the frame shows keyboard focus. */
+.ed-src-wrap:focus-within { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.ed-src-keyhint { flex: 1 0 100%; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.ed-src-keyhint:empty { display: none; }
 .ed-src-gutter { padding: var(--space-sm) var(--space-xs); min-width: 3.5ch; text-align: right;
   color: var(--color-text-muted); background: var(--color-surface);
   border-right: 1px solid var(--color-border);
@@ -997,7 +1003,7 @@
   font-family: var(--font-ui); font-size: var(--font-size-sm); resize: vertical;
 }
 .ed-meta-field input:focus, .ed-meta-field textarea:focus {
-  outline: 2px solid var(--color-gold); border-color: var(--color-gold);
+  outline: 2px solid var(--color-focus); border-color: var(--color-gold);
 }
 .ed-meta-readonly {
   min-height: 1.5em; padding: var(--space-xs); border-left: 2px solid var(--color-review);
@@ -1052,7 +1058,7 @@
 .ed-attr-name { font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-gold-hover); min-width: 7ch; }
 .ed-attr-input { flex: 1 1 auto; min-width: 6ch; font-family: var(--font-mono); font-size: var(--font-size-xs);
   padding: 2px 4px; border: 1px solid var(--color-gold); border-radius: var(--radius-sm); }
-.ed-attr-input:focus { outline: 2px solid var(--color-gold); border-color: var(--color-gold); }
+.ed-attr-input:focus { outline: 2px solid var(--color-focus); border-color: var(--color-gold); }
 .ed-attr-key { flex: 0 1 12ch; }
 .ed-attr-caption { font-size: var(--font-size-xs); color: var(--color-text-muted); max-width: 36ch; }
 .ed-attr-warn { font-size: var(--font-size-xs); color: var(--color-problem); max-width: 36ch; }
@@ -1072,7 +1078,7 @@
 }
 .ed-proj-file:hover { background: var(--color-blue-light); }
 .ed-proj-file.active { background: var(--color-gold-light); }
-.ed-proj-file:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 1px; }
+.ed-proj-file:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
 .ed-proj-file-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ed-proj-file-type, .ed-proj-file-kind {
   font-family: var(--font-mono); font-size: var(--font-size-xs); color: var(--color-text-muted);

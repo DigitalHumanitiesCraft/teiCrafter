@@ -33,7 +33,7 @@ import {
   applySourceProfile,
 } from "./edition.js";
 import { splitElement, mergeElements, insertLb, deleteElement } from "./structural.js";
-import { walk, decodeEntities, isTeiElement } from "./tei-document.js";
+import { walk, decodeEntities, isTeiElement, teiRootProblem } from "./tei-document.js";
 import { el, clear } from "./dom.js";
 import { createFacsimile, plainImageTileSource } from "./facsimile.js";
 import * as standoff from "./standoff.js";
@@ -643,12 +643,8 @@ function applyLoad(raw, name, handle, project, opts = {}) {
     throw new Error("The project snapshot does not match its active XML document.");
   }
   const openedState = parseEdition(raw);
-  if (opts.example) {
-    const roots = openedState.doc.root.children.filter((node) => node.type === "element");
-    if (roots.length !== 1 || !(isTeiElement(roots[0], "TEI") || isTeiElement(roots[0], "teiCorpus"))) {
-      throw new Error("The example response is not a TEI document. The current document was kept.");
-    }
-  }
+  const rootProblem = teiRootProblem(openedState.doc);
+  if (rootProblem) throw new Error(`${rootProblem} The current document was kept.`);
   schemaProfileRequest++;
   activeSchemaProfile = null;
   const resolvedProject = withWorkspaceDefaults(project || detectProject(openedState.doc));
@@ -1226,8 +1222,8 @@ function updateReviewProgress() {
   const current = summary.pages[app.folio] || null;
   const terms = unitTerms(app.state.sourceProfile);
   button.textContent = `Reviewed ${summary.reviewedPages}/${summary.totalPages}`;
-  if (current?.status === "changed") button.textContent += " · changed since review";
-  else if (current?.status === "historical") button.textContent += " · historical review";
+  if (current?.status === "changed") button.textContent += " (changed since review)";
+  else if (current?.status === "historical") button.textContent += " (historical review)";
   button.disabled = app.readOnly || !current || !current.markable;
   button.setAttribute("aria-pressed", String(!!(current && current.reviewed)));
   button.title = current && current.reviewed
@@ -1567,7 +1563,7 @@ function sourceValidationLabels() {
   );
   const names = sources.map((source) => source.name).join(", ");
   return {
-    validationLabel: `Well-formedness · ${schema ? "project schema" : "TEI All"} on demand`,
+    validationLabel: `Well-formedness, ${schema ? "project schema" : "TEI All"} on demand`,
     validationTitle: `The browser checks XML well-formedness before Apply. Run browser schema validation for ${names} from the live-check details.`,
   };
 }
@@ -1640,7 +1636,7 @@ function renderSourceView(host) {
     readOnly: app.readOnly,
     caret: 0,
     lineStart,
-    scopeLabel: `${sourceLabel} · lines ${lineStart}-${lineEnd}`,
+    scopeLabel: `${sourceLabel}, lines ${lineStart}-${lineEnd}`,
     scopeTitle: metadata
       ? "The complete teiHeader is staged here. Check and Apply validate the complete document."
       : pageTotal

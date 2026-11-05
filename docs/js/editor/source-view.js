@@ -201,7 +201,7 @@ export function mountSourceView(host, opts = {}) {
   const result = el("span", { class: "ed-src-result", text: "" });
   const validation = el("span", {
     class: "ed-src-validation",
-    text: opts.validationLabel || "Well-formedness · schema offline",
+    text: opts.validationLabel || "Well-formedness, schema offline",
     title: opts.validationTitle || "The browser checks XML well-formedness. RelaxNG and Schematron run in the offline validation harness.",
   });
   const checkBtn = el("button", {
@@ -220,7 +220,11 @@ export function mountSourceView(host, opts = {}) {
     class: "ed-btn", text: "Find",
     title: "Find, replace and go to line (Ctrl/Cmd+F; Escape closes)",
   });
-  const bar = el("div", { class: "ed-src-bar" }, [scope, validation, result, findBtn, checkBtn, applyBtn, cancelBtn]);
+  const keyHint = el("span", {
+    class: "ed-src-keyhint", id: "ed-src-keyhint",
+    text: opts.readOnly ? "" : "Tab indents. Press Escape, then Tab, to leave the editor.",
+  });
+  const bar = el("div", { class: "ed-src-bar" }, [scope, validation, result, findBtn, checkBtn, applyBtn, cancelBtn, keyHint]);
 
   // ---- find / replace / go-to-line bar (toggled, hidden by default) --------
   // Matching is literal and case-insensitive; edits stage in the textarea and
@@ -250,13 +254,14 @@ export function mountSourceView(host, opts = {}) {
     class: "ed-src-ta", spellcheck: "false", wrap: "off",
     autocapitalize: "off", autocomplete: "off",
     "aria-label": opts.scopeLabel || "XML source editor",
+    "aria-describedby": "ed-src-keyhint",
   });
   ta.value = initialValue;
   ta.readOnly = !!opts.readOnly;
   applyBtn.hidden = replaceInput.hidden = replaceBtn.hidden = replaceAllBtn.hidden = !!opts.readOnly;
   if (opts.readOnly) {
     cancelBtn.textContent = "Back to reading";
-    scope.textContent += " · read only";
+    scope.textContent += " (read only)";
   }
   // Textareas expose normalised LF line endings even when the assigned XML uses
   // CRLF. Compare against the browser's staged representation so opening a page
@@ -388,6 +393,9 @@ export function mountSourceView(host, opts = {}) {
   // Small text-editor affordances that do not rewrite existing XML: Tab inserts
   // two spaces, Enter carries the current line's indentation, and Ctrl/Cmd+Enter
   // applies through the same full-document well-formedness gate as the button.
+  // Shift+Tab, and Tab right after Escape, move focus on so a keyboard user is
+  // never trapped in the textarea (WCAG 2.1.2).
+  let tabReleased = false;
   const insertAtSelection = (text, caretDelta = text.length) => {
     if (opts.readOnly) return;
     const start = ta.selectionStart;
@@ -398,6 +406,9 @@ export function mountSourceView(host, opts = {}) {
   };
   ta.addEventListener("keydown", (e) => {
     if (opts.readOnly || e.isComposing) return;
+    const releaseTab = tabReleased;
+    tabReleased = false;
+    if (e.key === "Tab" && (e.shiftKey || releaseTab)) return;
     if ((e.ctrlKey || e.metaKey) && e.key === " ") {
       e.preventDefault();
       updateCompletions(true);
@@ -413,6 +424,10 @@ export function mountSourceView(host, opts = {}) {
     if (!completionBar.hidden && e.key === "Escape") {
       e.preventDefault();
       closeCompletions();
+      return;
+    }
+    if (e.key === "Escape") {
+      tabReleased = true;
       return;
     }
     if (e.key === "Tab") {

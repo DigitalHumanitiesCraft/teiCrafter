@@ -33,6 +33,9 @@
        (WCAG AA 5.0:1 on white). Fills and buttons keep the brighter --color-gold
        (dark text on gold is 8.8:1), so only orange text links use this. */
     --color-link: #B45309;
+    /* Focus ring of editor controls: the warm "write" family, dark enough for a
+       3:1 indicator contrast (WCAG 1.4.11), which the brand gold (1.9:1) misses. */
+    --color-focus: #B45309;
     --color-blue: #0059A8;       /* TEI blue */
     --color-blue-light: #E0EBF5;
 
@@ -44,13 +47,15 @@
     --color-text: #1A1A1A;
     --color-text-body: #2D3A4A;       /* reading-text grey for body copy on light pages, darker than secondary */
     --color-text-secondary: #5A6270;
-    --color-text-muted: #8899AA;
+    /* Muted, confidence and review colours also set text, so each keeps 4.5:1 on
+       surface, panel, secondary and its own tint (test/proofs/contrast_tokens_check.mjs). */
+    --color-text-muted: #636E7C;
     --color-text-inverse: #FFFFFF;
 
     /* Confidence (dual-channel: edge + tint) */
-    --color-confident: #2D8A70;
+    --color-confident: #257A62;
     --color-confident-tint: #E8F5F0;
-    --color-review: #CC8A1E;
+    --color-review: #94600F;
     --color-review-tint: #FEF5E7;
     --color-problem: #C0392B;
     --color-problem-tint: #FDECEB;
@@ -129,6 +134,7 @@
         --color-border: light-dark(#D0D4DC, #3A424D);
         --color-gold-hover: light-dark(#DE9712, #FFBE4D);
         --color-link: light-dark(#B45309, #F2A541);
+        --color-focus: light-dark(#B45309, #F2A541);
         --color-blue: light-dark(#0059A8, #8CBDF0);
         --color-blue-light: light-dark(#E0EBF5, #1D3550);
         --color-ai: light-dark(#6D4AB6, #BBA2F5);
@@ -136,7 +142,7 @@
         --color-text: light-dark(#1A1A1A, #ECEEF1);
         --color-text-body: light-dark(#2D3A4A, #CDD3DB);
         --color-text-secondary: light-dark(#5A6270, #A7B0BC);
-        --color-text-muted: light-dark(#8899AA, #8590A0);
+        --color-text-muted: light-dark(#636E7C, #959FAE);
         --shadow-card: 0 6px 24px light-dark(rgba(26, 26, 26, .08), rgba(0, 0, 0, .45));
         --shadow-card-hover: 0 4px 16px light-dark(rgba(26, 26, 26, .08), rgba(0, 0, 0, .45));
     }

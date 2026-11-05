@@ -442,6 +442,19 @@ export function isTeiElement(node, localName = null) {
     || (node.namespaceURI == null && legacyTeiRoot(node));
 }
 
+/**
+ * Why a parsed document cannot open as TEI, or null when its single root is
+ * TEI or teiCorpus. The message names what was found so a researcher can tell
+ * an empty file from another XML vocabulary.
+ */
+export function teiRootProblem(doc) {
+  const roots = (doc?.root?.children || []).filter((node) => node.type === "element");
+  if (!roots.length) return "The file contains no XML element; it may be empty.";
+  if (roots.length > 1) return `The file has ${roots.length} root elements; XML allows one.`;
+  if (isTeiElement(roots[0], "TEI") || isTeiElement(roots[0], "teiCorpus")) return null;
+  return `The root element is <${roots[0].qname || roots[0].localName}>, not <TEI> or <teiCorpus>. teiCrafter opens TEI P5 documents.`;
+}
+
 /** All TEI elements with a local name, in document order. */
 export function teiElementsByLocal(node, localName) {
   const out = [];
@@ -468,7 +481,7 @@ export function firstTeiByLocal(node, localName) {
  * @returns {string|null} The decoded value, or null when absent.
  */
 export function getAttr(el, localName) {
-  if (!el.attrs) return null;
+  if (!el?.attrs) return null;
   const a = el.attrs.find((x) => x.localName === localName);
   return a ? a.value : null;
 }
