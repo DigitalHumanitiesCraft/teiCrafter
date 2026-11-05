@@ -41,11 +41,12 @@ The generic code and tests still carry project-specific parts. [Derivation](deri
 
 ## Operator decisions from the workshop audit
 
-Each question can be answered with yes or no. The recommendation is the yes; the reasons and the evidence follow it.
+Decided on 2026-11-05: the source-first rebuild is paused, and the application under `docs/` is developed as the product and stays the derivable base. `src/` remains a tested core library without an application shell; the [rebuild phase](#rebuild-phase) below is dormant. The reasons are in the [journal](journal.md) and the [specification](specification.md#rebuild-paused-2026-11-05).
+
+The questions below remain open. Each can be answered with yes or no. The recommendation is the yes; the reasons and the evidence follow it.
 
 | Question | Yes (recommended) | No | Evidence |
 | --- | --- | --- | --- |
-| Pause the source-first rebuild and develop the legacy application as the product until the derivation questions are settled? | `docs/` stays the published editor and the derivable base; `src/` stays a tested core library without a shell. Costs: two code bases remain, and the legacy editor keeps its size. Risks: `src/` ages without users. | Continue the rebuild steps below. Costs: an application shell, the text level, the outline, large-document folds and a dark scheme, and then every legacy surface the new editor must take over or drop deliberately (registers, metadata forms, project folder, working copy, project package, entries, witnesses, the Wenzelsbibel workspace). Risks: the fork and the public site wait on it. | No interface exists in `src/` ([architecture](architecture.md#source-first-core-under-src)); the published site serves `docs/` ([integration](integration.md#browser-files-and-deployment)); the fork depends on the base's shell and the standalone case built a small editor without either ([derivation](derivation.md#case-register)); the audit corrections in `docs/` took hours, not a rebuild |
 | Keep Save and Download bound to a valid schema result (fail-closed) in the legacy editor? | Invalid XML never leaves the editor through Save; Working copy keeps unfinished work. | Save always and show the state, with one confirmation, as the SZD derivation does. | Specification [open decision on Save](specification.md#open-decision-on-save); the audit found the gate working and explained; the SZD case's ADR-008 ([derivation](derivation.md#teicrafter-szd-standalone-editor)) |
 | Present teiCrafter in the workshop as an editor to try and as a model for one's own tool, rather than as a fork template? | The site text names the editor and the three routes the README describes. | Keep "template to fork" and write a step-by-step fork guide first. | Only one public derivation exists and its interface is not built; the README section "Derive an editor for your edition"; the site text lives outside this repository |
 | Make szd-teiCrafter public? | The workshop gets a working, freely licensed derivation to look at, and the gallery can link it. | It stays private and the gallery describes it without a link. | Its letters are freely licensed and its code follows the MIT default; `docs/data/derivations.json` has no URL for it |
@@ -67,7 +68,7 @@ These defects of the published editor under `docs/` are known and not yet correc
 
 ## Rebuild phase
 
-The source-first rebuild under `src/` continues until the new editor carries an application shell for the three use cases. It writes nothing into `docs/`. The switch of the GitHub Pages source, the retirement of `docs/`, the legacy tests and the cluster-specific knowledge documents wait until the new editor can also serve as derivable base. [Design](design.md), [testing](testing.md) and [project](project.md) describe the legacy editor until then.
+The rebuild is dormant since the operator decision of 2026-11-05 and resumes only by a new decision; the steps below record where it stopped. While it rests, `src/` is a tested core library and writes nothing into `docs/`. The switch of the GitHub Pages source, the retirement of `docs/`, the legacy tests and the cluster-specific knowledge documents wait until the new editor can also serve as derivable base. [Design](design.md), [testing](testing.md) and [project](project.md) describe the legacy editor until then.
 
 The comparison of prototypes A, B and C is complete. The editor is A's source view plus a hidden-markup text level on the same `EditorState`, and [views](views.md) owns the evidence, the reasons and the list of what carries over. Automatic closing tags are switched off in `src/editor/xml-editor.ts`.
 

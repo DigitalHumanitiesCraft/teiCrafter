@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/handoff
 status: active
 created: 2026-09-11
-updated: 2026-10-31
+updated: 2026-11-05
 language: en
 topics: ["[[Promptotyping]]", "[[Knowledge Base]]"]
 related: [INDEX, journal]
@@ -35,5 +35,5 @@ This process inbox holds received deltas awaiting integration. Verify each sourc
 
 - Received: 2026-10-31
 - Source: szd-teiCrafter, `knowledge/journal.md` entries of 2026-10-31
-- Target: `knowledge/specification.md` of the base, as candidates for generic modules
+- Target: generic modules of the base under `docs/js/editor/`, which is developed as the product since 2026-11-05, with the requirement in the base specification; `src/` only if the rebuild resumes
 - Context: Selections may span empty line-break elements, so a name broken across lines becomes one element (`lineBreakPattern` in `js/actions.js`). The date parser reads German, English, French and Roman forms and completes incomplete dates from a document date as inferred (`js/dates.js`). Unlinked marks count as open work. Each of these was found by LLM agents annotating through the editor, a way of testing an editor that may serve the base as well.

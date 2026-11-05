@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/specification
 status: draft
 created: 2026-02-05
-updated: 2026-10-10
+updated: 2026-11-05
 language: en
 topics: ["[[Requirements Engineering]]", "[[TEI XML]]", "[[Decision Records]]"]
 related: [project, data, architecture, design, views, testing, journal, converter-reference]
@@ -108,6 +108,10 @@ Whether schema errors block Save is undecided. The options are:
 | Keyboard only | Opening, folding, validating, accepting a proposal and saving succeed without a pointer |
 
 ## Key decisions
+
+### Rebuild paused, 2026-11-05
+
+The workshop audit found the published application under `docs/` without data loss and correctable in hours, while `src/` had no interface and the fork waited on the base. The operator decided to pause the rebuild and develop `docs/` as the product. This specification stays the requirement set for the core library under `src/` and for a later shell; the base keeps the behaviour of the [specification at revision 6d720a6](https://github.com/DigitalHumanitiesCraft/teiCrafter/blob/6d720a632e5ad307e98d7eae536b3d7e8a981bbd/knowledge/specification.md).
 
 ### View model, 2026-10-30
 

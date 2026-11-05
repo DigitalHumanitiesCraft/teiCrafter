@@ -42,7 +42,7 @@ canonical XML string
 
 ## Source-first core under `src/`
 
-The successor architecture lives beside the current application in `docs/` until an app shell covers open, edit and save. The layers depend downward only, so every layer stays testable without the ones above it.
+`src/` is a tested core library beside the published application in `docs/`. The rebuild that would give it an application shell is paused ([plan](plan.md#operator-decisions-from-the-workshop-audit)), so no page loads these modules; their tests and type check keep them correct for a later shell or for derivations that import them. The layers depend downward only, so every layer stays testable without the ones above it.
 
 | Layer | Path | Content |
 | --- | --- | --- |
