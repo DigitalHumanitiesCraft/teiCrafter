@@ -2,6 +2,41 @@
 import { el } from "./dom.js";
 import { editCellCore, editCellReadings, splitEdge } from "./edition.js";
 
+/**
+ * The document selection inside a reading span as offsets into the cell's core
+ * text, or null when nothing in the span is selected or the span shows text that
+ * differs from the core (then offsets would not map).
+ */
+export function selectionWithin(span, core) {
+  const sel = typeof window !== "undefined" ? window.getSelection?.() : null;
+  if (!sel || sel.rangeCount === 0) return null;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed || !span.contains(range.startContainer) || !span.contains(range.endContainer)) return null;
+  const lead = span.textContent.indexOf(core);
+  if (lead < 0) return null;
+  const before = document.createRange();
+  before.selectNodeContents(span);
+  before.setEnd(range.startContainer, range.startOffset);
+  const start = before.toString().length - lead;
+  const end = start + range.toString().replace(/\s+$/, "").length;
+  if (start < 0 || end > core.length || end <= start) return null;
+  return { start, end };
+}
+
+/**
+ * After a keyboard commit or cancel the re-render removes the input, and focus
+ * would fall to the page body. Return it to the edited cell, or the reading pane.
+ */
+function refocusCell(cellId) {
+  if (document.activeElement && document.activeElement !== document.body) return;
+  const cell = [...document.querySelectorAll("#ed-reading .ed-w")]
+    .find((node) => node instanceof HTMLElement && node.dataset.id === cellId);
+  const target = cell || document.getElementById("ed-reading");
+  if (!(target instanceof HTMLElement)) return;
+  if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+  target.focus();
+}
+
 export function createInlineEditor(ctx) {
   const { app, stagedInput, replaceSessionState, setStatus, render, persistRecovery } = ctx;
 
@@ -20,16 +55,21 @@ export function createInlineEditor(ctx) {
     const multiline = cell.editingKind !== "token";
     let inp;
     if (multiline) {
-      inp = el("textarea", { class: "ed-w-input ed-line-input", rows: "1" });
+      // Selecting the whole line made a double-click-and-type correction replace
+      // the line. Keep the word the browser selected on double-click; from the
+      // keyboard (F2, Enter, menu) the caret goes to the end.
+      const selected = selectionWithin(span, core);
+      inp = el("textarea", { class: "ed-w-input ed-line-input", rows: "1", "aria-label": "Edit line text" });
       inp.value = core;
       const autosize = () => { inp.style.height = "auto"; inp.style.height = `${inp.scrollHeight}px`; };
       inp.addEventListener("input", autosize);
       span.replaceWith(inp);
       inp.focus();
-      inp.select();
+      if (selected) inp.setSelectionRange(selected.start, selected.end);
+      else inp.setSelectionRange(core.length, core.length);
       autosize();
     } else {
-      inp = el("input", { class: "ed-w-input", type: "text", value: core });
+      inp = el("input", { class: "ed-w-input", type: "text", value: core, "aria-label": "Edit word text" });
       inp.style.width = `${Math.min(60, Math.max(2, core.length + 1))}ch`;
       inp.style.maxWidth = "100%";
       span.replaceWith(inp);
@@ -64,8 +104,8 @@ export function createInlineEditor(ctx) {
     inp.addEventListener("keydown", (e) => {
       if (e.isComposing) return;
       // Enter commits; in the multiline textarea Shift+Enter inserts a real newline.
-      if (e.key === "Enter" && !(multiline && e.shiftKey)) { e.preventDefault(); commit(); }
-      else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+      if (e.key === "Enter" && !(multiline && e.shiftKey)) { e.preventDefault(); commit(); refocusCell(cell.id); }
+      else if (e.key === "Escape") { e.preventDefault(); cancel(); refocusCell(cell.id); }
     });
     inp.addEventListener("blur", commit);
     stagedInput.mount({

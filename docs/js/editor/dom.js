@@ -43,3 +43,24 @@ export function el(tag, props = {}, children = []) {
 export function clear(node) {
   while (node.firstChild) node.removeChild(node.firstChild);
 }
+
+/**
+ * Keep Tab and Shift+Tab inside an open modal dialog, wrapping at its ends, so
+ * keyboard focus cannot wander to the page behind it (WCAG 2.4.3).
+ */
+export function keepFocusInside(container, event) {
+  if (event.key !== "Tab") return;
+  const focusable = [...container.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+  )].filter((node) => !node.hidden && node.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}

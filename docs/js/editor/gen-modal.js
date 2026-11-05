@@ -26,7 +26,7 @@
  *   #generate deep link to open().
  */
 
-import { el, clear } from "./dom.js";
+import { el, clear, keepFocusInside } from "./dom.js";
 import {
   complete, setProvider, setModel, setApiKey, setEndpoint, getProviderConfigs,
 } from "../services/llm.js";
@@ -49,6 +49,7 @@ export function setupGenModal(ctx) {
   } = ctx;
   const gen = { key: "", provider: "anthropic", model: "", endpoint: "", type: "generic" };
   let activeJob = null;
+  let returnFocus = null;
 
   function generatedStructureIssue(xml) {
     const parsed = new DOMParser().parseFromString(xml, "application/xml");
@@ -116,6 +117,7 @@ export function setupGenModal(ctx) {
     const status = $("gen-status");
     status.textContent = "";
     status.className = "ed-modal-status";
+    returnFocus = document.activeElement;
     $("gen-modal").hidden = false;
     $("gen-text").focus();
   }
@@ -123,6 +125,8 @@ export function setupGenModal(ctx) {
   function close() {
     if (activeJob) abortAiJob(activeJob, "Generation cancelled");
     $("gen-modal").hidden = true;
+    if (returnFocus?.isConnected && returnFocus.offsetParent !== null) returnFocus.focus();
+    returnFocus = null;
   }
 
   async function runGenerate() {
@@ -205,7 +209,11 @@ export function setupGenModal(ctx) {
   $("gen-provider").addEventListener("change", refreshModels);
   $("gen-run").addEventListener("click", runGenerate);
   $("gen-modal").addEventListener("click", (e) => { if (e.target.id === "gen-modal") close(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("gen-modal").hidden) close(); });
+  document.addEventListener("keydown", (e) => {
+    if ($("gen-modal").hidden) return;
+    if (e.key === "Escape") close();
+    else keepFocusInside($("gen-modal"), e);
+  });
 
   return { open };
 }

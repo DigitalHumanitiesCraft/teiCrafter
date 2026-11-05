@@ -183,7 +183,7 @@ export function createIndexPanel(hostEl, hooks = {}) {
     if (addForm) addForm.hidden = true;
     const idToggle = el("button", {
       class: "ed-idx-btn ed-idx-idtoggle", type: "button",
-      title: "Add or look up an authority id", "aria-label": "Add authority id", text: "+ id",
+      title: "Add or look up an authority id", text: "add id",
       onclick: () => {
         if (!addForm) return;
         addForm.hidden = !addForm.hidden;
@@ -199,8 +199,8 @@ export function createIndexPanel(hostEl, hooks = {}) {
       }) : null,
       idToggle,
       el("button", {
-        class: "ed-idx-btn ed-idx-edit", type: "button", title: "Rename",
-        "aria-label": "Rename", text: "edit",
+        class: "ed-idx-btn ed-idx-edit", type: "button", title: "Rename this entry",
+        text: "rename",
         onclick: beginRename,
       }),
       delBtn,

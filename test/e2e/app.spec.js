@@ -181,7 +181,8 @@ async function loadWenzelsbibel(page) {
   ));
   await page.goto("/index.html");
   await page.getByRole("link", { name: /Wenzelsbibel/ }).click();
-  await expect(page).toHaveURL(/editor\.html#example=wb$/);
+  // The deep link loads once; the editor then drops the hash so a reload offers recovery.
+  await expect(page).toHaveURL(/editor\.html$/);
   await expect(page.locator("#ed-docstrip")).toBeVisible();
   await expect(page.locator("#ed-folio-label")).toContainText("page 1/20");
 }
@@ -623,7 +624,7 @@ test("overlapping entity layers can be inspected, relinked and removed safely", 
 
   const annotatedCell = page.locator("#ed-reading .ed-w").filter({ hasText: "deterministic" }).first();
   await annotatedCell.click({ button: "right" });
-  await page.getByRole("button", { name: "Edit annotation...", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit annotation...", exact: true }).click();
   await expect(page.locator(".ed-sel-pop-title")).toContainText("annotations on");
   await expect(page.getByRole("button", { name: "relink", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "remove annotation", exact: true })).toBeVisible();
@@ -777,7 +778,7 @@ test("on a public host only the SZD example opens", async ({ page }) => {
   for (const key of ["wb", "zbz"]) {
     await page.goto(`${origin}/index.html`);
     await page.goto(`${origin}/editor.html#example=${key}`);
-    await expect(page.locator("#ed-status")).not.toContainText("Loading");
+    await expect(page.locator("#ed-status")).toContainText("is not available on this site");
     await expect(page.locator("#ed-docstrip")).not.toContainText(".xml");
   }
   await page.locator("#btn-load").click();
@@ -787,7 +788,7 @@ test("on a public host only the SZD example opens", async ({ page }) => {
 
   await page.goto(`${origin}/index.html`);
   await page.getByRole("link", { name: "Open the example letter (Stefan Zweig, 1901)" }).click();
-  await expect(page).toHaveURL(`${origin}/editor.html#example=szd`);
+  await expect(page).toHaveURL(`${origin}/editor.html`);
   await expect(page.locator("#ed-docstrip")).toContainText("o_szd.1079.tei.xml");
   // Requests still in flight when the page closes must not fail the routed fetches.
   await page.unrouteAll({ behavior: "ignoreErrors" });

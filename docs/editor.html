@@ -88,6 +88,7 @@
          pane is a switchable context panel (facsimile, entity index; the panel
          registry in editor-app.js is open for project-specific panels). -->
     <main class="ed-main" id="ed-main">
+        <h1 class="visually-hidden">teiCrafter editor</h1>
         <section class="ed-pane" id="ed-pane-left">
             <div class="ed-pane-head">
                 <span class="ed-tabs" id="ed-view-tabs" role="tablist" aria-label="Text view">
@@ -99,7 +100,7 @@
                             title="Structured teiHeader fields with the complete editable XML one click away">Metadata</button>
                 </span>
                 <span class="ed-pane-head-right">
-                    <button class="ed-val-chip" id="ed-val-chip" type="button" hidden></button>
+                    <button class="ed-val-chip" id="ed-val-chip" type="button" aria-controls="ed-val-pop" aria-expanded="false" hidden></button>
                     <button class="ed-btn ed-btn-ai ed-icon-btn" id="btn-propose" type="button" hidden
                             title="Ask a language model to propose annotations on this page. Proposals appear violet and unverified; confirm or reject each. Set a provider and key via New from text (LLM) first.">Propose (AI)</button>
                     <span class="ed-pager">
@@ -123,9 +124,9 @@
                         </span>
                         <button class="ed-btn ed-review-summary" id="ed-review-summary" type="button"
                                 aria-pressed="false" title="Mark the current navigation unit as editorially reviewed">Reviewed -/-</button>
-                        <button class="ed-btn ed-pager-btn" id="btn-prev" disabled title="Previous page (ArrowLeft)">&#8249;</button>
+                        <button class="ed-btn ed-pager-btn" id="btn-prev" disabled aria-label="Previous page" title="Previous page (ArrowLeft)">&#8249;</button>
                         <span class="ed-folio-label" id="ed-folio-label">-</span>
-                        <button class="ed-btn ed-pager-btn" id="btn-next" disabled title="Next page (ArrowRight)">&#8250;</button>
+                        <button class="ed-btn ed-pager-btn" id="btn-next" disabled aria-label="Next page" title="Next page (ArrowRight)">&#8250;</button>
                     </span>
                     <span class="ed-tabs ed-reading-variant" id="ed-reading-variant" role="tablist" aria-label="Reading variant" hidden>
                         <button class="ed-tab active" id="variant-dipl" type="button" role="tab" aria-selected="true" tabindex="0" aria-controls="ed-reading"
@@ -134,9 +135,9 @@
                                 title="Shows the normalized reading from the norm attribute; words without one show the text as written.">Normalized</button>
                     </span>
                     <span class="ed-view-controls" id="ed-view-controls" hidden>
-                        <button class="ed-btn ed-icon-btn" id="ed-zoom-out" type="button" title="Smaller text">A-</button>
+                        <button class="ed-btn ed-icon-btn" id="ed-zoom-out" type="button" aria-label="Smaller text" title="Smaller text">A-</button>
                         <button class="ed-btn ed-icon-btn ed-zoom-level" id="ed-zoom-reset" type="button" title="Reset text size">100%</button>
-                        <button class="ed-btn ed-icon-btn" id="ed-zoom-in" type="button" title="Larger text">A+</button>
+                        <button class="ed-btn ed-icon-btn" id="ed-zoom-in" type="button" aria-label="Larger text" title="Larger text">A+</button>
                     </span>
                 </span>
             </div>

@@ -648,9 +648,8 @@
 }
 /* Row actions rest quiet so the panel scans as an overview, and come forward on
    hover or keyboard focus (focus-within keeps them reachable by tab). */
-.ed-idx-actions { display: flex; gap: 2px; flex-shrink: 0; opacity: .4; transition: opacity .12s ease; }
-.ed-idx-row:hover .ed-idx-actions,
-.ed-idx-row:focus-within .ed-idx-actions { opacity: 1; }
+/* Row actions stay at full contrast; dimming them at rest fell to 1.8:1. */
+.ed-idx-actions { display: flex; gap: 2px; flex-shrink: 0; }
 .ed-idx-btn {
   font-family: var(--font-ui); font-size: var(--font-size-xs); cursor: pointer;
   padding: 1px var(--space-xs); border-radius: var(--radius-sm);
@@ -917,7 +916,7 @@
 .ed-src-result { flex: 1 1 10ch; min-width: 6ch; font-family: var(--font-mono); font-size: var(--font-size-xs);
   min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ed-src-result.ok { color: var(--color-confident); }
-.ed-src-result.err { color: var(--color-problem); }
+.ed-src-result.err { color: var(--color-problem); white-space: normal; flex-basis: 100%; }
 .ed-src-validation {
   flex: 0 1 auto; font-family: var(--font-ui); font-size: var(--font-size-xs);
   color: var(--color-text-muted); padding: 1px var(--space-xs);
@@ -1090,3 +1089,10 @@
 .ed-proj-ann.annotated { color: var(--color-blue); background: var(--color-blue-light); }
 .ed-proj-ann.empty, .ed-proj-ann.pending { color: var(--color-text-muted); background: var(--color-surface-sunken); }
 .ed-proj-ann.error { color: var(--color-problem); background: var(--color-problem-tint); }
+
+/* Reflow at 320 CSS px (WCAG 1.4.10): toolbar groups and tab lists wrap instead
+   of pushing the page sideways. */
+@media (max-width: 480px) {
+  .ed-toolbar .group { flex-wrap: wrap; }
+  .ed-tabs, .ed-pane-head > .ed-tabs { flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+}

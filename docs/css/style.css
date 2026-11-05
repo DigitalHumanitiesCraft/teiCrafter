@@ -215,3 +215,10 @@ a.site-logo:hover .accent { color: var(--color-gold-light); }
 .site-foot a:hover { color: var(--color-text); text-decoration: underline; }
 .site-foot img { height: 16px; width: auto; display: block; }
 .site-foot .spacer { flex: 1; }
+
+/* Text for assistive technology only, such as a page heading the layout shows
+   through its toolbar. */
+.visually-hidden {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}

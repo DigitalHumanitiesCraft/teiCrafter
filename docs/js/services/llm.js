@@ -307,6 +307,29 @@ export function pickModel(config, stored) {
 }
 
 /**
+ * A provider's HTTP failure as a sentence a researcher can act on. Raw bodies
+ * are often JSON or an HTML error page, so only a provider's own error message,
+ * if it sends one, is kept as detail.
+ * @param {string} name Provider display name
+ * @param {number} status HTTP status
+ * @param {string} body Response body text
+ * @returns {string}
+ */
+export function describeProviderFailure(name, status, body = '') {
+    let detail = '';
+    try {
+        const parsed = JSON.parse(body);
+        const message = parsed?.error?.message ?? parsed?.message ?? (typeof parsed?.error === 'string' ? parsed.error : '');
+        if (typeof message === 'string') detail = message.trim().slice(0, 160);
+    } catch { /* not JSON: an HTML or plain error page carries no usable detail */ }
+    const suffix = detail ? ' Provider message: ' + detail.replace(/\.?$/, '.') : '';
+    if (status === 401 || status === 403) return name + ' refused the API key (HTTP ' + status + '). Check the key and the selected provider.' + suffix;
+    if (status === 429) return name + ' reports too many requests or an exhausted quota (HTTP 429). Wait a moment and try again.' + suffix;
+    if (status >= 500) return name + ' had a server error (HTTP ' + status + '). Try again later.' + suffix;
+    return name + ' did not accept the request (HTTP ' + status + ').' + suffix;
+}
+
+/**
  * Send a prompt to the current LLM provider.
  * @param {string} prompt
  * @param {Object} [options]
@@ -354,20 +377,32 @@ export async function complete(prompt, options = {}) {
     const requestSignal = signal ? AbortSignal.any([signal, timer.signal]) : timer.signal;
     let data;
     try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body,
-            credentials: 'omit',
-            signal: requestSignal
-        });
+        let response;
+        try {
+            response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body,
+                credentials: 'omit',
+                signal: requestSignal
+            });
+        } catch (err) {
+            if (requestSignal.aborted) throw err;
+            throw new Error(config.name + ' could not be reached. Check the network connection; a local server'
+                + ' such as Ollama must also allow requests from this site.');
+        }
 
         if (!response.ok) {
             const errorText = await response.text().catch(() => '');
-            throw new Error(config.name + ' API error ' + response.status + ': ' + errorText.slice(0, 200));
+            throw new Error(describeProviderFailure(config.name, response.status, errorText));
         }
 
-        data = await response.json();
+        try {
+            data = await response.json();
+        } catch (err) {
+            if (requestSignal.aborted) throw err;
+            throw new Error(config.name + ' sent a response that is not valid JSON, so no draft could be read from it.');
+        }
     } catch (err) {
         // A user cancel keeps its own error; only the bound gets the timeout message.
         if (timer.signal.aborted && !signal?.aborted) {

@@ -750,7 +750,17 @@ function applyLoad(raw, name, handle, project, opts = {}) {
     + (app.project ? `, project: ${app.project.name} (${app.project.source === "manifest" ? "manifest" : "detected"})` : "")
     + (docType ? `, type: ${docType.label}` : "")
     + (importedInterchange ? ", inline-GND opened in the editable register model" : "")
-    + ` in ${secs}s`);
+    + ` in ${secs}s`
+    + loadParseWarning(raw));
+}
+
+// The editor opens a file that does not parse so it can be repaired, but says so
+// at once rather than only through the check chip. Very large files skip this
+// extra parse; the chip still reports them.
+function loadParseWarning(raw) {
+  if (raw.length > BIG_DOC_CHARS) return "";
+  const parsed = validationView.isWellFormed(raw);
+  return parsed.ok ? "" : `. The file is not well-formed XML (${parsed.message}); correct it in XML source before saving.`;
 }
 
 function markGenerated(on) {
@@ -2317,8 +2327,35 @@ function openWorkingCopy() {
   input.click();
 }
 
-const save = () => outputController.save();
-const download = () => outputController.download();
+// Schema-gated output can take many seconds on its first validation. One output
+// runs at a time, and the buttons say so, so a repeated click neither looks
+// ignored nor requests a second file.
+let outputBusy = false;
+const OUTPUT_BUTTONS = ["btn-save", "btn-download"];
+async function runOutput(task) {
+  if (outputBusy) {
+    setStatus("The previous Save or Download is still being validated.");
+    return false;
+  }
+  outputBusy = true;
+  const labels = OUTPUT_BUTTONS.map((id) => [$(id), $(id).textContent]);
+  for (const [button] of labels) {
+    button.setAttribute("aria-busy", "true");
+    button.setAttribute("aria-disabled", "true");
+    button.textContent = "Validating...";
+  }
+  try { return await task(); }
+  finally {
+    outputBusy = false;
+    for (const [button, label] of labels) {
+      button.removeAttribute("aria-busy");
+      button.removeAttribute("aria-disabled");
+      button.textContent = label;
+    }
+  }
+}
+const save = () => runOutput(() => outputController.save());
+const download = () => runOutput(() => outputController.download());
 
 /** True when the loaded document's project opts into the inline-GND interchange. */
 function docHasInlineGndExport() {
@@ -2376,7 +2413,7 @@ async function attachFacsimileFolder() {
  * pipeline's "_final.xml". Reading text is byte-preserved; only the markup shape
  * changes (toInlineGND). The in-editor document is untouched.
  */
-const downloadInlineGND = () => outputController.download("inline-gnd");
+const downloadInlineGND = () => runOutput(() => outputController.download("inline-gnd"));
 
 // ---- view controls: zoom, collapse, splitter, layout persistence ------------
 // One persistence mechanism (storage.js, localStorage): text zoom is a global
@@ -2831,7 +2868,10 @@ async function proposeOnFolio() {
     }
   } catch (err) {
     if (job.signal.aborted || (err && err.name === "AbortError")) return;
-    setStatus(`Proposal failed: ${err.message}. Set a provider and API key via "New from text (LLM)" first.`);
+    // The key hint helps only when the key is what is missing.
+    const reason = String(err?.message || err).replace(/\.+$/, "");
+    const hint = /^No API key configured/.test(reason) ? ' Set a provider and API key in "New from text (LLM)".' : "";
+    setStatus(`Proposal failed: ${reason}.${hint}`);
   } finally {
     finishAiJob(job);
     if (btn) btn.disabled = false;
@@ -2887,14 +2927,46 @@ const imageOnramp = setupImageOnramp({ build: buildFromTextAndImages });
 // or Escape.
 const loadBtn = $("btn-load");
 const loadMenu = $("ed-load-menu");
+// Keyboard follows the menu-button pattern: opening moves focus to the first
+// item, arrow keys, Home and End move between items, Escape closes and returns
+// focus to the button, Tab closes and moves on. Focus returns to the button
+// before an item's action runs, so a dialog it opens can hand focus back there.
+const menuItems = () => [...loadMenu.querySelectorAll('[role^="menuitem"]')]
+  .filter((item) => !item.hidden && !item.disabled && item.offsetParent !== null);
 function closeLoadMenu() {
+  const hadFocus = loadMenu.contains(document.activeElement);
   loadMenu.hidden = true;
   loadBtn.setAttribute("aria-expanded", "false");
+  if (hadFocus) loadBtn.focus();
+}
+function openLoadMenu(focusIndex = 0) {
+  loadMenu.hidden = false;
+  loadBtn.setAttribute("aria-expanded", "true");
+  const items = menuItems();
+  items.at(focusIndex)?.focus();
 }
 loadBtn.addEventListener("click", (e) => {
   e.stopPropagation();
-  loadMenu.hidden = !loadMenu.hidden;
-  loadBtn.setAttribute("aria-expanded", String(!loadMenu.hidden));
+  if (loadMenu.hidden) openLoadMenu();
+  else closeLoadMenu();
+});
+loadBtn.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    openLoadMenu(e.key === "ArrowUp" ? -1 : 0);
+  }
+});
+loadMenu.addEventListener("keydown", (e) => {
+  const items = menuItems();
+  const index = items.indexOf(document.activeElement);
+  const target = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: items.length - 1 }[e.key];
+  if (target !== undefined && items.length) {
+    e.preventDefault();
+    items[(target + items.length) % items.length].focus();
+  } else if (e.key === "Tab") {
+    loadMenu.hidden = true;
+    loadBtn.setAttribute("aria-expanded", "false");
+  }
 });
 document.addEventListener("click", (e) => {
   if (!loadMenu.hidden && !(e.target instanceof Element && e.target.closest(".ed-dd-wrap"))) {
@@ -3076,6 +3148,9 @@ applyZoom(currentZoom());
 // Validation chip (in the reading-pane header, next to where the work happens):
 // the live checks run on every render; the chip opens the detail popover
 // anchored under itself, a click elsewhere or Escape closes it.
+// The popover opens from several places, so its hidden state drives aria-expanded.
+new MutationObserver(() => $("ed-val-chip").setAttribute("aria-expanded", String(!$("ed-val-pop").hidden)))
+  .observe($("ed-val-pop"), { attributes: true, attributeFilter: ["hidden"] });
 $("ed-val-chip").addEventListener("click", (e) => {
   e.stopPropagation();
   const pop = $("ed-val-pop");
@@ -3107,7 +3182,14 @@ render(); // start state: the empty editor (no document) with its load prompt
 // Deep link from the landing page: editor.html#example=KEY loads that example.
 // Gated like the menu entries, so only public examples load on the deployment.
 const exampleLink = location.hash.match(/^#example=([a-z]+)$/);
-if (exampleLink && exampleAvailable(exampleLink[1])) loadExample(exampleLink[1]);
+if (exampleLink) {
+  // The hash only starts the load. Left in the URL, a reload would load the
+  // example again and hide the recovery offer for the edits made since.
+  history.replaceState(null, "", location.pathname + location.search);
+  const known = Object.hasOwn({ ...workspaceExamples(), ...BUILTIN_EXAMPLES }, exampleLink[1]);
+  if (known && exampleAvailable(exampleLink[1])) loadExample(exampleLink[1]);
+  else setStatus(`The example "${exampleLink[1]}" is not available on this site. Use Load... to open a file or the public example.`);
+}
 
 const szdImportLink = location.hash.match(/^#szd-import=([a-f0-9-]{36})$/i);
 if (szdImportLink && ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {

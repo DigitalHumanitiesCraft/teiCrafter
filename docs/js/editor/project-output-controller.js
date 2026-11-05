@@ -53,7 +53,7 @@ export function createProjectOutputController(ctx, { validate = validateWithSche
       ctx.download(result.bytes, result.name, result.type);
       requested = true;
       const recovered = await ctx.persist();
-      if (current() && recovered) ctx.status(`Project package download requested: ${snapshot.documents.length} validated XML files in ${result.name}. Local recovery is retained.`);
+      if (current() && recovered) ctx.status(`Project package download requested: ${snapshot.documents.length} validated XML ${snapshot.documents.length === 1 ? "file" : "files"} in ${result.name}. Local recovery is retained.`);
       return true;
     } catch (error) {
       if (requested) {

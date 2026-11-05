@@ -81,9 +81,9 @@ export function highlightXml(src) {
   return out;
 }
 
-/** Extract "line N at column M" from a DOMParser parsererror message, or null. */
+/** Extract the position from a well-formedness message ("Line N, column M: ..."), or null. */
 function errorPosition(message) {
-  const m = /line (\d+)(?: at column (\d+))?/.exec(message || "");
+  const m = /line (\d+)(?:,? (?:at )?column (\d+))?/i.exec(message || "");
   return m ? { line: Number(m[1]), column: m[2] ? Number(m[2]) : 1 } : null;
 }
 
@@ -283,13 +283,11 @@ export function mountSourceView(host, opts = {}) {
   });
   completionBar.hidden = true;
   ta.setAttribute("aria-controls", "ed-src-completions");
-  ta.setAttribute("aria-expanded", "false");
   let completionContext = null;
   let completions = [];
   let completionIndex = 0;
   const closeCompletions = () => {
     completionBar.hidden = true;
-    ta.setAttribute("aria-expanded", "false");
     completionContext = null;
     completions = [];
     completionIndex = 0;
@@ -336,7 +334,6 @@ export function mountSourceView(host, opts = {}) {
       completionBar.appendChild(button);
     });
     completionBar.hidden = false;
-    ta.setAttribute("aria-expanded", "true");
     paintCompletionSelection();
   };
 
@@ -379,11 +376,17 @@ export function mountSourceView(host, opts = {}) {
   const clearErrorLine = () => { errLine = null; errBand.hidden = true; };
 
   let raf = 0;
+  // Well-formedness is checked after a pause in typing, so the result appears
+  // without pressing Check XML; Check XML and Apply still run it at once.
+  let liveCheck = 0;
   ta.addEventListener("input", () => {
     result.textContent = "";
+    result.title = "";
     result.className = "ed-src-result";
     clearErrorLine();
     updateCompletions(false);
+    clearTimeout(liveCheck);
+    if (!opts.readOnly) liveCheck = setTimeout(() => { if (root.isConnected) runCheck(true); }, 700);
     if (raf) return;
     raf = requestAnimationFrame(() => { raf = 0; refresh(); syncScroll(); });
   });
@@ -552,7 +555,8 @@ export function mountSourceView(host, opts = {}) {
   });
 
   // ---- actions --------------------------------------------------------------
-  const runCheck = () => {
+  // A live check marks the error line but leaves the caret where the user types.
+  const runCheck = (live = false) => {
     const wf = wellFormed(ta.value);
     if (wf.ok) {
       result.className = "ed-src-result ok";
@@ -561,17 +565,21 @@ export function mountSourceView(host, opts = {}) {
     } else {
       result.className = "ed-src-result err";
       result.textContent = wf.message;
+      result.title = wf.message;
       const pos = errorPosition(wf.message);
-      if (pos && caretToLineCol(pos.line, pos.column)) markErrorLine(pos.line - lineStart + 1);
+      if (pos && live) {
+        if (pos.line >= lineStart) markErrorLine(pos.line - lineStart + 1);
+      } else if (pos && caretToLineCol(pos.line, pos.column)) markErrorLine(pos.line - lineStart + 1);
     }
   };
-  checkBtn.addEventListener("click", runCheck);
+  checkBtn.addEventListener("click", () => runCheck());
   const applyChanges = () => {
     if (opts.readOnly) return false;
     const wf = wellFormed(ta.value);
     if (!wf.ok) {
       result.className = "ed-src-result err";
       result.textContent = wf.message;
+      result.title = wf.message;
       const pos = errorPosition(wf.message);
       if (pos && caretToLineCol(pos.line, pos.column)) markErrorLine(pos.line - lineStart + 1);
       return false;

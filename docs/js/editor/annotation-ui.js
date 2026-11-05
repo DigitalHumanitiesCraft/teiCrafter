@@ -429,13 +429,13 @@ export function createAnnotationUi(ctx) {
    * selection offers annotation; an annotated element offers its editor; every
    * cell offers edit / note / mark. Closes on click elsewhere or Escape.
    */
-  function openContextMenu(x, y, span, cell) {
+  function openContextMenu(x, y, span, cell, { keyboard = false } = {}) {
     if (app.readOnly) return;
     removeMenu();
     removeSelPopover();
-    const menu = el("div", { class: "ed-menu", id: "ed-menu" });
+    const menu = el("div", { class: "ed-menu", id: "ed-menu", role: "menu", "aria-label": "Text actions" });
     const item = (label, fn, opts = {}) => {
-      const b = el("button", { class: "ed-menu-item", text: label });
+      const b = el("button", { class: "ed-menu-item", text: label, role: "menuitem", tabindex: "-1" });
       if (opts.disabled) { b.disabled = true; if (opts.title) b.title = opts.title; }
       else b.addEventListener("click", (e) => { e.stopPropagation(); removeMenu(); fn(); });
       menu.appendChild(b);
@@ -482,9 +482,11 @@ export function createAnnotationUi(ctx) {
     if (cell && !cell.gap && author) {
       const c = () => app.state.cellById.get(cell.id);
       menu.appendChild(el("div", { class: "ed-menu-sep ed-menu-group", text: "Structure" }));
-      item("Split line here", () => { const cc = c(); if (cc) author.splitLine(x, y, cc); });
+      // Split and insert act at a pointer position, which a keyboard opening lacks.
+      const atPoint = keyboard ? { disabled: true, title: "Right-click at the position to split or break the line" } : {};
+      item("Split line here", () => { const cc = c(); if (cc) author.splitLine(x, y, cc); }, atPoint);
       item("Merge with previous", () => { const cc = c(); if (cc) author.mergePrev(cc); });
-      item("Insert line break", () => { const cc = c(); if (cc) author.insertLb(x, y, cc); });
+      item("Insert line break", () => { const cc = c(); if (cc) author.insertLb(x, y, cc); }, atPoint);
       const canDelete = author.isEmpty(cell);
       item("Delete", () => { const cc = c(); if (cc) author.deleteElement(cc); },
         canDelete ? {} : { disabled: true, title: "only an empty element can be deleted" });
@@ -502,11 +504,27 @@ export function createAnnotationUi(ctx) {
       }
     };
     document.addEventListener("mousedown", onAway, true);
+    // Keyboard: focus starts on the first action, arrow keys, Home and End move,
+    // Escape closes and returns focus to the text, Tab closes and moves on.
+    const actions = () => [...menu.querySelectorAll(".ed-menu-item:not([disabled])")];
+    const returnTo = span?.isConnected ? span : null;
     const onKey = (e) => {
-      if (e.key === "Escape") { removeMenu(); document.removeEventListener("keydown", onKey); }
-      if (!document.getElementById("ed-menu")) document.removeEventListener("keydown", onKey);
+      if (!document.getElementById("ed-menu")) { document.removeEventListener("keydown", onKey); return; }
+      const items = actions();
+      const index = items.indexOf(document.activeElement);
+      const target = { ArrowDown: index + 1, ArrowUp: index - 1, Home: 0, End: items.length - 1 }[e.key];
+      if (target !== undefined && items.length) {
+        e.preventDefault();
+        items[(target + items.length) % items.length].focus();
+      } else if (e.key === "Escape" || e.key === "Tab") {
+        if (e.key === "Escape") e.preventDefault();
+        removeMenu();
+        document.removeEventListener("keydown", onKey);
+        if (e.key === "Escape" && returnTo?.isConnected) returnTo.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
+    actions()[0]?.focus();
   }
 
   /** Word-profile whole-cell link via a small anchored entity picker. */
@@ -1664,7 +1682,15 @@ export function createAnnotationUi(ctx) {
     e.preventDefault();
     const span = e.target instanceof Element ? e.target.closest(".ed-w") : null;
     const cell = span ? app.state.cellById.get(span.dataset.id) : null;
-    openContextMenu(e.clientX, e.clientY, span, cell || null);
+    // The context-menu key and Shift+F10 report no pointer position; anchor at the text.
+    let { clientX: x, clientY: y } = e;
+    const keyboard = !x && !y;
+    if (keyboard && span) {
+      const rect = span.getBoundingClientRect();
+      x = rect.left;
+      y = rect.bottom;
+    }
+    openContextMenu(x, y, span, cell || null, { keyboard });
   });
 
   return {

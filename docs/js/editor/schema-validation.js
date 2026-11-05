@@ -1,6 +1,7 @@
 import { normalizeSchemaSet, schemaDependencyRefs, schemaPathExtension } from "./schema-set.js";
 import { createSchemaWorkerClient } from "./schema-validation-worker-client.js";
 import { validateXmlSchemaDirect } from "./xml-schema-runtime.js";
+import { describeParserError } from "./xml-errors.js";
 
 const DEFAULT_RELAXNG_URL = new URL(
   "../../schemas/tei-p5-4.11.0/tei_all.rng",
@@ -207,7 +208,7 @@ function parseXmlInBrowser(text, label) {
   const parsed = new DOMParser().parseFromString(text, "application/xml");
   const errors = [...parsed.getElementsByTagName("parsererror")];
   if (errors.length) {
-    throw new Error(`${label} is not well-formed XML: ${errors[0].textContent.replace(/\s+/g, " ").trim().slice(0, 240)}`);
+    throw new Error(`${label} is not well-formed XML: ${describeParserError(errors[0].textContent).message}`);
   }
   return parsed;
 }

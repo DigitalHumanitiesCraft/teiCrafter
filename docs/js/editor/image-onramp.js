@@ -18,7 +18,7 @@
  *   ctx.build({ text, title, images: [{ file, name, type }] }) -> Promise
  */
 
-import { el, clear } from "./dom.js";
+import { el, clear, keepFocusInside } from "./dom.js";
 import { STARTER_PROFILES, starterEntries } from "./starter-profiles.js";
 
 // Image-byte signatures, so a file named without an extension (e.g. "IMG.1")
@@ -314,20 +314,7 @@ export function setupImageOnramp(ctx) {
         close();
         return;
       }
-      if (e.key !== "Tab") return;
-      const focusable = [...root.querySelectorAll(
-        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      )].filter((node) => !node.hidden);
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      keepFocusInside(root, e);
     });
   }
 

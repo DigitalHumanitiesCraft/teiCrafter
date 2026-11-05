@@ -6,6 +6,7 @@
 import { el, clear } from "./dom.js";
 import { serialize, structuralSummary, xmlIdSet } from "./edition.js";
 import { requireCtx } from "./ctx.js";
+import { wellFormedError } from "./xml-errors.js";
 import {
   customSchemaFromFile,
   schemaGate,
@@ -28,12 +29,8 @@ export function createValidationView(ctx) {
   let schemaSelection = 0;
 
   function isWellFormed(raw) {
-    const doc = new DOMParser().parseFromString(raw, "application/xml");
-    const err = doc.querySelector("parsererror");
-    return {
-      ok: !err,
-      message: err ? err.textContent.replace(/\s+/g, " ").trim().slice(0, 200) : "",
-    };
+    const error = wellFormedError(raw);
+    return { ok: !error, message: error ? error.message : "", line: error?.line ?? null, column: error?.column ?? null };
   }
 
   function computeValidation() {
@@ -161,7 +158,7 @@ export function createValidationView(ctx) {
     for (const [kind, text] of rows) liveSection.appendChild(valRow(kind, text));
     liveSection.appendChild(el("div", {
       class: "ed-val-note",
-      text: "Well-formed: the XML parses without errors.",
+      text: "Well-formedness means that the XML parses without errors.",
     }));
     liveSection.appendChild(el("div", {
       class: "ed-val-note",
@@ -314,6 +311,16 @@ export function createValidationView(ctx) {
       };
     }
     const gate = schemaGate(record.results);
+    // A document that does not parse fails every schema; naming the parse error
+    // points to the actual repair instead of the schema.
+    const parseError = gate.ok ? null : wellFormedError(raw);
+    if (parseError) {
+      return {
+        ok: false,
+        results: record.results,
+        message: `${action} blocked because the document is not well-formed XML (${parseError.message}). Correct it in XML source; Working copy keeps the unfinished state.`,
+      };
+    }
     if (gate.ok) return { ok: true, results: record.results, authorization: target };
     const invalid = gate.invalid.map((item) => item.name).join(", ");
     const unavailable = gate.unavailable.map((item) => item.name).join(", ");
