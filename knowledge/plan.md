@@ -13,7 +13,7 @@ template:
   alias: https://dhcraft.org/Promptotyping/#promptotyping-document-plan
 status: active
 created: 2026-10-10
-updated: 2026-11-05
+updated: 2026-11-06
 language: en
 related: [architecture, specification, testing, wenzelsbibel, derivation, views, journal, handoff, INDEX]
 ---
@@ -43,13 +43,14 @@ The generic code and tests still carry project-specific parts. [Derivation](deri
 
 Decided on 2026-11-05: the source-first rebuild is paused, and the application under `docs/` is developed as the product and stays the derivable base. `src/` remains a tested core library without an application shell; the [rebuild phase](#rebuild-phase) below is dormant. The reasons are in the [journal](journal.md) and the [specification](specification.md#rebuild-paused-2026-11-05).
 
+Decided on 2026-11-06: szd-teiCrafter becomes public and is served with GitHub Pages from its `docs/` folder, so the workshop and the gallery can link a working, freely licensed derivation. Switching the visibility and enabling Pages stay with the operator; the URL enters `docs/data/derivations.json` once the site is live.
+
 The questions below remain open. Each can be answered with yes or no. The recommendation is the yes; the reasons and the evidence follow it.
 
 | Question | Yes (recommended) | No | Evidence |
 | --- | --- | --- | --- |
 | Keep Save and Download bound to a valid schema result (fail-closed) in the legacy editor? | Invalid XML never leaves the editor through Save; Working copy keeps unfinished work. | Save always and show the state, with one confirmation, as the SZD derivation does. | Specification [open decision on Save](specification.md#open-decision-on-save); the audit found the gate working and explained; the SZD case's ADR-008 ([derivation](derivation.md#teicrafter-szd-standalone-editor)) |
 | Present teiCrafter in the workshop as an editor to try and as a model for one's own tool, rather than as a fork template? | The site text names the editor and the three routes the README describes. | Keep "template to fork" and write a step-by-step fork guide first. | Only one public derivation exists and its interface is not built; the README section "Derive an editor for your edition"; the site text lives outside this repository |
-| Make szd-teiCrafter public? | The workshop gets a working, freely licensed derivation to look at, and the gallery can link it. | It stays private and the gallery describes it without a link. | Its letters are freely licensed and its code follows the MIT default; `docs/data/derivations.json` has no URL for it |
 | Accept a Node and npm version range in `npm run verify`, keeping the exact pin only for `npm run evaluate:editorial` and CI? | Contributors and forks can run the gate with any Node 24 release. | Every gate keeps the exact pin. | `test/verify.mjs` refuses any version but 24.13.0 and 11.6.2; every gate step passed under Node 24.20.0 in the audit run |
 | Keep the model features on by default on the public site? | Without a key nothing is sent, and the dialog says that a key is needed. | The public build hides them until a user switches them on. | `FEATURES.llmOnRamp` and the per-user setting in `docs/js/utils/constants.js`; the audit found no request without a key |
 | Change the generated-draft banner to say that the whole document is model-generated, instead of marking each element violet? | The banner is accurate for the document-level provenance the file records. | Record and mark provenance per element. | `generated-provenance.js` writes `resp="#ai"` on the root only; the banner says that AI output is marked violet |
