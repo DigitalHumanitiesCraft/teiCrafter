@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-11-05
+updated: 2026-11-10
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
 related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
@@ -21,6 +21,10 @@ related: [project, specification, architecture, data, design, testing, integrati
 # teiCrafter Decision Journal
 
 The entries record the triggers, decisions and reasons that explain teiCrafter's development, in reverse chronological order. Integrated, Corrected and Rejected identify substantive transitions, Decided identifies a direction set without a received delta, and Compacted identifies maintenance of their provenance.
+
+## 2026-11-10 | Compacted | Maintenance check against the repository state
+
+A maintenance pass compared action layer and knowledge base with the repository at `b79104e`, which matches `origin/main`, so the audit corrections of 5 November are on the public site. The decision of 6 November to publish szd-teiCrafter stands in the [plan](plan.md#operator-decisions-from-the-workshop-audit) and is recorded here for provenance. Biome, both typechecks and the source-first tests passed, and `npm run verify` again stopped at its toolchain check under Node 24.20.0, the version question in the plan. Pages serves `main:/docs`, which also publishes `docs/data/editor/szd-mapping-local/README.md`, a development note with a local path; changing it touches the public site and was left to the operator.
 
 ## 2026-11-05 | Decided | Rebuild paused, the legacy application is the product
 
