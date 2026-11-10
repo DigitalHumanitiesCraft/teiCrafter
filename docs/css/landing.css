@@ -62,6 +62,13 @@
 }
 .lp-intro a { color: var(--color-blue); }
 
+/* Standing notice under the lede: plain text at body size, no box. */
+.lp-note {
+    font-size: var(--font-size-sm); color: var(--color-text-body);
+    line-height: 1.6; max-width: 68ch; margin: 0 0 var(--space-lg);
+}
+.lp-note a { color: var(--color-blue); }
+
 /* Local development only: the full example set. */
 .lp-examples { padding: var(--space-2xl) 0; }
 .lp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-md); }
@@ -131,7 +138,7 @@
 }
 
 .lp-card:focus-visible, .lp-btn:focus-visible, .lp-example:focus-visible,
-.lp-lede a:focus-visible, .lp-feature a:focus-visible, .lp-intro a:focus-visible,
+.lp-lede a:focus-visible, .lp-note a:focus-visible, .lp-feature a:focus-visible, .lp-intro a:focus-visible,
 .lp-ed a:focus-visible, .lp-shot a:focus-visible, .site-foot a:focus-visible {
     outline: 2px solid var(--color-blue); outline-offset: 2px; border-radius: var(--radius-sm);
 }

@@ -12,7 +12,7 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/design
 status: complete
 created: 2026-05-27
-updated: 2026-11-05
+updated: 2026-11-10
 language: en
 topics: ["[[Information Visualisation]]", "[[Scholar-Centered Design]]", "[[Human-Computer Interaction]]"]
 related: [project, specification, architecture, data, testing, wenzelsbibel, views]
@@ -51,7 +51,7 @@ Status uses categories and words. Numeric confidence requires a calibrated produ
 
 The start page serves a researcher who decides whether teiCrafter fits a TEI task and then opens it. Its order follows that decision.
 
-1. The hero states what the editor does, offers one primary button, Open the editor, and one text link that names the public example, Open the example letter (Stefan Zweig, 1901), which opens `editor.html#example=szd`. The screenshot below shows that letter in the editor with its facsimile and carries the letter's attribution and licence notice as caption. `test/tools/make_landing_screenshot.mjs` regenerates it at the size the page reserves.
+1. The hero states what the editor does, offers one primary button, Open the editor, and one text link that names the public example, Open the example letter (Stefan Zweig, 1901), which opens `editor.html#example=szd`. The screenshot below shows that letter in the editor with its facsimile and carries the letter's attribution and licence notice as caption. `test/tools/make_landing_screenshot.mjs` regenerates it at the size the page reserves. Below the lede a standing notice in plain text names the research preview, says that the editor is a research prototype developed with coding agents and no finished or supported product, that its results need checking before reuse, and that feedback belongs in the repository issues.
 2. How teiCrafter treats your document describes saving, configuration and checks in full sentences. Drafting from plain text with a language model is one optional item there in the violet model family, shown only when the model features are enabled, because it is a path beside the editor rather than its entry.
 3. Editions built on teiCrafter lists the derivations registered in [derivation](derivation.md#case-register) from `docs/data/derivations.json`, one card per edition with its status, what it demonstrates, its form, data and licence, and a link to its derivation notes. A card links into the editor only when its entry carries a public URL, so an edition without cleared rights or without a public deployment is described without a demonstration.
 4. Status says what research preview means and links the verification reports. The Research preview pill in the header links there.

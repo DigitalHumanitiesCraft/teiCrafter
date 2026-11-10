@@ -22,6 +22,10 @@ related: [project, specification, architecture, data, design, testing, integrati
 
 The entries record the triggers, decisions and reasons that explain teiCrafter's development, in reverse chronological order. Integrated, Corrected and Rejected identify substantive transitions, Decided identifies a direction set without a received delta, and Compacted identifies maintenance of their provenance.
 
+## 2026-11-10 | Decided | Standing notice on the start page and in the README
+
+The operator asked that every public demo of the research tools says on its first view and in the first paragraph of its README that it is an experiment, what it is, what it is not and where feedback belongs. The start page named the research preview only as a pill in the header that links to the Status section at the end of the page, and the README stated the preview without its limits for reuse or a place for feedback. The word research preview stays, because the project uses it throughout. A notice in plain text now stands under the lede of the start page, and the README paragraph on the research preview carries the same sentences. The sentence on what the editor does is the lede directly above the notice, so the notice does not repeat it. [Design](design.md) records the notice as part of the hero.
+
 ## 2026-11-10 | Compacted | Maintenance check against the repository state
 
 A maintenance pass compared action layer and knowledge base with the repository at `b79104e`, which matches `origin/main`, so the audit corrections of 5 November are on the public site. The decision of 6 November to publish szd-teiCrafter stands in the [plan](plan.md#operator-decisions-from-the-workshop-audit) and is recorded here for provenance. Biome, both typechecks and the source-first tests passed, and `npm run verify` again stopped at its toolchain check under Node 24.20.0, the version question in the plan. Pages serves `main:/docs`, which also publishes `docs/data/editor/szd-mapping-local/README.md`, a development note with a local path; changing it touches the public site and was left to the operator.

@@ -4,7 +4,7 @@ A browser editor for creating, reading and editing TEI XML with exact source pre
 
 [Open the published editor](https://digitalhumanitiescraft.github.io/teiCrafter/) | [Start with the workflows](knowledge/worked-examples.md) | [Project knowledge](knowledge/INDEX.md)
 
-**Research preview.** The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [editorial workspace report](reports/editorial-completion-2026-09-11.md) records the current implementation and verification boundary, extending the [Wenzelsbibel workflow report](reports/wenzelsbibel-workflow-2026-09-11.md). The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader product target.
+**Research preview.** teiCrafter is a research prototype developed with coding agents. It is not a finished or supported product, and its results need checking before any reuse. Feedback belongs in the [issues of the repository](https://github.com/DigitalHumanitiesCraft/teiCrafter/issues). The working implementation targets **0.2.0**; package metadata remains **0.1.0**. The published site may differ from this repository revision. The [editorial workspace report](reports/editorial-completion-2026-09-11.md) records the current implementation and verification boundary, extending the [Wenzelsbibel workflow report](reports/wenzelsbibel-workflow-2026-09-11.md). The [0.2.0 plan](reports/implementation-plan-0.2.0.md) describes the broader product target.
 
 ## Source-first core
 
