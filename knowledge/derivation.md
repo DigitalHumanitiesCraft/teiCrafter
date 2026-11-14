@@ -15,7 +15,7 @@ created: 2026-10-30
 updated: 2026-11-05
 language: en
 topics: ["[[TEI XML]]", "[[Promptotyping]]"]
-related: [integration, architecture, specification, plan, wenzelsbibel, journal, handoff]
+related: [integration, architecture, specification, plan, wenzelsbibel, journal]
 ---
 
 # Derived project versions
@@ -35,7 +35,7 @@ teiCrafter base
 wenzelsbibel-teiCrafter              szd-teiCrafter
 fork with upstream merge             standalone editor, one source configuration
      |                                   |
-     +---- findings as items in this repository's knowledge/handoff.md ----> base
+     +---- findings as items in ## Open of this repository's knowledge/journal.md ----> base
 ```
 
 ## Forms of derivation

@@ -16,7 +16,7 @@ updated: 2026-11-05
 language: en
 version: "0.23"
 topics: ["[[TEI XML]]", "[[Knowledge Base]]", "[[Promptotyping]]"]
-related: [project, data, specification, architecture, design, views, plan, journal, handoff, testing, integration, derivation, converter-reference, worked-examples, wenzelsbibel]
+related: [project, data, specification, architecture, design, views, plan, journal, testing, integration, derivation, converter-reference, worked-examples, wenzelsbibel]
 ---
 
 # teiCrafter Knowledge Base
@@ -29,11 +29,11 @@ This model describes the legacy application under `docs/`, which is also the bas
 
 This index owns the shared documentation schema version in its top-level `version` field. Other knowledge documents inherit it and omit that field. Change this version only when the shared document contract changes, such as required metadata or document functions. Content edits do not require a schema version change or edits to unrelated documents.
 
-Frontmatter status describes document maturity. Consolidated reference documents use `complete`; the ongoing journal and handoff inbox use `active`. Neither value claims software release acceptance or scholarly ratification.
+Frontmatter status describes document maturity. Consolidated reference documents use `complete`; the ongoing journal uses `active`. Neither value claims software release acceptance or scholarly ratification.
 
 Each document's `updated` date records its latest substantive change. Removing an inherited version field alone preserves that date. Git identifies the complete content revision. Nested `template.version` identifies the source template and changes only when adopting a different template version. The frozen SZD contract in [converter-reference.md](converter-reference.md) retains its independently owned top-level version.
 
-The required process documents are the decision [journal](journal.md) and the continuously present [handoff inbox](handoff.md). The inbox contains received deltas awaiting integration; its empty state is `Keine offenen Handoff-Punkte.`. A journal entry records a processed delta's source, destination and outcome. Accepted release requirements belong in the [release scope](../reports/implementation-plan-0.2.0.md).
+The required process document is the decision [journal](journal.md). Its `## Open` section, always present at its beginning, contains received deltas awaiting integration; its empty state is `Nothing open.`. A journal entry records a processed delta's source, destination and outcome. Accepted release requirements belong in the [release scope](../reports/implementation-plan-0.2.0.md).
 
 ## Documents
 
@@ -52,14 +52,13 @@ The required process documents are the decision [journal](journal.md) and the co
 | [Wenzelsbibel](wenzelsbibel.md) | Which editorial models, project forms and cross-file conventions support the Wenzelsbibel workflow? |
 | [Converter reference](converter-reference.md) | Which frozen contract governs the SZD Page-JSON conversion lane? |
 | [Plan](plan.md) | What is planned for the base and the source-first rebuild, and in which order? |
-| [Journal](journal.md) | Which triggers, decisions, and reasons led to the current state? |
-| [Handoff](handoff.md) | Which received deltas still require verification and integration? |
+| [Journal](journal.md) | Which received deltas still require verification and integration, and which triggers, decisions, and reasons led to the current state? |
 
 ## Reading routes
 
 Start with the [user overview](../README.md) for workflows and setup, [test guide](../test/README.md) for executable checks, and [report index](../reports/README.md) for dated evidence and release planning. Requirements in a plan are not claims that the feature is complete. A passing run certifies its recorded revision, fixtures and environment only.
 
-For session re-entry, read [CLAUDE.md](../CLAUDE.md), this index, the handoff inbox and the latest journal decision. Follow their links to the owning contract and the [editorial completion report](../reports/editorial-completion-2026-09-11.md). Check Git for the actual branch, revision and uncommitted changes before continuing.
+For session re-entry, read [CLAUDE.md](../CLAUDE.md), this index, the `## Open` section of the journal and the latest journal decision. Follow their links to the owning contract and the [editorial completion report](../reports/editorial-completion-2026-09-11.md). Check Git for the actual branch, revision and uncommitted changes before continuing.
 
 Repository knowledge uses standard Markdown. Established public filenames remain stable, including `wenzelsbibel.md` for the specialized editorial contract and `worked-examples.md` for editorial recipes. `reports/` owns dated observations and the release scope catalogue. Browser source lives in `docs/`; `dist/` is generated build output. Rights-local editions remain external to the repository.
 

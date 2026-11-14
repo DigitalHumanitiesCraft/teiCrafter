@@ -15,7 +15,7 @@ status: active
 created: 2026-10-10
 updated: 2026-11-06
 language: en
-related: [architecture, specification, testing, wenzelsbibel, derivation, views, journal, handoff, INDEX]
+related: [architecture, specification, testing, wenzelsbibel, derivation, views, journal, INDEX]
 ---
 
 # Plan

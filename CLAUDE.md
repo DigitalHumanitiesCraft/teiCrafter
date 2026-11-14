@@ -22,7 +22,7 @@
 - The target release is 0.2.0, while package.json remains 0.1.0 until release acceptance. Read [reports/README.md](reports/README.md) for current verification and remaining scope. Starter templates do not imply complete genre-specific workspaces.
 
 ## Knowledge Base (`knowledge/`)
-Function-separated per the Promptotyping convention. After this action layer, read `knowledge/INDEX.md`, `knowledge/handoff.md` and the latest journal decision. Verify the current Git state before relying on a dated observation.
+Function-separated per the Promptotyping convention. After this action layer, read `knowledge/INDEX.md`, the `## Open` section at the beginning of `knowledge/journal.md` and the latest journal decision. Verify the current Git state before relying on a dated observation.
 
 | Document | Read first when |
 |----------|-----------------|
@@ -33,9 +33,8 @@ Function-separated per the Promptotyping convention. After this action layer, re
 | design.md | UI, visual, or interaction work (the aesthetic value source) |
 | views.md | the surfaces of the source-first editor, the prototype comparison behind them or what carries over from it |
 | testing.md | the test approach, the acceptance method, engine proofs, or the harness is in question |
-| journal.md | how a decision came about |
+| journal.md | received deltas still require verification or integration (its `## Open` section), or how a decision came about |
 | plan.md | what is planned for the base and the source-first rebuild, and in which order |
-| handoff.md | received deltas still require verification or integration |
 | integration.md | working across the sibling projects: cross-project data flow or the tool boundary |
 | derivation.md | a derived project version, its inherited invariants, the base coupling it meets or the case register is in question |
 | converter-reference.md | building or verifying the SZD Page-JSON to TEI converter |
@@ -55,7 +54,7 @@ At the end of a session with code changes, update the affected knowledge documen
 The documentation version policy is owned by [INDEX.md](knowledge/INDEX.md#documentation-maintenance). Follow it when changing knowledge documents. Distill: one function per document, cross-link via `related:` rather than repeat.
 
 ## Handoff and re-entry
-`knowledge/handoff.md` is the permanent process inbox for received deltas awaiting integration. Keep it active even when empty; the canonical empty text is `Keine offenen Handoff-Punkte.`. Each open item carries `Received`, `Source`, `Target` and `Context`. Verify the source and destination, integrate durable content into its owning document, record the outcome in `knowledge/journal.md`, then remove the processed item. Release requirements remain in the release scope catalogue.
+The `## Open` section at the beginning of `knowledge/journal.md` is the permanent process inbox for received deltas awaiting integration. Keep it even when empty; the canonical empty text is `Nothing open.`. Each open item carries `Received`, `Source`, `Target` and `Context`. Verify the source and destination, integrate durable content into its owning document, record the outcome in a journal entry, then remove the processed item from `## Open`. Release requirements remain in the release scope catalogue.
 
 Use Git, the owning knowledge documents and dated verification reports for normal session re-entry. Create a dated exceptional handoff under `handoffs/` only when necessary context cannot be recovered from those sources. Historical snapshots in `reports/` retain their original evidence boundary. Do not create a session dump to repeat the maintained knowledge base.
 

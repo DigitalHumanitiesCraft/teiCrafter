@@ -12,15 +12,26 @@ template:
   url: https://dhcraft.org/Promptotyping/promptotyping-document/journal
 status: active
 created: 2026-02-05
-updated: 2026-11-10
+updated: 2026-11-14
 language: en
 topics: ["[[Decision Log]]", "[[Promptotyping]]"]
-related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, handoff]
+related: [project, specification, architecture, data, design, testing, integration, worked-examples, wenzelsbibel, plan]
 ---
 
 # teiCrafter Decision Journal
 
 The entries record the triggers, decisions and reasons that explain teiCrafter's development, in reverse chronological order. Integrated, Corrected and Rejected identify substantive transitions, Decided identifies a direction set without a received delta, and Compacted identifies maintenance of their provenance.
+
+## Open
+
+Received deltas awaiting verification and integration. Verify each source and current destination, integrate durable content into its owning document, record the source, destination and outcome in a journal entry, then remove the item here.
+
+- Review of agent proposals in the SZD derivation diverges from the proposal layer. Received 2026-10-31. Source: szd-teiCrafter, ADR-015 and ADR-016 in `knowledge/specification.md`, `js/proposals.js`, `js/review.js` (commit e9e761d). Target: [data.md](data.md) (acceptance encoding, around the paragraph on `urn:teicrafter:proposal:accepted`) and [derivation.md](derivation.md) (case register, open question on the save gate and provenance departures). The SZD derivation lets LLM agents work beside the editor and loads their annotations as a proposal file, reviewed one by one. Accepting writes `resp="#resp-agent-annotation #resp-editor-review"` pointing to two `respStmt` in `titleStmt`, following the provenance contract of zbz-ocr-tei (E131 there), and writes no `@ana` acceptance token and no reviewer URN. Proposals stay outside the text until decided, so a saved file never holds an undecided one. The base appends `urn:teicrafter:local-reviewer` and `urn:teicrafter:proposal:accepted:%23ai`. Decide whether the base aligns, keeps its form, or records the difference as a derivation case. The proposal file format (`teicrafter-proposals/0.2`, described in `knowledge/data.md` of szd-teiCrafter) is a candidate for a shared format.
+- Further generic findings of the SZD derivation. Received 2026-10-31. Source: szd-teiCrafter, `knowledge/journal.md` entries of 2026-10-31. Target: generic modules of the base under `docs/js/editor/`, which is developed as the product since 2026-11-05, with the requirement in the base specification, and `src/` only if the rebuild resumes. Selections may span empty line-break elements, so a name broken across lines becomes one element (`lineBreakPattern` in `js/actions.js`). The date parser reads German, English, French and Roman forms and completes incomplete dates from a document date as inferred (`js/dates.js`). Unlinked marks count as open work. Each of these was found by LLM agents annotating through the editor, a way of testing an editor that may serve the base as well.
+
+## 2026-11-14 | Compacted | Handoff inbox dissolved into the journal
+
+The operator decided on 2026-11-14 that a Promptotyping repository keeps no `knowledge/handoff.md` and that the journal opens with what is open. The two open items of 2026-10-31 from the SZD derivation, on the proposal review encoding and on further generic findings, moved into `## Open` with their sources, targets and context, and `knowledge/handoff.md` was removed. Nothing was dropped. The action layer, the index, the derivation diagram and the `related:` lists now name `## Open`, while the dated reports under `reports/` keep their references to the former inbox.
 
 ## 2026-11-10 | Decided | Standing notice on the start page and in the README
 
